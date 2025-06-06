@@ -336,7 +336,7 @@ const ghost1POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(1.009, 0.55, 0.8035), type: "straight" },
   { pos: new THREE.Vector3(0.9085, 0.55, 0.8035), type: "straight" },
 ];
-
+ 
 const ghost2POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(1.05925, 0.55, 1.2055), type: "straight" },
   { pos: new THREE.Vector3(1.009, 0.55, 1.2055), type: "curve", curveType: "lowerArc" },
