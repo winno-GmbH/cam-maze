@@ -65,15 +65,6 @@ export function setupScrollHandler(): void {
   });
 }
 
-// Resize Handler
-export function setupResizeHandler(): void {
-  window.addEventListener("resize", () => {
-    camera.aspect = container.clientWidth / container.clientHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(container.clientWidth, container.clientHeight);
-  });
-}
-
 // Window Load Handler
 export function setupLoadHandler(): void {
   window.addEventListener("load", () => {
@@ -84,6 +75,5 @@ export function setupLoadHandler(): void {
 // Initialize all event handlers
 export function initEventHandlers(): void {
   setupScrollHandler();
-  setupResizeHandler();
   setupLoadHandler();
 }

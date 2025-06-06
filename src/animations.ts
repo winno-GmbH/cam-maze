@@ -8,6 +8,7 @@ import { TriggerPosition } from './types';
 import { CAMERA_CONFIG, ANIMATION_CONFIG, SPECIAL_POINTS } from './config';
 import { smoothStep, findClosestProgressOnPath, ensureGhostsInScene } from './utils';
 
+
 // Use global gsap
 const gsap = (window as any).gsap;
 
@@ -367,6 +368,7 @@ function resetCameraState(isReverse: boolean = false): void {
   animationState.startedInitEndScreen = false;
 
   if (!isReverse) {
+    canvas.style.display = "none";
     camera.lookAt(SPECIAL_POINTS.finalLookAt);
     animationState.endScreenPassed = true;
   } else {
@@ -388,6 +390,10 @@ function updateCamera(progress: number): void {
 }
 
 function handleCameraPhases(progress: number, position: THREE.Vector3, defaultLookAt: THREE.Vector3): void {
+  if (canvas.style.display === "none" && progress < 0.99) {
+    canvas.style.display = "block";
+  }
+  
   if (progress === 0) {
     camera.lookAt(new THREE.Vector3(camera.position.x, 2, camera.position.z));
   } else {

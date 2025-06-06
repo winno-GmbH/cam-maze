@@ -122,7 +122,7 @@ if (document.readyState === 'loading') {
   (window as any).CAMApp = app;
 }
 
-// Handle page visibility changes
+/* Handle page visibility changes
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     animationState.animationRunning = false;
@@ -130,6 +130,7 @@ document.addEventListener('visibilitychange', () => {
     animationState.animationRunning = window.scrollY === 0;
   }
 });
+*/
 
 // Export for external use
 export { CAMApplication };
