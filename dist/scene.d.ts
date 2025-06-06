@@ -1,0 +1,11 @@
+import * as THREE from 'three';
+export declare const scene: THREE.Scene;
+export declare const renderer: THREE.WebGLRenderer;
+export declare const container: HTMLElement;
+export declare const clock: THREE.Clock;
+export declare function initRenderer(): void;
+export declare function setupLighting(): void;
+export declare const canvas: HTMLCanvasElement;
+export declare const finalSection: HTMLElement;
+export declare const finalContainer: HTMLElement;
+export declare const parentElements: NodeListOf<Element>;
