@@ -85,12 +85,13 @@ export function loadModel(): Promise<void> {
             ghosts.pacman.rotation.set(Math.PI / 2, Math.PI / 2, Math.PI / 4);
 
             // Animation setup - NO FILTERING like backup.js
-            pacmanMixer = new THREE.AnimationMixer(ghosts.pacman);
+             pacmanMixer = new THREE.AnimationMixer(ghosts.pacman);
             const pacmanActions: { [key: string]: THREE.AnimationAction } = {};
 
             gltf.animations.forEach((clip: THREE.AnimationClip) => {
               const action = pacmanMixer.clipAction(clip);
 
+              // EXACT EVENT HANDLER like backup.js
               action.getMixer().addEventListener('loop', function (e: any) {
                 e.action.getRoot().traverse(function (obj: any) {
                   if (obj.userData && obj.userData.skipAnimation) {
@@ -104,6 +105,7 @@ export function loadModel(): Promise<void> {
               action.play();
             });
 
+            // Set all actions to weight 1 like backup.js
             Object.values(pacmanActions).forEach((action) => {
               action.setEffectiveWeight(1);
             });

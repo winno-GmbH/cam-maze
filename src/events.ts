@@ -45,7 +45,7 @@ export function setupScrollHandler(): void {
       });
     }
 
-    // Handle animation pause/resume
+    // Handle animation pause/resume - EXACT MATCH to backup.js
     if (window.scrollY > 0 && animationState.animationRunning) {
       animationState.pauseTime = Date.now();
       animationState.animationRunning = false;
@@ -55,6 +55,7 @@ export function setupScrollHandler(): void {
       }
       animationState.animationRunning = true;
 
+      // Clear scroll timeout like in backup.js
       if (animationState.scrollTimeout) {
         clearTimeout(animationState.scrollTimeout);
         animationState.scrollTimeout = null;

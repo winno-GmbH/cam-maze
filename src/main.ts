@@ -59,8 +59,7 @@ class CAMApplication {
 
   private setupAnimations(): void {
     console.log('Setting up animations...');
-    
-    // Match backup.js timing exactly: setTimeout(initGsap, 200) at end
+
     setTimeout(() => {
       initGsap();
     }, 200);
@@ -68,11 +67,9 @@ class CAMApplication {
 
   private start(): void {
     console.log('Starting animation loop...');
+  
+    animate();
     
-    // Start the main animation loop immediately
-    this.startBasicAnimation();
-    
-    // Set initial animation state
     animationState.animationRunning = window.scrollY === 0;
   }
 
