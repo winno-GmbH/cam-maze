@@ -49,7 +49,6 @@ export function loadModel(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!loader) {
       console.warn('GLTFLoader not available. Please include GLTFLoader script.');
-      // Continue without model loading
       resolve();
       return;
     }
@@ -99,7 +98,7 @@ export function loadModel(): Promise<void> {
         });
 
         // Enable shadows
-        model.traverse(function (node: THREE.Object3D) {
+         model.traverse(function (node: THREE.Object3D) {
           if (node instanceof THREE.Mesh) {
             node.castShadow = true;
             node.receiveShadow = true;
@@ -109,11 +108,10 @@ export function loadModel(): Promise<void> {
         scene.add(model);
         model.position.set(0.5, 0.5, 0.5);
         resolve();
-      },
+       },
       undefined,
       function (error: ErrorEvent) {
         console.error("Fehler beim Laden des 3D-Modells:", error);
-        // Don't reject, continue without model
         console.warn("Continuing without 3D model...");
         resolve();
       }
