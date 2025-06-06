@@ -2,8 +2,6 @@ import * as THREE from 'three';
 import { AnimationState, AnimationPosition } from './types';
 import { ghosts } from './objects';
 import { ANIMATION_CONFIG } from './config';
-import { renderer, container } from './scene';
-import { camera } from './camera';
 
 // Animation State
 export const animationState: AnimationState = {
@@ -72,7 +70,7 @@ export function setupLoadHandler(): void {
   });
 }
 
-// Initialize all event handlers
+// Initialize all event handlers - REMOVED duplicate resize handler
 export function initEventHandlers(): void {
   setupScrollHandler();
   setupLoadHandler();

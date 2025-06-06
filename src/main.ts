@@ -4,7 +4,7 @@ import { loadModel } from './objects';
 import { initEventHandlers, animationState } from './events';
 import { initGsap, animate } from './animations';
 
-// Main Application Class
+// Main Application Class - FIXED to match backup.js timing
 class CAMApplication {
   private initialized: boolean = false;
 
@@ -22,11 +22,11 @@ class CAMApplication {
       // Load 3D assets
       await this.loadAssets();
 
-      // Setup animations and interactions
-      this.setupAnimations();
-
-      // Start the application immediately
+      // CRITICAL: Start animation BEFORE GSAP setup (like backup.js)
       this.start();
+
+      // Setup animations AFTER animation starts (like backup.js)
+      this.setupAnimations();
 
       this.initialized = true;
       console.log('CAM 3D Animation initialized successfully');
@@ -60,7 +60,7 @@ class CAMApplication {
   private setupAnimations(): void {
     console.log('Setting up animations...');
     
-    // Initialize GSAP animations with a delay to ensure DOM is ready
+    // Match backup.js timing exactly: setTimeout(initGsap, 200) at end
     setTimeout(() => {
       initGsap();
     }, 200);
@@ -122,7 +122,8 @@ if (document.readyState === 'loading') {
   (window as any).CAMApp = app;
 }
 
-/* Handle page visibility changes
+// REMOVED visibility change handler to match backup.js exactly
+/*
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     animationState.animationRunning = false;

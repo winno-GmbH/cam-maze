@@ -29,14 +29,14 @@ function enhanceAntiAliasing(): void {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 }
 
-// Pixel Ratio Setup
+// Pixel Ratio Setup - ADDED to match backup.js
 function setPixelRatio(): void {
   const pixelRatio = Math.min(window.devicePixelRatio, isMobile ? 2 : 3);
   renderer.setPixelRatio(pixelRatio);
   renderer.setSize(container.clientWidth, container.clientHeight);
 }
 
-// Initialize Renderer
+// Initialize Renderer - FIXED to match backup.js
 export function initRenderer(): void {
   enhanceAntiAliasing();
   renderer.shadowMap.enabled = true;
@@ -44,7 +44,7 @@ export function initRenderer(): void {
   renderer.setSize(container.clientWidth, container.clientHeight);
   container.appendChild(renderer.domElement);
 
-  // Event listeners
+  // ADD these event listeners to match backup.js:
   window.addEventListener("load", setPixelRatio);
   window.addEventListener("resize", setPixelRatio);
 }
