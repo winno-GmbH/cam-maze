@@ -141,6 +141,12 @@ export function initIntro(): void {
 }
 
 export function initCameraHome(): void {
+  console.log('=== INIT CAMERA HOME DEBUG ===');
+  console.log('camera:', !!camera);
+  console.log('cameraHomePath:', !!cameraHomePath);
+  console.log('startQuaternion:', !!startQuaternion);
+  console.log('endQuaternion:', !!endQuaternion);
+  
   if (!gsap || !camera || !cameraHomePath || !startQuaternion || !endQuaternion) {
     console.warn("Camera animation variables not ready or GSAP not available");
     return;
@@ -665,6 +671,15 @@ export function animate(): void {
 
 // Initialize GSAP Animations
 export function initGsap(): void {
+  // ADD THESE DEBUG LOGS:
+  console.log('=== GSAP DEBUG ===');
+  console.log('GSAP available:', !!gsap);
+  console.log('ScrollTrigger available:', !!(window as any).ScrollTrigger);
+  console.log('cameraHomePath available:', !!cameraHomePath);
+  console.log('camera available:', !!camera);
+  console.log('startQuaternion available:', !!startQuaternion);
+  console.log('endQuaternion available:', !!endQuaternion);
+  
   // Only initialize if gsap is available
   if (!gsap) {
     console.warn('GSAP not available, skipping scroll animations');
