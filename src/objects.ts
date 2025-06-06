@@ -133,8 +133,15 @@ function processPacmanObject(child: THREE.Object3D, pacmanNames: string[], gltf:
       } else if (subChild.name === "CAM-Pacman_Shell" || 
                  subChild.name === "CAM-Pacman_Shell_Boolean") {
         subChild.visible = false;
+        // FIX: Properly handle morph targets
         if (subChild instanceof THREE.Mesh) {
-          subChild.morphTargetInfluences = [];
+          if (subChild.morphTargetInfluences) {
+            subChild.morphTargetInfluences = [];
+          }
+          // Clear any morph target dictionary
+          if (subChild.morphTargetDictionary) {
+            subChild.morphTargetDictionary = {};
+          }
         }
         subChild.userData.skipAnimation = true;
       }
@@ -146,11 +153,21 @@ function processPacmanObject(child: THREE.Object3D, pacmanNames: string[], gltf:
     ghosts.pacman.scale.set(0.05, 0.05, 0.05);
     ghosts.pacman.rotation.set(Math.PI / 2, Math.PI / 2, Math.PI / 4);
 
-    // Setup animations
+    // Setup animations with better error handling
     pacmanMixer = new THREE.AnimationMixer(ghosts.pacman);
     const pacmanActions: { [key: string]: THREE.AnimationAction } = {};
 
     gltf.animations.forEach((clip: THREE.AnimationClip) => {
+      // SIMPLE FIX: Skip problematic clips entirely
+      const hasProblematicTracks = clip.tracks.some(track => 
+        track.name.includes('CAM-Pacman_Shell') && track.name.includes('morphTargetInfluences')
+      );
+      
+      if (hasProblematicTracks) {
+        console.log('Skipping problematic animation clip:', clip.name);
+        return; // Skip this entire clip
+      }
+      
       const action = pacmanMixer.clipAction(clip);
 
       action.getMixer().addEventListener('loop', function (e: any) {
