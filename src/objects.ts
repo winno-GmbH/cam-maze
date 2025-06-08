@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { ASSETS } from "./config";
 import { GhostContainer } from "./types";
-import { scene } from "./scene";
+import { scene, clock } from "./scene";
 import {
   mazeMaterial,
   topMaterial,
@@ -9,6 +9,9 @@ import {
   floorMaterial,
   materialMap,
 } from "./materials";
+
+// Export clock for animation system
+export { clock };
 
 // GLB Loader - check if available in global THREE
 const loader = (THREE as any).GLTFLoader

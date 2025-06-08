@@ -1,6 +1,7 @@
 import { initRenderer, setupLighting, renderer, scene } from "./scene";
 import { initCamera, setupCameraResize, camera } from "./camera";
 import { loadModel } from "./objects";
+import { initAnimationSystem } from "./animation-system";
 
 // Initialize everything
 async function init() {
@@ -12,6 +13,9 @@ async function init() {
   setupCameraResize();
 
   await loadModel();
+
+  // Initialize new animation system
+  initAnimationSystem();
 
   // Basic render loop
   function animate() {

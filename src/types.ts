@@ -49,22 +49,17 @@ export interface PathMapping {
   [key: string]: string;
 }
 
-export interface AnimationState {
-  animationRunning: boolean;
-  savedPositions: { [key: string]: any };
-  timeOffset: number;
-  oldTop: number;
-  scrollTimeout: NodeJS.Timeout | null;
-  homePositionsSaved: boolean;
-  homeAnimationPositions: { [key: string]: AnimationPosition };
-  isInPovSection: boolean;
-  isMovingForward: boolean;
-  previousCameraPosition: THREE.Vector3 | null;
-  cachedStartYAngle: number | null;
-  animationStarted: boolean;
-  rotationStarted: boolean;
-  startedInitEndScreen: boolean;
-  endScreenPassed: boolean;
-  startEndProgress: number;
-  cachedHomeEndRotation: THREE.Quaternion | null;
+// New Simplified Types for Animation System
+export type AnimationState = "HOME" | "SCROLL_ANIMATION";
+
+export interface GhostPosition {
+  position: THREE.Vector3;
+  opacity: number;
+}
+
+export interface BezierCurve {
+  startPosition: THREE.Vector3;
+  midPosition: THREE.Vector3;
+  endPosition: THREE.Vector3;
+  curve: THREE.QuadraticBezierCurve3;
 }
