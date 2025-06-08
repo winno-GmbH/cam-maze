@@ -131,11 +131,12 @@ export function loadModel(): Promise<void> {
             const children: THREE.Object3D[] = [];
             child.traverse((subChild) => {
               if ((subChild as any).isMesh) {
-                if (subChild.name.startsWith("Ghost_Mesh")) {
+                if (subChild.name && subChild.name.startsWith("Ghost_Mesh")) {
                   if (subChild instanceof THREE.Mesh) {
                     subChild.material = ghostMaterial;
                   }
                 } else if (
+                  subChild.name &&
                   ["EUR", "CHF", "YEN", "USD", "GBP"].includes(subChild.name)
                 ) {
                   subChild.visible = false;
