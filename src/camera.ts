@@ -1,6 +1,11 @@
-import * as THREE from 'three';
-import { CAMERA_CONFIG, startPosition, secondPosition, lookAtPosition } from './config';
-import { container } from './scene';
+import * as THREE from "three";
+import {
+  CAMERA_CONFIG,
+  startPosition,
+  secondPosition,
+  lookAtPosition,
+} from "./config";
+import { container } from "./scene";
 
 // Camera Setup
 export const camera = new THREE.PerspectiveCamera(
@@ -18,7 +23,9 @@ export function initCamera(): void {
 
 // Camera Quaternions
 export const startQuaternion = camera.quaternion.clone();
-export const endQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(-1.5708, 0, 0));
+export const endQuaternion = new THREE.Quaternion().setFromEuler(
+  new THREE.Euler(-1.5708, 0, 0)
+);
 
 // Camera Utility Functions
 export function getCameraLookAtPoint(): THREE.Vector3 {
