@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from "three";
 
 export interface PathPoint {
   pos: THREE.Vector3;
@@ -52,7 +52,6 @@ export interface PathMapping {
 export interface AnimationState {
   animationRunning: boolean;
   savedPositions: { [key: string]: any };
-  pauseTime: number | null;
   timeOffset: number;
   oldTop: number;
   scrollTimeout: NodeJS.Timeout | null;
