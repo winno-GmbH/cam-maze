@@ -1,0 +1,306 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# CAM 3D Animation Project - Cursor Rules
+
+## Project Overview
+
+This is a **TypeScript Three.js project** for a 3D Pac-Man maze animation with scroll-based camera movement and ghost animations. The project uses webpack for bundling and follows a modular architecture.
+
+### Key Technologies
+- **Three.js** for 3D rendering
+- **TypeScript** for type safety  
+- **Webpack** for bundling
+- **GSAP** for scroll-triggered animations
+- **GLSL shaders** for custom materials
+
+---
+
+## Architecture Guidelines
+
+### File Structure
+
+```
+src/
+├── main.ts          # Entry point and initialization
+├── scene.ts         # Three.js scene, renderer, and lighting setup
+├── camera.ts        # Camera configuration and controls
+├── objects.ts       # 3D model loading and object management
+├── materials.ts     # Three.js materials and textures
+├── paths.ts         # Curve paths for animations
+├── config.ts        # Constants and configuration
+├── types.ts         # TypeScript interfaces
+├── utils.ts         # Utility functions
+└── triggers.ts      # POV section trigger positions (DOM-dependent)
+```
+
+---
+
+## Code Style Rules
+
+### TypeScript Guidelines
+
+✅ **DO:**
+- Use strict typing, avoid `any` except for Three.js edge cases
+- Prefer interfaces over types for object shapes
+- Use meaningful variable names (not abbreviated)
+- Always handle Promise rejections
+- Use optional chaining where appropriate
+
+❌ **DON'T:**
+- Access DOM elements at module level
+- Use `any` type unless absolutely necessary
+- Create circular imports
+
+### Three.js Specific Rules
+
+#### Material Assignment
+```typescript
+// ❌ Wrong - TypeScript error
+child.material = newMaterial;
+
+// ✅ Correct - Type cast
+(child as THREE.Mesh).material = newMaterial;
+```
+
+#### Mesh Checking
+```typescript
+// ✅ Runtime mesh checking
+if ((object as any).isMesh) {
+  (object as THREE.Mesh).material = newMaterial;
+}
+
+// ✅ Instance checking
+if (object instanceof THREE.Mesh) {
+  object.material = newMaterial;
+}
+```
+
+#### Best Practices
+- Import THREE namespace: `import * as THREE from 'three'`
+- Always call `updateProjectionMatrix()` after camera changes
+- Dispose of geometries and materials when removing objects
+- Use `renderer.setPixelRatio(Math.min(devicePixelRatio, 2))` for mobile
+
+### DOM Interactions
+
+#### ✅ Correct Pattern
+```typescript
+function init() {
+  // DOM access after DOMContentLoaded
+  const elements = document.querySelectorAll('.selector');
+  if (elements.length > 0) {
+    // Use elements safely
+  }
+}
+```
+
+#### ❌ Wrong Pattern
+```typescript
+// Never at module level - causes SSR issues
+const elements = document.querySelectorAll('.selector');
+```
+
+---
+
+## Animation System Architecture
+
+### Animation States
+1. **`HOME`** - Normal path-based animation loop
+2. **`SCROLL_ANIMATION`** - Bezier curves to maze center during scroll  
+3. **`POV`** - Complex camera and ghost interactions
+
+### Core Functions
+- `captureGhostPositions()` - Save positions on first scroll
+- `createBezierCurves()` - Generate smooth paths to maze center
+- `moveGhostOnCurve(ghostKey, progress)` - Move ghost along curve (0-1)
+- `initTriggerPositions()` - Initialize DOM-dependent triggers
+
+### Animation Flow
+```mermaid
+graph TD
+    A[Start: HOME State] --> B[First Scroll Event]
+    B --> C[captureGhostPositions()]
+    C --> D[createBezierCurves()]
+    D --> E[SCROLL_ANIMATION State]
+    E --> F[Intro Section: moveGhostOnCurve(0→1)]
+    F --> G[Home Section: moveGhostOnCurve(1→0)]
+    G --> H[POV Section: Complex System]
+    H --> I[Back to HOME State]
+```
+
+---
+
+## Common Issues & Solutions
+
+### Git Conflict Markers
+**Issue:** Hidden merge conflict markers cause TypeScript errors
+
+**Solution:**
+```bash
+# Find conflicts
+grep -n "<<<<<<" src/*.ts
+grep -n "======" src/*.ts  
+grep -n ">>>>>>" src/*.ts
+
+# Remove all conflict markers manually
+```
+
+### Webpack Bundle Issues
+**Issue:** `script.js` is 0 bytes
+
+**Cause:** Empty or minimal `main.ts`
+
+**Solution:**
+```typescript
+// main.ts must have substantial imports/code
+import { initRenderer, setupLighting } from './scene';
+import { initCamera } from './camera';
+// ... actual implementation
+```
+
+### Variable Access Before Declaration
+**Issue:** `ReferenceError: Cannot access 'w' before initialization`
+
+**Cause:** Circular imports or undefined DOM elements
+
+**Solution:**
+- Move DOM-dependent code to initialization functions
+- Check import order and remove circular dependencies
+
+---
+
+## Performance Guidelines
+
+### 3D Rendering Optimization
+- Use appropriate pixel ratios: `Math.min(devicePixelRatio, isMobile ? 2 : 3)`
+- Enable efficient shadow mapping: `renderer.shadowMap.type = THREE.PCFSoftShadowMap`
+- Cache geometry and material instances
+- Dispose unused resources: `geometry.dispose()`, `material.dispose()`
+
+### Animation Performance
+- Use `requestAnimationFrame` for smooth 60fps
+- Implement object pooling for frequently created/destroyed objects
+- Cache path calculations and reuse when possible
+- Use linear interpolation for smooth transitions: `smoothStep(x)`
+
+---
+
+## Debug Workflow
+
+### Development Setup
+```javascript
+// webpack.config.js for debugging
+module.exports = {
+  mode: 'development',
+  devtool: 'source-map',
+  optimization: {
+    minimize: false
+  }
+}
+```
+
+### Debugging Steps
+1. **Enable source maps** for TypeScript debugging
+2. **Add strategic console.log** statements
+3. **Use browser DevTools** with Three.js inspector
+4. **Test step-by-step** by commenting out imports
+5. **Check webpack bundle analyzer** for size issues
+
+---
+
+## Asset Management
+
+### 3D Model Loading
+```typescript
+// Always check loader availability
+const loader = (THREE as any).GLTFLoader ? 
+  new (THREE as any).GLTFLoader() : null;
+
+if (!loader) {
+  console.warn('GLTFLoader not available');
+  return;
+}
+
+// Proper error handling
+loader.load(url, onLoad, onProgress, onError);
+```
+
+### Material Guidelines
+- Use texture compression for better performance
+- Implement fallbacks for missing textures
+- Cache loaded materials for reuse
+- Use appropriate material types for performance
+
+---
+
+## Project Constants
+
+### Important Positions
+```typescript
+// Maze center for Bezier curves
+mazeCenter: new THREE.Vector3(0.45175, 0.5, 0.55675)
+
+// Camera positions
+startDesktop: new THREE.Vector3(-2, 2.5, 2)
+startMobile: new THREE.Vector3(0.5, 2.5, 2.5)
+```
+
+### Animation Timing
+- **Opacity fade**: Last 20% of each animation
+- **Smooth transitions**: Use `smoothStep(x)` function
+- **Frame rate**: Target 60fps with requestAnimationFrame
+
+---
+
+## Testing Guidelines
+
+### Cross-Platform Testing
+- ✅ Test on desktop browsers (Chrome, Firefox, Safari)
+- ✅ Test on mobile devices (iOS Safari, Android Chrome)
+- ✅ Verify scroll animations are smooth
+- ✅ Check 3D model loading and materials
+- ✅ Monitor memory usage during long sessions
+
+### Performance Metrics
+- **Frame rate**: Should maintain 60fps
+- **Memory usage**: Monitor for leaks
+- **Load time**: 3D models should load within 3 seconds
+- **Scroll responsiveness**: No lag during scroll animations
+
+---
+
+## Environment Requirements
+
+### Dependencies
+```json
+{
+  "three": "^r128",
+  "typescript": "^4.x",
+  "webpack": "^5.x"
+}
+```
+
+### External Libraries (CDN)
+- **Three.js GLTFLoader**: Must be available globally
+- **GSAP & ScrollTrigger**: Loaded externally  
+- **Browser compatibility**: Modern browsers with WebGL support
+
+---
+
+## Collaboration Notes
+
+### Commit Guidelines
+- Use conventional commit messages
+- Test webpack compilation before commits: `npm run compile`
+- Check TypeScript errors: `tsc --noEmit`
+- Validate in browser before pushing
+
+### Code Review Checklist
+- [ ] No TypeScript errors
+- [ ] No DOM access at module level
+- [ ] Proper Three.js type casting
+- [ ] Animation performance tested
+- [ ] Cross-browser compatibility checked
