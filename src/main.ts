@@ -7,22 +7,43 @@ import { initAnimationSystem } from "./animation-system";
 async function init() {
   console.log("Starting CAM 3D Animation...");
 
-  initRenderer();
-  setupLighting();
-  initCamera();
-  setupCameraResize();
+  try {
+    initRenderer();
+    console.log("Renderer initialized");
 
-  await loadModel();
+    setupLighting();
+    console.log("Lighting setup complete");
 
-  // Initialize new animation system
-  initAnimationSystem();
+    initCamera();
+    console.log("Camera initialized");
 
-  // Basic render loop
-  function animate() {
-    renderer.render(scene, camera);
-    requestAnimationFrame(animate);
+    setupCameraResize();
+    console.log("Camera resize setup complete");
+
+    console.log("Loading 3D model...");
+    await loadModel();
+    console.log("Model loading complete");
+
+    // Initialize new animation system
+    console.log("Initializing animation system...");
+    initAnimationSystem();
+
+    // Basic render loop
+    function animate() {
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    animate();
+    console.log("Animation loop started");
+
+    // Debug scene contents
+    console.log("Scene children count:", scene.children.length);
+    scene.children.forEach((child, index) => {
+      console.log(`Child ${index}:`, child.type, child.name || "unnamed");
+    });
+  } catch (error) {
+    console.error("Initialization error:", error);
   }
-  animate();
 }
 
 // Start when DOM is ready

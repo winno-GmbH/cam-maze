@@ -14,9 +14,19 @@ import {
 export { clock };
 
 // GLB Loader - check if available in global THREE
+console.log("Checking for GLTFLoader...");
+console.log("THREE object:", typeof THREE);
+console.log("GLTFLoader available:", !!(THREE as any).GLTFLoader);
+
 const loader = (THREE as any).GLTFLoader
   ? new (THREE as any).GLTFLoader()
   : null;
+
+if (loader) {
+  console.log("GLTFLoader created successfully");
+} else {
+  console.warn("GLTFLoader not available - model will not load");
+}
 
 // Animation Mixer
 export let pacmanMixer: THREE.AnimationMixer;
@@ -38,6 +48,14 @@ export const ghosts: GhostContainer = {
 // Add ghosts to scene
 Object.values(ghosts).forEach((ghost) => scene.add(ghost));
 
+// Add a test cube to verify rendering
+const testGeometry = new THREE.BoxGeometry(1, 1, 1);
+const testMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+const testCube = new THREE.Mesh(testGeometry, testMaterial);
+testCube.position.set(0, 0, 0);
+scene.add(testCube);
+console.log("Test cube added to scene");
+
 // Ghost Container Mapping
 const ghostContainers: GhostContainer = {
   Ghost_EUR: ghosts.ghost1,
@@ -58,70 +76,76 @@ export function loadModel(): Promise<void> {
       return;
     }
 
-    loader.load(ASSETS.mazeModel, function (gltf: any) {
-      const model = gltf.scene;
-      const pacmanNames: string[] = [];
+    loader.load(
+      ASSETS.mazeModel,
+      function (gltf: any) {
+        const model = gltf.scene;
+        const pacmanNames: string[] = [];
 
-      model.traverse(
-        (child: THREE.Object3D) => {
+        model.traverse((child: THREE.Object3D) => {
+          // Null check for child.name
+          const childName = child.name || "";
+
           // PACMAN PROCESSING - inline like backup.js
-          if (child.name === "CAM-Pacman") {
+          if (childName === "CAM-Pacman") {
             const children: THREE.Mesh[] = [];
 
             child.traverse((subChild) => {
+              const subChildName = subChild.name || "";
+
               if (
                 (subChild as any).isMesh &&
-                subChild.name !== "CAM-Pacman_Shell" &&
-                subChild.name !== "CAM-Pacman_Shell_Boolean"
+                subChildName !== "CAM-Pacman_Shell" &&
+                subChildName !== "CAM-Pacman_Shell_Boolean"
               ) {
                 (subChild as THREE.Mesh).material =
-                  materialMap[subChild.name] || materialMap.default;
+                  materialMap[subChildName] || materialMap.default;
                 children.push(subChild as THREE.Mesh);
               } else if (
-                subChild.name === "CAM-Pacman_Shell" ||
-                subChild.name === "CAM-Pacman_Shell_Boolean"
+                subChildName === "CAM-Pacman_Shell" ||
+                subChildName === "CAM-Pacman_Shell_Boolean"
               ) {
                 subChild.visible = false;
-                // EXACT MATCH to backup.js - no instanceof check:
                 (subChild as any).morphTargetInfluences = [];
                 subChild.userData.skipAnimation = true;
               }
-              pacmanNames.push(subChild.name);
+              pacmanNames.push(subChildName);
             });
 
             children.forEach((item) => ghosts.pacman.add(item));
             ghosts.pacman.scale.set(0.05, 0.05, 0.05);
             ghosts.pacman.rotation.set(Math.PI / 2, Math.PI / 2, Math.PI / 4);
 
-            // Animation setup - NO FILTERING like backup.js
-            pacmanMixer = new THREE.AnimationMixer(ghosts.pacman);
-            const pacmanActions: { [key: string]: THREE.AnimationAction } = {};
+            // Animation setup
+            if (gltf.animations && gltf.animations.length > 0) {
+              pacmanMixer = new THREE.AnimationMixer(ghosts.pacman);
+              const pacmanActions: { [key: string]: THREE.AnimationAction } =
+                {};
 
-            gltf.animations.forEach((clip: THREE.AnimationClip) => {
-              const action = pacmanMixer.clipAction(clip);
+              gltf.animations.forEach((clip: THREE.AnimationClip) => {
+                const action = pacmanMixer.clipAction(clip);
 
-              // EXACT EVENT HANDLER like backup.js
-              action.getMixer().addEventListener("loop", function (e: any) {
-                e.action.getRoot().traverse(function (obj: any) {
-                  if (obj.userData && obj.userData.skipAnimation) {
-                    obj.updateMorphTargets = function () {};
-                  }
+                action.getMixer().addEventListener("loop", function (e: any) {
+                  e.action.getRoot().traverse(function (obj: any) {
+                    if (obj.userData && obj.userData.skipAnimation) {
+                      obj.updateMorphTargets = function () {};
+                    }
+                  });
                 });
+
+                pacmanActions[clip.name] = action;
+                action.setEffectiveWeight(0);
+                action.play();
               });
 
-              pacmanActions[clip.name] = action;
-              action.setEffectiveWeight(0);
-              action.play();
-            });
-
-            // Set all actions to weight 1 like backup.js
-            Object.values(pacmanActions).forEach((action) => {
-              action.setEffectiveWeight(1);
-            });
+              Object.values(pacmanActions).forEach((action) => {
+                action.setEffectiveWeight(1);
+              });
+            }
           }
-          // GHOST PROCESSING - inline like backup.js
-          else if (ghostContainers[child.name]) {
-            const ghostContainer = ghostContainers[child.name];
+          // GHOST PROCESSING
+          else if (ghostContainers[childName]) {
+            const ghostContainer = ghostContainers[childName];
             const ghostGroup = new THREE.Group();
 
             child.rotation.z = Math.PI;
@@ -130,14 +154,15 @@ export function loadModel(): Promise<void> {
 
             const children: THREE.Object3D[] = [];
             child.traverse((subChild) => {
+              const subChildName = subChild.name || "";
+
               if ((subChild as any).isMesh) {
-                if (subChild.name && subChild.name.startsWith("Ghost_Mesh")) {
+                if (subChildName.startsWith("Ghost_Mesh")) {
                   if (subChild instanceof THREE.Mesh) {
                     subChild.material = ghostMaterial;
                   }
                 } else if (
-                  subChild.name &&
-                  ["EUR", "CHF", "YEN", "USD", "GBP"].includes(subChild.name)
+                  ["EUR", "CHF", "YEN", "USD", "GBP"].includes(subChildName)
                 ) {
                   subChild.visible = false;
                 }
@@ -146,9 +171,10 @@ export function loadModel(): Promise<void> {
             });
 
             children.forEach((item) => {
+              const itemName = item.name || "";
               if (
-                item.name.includes("EUR") ||
-                item.name.startsWith("Ghost_Mesh")
+                itemName.includes("EUR") ||
+                itemName.startsWith("Ghost_Mesh")
               ) {
                 item.rotation.z = Math.PI;
                 item.rotation.x = Math.PI / 2;
@@ -166,15 +192,15 @@ export function loadModel(): Promise<void> {
             }
           }
 
-          // MESH PROCESSING - use .isMesh like backup.js
+          // MESH PROCESSING
           if ((child as any).isMesh) {
-            if (child.name === "CAM-Arena_LowRes_Top") {
+            if (childName === "CAM-Arena_LowRes_Top") {
               (child as THREE.Mesh).material = topMaterial;
               child.castShadow = true;
-            } else if (child.name === "CAM-Arena_LowRes_Bottom") {
+            } else if (childName === "CAM-Arena_LowRes_Bottom") {
               (child as THREE.Mesh).material = mazeMaterial;
               child.castShadow = true;
-            } else if (child.name === "CAM-Floor") {
+            } else if (childName === "CAM-Floor") {
               const clonedChild = child.clone();
               child.position.y = -0.1;
               child.position.x = 0;
@@ -196,26 +222,28 @@ export function loadModel(): Promise<void> {
               scene.add(clonedChild);
             }
           }
+        });
 
-          // Enable shadows
-          model.traverse(function (node: THREE.Object3D) {
-            if ((node as any).isMesh) {
-              node.castShadow = true;
-              node.receiveShadow = true;
-            }
-          });
+        // Enable shadows AFTER traversing
+        model.traverse(function (node: THREE.Object3D) {
+          if ((node as any).isMesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+          }
+        });
 
-          scene.add(model);
-          model.position.set(0.5, 0.5, 0.5);
-          resolve();
-        },
-        undefined,
-        function (error: ErrorEvent) {
-          console.error("Fehler beim Laden des 3D-Modells:", error);
-          console.warn("Continuing without 3D model...");
-          resolve();
-        }
-      );
-    });
+        // Add model to scene and position it
+        scene.add(model);
+        model.position.set(0.5, 0.5, 0.5);
+        console.log("3D Model loaded successfully");
+        resolve();
+      },
+      undefined,
+      function (error: ErrorEvent) {
+        console.error("Fehler beim Laden des 3D-Modells:", error);
+        console.warn("Continuing without 3D model...");
+        resolve();
+      }
+    );
   });
 }
