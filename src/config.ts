@@ -1,13 +1,13 @@
-import * as THREE from 'three';
-import { TriggerPosition } from './types';
-import { parentElements } from './scene';
+import * as THREE from "three";
+import { TriggerPosition } from "./types";
+import { parentElements } from "./scene";
 
 // Camera Configuration
 export const CAMERA_CONFIG = {
   originalFOV: 50,
   wideFOV: 80,
   near: 0.001,
-  far: 1000
+  far: 1000,
 };
 
 // Mobile Detection
@@ -20,13 +20,19 @@ export const CAMERA_POSITIONS = {
   secondMobile: new THREE.Vector3(0.5, 2.5, 2),
   secondDesktop: new THREE.Vector3(-1.5, 3, 2),
   mobileLookAt: new THREE.Vector3(0.5, 0.5, -1.5),
-  desktopLookAt: new THREE.Vector3(-1.25, 0.5, 0.25)
+  desktopLookAt: new THREE.Vector3(-1.25, 0.5, 0.25),
 };
 
 // Get correct positions based on device
-export const startPosition = isMobile ? CAMERA_POSITIONS.startMobile : CAMERA_POSITIONS.startDesktop;
-export const secondPosition = isMobile ? CAMERA_POSITIONS.secondMobile : CAMERA_POSITIONS.secondDesktop;
-export const lookAtPosition = isMobile ? CAMERA_POSITIONS.mobileLookAt : CAMERA_POSITIONS.desktopLookAt;
+export const startPosition = isMobile
+  ? CAMERA_POSITIONS.startMobile
+  : CAMERA_POSITIONS.startDesktop;
+export const secondPosition = isMobile
+  ? CAMERA_POSITIONS.secondMobile
+  : CAMERA_POSITIONS.secondDesktop;
+export const lookAtPosition = isMobile
+  ? CAMERA_POSITIONS.mobileLookAt
+  : CAMERA_POSITIONS.desktopLookAt;
 
 // Animation Configuration
 export const ANIMATION_CONFIG = {
@@ -36,7 +42,7 @@ export const ANIMATION_CONFIG = {
   TRIGGER_DISTANCE: 0.02,
   startEndScreenSectionProgress: 0.8,
   rotationStartingPoint: 0.973,
-  scrollDebounceDelay: 0
+  scrollDebounceDelay: 0,
 };
 
 // Shader Configuration
@@ -64,13 +70,13 @@ export const SHADER_CONFIG = {
       vec3 finalColor = mix(gradientA, gradientB, mixValue);
       gl_FragColor = vec4(finalColor, 1.0);
     }
-  `
+  `,
 };
 
 // Asset URLs
 export const ASSETS = {
   mazeTexture: "https://c-am.b-cdn.net/CAM/matcap24.png",
-  mazeModel: "https://c-am.b-cdn.net/CAM/c-am-assets-3.glb"
+  mazeModel: "https://c-am.b-cdn.net/CAM/c-am-assets-3.glb",
 };
 
 // DOM Selectors
@@ -81,7 +87,7 @@ export const SELECTORS = {
   homeSection: ".sc--home",
   povSection: ".sc--pov",
   finalSection: ".sc--final.sc",
-  parentElements: ".cmp--pov.cmp"
+  parentElements: ".cmp--pov.cmp",
 };
 
 // Special Points
@@ -93,10 +99,14 @@ export const SPECIAL_POINTS = {
   endRotationPoint: new THREE.Vector3(-0.14675, 1, 1.8085),
   targetLookAt: new THREE.Vector3(0.55675, 0.1, 1.306),
   finalLookAt: new THREE.Vector3(-0.14675, 0, 1.8085),
-  reverseFinalLookAt: new THREE.Vector3(7.395407041377711, 0.9578031302345096, -4.312450290270135)
+  reverseFinalLookAt: new THREE.Vector3(
+    7.395407041377711,
+    0.9578031302345096,
+    -4.312450290270135
+  ),
 };
 
-export const triggerPositions: { [key: string]: TriggerPosition } = {
+/*export const triggerPositions: { [key: string]: TriggerPosition } = {
   ghost1: {
     triggerPos: new THREE.Vector3(0.65725, 0.55, 0.75325),
     ghostTextPos: new THREE.Vector3(0.7075, 0.55, 0.8035),
@@ -137,7 +147,7 @@ export const triggerPositions: { [key: string]: TriggerPosition } = {
     parent: parentElements[4],
     active: false,
   },
-};
+};*/
 
 // Previous positions tracking
 const previousPositions: { [key: string]: any } = {
