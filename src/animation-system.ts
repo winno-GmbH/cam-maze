@@ -390,25 +390,30 @@ function handleScroll() {
   const rect = homeSection.getBoundingClientRect();
   const windowHeight = window.innerHeight;
 
-  // Check if we're scrolling through the home section
-  const isInHomeSection = rect.top < windowHeight && rect.bottom > 0;
+  // Check if we're scrolling through the home section or its extended buffer zone
+  const isInHomeSection =
+    rect.top < windowHeight && rect.bottom > -windowHeight; // Extended buffer zone
 
   // Calculate scroll progress: completely scroll-driven
+  // Add buffer zone to allow animation to complete smoothly past section bounds
+  const animationBuffer = windowHeight * 0.5; // 50% of viewport height as buffer
+  const totalAnimationHeight = homeSection.offsetHeight + animationBuffer;
+
   // If rect.top = windowHeight, we're just entering (scrollProgress = 0)
   // If rect.top = 0, we're at the start of section (scrollProgress = some value)
-  // If rect.top = -sectionHeight, we're at the end of section (scrollProgress = 1)
+  // If rect.top = -(sectionHeight + buffer), we're at the end of animation (scrollProgress = 1)
   const scrolledIntoSection = Math.max(0, -rect.top);
   const scrollProgress = Math.min(
-    scrolledIntoSection / homeSection.offsetHeight,
+    scrolledIntoSection / totalAnimationHeight,
     1
   );
 
   console.log(
-    `Scroll Debug: rect.top=${rect.top}, windowHeight=${windowHeight}, scrolledIntoSection=${scrolledIntoSection}, sectionHeight=${homeSection.offsetHeight}, scrollProgress=${scrollProgress}`
+    `Scroll Debug: rect.top=${rect.top}, windowHeight=${windowHeight}, scrolledIntoSection=${scrolledIntoSection}, totalAnimationHeight=${totalAnimationHeight}, scrollProgress=${scrollProgress}`
   );
 
   if (isInHomeSection) {
-    // We're in the home section - handle scroll animation
+    // We're in the home section or buffer zone - handle scroll animation
 
     if (scrollProgress > 0) {
       // Always animate when scrollProgress > 0, regardless of state
@@ -450,7 +455,7 @@ function handleScroll() {
       }
     }
   } else {
-    // We're outside the home section
+    // We're outside the home section and buffer zone
 
     // Check if we're at the very top of the page (above home section)
     if (window.scrollY <= 10) {
@@ -507,14 +512,21 @@ function handleIntroScroll() {
   const rect = introSection.getBoundingClientRect();
   const windowHeight = window.innerHeight;
 
-  // Calculate if intro section is in view
+  // Calculate if intro section is in view with buffer zone
   const sectionTop = rect.top;
   const sectionHeight = rect.height;
 
-  if (sectionTop <= windowHeight && sectionTop + sectionHeight >= 0) {
-    // Section is in view - calculate progress
+  // Add buffer zone for smooth animation completion
+  const animationBuffer = windowHeight * 0.2; // 20% buffer for intro
+  const totalAnimationHeight = sectionHeight + animationBuffer;
+
+  if (
+    sectionTop <= windowHeight &&
+    sectionTop + sectionHeight >= -animationBuffer
+  ) {
+    // Section is in view (including buffer zone) - calculate progress
     const scrolledIntoSection = Math.max(0, -sectionTop);
-    const progress = Math.min(1, scrolledIntoSection / sectionHeight);
+    const progress = Math.min(1, scrolledIntoSection / totalAnimationHeight);
 
     // Animate intro elements based on progress
     animateIntroHeader(progress);
@@ -1434,14 +1446,21 @@ function handlePOVScroll() {
   const rect = povSection.getBoundingClientRect();
   const windowHeight = window.innerHeight;
 
-  // Calculate if POV section is in view
+  // Calculate if POV section is in view with buffer zone
   const sectionTop = rect.top;
   const sectionHeight = rect.height;
 
-  if (sectionTop <= windowHeight && sectionTop + sectionHeight >= 0) {
-    // Section is in view - calculate progress
+  // Add buffer zone for smooth animation completion
+  const animationBuffer = windowHeight * 0.3; // 30% buffer for POV
+  const totalAnimationHeight = sectionHeight + animationBuffer;
+
+  if (
+    sectionTop <= windowHeight &&
+    sectionTop + sectionHeight >= -animationBuffer
+  ) {
+    // Section is in view (including buffer zone) - calculate progress
     const scrolledIntoSection = Math.max(0, -sectionTop);
-    const progress = Math.min(1, scrolledIntoSection / sectionHeight);
+    const progress = Math.min(1, scrolledIntoSection / totalAnimationHeight);
 
     // Start POV animation if not already active and we're in SCROLL_ANIMATION or HOME state
     if (
@@ -1460,7 +1479,7 @@ function handlePOVScroll() {
       updatePOVAnimation(progress);
     }
   } else {
-    // Section is out of view - end POV animation
+    // Section is out of view (beyond buffer zone) - end POV animation
     if (povAnimationState.isActive) {
       console.log("🎭 POV Animation Ended (Scroll)");
       povAnimationState.isActive = false;
