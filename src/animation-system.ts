@@ -1592,32 +1592,36 @@ function updateGhostInPOV(
   if (!path) return;
 
   // Check if ghost has trigger position
-  if (ghostKey in backupTriggerPositions) {
-    const trigger =
-      backupTriggerPositions[ghostKey as keyof typeof backupTriggerPositions];
+  if (ghostKey in povAnimationState.triggerPositions) {
+    const trigger = povAnimationState.triggerPositions[ghostKey];
     const { triggerPos, ghostTextPos, camTextPos, endPosition, parent } =
       trigger;
 
     if (!triggerPos || !endPosition) return;
 
-    const ghostText = parent as HTMLElement;
+    const ghostText = parent?.querySelector(".cmp--pov-ghost") as HTMLElement;
     const camText = parent?.querySelector(".cmp--pov-cam") as HTMLElement;
+
+    console.log(
+      `🎭 ${ghostKey} - Parent: ${parent ? "found" : "null"}, GhostText: ${
+        ghostText ? "found" : "null"
+      }, CamText: ${camText ? "found" : "null"}`
+    );
 
     ghost.scale.set(0.5, 0.5, 0.5);
 
     // Initialize ghost trigger state if not done already
-    if ((trigger as any).hasBeenTriggered === undefined) {
-      (trigger as any).hasBeenTriggered = false;
-      (trigger as any).hasBeenDeactivated = false;
-      (trigger as any).triggerCameraProgress = null;
-      (trigger as any).ghostTextCameraProgress = null;
-      (trigger as any).camTextCameraProgress = null;
-      (trigger as any).endCameraProgress = null;
-      (trigger as any).currentPathT = 0;
-      (trigger as any).ghostTextOpacity = 0;
-      (trigger as any).camTextOpacity = 0;
-      (trigger as any).lastProgress = 0;
-      (trigger as any).currentRotation = null;
+    if (trigger.hasBeenTriggered === undefined) {
+      trigger.hasBeenTriggered = false;
+      trigger.hasBeenDeactivated = false;
+      trigger.triggerCameraProgress = null;
+      trigger.ghostTextCameraProgress = null;
+      trigger.camTextCameraProgress = null;
+      trigger.endCameraProgress = null;
+      trigger.currentPathT = 0;
+      trigger.ghostTextOpacity = 0;
+      trigger.camTextOpacity = 0;
+      trigger.lastProgress = 0;
 
       // Make ghost and text invisible initially
       ghost.visible = false;
@@ -1635,23 +1639,21 @@ function updateGhostInPOV(
     const currentCameraProgress = findClosestProgressOnPOVPath(cameraPosition);
 
     // Calculate path positions if not done already
-    if ((trigger as any).triggerCameraProgress === null) {
-      (trigger as any).triggerCameraProgress =
-        findClosestProgressOnPOVPath(triggerPos);
-      (trigger as any).ghostTextCameraProgress = ghostTextPos
+    if (trigger.triggerCameraProgress === null) {
+      trigger.triggerCameraProgress = findClosestProgressOnPOVPath(triggerPos);
+      trigger.ghostTextCameraProgress = ghostTextPos
         ? findClosestProgressOnPOVPath(ghostTextPos)
-        : (trigger as any).triggerCameraProgress;
-      (trigger as any).camTextCameraProgress = camTextPos
+        : trigger.triggerCameraProgress;
+      trigger.camTextCameraProgress = camTextPos
         ? findClosestProgressOnPOVPath(camTextPos)
-        : (trigger as any).ghostTextCameraProgress;
-      (trigger as any).endCameraProgress =
-        findClosestProgressOnPOVPath(endPosition);
+        : trigger.ghostTextCameraProgress;
+      trigger.endCameraProgress = findClosestProgressOnPOVPath(endPosition);
     }
 
-    const triggerProgress = (trigger as any).triggerCameraProgress;
-    const ghostTextProgress = (trigger as any).ghostTextCameraProgress;
-    const camTextProgress = (trigger as any).camTextCameraProgress;
-    const endProgress = (trigger as any).endCameraProgress;
+    const triggerProgress = trigger.triggerCameraProgress;
+    const ghostTextProgress = trigger.ghostTextCameraProgress;
+    const camTextProgress = trigger.camTextCameraProgress;
+    const endProgress = trigger.endCameraProgress;
 
     // 1. Ghost visibility and position
     if (
@@ -1661,7 +1663,7 @@ function updateGhostInPOV(
       // Make ghost visible if not already active
       if (!ghost.visible) {
         ghost.visible = true;
-        (trigger as any).hasBeenTriggered = true;
+        trigger.hasBeenTriggered = true;
       }
 
       // Update ghost position
@@ -1671,46 +1673,27 @@ function updateGhostInPOV(
       let ghostProgress = Math.max(0, Math.min(1, normalizedProgress));
 
       // Parameter smoothing
-      if ((trigger as any).currentPathT === undefined) {
-        (trigger as any).currentPathT = ghostProgress;
+      if (trigger.currentPathT === undefined) {
+        trigger.currentPathT = ghostProgress;
       } else {
         const parameterSmoothingFactor = 0.1;
-        (trigger as any).currentPathT +=
-          (ghostProgress - (trigger as any).currentPathT) *
-          parameterSmoothingFactor;
+        trigger.currentPathT +=
+          (ghostProgress - trigger.currentPathT) * parameterSmoothingFactor;
       }
 
       // Final progress with smoothing
-      ghostProgress = (trigger as any).currentPathT;
+      ghostProgress = trigger.currentPathT;
 
       // Update ghost position
       const pathPoint = path.getPointAt(ghostProgress);
       ghost.position.copy(pathPoint);
 
-      // Update ghost orientation with smooth rotation
+      // Simple ghost orientation: stand upright and face tangent direction
       const tangent = path.getTangentAt(ghostProgress).normalize();
       const lookAtPoint = ghost.position.clone().add(tangent);
 
-      if (!(trigger as any).currentRotation) {
-        (trigger as any).currentRotation = new THREE.Quaternion();
-        ghost.getWorldQuaternion((trigger as any).currentRotation);
-      }
-
-      const targetQuaternion = new THREE.Quaternion();
-      const lookAtMatrix = new THREE.Matrix4().lookAt(
-        ghost.position,
-        lookAtPoint,
-        new THREE.Vector3(0, 1, 0)
-      );
-      targetQuaternion.setFromRotationMatrix(lookAtMatrix);
-
-      // Smoothly interpolate to target rotation
-      const rotationSmoothingFactor = 0.15;
-      (trigger as any).currentRotation.slerp(
-        targetQuaternion,
-        rotationSmoothingFactor
-      );
-      ghost.quaternion.copy((trigger as any).currentRotation);
+      // Make ghost look in tangent direction while staying upright
+      ghost.lookAt(lookAtPoint);
 
       // Fade out at the end
       if (ghostProgress > 0.9) {
@@ -1721,7 +1704,7 @@ function updateGhostInPOV(
     } else {
       // Make ghost invisible when outside range
       ghost.visible = false;
-      (trigger as any).hasBeenTriggered = false;
+      trigger.hasBeenTriggered = false;
     }
 
     // 2. TEXT VISIBILITY: Adjusted timing ranges
@@ -1786,31 +1769,31 @@ function updateGhostInPOV(
     const fadeOutSpeed = 0.1; // Slower fade out
 
     // Update ghost text opacity
-    if (targetGhostOpacity > (trigger as any).ghostTextOpacity) {
-      (trigger as any).ghostTextOpacity +=
-        (targetGhostOpacity - (trigger as any).ghostTextOpacity) * fadeInSpeed;
+    if (targetGhostOpacity > trigger.ghostTextOpacity) {
+      trigger.ghostTextOpacity +=
+        (targetGhostOpacity - trigger.ghostTextOpacity) * fadeInSpeed;
     } else {
-      (trigger as any).ghostTextOpacity +=
-        (targetGhostOpacity - (trigger as any).ghostTextOpacity) * fadeOutSpeed;
+      trigger.ghostTextOpacity +=
+        (targetGhostOpacity - trigger.ghostTextOpacity) * fadeOutSpeed;
     }
 
     // Update CAM text opacity
-    if (targetCamOpacity > (trigger as any).camTextOpacity) {
-      (trigger as any).camTextOpacity +=
-        (targetCamOpacity - (trigger as any).camTextOpacity) * fadeInSpeed;
+    if (targetCamOpacity > trigger.camTextOpacity) {
+      trigger.camTextOpacity +=
+        (targetCamOpacity - trigger.camTextOpacity) * fadeInSpeed;
     } else {
-      (trigger as any).camTextOpacity +=
-        (targetCamOpacity - (trigger as any).camTextOpacity) * fadeOutSpeed;
+      trigger.camTextOpacity +=
+        (targetCamOpacity - trigger.camTextOpacity) * fadeOutSpeed;
     }
 
     // 4. DOM UPDATES
     const ghostTextOpacity = Math.max(
       0,
-      Math.min(1, Math.round((trigger as any).ghostTextOpacity * 1000) / 1000)
+      Math.min(1, Math.round(trigger.ghostTextOpacity * 1000) / 1000)
     );
     const camTextOpacity = Math.max(
       0,
-      Math.min(1, Math.round((trigger as any).camTextOpacity * 1000) / 1000)
+      Math.min(1, Math.round(trigger.camTextOpacity * 1000) / 1000)
     );
 
     // Update DOM only when necessary
@@ -1845,7 +1828,7 @@ function updateGhostInPOV(
     }
 
     // Store position for next iteration
-    (trigger as any).lastProgress = currentCameraProgress;
+    trigger.lastProgress = currentCameraProgress;
   } else {
     // Default behavior for ghosts without triggers
     const closestProgress = findClosestProgressOnPOVPath(cameraPosition);
