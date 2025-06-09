@@ -564,14 +564,14 @@ function animateIntroBody(progress: number) {
   // Make visible
   introBody.style.display = "block";
 
-  // Body animation: Starts at 35% (earlier, like backup.js center center) and runs to 100% (bottom bottom)
-  // More realistic timing: start "center center", end "bottom bottom"
+  // Body animation: "center center" to "bottom bottom" (50% to 100% of TOTAL GSAP animation)
+  // GSAP: start="center center" end="bottom bottom" = second half of full animation
   let scale = 0.5;
   let opacity = 0;
 
-  if (progress >= 0.35) {
-    // Map 0.35-1.0 to 0-1 for full animation (center center to bottom bottom)
-    const localProgress = Math.min(1, (progress - 0.35) / 0.65); // 0.35-1.0 range = 0.65 duration
+  if (progress >= 0.5) {
+    // Map 0.5-1.0 to 0-1 for full animation (center center to bottom bottom)
+    const localProgress = Math.min(1, (progress - 0.5) / 0.5); // 0.5-1.0 range to 0-1 animation
 
     if (localProgress <= 0.3) {
       // 0% - 30%: scale 0.5->0.8, opacity 0->1
@@ -598,11 +598,13 @@ function animateIntroBody(progress: number) {
       )}, opacity=${opacity.toFixed(2)}`
     );
   } else {
-    // Before 0.35 progress, body is not visible
+    // Before 0.5 progress (before center center), body is not visible
     scale = 0.5;
     opacity = 0;
     console.log(
-      `🎬 BODY WAITING: progress=${progress.toFixed(3)} (waiting for 0.35)`
+      `🎬 BODY WAITING: progress=${progress.toFixed(
+        3
+      )} (waiting for 0.5 - center center)`
     );
   }
 
