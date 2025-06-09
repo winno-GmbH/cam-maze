@@ -280,10 +280,11 @@ function animationLoop() {
 function resetToHomeState() {
   currentAnimationState = "HOME";
 
-  if (pauseTime) {
-    timeOffset += Date.now() - pauseTime;
-    pauseTime = 0;
-  }
+  // CRITICAL FIX: Reset animation timing to start fresh home animation
+  animationStartTime = Date.now();
+  timeOffset = 0;
+  pauseTime = 0;
+  console.log("🔄 Animation timing reset - home animation will start fresh");
 
   // Reset camera to initial position and rotation
   camera.position.copy(initialCameraPosition);
