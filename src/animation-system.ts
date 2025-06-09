@@ -7,14 +7,12 @@ import { camera, startQuaternion, endQuaternion } from "./camera";
 // 1. STATE MANAGEMENT
 type AnimationState = "HOME" | "SCROLL_ANIMATION" | "POV_ANIMATION";
 let currentAnimationState: AnimationState = "HOME";
-let isFirstScroll = true;
 
 // Debug info for window
 declare global {
   interface Window {
     animationDebugInfo: {
       state: AnimationState;
-      isFirstScroll: boolean;
       capturedPositions: any;
       bezierCurves: any;
       scrollProgress?: number;
@@ -163,8 +161,17 @@ function moveGhostOnCurve(ghostKey: string, ghostProgress: number) {
 
 // Create camera path exactly like backup.js but starting from current position
 function createCameraPath() {
-  // Use current camera position as start (don't jump)
-  const startPosition = initialCameraPosition.clone();
+  // Use current camera position as start (don't jump) - capture it NOW
+  const startPosition = camera.position.clone();
+
+  // Update the initial camera state to current state for smooth transitions
+  initialCameraPosition.copy(camera.position);
+  initialCameraQuaternion.copy(camera.quaternion);
+  const direction = new THREE.Vector3(0, 0, -1);
+  direction.applyQuaternion(camera.quaternion);
+  initialCameraTarget = camera.position
+    .clone()
+    .add(direction.multiplyScalar(5));
 
   // Calculate a smooth second position towards backup.js path
   const isMobile = window.innerWidth < 768;
@@ -203,56 +210,6 @@ let initialCameraPosition = new THREE.Vector3();
 let initialCameraTarget = new THREE.Vector3();
 let initialCameraQuaternion = new THREE.Quaternion();
 let cameraHomePath: THREE.CubicBezierCurve3;
-
-function onFirstScroll() {
-  if (!isFirstScroll) return;
-
-  console.log("onFirstScroll called - stopping all animations immediately");
-
-  isFirstScroll = false;
-  pauseTime = Date.now();
-
-  // IMMEDIATELY stop the home animation by changing state first
-  currentAnimationState = "SCROLL_ANIMATION";
-
-  // Use the CURRENT camera position and rotation as start point (don't jump!)
-  const currentCameraPosition = camera.position.clone();
-  const currentCameraQuaternion = camera.quaternion.clone();
-  const currentDirection = new THREE.Vector3(0, 0, -1);
-  currentDirection.applyQuaternion(camera.quaternion);
-  const currentCameraTarget = camera.position
-    .clone()
-    .add(currentDirection.multiplyScalar(5));
-
-  console.log("Using current camera position for path:", currentCameraPosition);
-  console.log(
-    "Using current camera rotation (quaternion):",
-    currentCameraQuaternion
-  );
-  console.log("Using current camera look-at target:", currentCameraTarget);
-
-  // Update the camera start position and rotation for smooth transition
-  initialCameraPosition.copy(currentCameraPosition);
-  initialCameraTarget.copy(currentCameraTarget);
-  initialCameraQuaternion.copy(currentCameraQuaternion);
-
-  // Capture ghost positions AFTER stopping animation
-  captureGhostPositions();
-  createBezierCurves();
-
-  // Create camera path starting from CURRENT position (not jump)
-  createCameraPath();
-
-  // Update debug info
-  if (window.animationDebugInfo) {
-    window.animationDebugInfo.state = currentAnimationState;
-    window.animationDebugInfo.isFirstScroll = isFirstScroll;
-  }
-
-  console.log(
-    "First scroll detected - animation STOPPED immediately, bezier curves created"
-  );
-}
 
 // 4. ANIMATION LOOP
 let animationStartTime = Date.now();
@@ -317,7 +274,6 @@ function animationLoop() {
 // Reset to home state helper
 function resetToHomeState() {
   currentAnimationState = "HOME";
-  isFirstScroll = true;
 
   if (pauseTime) {
     timeOffset += Date.now() - pauseTime;
@@ -371,7 +327,6 @@ function resetToHomeState() {
   // Update debug info
   if (window.animationDebugInfo) {
     window.animationDebugInfo.state = currentAnimationState;
-    window.animationDebugInfo.isFirstScroll = isFirstScroll;
     window.animationDebugInfo.scrollProgress = 0;
   }
 }
@@ -456,49 +411,46 @@ function handleScroll() {
     // We're in the home section - handle scroll animation
 
     if (scrollProgress > 0) {
-      // Start scroll animation if not already active
+      // Always animate when scrollProgress > 0, regardless of state
+      // Switch to SCROLL_ANIMATION state if not already
       if (currentAnimationState === "HOME") {
-        console.log("Starting scroll animation...");
-        onFirstScroll();
+        currentAnimationState = "SCROLL_ANIMATION";
+        console.log("Switched to SCROLL_ANIMATION state");
+
+        // Capture positions immediately when starting scroll animation
+        captureGhostPositions();
+        createBezierCurves();
+        createCameraPath();
       }
 
-      if (currentAnimationState === "SCROLL_ANIMATION") {
-        console.log(`Animating with scrollProgress: ${scrollProgress}`);
+      // Always animate based on scroll progress (no state checks)
+      console.log(`Animating with scrollProgress: ${scrollProgress}`);
 
-        // Animate ghosts along bezier curves (they finish at 80% scroll)
-        Object.keys(ghosts).forEach((ghostKey) => {
-          if (bezierCurves[ghostKey]) {
-            // Compress ghost animation into 0-80% range
-            const ghostProgress = Math.min(scrollProgress / GHOSTS_END_AT, 1);
-            moveGhostOnCurve(ghostKey, ghostProgress);
-          }
-        });
-
-        // Animate camera normally (0% to 100%)
-        animateCamera(scrollProgress);
-
-        // Update debug info
-        if (window.animationDebugInfo) {
-          window.animationDebugInfo.scrollProgress = scrollProgress;
+      // Animate ghosts along bezier curves (they finish at 80% scroll)
+      Object.keys(ghosts).forEach((ghostKey) => {
+        if (bezierCurves[ghostKey]) {
+          // Compress ghost animation into 0-80% range
+          const ghostProgress = Math.min(scrollProgress / GHOSTS_END_AT, 1);
+          moveGhostOnCurve(ghostKey, ghostProgress);
         }
+      });
+
+      // Animate camera normally (0% to 100%)
+      animateCamera(scrollProgress);
+
+      // Update debug info
+      if (window.animationDebugInfo) {
+        window.animationDebugInfo.scrollProgress = scrollProgress;
       }
     } else if (scrollProgress === 0) {
       // Back at the beginning of home section - reset to home state
-      if (currentAnimationState === "SCROLL_ANIMATION") {
+      if (currentAnimationState !== "HOME") {
         console.log("Scroll progress at 0, resetting to home state");
         resetToHomeState();
       }
     }
   } else {
     // We're outside the home section
-
-    // If we were in scroll animation and left the section, maintain the final animation state
-    // The camera should stay at whatever position it was at when we left
-    if (currentAnimationState === "SCROLL_ANIMATION") {
-      // Maintain the current scroll animation position
-      // Don't change state - we'll resume when coming back to home section
-      console.log("Left home section - maintaining current scroll position");
-    }
 
     // Check if we're at the very top of the page (above home section)
     if (window.scrollY <= 10) {
@@ -683,7 +635,6 @@ export function initAnimationSystem() {
   // Setup debug info
   window.animationDebugInfo = {
     state: currentAnimationState,
-    isFirstScroll: isFirstScroll,
     capturedPositions: capturedPositions,
     bezierCurves: bezierCurves,
     povAnimationActive: false,
