@@ -422,8 +422,9 @@ function animateCamera(progress: number) {
     return;
   }
 
-  // FOV is CONSTANT like backup.js (this was the only issue!)
-  camera.fov = 80; // wideFOV from backup.js - CONSTANT, no animation!
+  // Keep original FOV (50°) - don't jump to wide FOV immediately!
+  // Only change FOV if backup.js specifically does it
+  camera.fov = 50; // Keep originalFOV, don't jump to 80°!
   camera.updateProjectionMatrix();
 
   // Get position on the backup.js curve
