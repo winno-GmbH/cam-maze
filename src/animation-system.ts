@@ -523,8 +523,8 @@ function handleScroll() {
     // Animate camera normally (0% to 100%)
     animateCamera(scrollProgress);
 
-    // Trigger intro animations when scroll animation is complete (100%) - only once
-    if (scrollProgress >= 1.0 && !introAnimationsTriggered) {
+    // Trigger intro animations when scroll animation is nearly complete (99%) - only once
+    if (scrollProgress >= 0.99 && !introAnimationsTriggered) {
       introAnimationsTriggered = true;
       triggerIntroAnimations();
     }
