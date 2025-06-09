@@ -96,6 +96,17 @@ export function moveGhostOnCurve(ghostKey: string, ghostProgress: number) {
   const position = bezierCurves[ghostKey].getPoint(ghostProgress);
   ghost.position.copy(position);
 
+  // Only log first few movements to avoid spam
+  if (ghostProgress < 0.1) {
+    console.log(
+      `👻 ${ghostKey} at progress ${ghostProgress.toFixed(
+        3
+      )} moved to (${position.x.toFixed(2)}, ${position.y.toFixed(
+        2
+      )}, ${position.z.toFixed(2)})`
+    );
+  }
+
   // Rotation interpolation
   const originalRotation = capturedRotations[ghostKey];
   const targetRotation = new THREE.Euler(Math.PI / -2, 0, 0);
@@ -197,6 +208,12 @@ function onFirstScroll() {
   currentAnimationState = "SCROLL_ANIMATION";
 
   console.log("🔄 State changed to SCROLL_ANIMATION");
+  console.log("🔄 Current state is now:", currentAnimationState);
+
+  // Verify state change worked
+  setTimeout(() => {
+    console.log("🔄 State check after 100ms:", currentAnimationState);
+  }, 100);
 
   const currentCameraPosition = camera.position.clone();
   const currentCameraQuaternion = camera.quaternion.clone();
