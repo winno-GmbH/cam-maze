@@ -455,17 +455,26 @@ function handleIntroScroll() {
   const sectionBottom = rect.bottom;
   const sectionHeight = rect.height;
 
-  // Animation should run from "top top" to "bottom bottom" exactly
-  if (sectionTop <= windowHeight && sectionBottom >= 0) {
-    // Section is in view - calculate progress based on section position
-    const scrolledIntoSection = Math.max(0, -sectionTop);
-    const progress = Math.min(1, scrolledIntoSection / sectionHeight);
+  // Animation should run from "top top" to "bottom bottom" (GSAP logic)
+  // Start: when section top hits viewport top (sectionTop = 0)
+  // End: when section bottom hits viewport bottom (sectionBottom = -windowHeight)
+
+  if (sectionTop <= 0 && sectionBottom >= -windowHeight) {
+    // Section is in animation range
+    // Total animation distance = sectionHeight + windowHeight
+    const totalAnimationDistance = sectionHeight + windowHeight;
+    const scrolledDistance = Math.max(0, -sectionTop);
+    const progress = Math.min(1, scrolledDistance / totalAnimationDistance);
 
     // DEBUG: Intro scroll timing
     console.log(
       `🎬 INTRO DEBUG: top=${sectionTop.toFixed(
         1
       )}, bottom=${sectionBottom.toFixed(1)}, height=${sectionHeight.toFixed(
+        1
+      )}, windowHeight=${windowHeight.toFixed(
+        1
+      )}, totalDistance=${totalAnimationDistance.toFixed(
         1
       )}, progress=${progress.toFixed(3)}`
     );
