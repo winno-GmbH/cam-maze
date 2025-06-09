@@ -571,25 +571,35 @@ function animateIntroHeader(progress: number) {
   // Make visible
   introHeader.style.display = "block";
 
-  // Keyframe progress mapping (like backup.js)
+  // Header animation: First half of intro section (0-0.5)
+  // Map progress 0-0.5 to full animation 0-1
   let scale = 0;
   let opacity = 0;
 
-  if (progress <= 0.3) {
-    // 0% - 30%: scale 0->0.8, opacity 0->1
-    const localProgress = progress / 0.3;
-    scale = localProgress * 0.8;
-    opacity = localProgress;
-  } else if (progress <= 0.7) {
-    // 30% - 70%: scale 0.8->1.2, opacity stays 1
-    const localProgress = (progress - 0.3) / 0.4;
-    scale = 0.8 + localProgress * 0.4; // 0.8 -> 1.2
-    opacity = 1;
+  if (progress <= 0.5) {
+    // Map 0-0.5 to 0-1 for full animation
+    const localProgress = progress / 0.5;
+
+    if (localProgress <= 0.3) {
+      // 0% - 30%: scale 0->0.8, opacity 0->1
+      const keyframeProgress = localProgress / 0.3;
+      scale = keyframeProgress * 0.8;
+      opacity = keyframeProgress;
+    } else if (localProgress <= 0.7) {
+      // 30% - 70%: scale 0.8->1.2, opacity stays 1
+      const keyframeProgress = (localProgress - 0.3) / 0.4;
+      scale = 0.8 + keyframeProgress * 0.4; // 0.8 -> 1.2
+      opacity = 1;
+    } else {
+      // 70% - 100%: scale 1.2->1.5, opacity 1->0
+      const keyframeProgress = (localProgress - 0.7) / 0.3;
+      scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
+      opacity = 1 - keyframeProgress; // 1 -> 0
+    }
   } else {
-    // 70% - 100%: scale 1.2->1.5, opacity 1->0
-    const localProgress = (progress - 0.7) / 0.3;
-    scale = 1.2 + localProgress * 0.3; // 1.2 -> 1.5
-    opacity = 1 - localProgress; // 1 -> 0
+    // After 0.5 progress, header is fully animated out
+    scale = 1.5;
+    opacity = 0;
   }
 
   introHeader.style.transform = `scale(${scale})`;
@@ -603,25 +613,35 @@ function animateIntroBody(progress: number) {
   // Make visible
   introBody.style.display = "block";
 
-  // Same keyframe logic as header but starting from scale 0.5
+  // Body animation: Second half of intro section (0.5-1.0)
+  // Map progress 0.5-1.0 to full animation 0-1
   let scale = 0.5;
   let opacity = 0;
 
-  if (progress <= 0.3) {
-    // 0% - 30%: scale 0.5->0.8, opacity 0->1
-    const localProgress = progress / 0.3;
-    scale = 0.5 + localProgress * 0.3; // 0.5 -> 0.8
-    opacity = localProgress;
-  } else if (progress <= 0.7) {
-    // 30% - 70%: scale 0.8->1.2, opacity stays 1
-    const localProgress = (progress - 0.3) / 0.4;
-    scale = 0.8 + localProgress * 0.4; // 0.8 -> 1.2
-    opacity = 1;
+  if (progress > 0.5) {
+    // Map 0.5-1.0 to 0-1 for full animation
+    const localProgress = (progress - 0.5) / 0.5;
+
+    if (localProgress <= 0.3) {
+      // 0% - 30%: scale 0.5->0.8, opacity 0->1
+      const keyframeProgress = localProgress / 0.3;
+      scale = 0.5 + keyframeProgress * 0.3; // 0.5 -> 0.8
+      opacity = keyframeProgress;
+    } else if (localProgress <= 0.7) {
+      // 30% - 70%: scale 0.8->1.2, opacity stays 1
+      const keyframeProgress = (localProgress - 0.3) / 0.4;
+      scale = 0.8 + keyframeProgress * 0.4; // 0.8 -> 1.2
+      opacity = 1;
+    } else {
+      // 70% - 100%: scale 1.2->1.5, opacity 1->0
+      const keyframeProgress = (localProgress - 0.7) / 0.3;
+      scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
+      opacity = 1 - keyframeProgress; // 1 -> 0
+    }
   } else {
-    // 70% - 100%: scale 1.2->1.5, opacity 1->0
-    const localProgress = (progress - 0.7) / 0.3;
-    scale = 1.2 + localProgress * 0.3; // 1.2 -> 1.5
-    opacity = 1 - localProgress; // 1 -> 0
+    // Before 0.5 progress, body is not visible
+    scale = 0.5;
+    opacity = 0;
   }
 
   introBody.style.transform = `scale(${scale})`;
