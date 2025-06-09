@@ -509,14 +509,14 @@ function animateIntroHeader(progress: number) {
   // Make visible
   introHeader.style.display = "block";
 
-  // Header animation: Runs from 0% (top top) to 35% (before center center) of intro section
-  // Earlier finish so body can start at 35%
+  // Header animation: "top top" to "center center" (0% to 50% of TOTAL GSAP animation)
+  // GSAP: start="top top" end="center center" = first half of full animation
   let scale = 0;
   let opacity = 0;
 
-  if (progress <= 0.35) {
-    // Map 0-0.35 to 0-1 for full animation (top top to center center)
-    const localProgress = Math.min(1, progress / 0.35); // 0-0.35 range = 0.35 duration
+  if (progress <= 0.5) {
+    // Map 0-0.5 to 0-1 for full animation (top top to center center)
+    const localProgress = Math.min(1, progress * 2); // 0-0.5 range to 0-1 animation
 
     if (localProgress <= 0.3) {
       // 0% - 30%: scale 0->0.8, opacity 0->1
@@ -543,7 +543,7 @@ function animateIntroHeader(progress: number) {
       )}, opacity=${opacity.toFixed(2)}`
     );
   } else {
-    // After 0.35 progress, header is fully animated out
+    // After 0.5 progress (center center reached), header is fully animated out
     scale = 1.5;
     opacity = 0;
     console.log(
