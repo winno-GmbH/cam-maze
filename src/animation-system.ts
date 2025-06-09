@@ -200,33 +200,39 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
   }
 }
 
-// Create camera path exactly like backup.js
+// Create camera path exactly like backup.js but starting from current position
 function createCameraPath() {
-  // Exact same positions as backup.js
+  // Use current camera position as start (don't jump)
+  const startPosition = initialCameraPosition.clone();
+
+  // Calculate a smooth second position towards backup.js path
   const isMobile = window.innerWidth < 768;
-  const startMobileCameraPosition = new THREE.Vector3(0.5, 2.5, 2.5);
-  const startDesktopCameraPosition = new THREE.Vector3(-2, 2.5, 2);
-  const startPosition = isMobile
-    ? startMobileCameraPosition
-    : startDesktopCameraPosition;
+  const targetSecondPositionMobile = new THREE.Vector3(0.5, 2.5, 2);
+  const targetSecondPositionDesktop = new THREE.Vector3(-1.5, 3, 2);
+  const targetSecondPosition = isMobile
+    ? targetSecondPositionMobile
+    : targetSecondPositionDesktop;
 
-  const secondPositionMobile = new THREE.Vector3(0.5, 2.5, 2);
-  const secondPositionDesktop = new THREE.Vector3(-1.5, 3, 2);
-  const secondPosition = isMobile
-    ? secondPositionMobile
-    : secondPositionDesktop;
+  // Create a second position between current and target
+  const secondPosition = new THREE.Vector3().lerpVectors(
+    startPosition,
+    targetSecondPosition,
+    0.3
+  );
 
-  // Exact same path as backup.js
+  // Exact same control and end points as backup.js
   cameraHomePath = new THREE.CubicBezierCurve3(
-    startPosition, // Fixed start position
-    secondPosition, // Fixed second position
+    startPosition, // Current position (no jump)
+    secondPosition, // Interpolated second position
     new THREE.Vector3(0.55675, 3, 0.45175), // High control point
     new THREE.Vector3(0.55675, 0.5, 0.45175) // End point (maze center)
   );
 
   console.log(
-    `Camera path created for ${isMobile ? "mobile" : "desktop"}:`,
-    `from ${startPosition.x}, ${startPosition.y}, ${startPosition.z}`,
+    `Camera path created starting from current position:`,
+    `${startPosition.x.toFixed(2)}, ${startPosition.y.toFixed(
+      2
+    )}, ${startPosition.z.toFixed(2)}`,
     "to maze center (0.55675, 0.5, 0.45175)"
   );
 }
@@ -398,29 +404,49 @@ function resetToHomeState() {
   }
 }
 
-// Camera animation helper - EXACT backup.js implementation
+// Camera animation helper - following backup.js logic more closely
 function animateCamera(progress: number) {
   if (!cameraHomePath) {
     console.warn("Camera path not created yet");
     return;
   }
 
-  // Get position on the exact backup.js curve
+  // Set FOV to wide immediately like backup.js
+  camera.fov = 80; // wideFOV from backup.js
+  camera.updateProjectionMatrix();
+
+  // Get position on the backup.js curve
   const position = cameraHomePath.getPointAt(progress);
   camera.position.copy(position);
 
-  // Get direction from curve tangent for smooth camera direction
+  // Get tangent for default look direction
   const tangent = cameraHomePath.getTangentAt(progress).normalize();
-  const lookAtTarget = position.clone().add(tangent);
+  const defaultLookAt = position.clone().add(tangent);
 
-  camera.lookAt(lookAtTarget);
+  // Implement backup.js camera look-at logic
+  if (progress === 0) {
+    // At start: look straight down/forward
+    camera.lookAt(new THREE.Vector3(camera.position.x, 2, camera.position.z));
+  } else if (progress < 0.1) {
+    // First 10%: smooth transition from looking up to looking forward
+    const transitionProgress = progress / 0.1;
+    const upLookAt = new THREE.Vector3(camera.position.x, 1, camera.position.z);
+    const frontLookAt = new THREE.Vector3(
+      camera.position.x,
+      0.5,
+      camera.position.z + 1
+    );
 
-  // Adjust FOV like in backup.js (wideFOV at progress > 0)
-  if (progress > 0) {
-    const startFOV = 50; // Default camera FOV
-    const targetFOV = 80; // Wide FOV like backup.js
-    camera.fov = startFOV + (targetFOV - startFOV) * progress;
-    camera.updateProjectionMatrix();
+    const interpolatedLookAt = new THREE.Vector3();
+    interpolatedLookAt.lerpVectors(
+      upLookAt,
+      frontLookAt,
+      smoothStep(transitionProgress)
+    );
+    camera.lookAt(interpolatedLookAt);
+  } else {
+    // Default: look along the curve tangent (into the maze)
+    camera.lookAt(defaultLookAt);
   }
 
   console.log(
@@ -428,6 +454,11 @@ function animateCamera(progress: number) {
       2
     )}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}`
   );
+}
+
+// Smooth step function from backup.js
+function smoothStep(x: number): number {
+  return x * x * (3 - 2 * x);
 }
 
 // Scroll event handler
