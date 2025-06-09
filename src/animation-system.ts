@@ -1720,24 +1720,40 @@ function updateGhostInPOV(
       // Make ghost look in tangent direction while staying upright
       ghost.lookAt(lookAtPoint);
 
-      // FIXED: Use normalized progress for fade (not smoothed progress)
+      // SMOOTH FADE: Calculate target opacity based on normalized progress, then smooth the opacity change
+      let targetOpacity = 1;
       if (fadeProgress > 0.9) {
-        const fadeOpacity = 1 - (fadeProgress - 0.9) / 0.1;
-        (ghost as any).material.opacity = fadeOpacity;
+        targetOpacity = 1 - (fadeProgress - 0.9) / 0.1;
+        targetOpacity = Math.max(0, Math.min(1, targetOpacity));
+      }
+
+      // Initialize opacity tracking if not exists
+      if (trigger.currentOpacity === undefined) {
+        trigger.currentOpacity = 1;
+      }
+
+      // Smooth opacity transition for smooth fade effect
+      const opacitySmoothingFactor = 0.15; // Faster than position smoothing for responsive fade
+      trigger.currentOpacity +=
+        (targetOpacity - trigger.currentOpacity) * opacitySmoothingFactor;
+
+      // Apply smoothed opacity
+      (ghost as any).material.opacity = trigger.currentOpacity;
+
+      if (fadeProgress > 0.9) {
         console.log(
-          `🎭 ${ghostKey} FADING OUT: fadeProgress=${fadeProgress.toFixed(
+          `🎭 ${ghostKey} FADING: fadeProgress=${fadeProgress.toFixed(
             3
-          )}, opacity=${fadeOpacity.toFixed(3)}`
+          )}, targetOpacity=${targetOpacity.toFixed(
+            3
+          )}, currentOpacity=${trigger.currentOpacity.toFixed(3)}`
         );
-      } else {
-        (ghost as any).material.opacity = 1;
-        if (fadeProgress > 0.85) {
-          console.log(
-            `🎭 ${ghostKey} ALMOST FADING: fadeProgress=${fadeProgress.toFixed(
-              3
-            )} (need > 0.9)`
-          );
-        }
+      } else if (fadeProgress > 0.85) {
+        console.log(
+          `🎭 ${ghostKey} ALMOST FADING: fadeProgress=${fadeProgress.toFixed(
+            3
+          )} (will trigger at > 0.9)`
+        );
       }
 
       // Check if ghost actually has material and if it's working
@@ -1748,7 +1764,9 @@ function updateGhostInPOV(
       }
 
       console.log(
-        `🎭 ${ghostKey} visible in range: progress=${ghostProgress.toFixed(
+        `🎭 ${ghostKey} visible in range: positionProgress=${positionProgress.toFixed(
+          3
+        )}, fadeProgress=${fadeProgress.toFixed(
           3
         )}, cameraProgress=${currentCameraProgress.toFixed(3)}, visible=${
           ghost.visible
