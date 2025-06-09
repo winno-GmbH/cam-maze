@@ -395,26 +395,33 @@ function handleScroll() {
   const rect = homeSection.getBoundingClientRect();
   const windowHeight = window.innerHeight;
 
-  // Check if we're scrolling through the home section or its extended buffer zone
+  // Check if we're in or approaching the home section animation range
   const isInHomeSection =
-    rect.top < windowHeight && rect.bottom > -windowHeight; // Extended buffer zone
+    rect.top <= windowHeight && rect.bottom > -windowHeight;
 
-  // Calculate scroll progress: completely scroll-driven
-  // Add buffer zone to allow animation to complete smoothly past section bounds
-  const animationBuffer = windowHeight * 0.5; // 50% of viewport height as buffer
-  const totalAnimationHeight = homeSection.offsetHeight + animationBuffer;
+  // Calculate scroll progress: LIMITED to "top top" -> "top bottom"
+  // Animation starts when section top hits viewport top (rect.top = 0)
+  // Animation ends when section top hits viewport bottom (rect.top = -windowHeight)
 
-  // If rect.top = windowHeight, we're just entering (scrollProgress = 0)
-  // If rect.top = 0, we're at the start of section (scrollProgress = some value)
-  // If rect.top = -(sectionHeight + buffer), we're at the end of animation (scrollProgress = 1)
-  const scrolledIntoSection = Math.max(0, -rect.top);
-  const scrollProgress = Math.min(
-    scrolledIntoSection / totalAnimationHeight,
-    1
-  );
+  let scrollProgress = 0;
+
+  if (rect.top <= 0 && rect.top >= -windowHeight) {
+    // We're in the animation range: top of section is between top and bottom of viewport
+    const animationRange = windowHeight; // Total animation distance
+    const currentPosition = Math.abs(rect.top); // How far past top we are (0 to windowHeight)
+    scrollProgress = currentPosition / animationRange; // 0 to 1
+  } else if (rect.top < -windowHeight) {
+    // Past the animation range - animation complete
+    scrollProgress = 1;
+  }
+  // else scrollProgress stays 0 (before animation range)
 
   console.log(
-    `Scroll Debug: rect.top=${rect.top}, windowHeight=${windowHeight}, scrolledIntoSection=${scrolledIntoSection}, totalAnimationHeight=${totalAnimationHeight}, scrollProgress=${scrollProgress}`
+    `Scroll Debug: rect.top=${
+      rect.top
+    }, windowHeight=${windowHeight}, scrollProgress=${scrollProgress}, animationRange=${
+      rect.top <= 0 && rect.top >= -windowHeight ? windowHeight : "outside"
+    }`
   );
 
   if (isInHomeSection) {
