@@ -128,7 +128,7 @@ function moveGhostOnCurve(ghostKey: string, ghostProgress: number) {
 
   // Simple rotation: interpolate from start rotation to (90°, 0°, 0°)
   const originalRotation = capturedRotations[ghostKey];
-  const targetRotation = new THREE.Euler(Math.PI / 2, 0, 0); // Target: (90°, 0°, 0°)
+  const targetRotation = new THREE.Euler(Math.PI / -2, 0, 0); // Target: (90°, 0°, 0°)
 
   // Interpolate between original and target rotation
   const currentRotation = new THREE.Euler(
