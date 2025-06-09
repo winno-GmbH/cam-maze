@@ -1625,6 +1625,7 @@ function updateGhostInPOV(
       trigger.ghostTextOpacity = 0;
       trigger.camTextOpacity = 0;
       trigger.lastProgress = 0;
+      trigger.isInActivePhase = false;
 
       // Make ghost and text invisible initially
       ghost.visible = false;
@@ -1707,18 +1708,9 @@ function updateGhostInPOV(
       // Make ghost look in tangent direction while staying upright
       ghost.lookAt(lookAtPoint);
 
-      // Fade out at the end
-      if (ghostProgress > 0.9) {
-        const fadeOpacity = 1 - (ghostProgress - 0.9) / 0.1;
-        (ghost as any).material.opacity = fadeOpacity;
-        console.log(
-          `🎭 ${ghostKey} fading out: progress=${ghostProgress.toFixed(
-            3
-          )}, opacity=${fadeOpacity.toFixed(3)}`
-        );
-      } else {
-        (ghost as any).material.opacity = 1;
-      }
+      // Set ghost to full opacity during active phase
+      (ghost as any).material.opacity = 1;
+      trigger.isInActivePhase = true;
 
       console.log(
         `🎭 ${ghostKey} visible in range: progress=${ghostProgress.toFixed(
@@ -1727,8 +1719,36 @@ function updateGhostInPOV(
           ghost.visible
         }`
       );
+    } else if (trigger.isInActivePhase && trigger.currentPathT > 0.9) {
+      // Ghost is outside trigger range but should fade out based on its path progress
+      const ghostProgress = trigger.currentPathT;
+
+      // Continue updating position during fade
+      const pathPoint = path.getPointAt(ghostProgress);
+      ghost.position.copy(pathPoint);
+
+      const tangent = path.getTangentAt(ghostProgress).normalize();
+      const lookAtPoint = ghost.position.clone().add(tangent);
+      ghost.lookAt(lookAtPoint);
+
+      // Fade out based on ghost's path progress
+      const fadeOpacity = 1 - (ghostProgress - 0.9) / 0.1;
+      (ghost as any).material.opacity = Math.max(0, fadeOpacity);
+
+      console.log(
+        `🎭 ${ghostKey} fading out: progress=${ghostProgress.toFixed(
+          3
+        )}, opacity=${fadeOpacity.toFixed(3)}`
+      );
+
+      // Only hide when fully faded
+      if (fadeOpacity <= 0) {
+        ghost.visible = false;
+        trigger.hasBeenTriggered = false;
+        trigger.isInActivePhase = false;
+      }
     } else {
-      // Make ghost invisible when outside range
+      // Make ghost invisible when outside range and not in fade phase
       console.log(
         `🎭 ${ghostKey} OUT OF RANGE: cameraProgress=${currentCameraProgress.toFixed(
           3
@@ -1738,6 +1758,7 @@ function updateGhostInPOV(
       );
       ghost.visible = false;
       trigger.hasBeenTriggered = false;
+      trigger.isInActivePhase = false;
     }
 
     // 2. TEXT VISIBILITY: Adjusted timing ranges
