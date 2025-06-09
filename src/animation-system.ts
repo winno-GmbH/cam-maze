@@ -500,14 +500,14 @@ function animateIntroHeader(progress: number) {
   // Make visible
   introHeader.style.display = "block";
 
-  // Header animation: Runs from 0% (top top) to 50% (center center) of intro section
-  // Matches backup.js: start "top top", end "center center"
+  // Header animation: Runs from 0% (top top) to 35% (before center center) of intro section
+  // Earlier finish so body can start at 35%
   let scale = 0;
   let opacity = 0;
 
-  if (progress <= 0.5) {
-    // Map 0-0.5 to 0-1 for full animation (top top to center center)
-    const localProgress = Math.min(1, progress * 2); // 0-0.5 range = 0.5 duration, so *2
+  if (progress <= 0.35) {
+    // Map 0-0.35 to 0-1 for full animation (top top to center center)
+    const localProgress = Math.min(1, progress / 0.35); // 0-0.35 range = 0.35 duration
 
     if (localProgress <= 0.3) {
       // 0% - 30%: scale 0->0.8, opacity 0->1
@@ -534,7 +534,7 @@ function animateIntroHeader(progress: number) {
       )}, opacity=${opacity.toFixed(2)}`
     );
   } else {
-    // After 0.5 progress, header is fully animated out
+    // After 0.35 progress, header is fully animated out
     scale = 1.5;
     opacity = 0;
     console.log(
@@ -555,14 +555,14 @@ function animateIntroBody(progress: number) {
   // Make visible
   introBody.style.display = "block";
 
-  // Body animation: Starts at 50% (center center) and runs to 100% (bottom bottom)
-  // Matches backup.js: start "center center", end "bottom bottom"
+  // Body animation: Starts at 35% (earlier, like backup.js center center) and runs to 100% (bottom bottom)
+  // More realistic timing: start "center center", end "bottom bottom"
   let scale = 0.5;
   let opacity = 0;
 
-  if (progress >= 0.5) {
-    // Map 0.5-1.0 to 0-1 for full animation (center center to bottom bottom)
-    const localProgress = Math.min(1, (progress - 0.5) / 0.5); // 0.5-1.0 range = 0.5 duration
+  if (progress >= 0.35) {
+    // Map 0.35-1.0 to 0-1 for full animation (center center to bottom bottom)
+    const localProgress = Math.min(1, (progress - 0.35) / 0.65); // 0.35-1.0 range = 0.65 duration
 
     if (localProgress <= 0.3) {
       // 0% - 30%: scale 0.5->0.8, opacity 0->1
@@ -589,11 +589,11 @@ function animateIntroBody(progress: number) {
       )}, opacity=${opacity.toFixed(2)}`
     );
   } else {
-    // Before 0.5 progress, body is not visible
+    // Before 0.35 progress, body is not visible
     scale = 0.5;
     opacity = 0;
     console.log(
-      `🎬 BODY WAITING: progress=${progress.toFixed(3)} (waiting for 0.5)`
+      `🎬 BODY WAITING: progress=${progress.toFixed(3)} (waiting for 0.35)`
     );
   }
 
