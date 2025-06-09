@@ -5,11 +5,7 @@ import { renderer, scene } from "./scene";
 import { camera, startQuaternion, endQuaternion } from "./camera";
 
 // 1. STATE MANAGEMENT
-type AnimationState =
-  | "HOME"
-  | "SCROLL_ANIMATION"
-  | "POV_ANIMATION"
-  | "FINAL_POSITION";
+type AnimationState = "HOME" | "SCROLL_ANIMATION" | "POV_ANIMATION";
 let currentAnimationState: AnimationState = "HOME";
 let isFirstScroll = true;
 
@@ -442,72 +438,72 @@ function handleScroll() {
   // Check if we're scrolling through the home section
   const isInHomeSection = rect.top < windowHeight && rect.bottom > 0;
 
-  if (!isInHomeSection) {
-    // If we're not in home section and currently in scroll animation,
-    // switch to a "FINAL_POSITION" state instead of resetting to home
-    if (currentAnimationState === "SCROLL_ANIMATION") {
-      currentAnimationState = "FINAL_POSITION";
-      console.log("Left home section - maintaining final position");
-    }
-    return;
-  }
-
-  // Special case: If we're near the top of the page and in FINAL_POSITION,
-  // reset to HOME to restore the home animation
-  if (window.scrollY <= 10 && currentAnimationState === "FINAL_POSITION") {
-    console.log("Back at top of page from FINAL_POSITION - resetting to HOME");
-    resetToHomeState();
-    return;
-  }
-
-  // Calculate scroll progress within the home section
-  const sectionHeight = homeSection.offsetHeight;
-
-  // Korrekte Berechnung: Wie weit sind wir IN die Section gescrollt (von oben)
-  // Wenn rect.top = 0, sind wir am Anfang der Section (scrollProgress = 0)
-  // Wenn rect.top = -sectionHeight, sind wir am Ende der Section (scrollProgress = 1)
+  // Calculate scroll progress: completely scroll-driven
+  // If rect.top = windowHeight, we're just entering (scrollProgress = 0)
+  // If rect.top = 0, we're at the start of section (scrollProgress = some value)
+  // If rect.top = -sectionHeight, we're at the end of section (scrollProgress = 1)
   const scrolledIntoSection = Math.max(0, -rect.top);
-  const scrollProgress = Math.min(scrolledIntoSection / sectionHeight, 1);
-
-  console.log(
-    `Scroll Debug: rect.top=${rect.top}, windowHeight=${windowHeight}, scrolledIntoSection=${scrolledIntoSection}, sectionHeight=${sectionHeight}, scrollProgress=${scrollProgress}`
+  const scrollProgress = Math.min(
+    scrolledIntoSection / homeSection.offsetHeight,
+    1
   );
 
-  // Start scroll animation IMMEDIATELY when we begin scrolling through home section
-  if (
-    scrollProgress > 0 &&
-    (currentAnimationState === "HOME" ||
-      currentAnimationState === "FINAL_POSITION")
-  ) {
-    console.log("Starting scroll animation...");
-    onFirstScroll();
-  }
+  console.log(
+    `Scroll Debug: rect.top=${rect.top}, windowHeight=${windowHeight}, scrolledIntoSection=${scrolledIntoSection}, sectionHeight=${homeSection.offsetHeight}, scrollProgress=${scrollProgress}`
+  );
 
-  if (currentAnimationState === "SCROLL_ANIMATION") {
-    // If we're back at the very top (scrollProgress = 0), reset to home only if we're actually scrolling back up
-    if (scrollProgress === 0) {
-      console.log("Scroll progress at 0, resetting to home state");
-      resetToHomeState();
-      return;
+  if (isInHomeSection) {
+    // We're in the home section - handle scroll animation
+
+    if (scrollProgress > 0) {
+      // Start scroll animation if not already active
+      if (currentAnimationState === "HOME") {
+        console.log("Starting scroll animation...");
+        onFirstScroll();
+      }
+
+      if (currentAnimationState === "SCROLL_ANIMATION") {
+        console.log(`Animating with scrollProgress: ${scrollProgress}`);
+
+        // Animate ghosts along bezier curves (they finish at 80% scroll)
+        Object.keys(ghosts).forEach((ghostKey) => {
+          if (bezierCurves[ghostKey]) {
+            // Compress ghost animation into 0-80% range
+            const ghostProgress = Math.min(scrollProgress / GHOSTS_END_AT, 1);
+            moveGhostOnCurve(ghostKey, ghostProgress);
+          }
+        });
+
+        // Animate camera normally (0% to 100%)
+        animateCamera(scrollProgress);
+
+        // Update debug info
+        if (window.animationDebugInfo) {
+          window.animationDebugInfo.scrollProgress = scrollProgress;
+        }
+      }
+    } else if (scrollProgress === 0) {
+      // Back at the beginning of home section - reset to home state
+      if (currentAnimationState === "SCROLL_ANIMATION") {
+        console.log("Scroll progress at 0, resetting to home state");
+        resetToHomeState();
+      }
+    }
+  } else {
+    // We're outside the home section
+
+    // If we were in scroll animation and left the section, maintain the final animation state
+    // The camera should stay at whatever position it was at when we left
+    if (currentAnimationState === "SCROLL_ANIMATION") {
+      // Maintain the current scroll animation position
+      // Don't change state - we'll resume when coming back to home section
+      console.log("Left home section - maintaining current scroll position");
     }
 
-    console.log(`Animating with scrollProgress: ${scrollProgress}`);
-
-    // Animate ghosts along bezier curves (they finish at 80% scroll)
-    Object.keys(ghosts).forEach((ghostKey) => {
-      if (bezierCurves[ghostKey]) {
-        // Compress ghost animation into 0-80% range
-        const ghostProgress = Math.min(scrollProgress / GHOSTS_END_AT, 1);
-        moveGhostOnCurve(ghostKey, ghostProgress);
-      }
-    });
-
-    // Animate camera normally (0% to 100%)
-    animateCamera(scrollProgress);
-
-    // Update debug info
-    if (window.animationDebugInfo) {
-      window.animationDebugInfo.scrollProgress = scrollProgress;
+    // Check if we're at the very top of the page (above home section)
+    if (window.scrollY <= 10) {
+      console.log("At top of page - resetting to HOME");
+      resetToHomeState();
     }
   }
 }
@@ -1283,8 +1279,9 @@ function findClosestProgressOnPOVPath(
 
 // POV Animation End Handler
 function onPOVAnimationEnd() {
-  // Return to FINAL_POSITION state (maintain camera position) instead of HOME
-  currentAnimationState = "FINAL_POSITION";
+  // After POV animation, we want to maintain the scroll animation state
+  // so the camera stays at its last scroll position
+  currentAnimationState = "SCROLL_ANIMATION";
 
   // Reset all POV text elements
   Object.values(povAnimationState.triggerPositions).forEach((trigger: any) => {
@@ -1385,11 +1382,11 @@ function handlePOVScroll() {
     const scrolledIntoSection = Math.max(0, -sectionTop);
     const progress = Math.min(1, scrolledIntoSection / sectionHeight);
 
-    // Start POV animation if not already active and we're in FINAL_POSITION or HOME state
+    // Start POV animation if not already active and we're in SCROLL_ANIMATION or HOME state
     if (
       !povAnimationState.isActive &&
       progress > 0 &&
-      (currentAnimationState === "FINAL_POSITION" ||
+      (currentAnimationState === "SCROLL_ANIMATION" ||
         currentAnimationState === "HOME")
     ) {
       console.log("🎭 POV Animation Started (Scroll)");
