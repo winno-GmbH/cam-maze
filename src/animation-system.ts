@@ -1,28 +1,34 @@
 import * as THREE from "three";
 import { ghosts, pacmanMixer, clock } from "./objects";
-import { MAZE_CENTER } from "./config";
-import { AnimationState, BezierCurve, GhostPosition } from "./types";
 import { pathsMap } from "./paths";
 
 // 1. STATE MANAGEMENT
+type AnimationState = "HOME" | "SCROLL_ANIMATION";
 let currentAnimationState: AnimationState = "HOME";
 let isFirstScroll = true;
 
-// 2. POSITION & BEZIER SYSTEM
-const capturedPositions: { [key: string]: THREE.Vector3 } = {};
-const bezierCurves: { [key: string]: BezierCurve } = {};
-const originalPositions: { [key: string]: THREE.Vector3 } = {};
-
-// Store original positions for all ghosts
-function storeOriginalPositions() {
-  Object.keys(ghosts).forEach((ghostKey) => {
-    if (ghostKey !== "pacman" && ghosts[ghostKey]) {
-      originalPositions[ghostKey] = ghosts[ghostKey].position.clone();
-    }
-  });
+// Debug info for window
+declare global {
+  interface Window {
+    animationDebugInfo: {
+      state: AnimationState;
+      isFirstScroll: boolean;
+      capturedPositions: any;
+      bezierCurves: any;
+    };
+  }
 }
 
-// 2.1 Capture current ghost positions when first scroll happens
+// Constants
+const MAZE_CENTER = new THREE.Vector3(0.45175, 0.5, 0.55675);
+const OPACITY_FADE_START = 0.8; // Last 20% for opacity fade
+
+// 2. POSITION & BEZIER SYSTEM
+const capturedPositions: { [key: string]: THREE.Vector3 } = {};
+const bezierCurves: { [key: string]: THREE.QuadraticBezierCurve3 } = {};
+let timeOffset = 0;
+let pauseTime = 0;
+
 function captureGhostPositions() {
   Object.keys(ghosts).forEach((ghostKey) => {
     if (ghostKey !== "pacman" && ghosts[ghostKey]) {
@@ -32,59 +38,58 @@ function captureGhostPositions() {
   console.log("Ghost positions captured:", capturedPositions);
 }
 
-// 2.2 Create bezier curves from captured positions to maze center and back
 function createBezierCurves() {
   Object.keys(capturedPositions).forEach((ghostKey) => {
     const startPos = capturedPositions[ghostKey];
-    const midPos = MAZE_CENTER.clone();
-    const endPos = startPos.clone(); // Back to original position
+    const endPos = startPos.clone(); // Round trip back to start
 
-    bezierCurves[ghostKey] = {
-      startPosition: startPos,
-      midPosition: midPos,
-      endPosition: endPos,
-      curve: new THREE.QuadraticBezierCurve3(startPos, midPos, endPos),
-    };
+    // Create control point that goes through maze center
+    const controlPoint = MAZE_CENTER.clone();
+
+    bezierCurves[ghostKey] = new THREE.QuadraticBezierCurve3(
+      startPos,
+      controlPoint,
+      endPos
+    );
   });
-  console.log("Bezier curves created:", bezierCurves);
+  console.log("Bezier curves created");
 }
 
-// 2.3 Move ghost on curve based on scroll progress (0-1)
 function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
-  if (!bezierCurves[ghostKey] || !ghosts[ghostKey]) return;
+  if (!bezierCurves[ghostKey] || !ghosts[ghostKey] || ghostKey === "pacman")
+    return;
 
-  const curve = bezierCurves[ghostKey].curve;
-  const position = curve.getPointAt(scrollProgress);
-
-  // Calculate opacity (fade out in last 20%)
-  let opacity = 1;
-  if (scrollProgress > 0.8) {
-    opacity = 1 - (scrollProgress - 0.8) / 0.2;
-  }
-
+  // Get position on curve (0-1)
+  const position = bezierCurves[ghostKey].getPoint(scrollProgress);
   ghosts[ghostKey].position.copy(position);
 
-  // Handle material opacity for both Mesh and Group
+  // Handle opacity fade in last 20%
+  let opacity = 1;
+  if (scrollProgress >= OPACITY_FADE_START) {
+    const fadeProgress =
+      (scrollProgress - OPACITY_FADE_START) / (1 - OPACITY_FADE_START);
+    opacity = 1 - fadeProgress;
+  }
+
+  // Set opacity for both Mesh and Group
   const ghost = ghosts[ghostKey];
   if (ghost instanceof THREE.Mesh && ghost.material) {
     if (Array.isArray(ghost.material)) {
       ghost.material.forEach((mat) => {
-        if (mat.transparent !== undefined) mat.opacity = opacity;
+        if ("opacity" in mat) mat.opacity = opacity;
       });
     } else {
-      if (ghost.material.transparent !== undefined)
-        ghost.material.opacity = opacity;
+      if ("opacity" in ghost.material) ghost.material.opacity = opacity;
     }
   } else if (ghost instanceof THREE.Group) {
     ghost.traverse((child) => {
       if (child instanceof THREE.Mesh && child.material) {
         if (Array.isArray(child.material)) {
           child.material.forEach((mat) => {
-            if (mat.transparent !== undefined) mat.opacity = opacity;
+            if ("opacity" in mat) mat.opacity = opacity;
           });
         } else {
-          if (child.material.transparent !== undefined)
-            child.material.opacity = opacity;
+          if ("opacity" in child.material) child.material.opacity = opacity;
         }
       }
     });
@@ -93,173 +98,177 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
 
 // 3. SCROLL MANAGEMENT
 function onFirstScroll() {
-  if (isFirstScroll) {
-    console.log("First scroll detected - switching to scroll animation");
-    captureGhostPositions();
-    createBezierCurves();
-    currentAnimationState = "SCROLL_ANIMATION";
-    isFirstScroll = false;
+  if (!isFirstScroll) return;
+
+  isFirstScroll = false;
+  pauseTime = Date.now();
+
+  captureGhostPositions();
+  createBezierCurves();
+  currentAnimationState = "SCROLL_ANIMATION";
+
+  // Update debug info
+  if (window.animationDebugInfo) {
+    window.animationDebugInfo.state = currentAnimationState;
+    window.animationDebugInfo.isFirstScroll = isFirstScroll;
   }
+
+  console.log(
+    "First scroll detected - animation paused and bezier curves created"
+  );
 }
 
 // 4. ANIMATION LOOP
-let animationTime = 0;
 function animationLoop() {
-  const deltaTime = clock.getDelta();
-  animationTime += deltaTime;
+  if (currentAnimationState !== "HOME") return;
 
-  // Only run path animation when in HOME state
-  if (currentAnimationState === "HOME") {
-    // Update pacman animation mixer
-    if (pacmanMixer) {
-      pacmanMixer.update(deltaTime);
-    }
+  const currentTime = Date.now();
+  const adjustedTime = currentTime - timeOffset;
+  const t = ((adjustedTime / 6000) % 6) / 6;
 
-    // Move ghosts along their paths
-    Object.keys(ghosts).forEach((ghostKey) => {
-      if (ghostKey === "pacman") return;
+  // Animate ghosts on their home paths
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    if (key === "pacman") {
+      // Pacman animation
+      if (pathsMap[key]) {
+        const position = pathsMap[key].getPointAt(t);
+        ghost.position.copy(position);
+        const tangent = pathsMap[key].getTangentAt(t).normalize();
+        ghost.lookAt(position.clone().add(tangent));
 
-      const path = pathsMap[ghostKey];
-      if (path) {
-        const t = (animationTime * 0.1) % 1; // Speed control
-        const position = path.getPointAt(t);
-        if (position && ghosts[ghostKey]) {
-          ghosts[ghostKey].position.copy(position);
+        // Handle pacman rotation smoothing
+        const zRotation = Math.atan2(tangent.x, tangent.z);
+        if ((ghost as any).previousZRotation === undefined) {
+          (ghost as any).previousZRotation = zRotation;
+        }
 
-          // Set opacity to 1 for both Mesh and Group
-          const ghost = ghosts[ghostKey];
-          if (ghost instanceof THREE.Mesh && ghost.material) {
-            if (Array.isArray(ghost.material)) {
-              ghost.material.forEach((mat) => {
-                if (mat.transparent !== undefined) mat.opacity = 1;
-              });
-            } else {
-              if (ghost.material.transparent !== undefined)
-                ghost.material.opacity = 1;
-            }
-          } else if (ghost instanceof THREE.Group) {
-            ghost.traverse((child) => {
-              if (child instanceof THREE.Mesh && child.material) {
-                if (Array.isArray(child.material)) {
-                  child.material.forEach((mat) => {
-                    if (mat.transparent !== undefined) mat.opacity = 1;
-                  });
-                } else {
-                  if (child.material.transparent !== undefined)
-                    child.material.opacity = 1;
-                }
-              }
-            });
-          }
+        let rotationDiff = zRotation - (ghost as any).previousZRotation;
+        if (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;
+        else if (rotationDiff < -Math.PI) rotationDiff += 2 * Math.PI;
+
+        const smoothFactor = 0.1;
+        const smoothedRotation =
+          (ghost as any).previousZRotation + rotationDiff * smoothFactor;
+        (ghost as any).previousZRotation = smoothedRotation;
+
+        ghost.rotation.set(
+          Math.PI / 2,
+          Math.PI,
+          smoothedRotation + Math.PI / 2
+        );
+      }
+    } else {
+      // Ghost animation
+      if (pathsMap[key]) {
+        const position = pathsMap[key].getPointAt(t);
+        ghost.position.copy(position);
+        const tangent = pathsMap[key].getTangentAt(t).normalize();
+        ghost.lookAt(position.clone().add(tangent));
+
+        // Ensure full opacity
+        if (
+          ghost instanceof THREE.Mesh &&
+          ghost.material &&
+          "opacity" in ghost.material
+        ) {
+          ghost.material.opacity = 1;
         }
       }
-    });
-  }
-
-  requestAnimationFrame(animationLoop);
+    }
+  });
 }
 
-// 5. GSAP INTEGRATION
-function setupScrollTriggers() {
-  // Import GSAP dynamically to avoid build issues
-  if (typeof window !== "undefined" && (window as any).gsap) {
-    const gsap = (window as any).gsap;
-    const ScrollTrigger = gsap.ScrollTrigger;
+// Scroll event handler
+function handleScroll() {
+  const scrollY = window.scrollY;
 
-    // Intro ScrollTrigger - moves ghosts to center
-    ScrollTrigger.create({
-      trigger: ".sc--intro",
-      start: "top bottom",
-      end: "bottom top",
-      onUpdate: (self: any) => {
-        onFirstScroll();
-        if (currentAnimationState === "SCROLL_ANIMATION") {
-          const progress = self.progress;
-          Object.keys(bezierCurves).forEach((ghostKey) => {
-            moveGhostOnCurve(ghostKey, progress);
-          });
-        }
-      },
-    });
+  if (scrollY > 0 && currentAnimationState === "HOME") {
+    onFirstScroll();
+  } else if (scrollY === 0 && currentAnimationState === "SCROLL_ANIMATION") {
+    // Reset to home state
+    currentAnimationState = "HOME";
+    isFirstScroll = true;
 
-    // Home ScrollTrigger - moves ghosts back from center
-    ScrollTrigger.create({
-      trigger: ".sc--home",
-      start: "top bottom",
-      end: "bottom top",
-      onUpdate: (self: any) => {
-        if (currentAnimationState === "SCROLL_ANIMATION") {
-          const progress = 1 - self.progress; // Reverse direction
-          Object.keys(bezierCurves).forEach((ghostKey) => {
-            moveGhostOnCurve(ghostKey, progress);
-          });
-        }
-      },
-      onLeave: () => {
-        // Back to top - reset to HOME state
-        if (window.scrollY === 0) {
-          console.log("Back to top - resetting to HOME state");
-          currentAnimationState = "HOME";
-          isFirstScroll = true;
-        }
-      },
-    });
+    if (pauseTime) {
+      timeOffset += Date.now() - pauseTime;
+      pauseTime = 0;
+    }
 
-    // POV ScrollTrigger - position ghosts for POV section
-    ScrollTrigger.create({
-      trigger: ".sc--pov",
-      start: "top bottom",
-      end: "bottom top",
-      onEnter: () => {
-        // Position ghosts at maze center for POV animations
-        Object.keys(ghosts).forEach((ghostKey) => {
-          if (ghostKey !== "pacman" && ghosts[ghostKey]) {
-            ghosts[ghostKey].position.copy(MAZE_CENTER);
+    // Update debug info
+    if (window.animationDebugInfo) {
+      window.animationDebugInfo.state = currentAnimationState;
+      window.animationDebugInfo.isFirstScroll = isFirstScroll;
+    }
 
-            // Set opacity to 1 for both Mesh and Group
-            const ghost = ghosts[ghostKey];
-            if (ghost instanceof THREE.Mesh && ghost.material) {
-              if (Array.isArray(ghost.material)) {
-                ghost.material.forEach((mat) => {
-                  if (mat.transparent !== undefined) mat.opacity = 1;
-                });
-              } else {
-                if (ghost.material.transparent !== undefined)
-                  ghost.material.opacity = 1;
-              }
-            } else if (ghost instanceof THREE.Group) {
-              ghost.traverse((child) => {
-                if (child instanceof THREE.Mesh && child.material) {
-                  if (Array.isArray(child.material)) {
-                    child.material.forEach((mat) => {
-                      if (mat.transparent !== undefined) mat.opacity = 1;
-                    });
-                  } else {
-                    if (child.material.transparent !== undefined)
-                      child.material.opacity = 1;
-                  }
-                }
-              });
-            }
-          }
-        });
-      },
-    });
+    console.log("Returned to top - resuming home animation");
   }
 }
 
-// Initialize the animation system
+// 5. GSAP INTEGRATION - To be called by GSAP ScrollTriggers
+export function setupScrollTriggers() {
+  // This will be implemented when GSAP is available
+  // For now, we use basic scroll events
+  window.addEventListener("scroll", handleScroll);
+  console.log("Scroll triggers setup complete");
+}
+
+// Main animation loop
+function animate() {
+  // Update pacman mixer
+  if (pacmanMixer) {
+    const delta = clock.getDelta();
+    pacmanMixer.update(delta);
+  }
+
+  // Run animation loop if in HOME state
+  animationLoop();
+
+  requestAnimationFrame(animate);
+}
+
+// Initialize animation system
 export function initAnimationSystem() {
   console.log("Initializing animation system...");
 
-  // Store original positions
-  storeOriginalPositions();
+  // Setup debug info
+  window.animationDebugInfo = {
+    state: currentAnimationState,
+    isFirstScroll: isFirstScroll,
+    capturedPositions: capturedPositions,
+    bezierCurves: bezierCurves,
+  };
 
-  // Setup GSAP ScrollTriggers
+  // Ensure all ghosts are visible and have full opacity
+  Object.keys(ghosts).forEach((ghostKey) => {
+    if (ghosts[ghostKey]) {
+      ghosts[ghostKey].visible = true;
+
+      const ghost = ghosts[ghostKey];
+      if (
+        ghost instanceof THREE.Mesh &&
+        ghost.material &&
+        "opacity" in ghost.material
+      ) {
+        ghost.material.opacity = 1;
+      } else if (ghost instanceof THREE.Group) {
+        ghost.traverse((child) => {
+          if (
+            child instanceof THREE.Mesh &&
+            child.material &&
+            "opacity" in child.material
+          ) {
+            child.material.opacity = 1;
+          }
+        });
+      }
+    }
+  });
+
   setupScrollTriggers();
-
-  // Start animation loop
-  animationLoop();
+  animate();
 
   console.log("Animation system initialized");
 }
+
+// Export functions for GSAP integration
+export { moveGhostOnCurve, captureGhostPositions, createBezierCurves };

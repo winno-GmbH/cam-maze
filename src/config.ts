@@ -1,6 +1,4 @@
 import * as THREE from "three";
-import { TriggerPosition } from "./types";
-import { parentElements } from "./scene";
 
 // Camera Configuration
 export const CAMERA_CONFIG = {

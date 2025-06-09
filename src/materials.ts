@@ -1,6 +1,5 @@
 import * as THREE from "three";
-import { ASSETS, SHADER_CONFIG } from "./config";
-import { MaterialMap } from "./types";
+import { ASSETS } from "./config";
 
 // Texture Loader
 const textureLoader = new THREE.TextureLoader();
@@ -41,11 +40,23 @@ export const floorMaterial = new THREE.MeshStandardMaterial({
   metalness: 0.1,
 });
 
-// Pacman materials exactly like backup.js
+// Pacman materials with transparency for opacity changes
 const pacmanMaterials = {
-  blue: new THREE.MeshBasicMaterial({ color: 0x1469d3 }),
-  white: new THREE.MeshBasicMaterial({ color: 0xffffff }),
-  default: new THREE.MeshBasicMaterial({ color: 0x1469d3 }),
+  blue: new THREE.MeshBasicMaterial({
+    color: 0x1469d3,
+    transparent: true,
+    opacity: 1,
+  }),
+  white: new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 1,
+  }),
+  default: new THREE.MeshBasicMaterial({
+    color: 0x1469d3,
+    transparent: true,
+    opacity: 1,
+  }),
 };
 
 export const materialMap = {
