@@ -897,7 +897,7 @@ const povAnimationState: POVAnimationState = {
   previousCameraPosition: null,
   startRotationPoint: new THREE.Vector3(0.55675, 0.55, 1.306),
   endRotationPoint: new THREE.Vector3(-0.14675, 1, 1.8085),
-  targetLookAt: new THREE.Vector3(0.55675, 0.1, 1.306),
+  targetLookAt: new THREE.Vector3(0.55675, 0.6, 1.306),
   finalLookAt: new THREE.Vector3(-0.14675, 0, 1.8085),
   rotationStarted: false,
   cachedStartYAngle: null,
