@@ -23,7 +23,7 @@ declare global {
 }
 
 // Constants
-const MAZE_CENTER = new THREE.Vector3(0.95175, 0.5, 1.05675);
+const MAZE_CENTER = new THREE.Vector3(0.55675, 0.5, 0.45175);
 const GHOSTS_END_AT = 0.8; // Ghosts finish their animation at 80% scroll
 const OPACITY_FADE_START = 0.8; // Last 20% for opacity fade (same as ghosts end)
 const CAMERA_DELAY = 0.15; // Camera starts 15% later than ghosts
