@@ -253,22 +253,26 @@ function onFirstScroll() {
   // IMMEDIATELY stop the home animation by changing state first
   currentAnimationState = "SCROLL_ANIMATION";
 
-  // Capture initial camera state more accurately
-  initialCameraPosition.copy(camera.position);
+  // Use the CURRENT camera position as start point (don't use initial anymore, use actual current)
+  const currentCameraPosition = camera.position.clone();
+  const currentDirection = new THREE.Vector3(0, 0, -1);
+  currentDirection.applyQuaternion(camera.quaternion);
+  const currentCameraTarget = camera.position
+    .clone()
+    .add(currentDirection.multiplyScalar(5));
 
-  // Get the current camera direction to calculate where it's looking
-  const direction = new THREE.Vector3(0, 0, -1);
-  direction.applyQuaternion(camera.quaternion);
-  initialCameraTarget.copy(camera.position).add(direction.multiplyScalar(5));
+  console.log("Using current camera position for path:", currentCameraPosition);
+  console.log("Using current camera look-at target:", currentCameraTarget);
 
-  console.log("Captured camera position:", initialCameraPosition);
-  console.log("Captured camera look-at target:", initialCameraTarget);
+  // Update the camera start position to current position for smooth path
+  initialCameraPosition.copy(currentCameraPosition);
+  initialCameraTarget.copy(currentCameraTarget);
 
   // Capture ghost positions AFTER stopping animation
   captureGhostPositions();
   createBezierCurves();
 
-  // Create camera path exactly like backup.js
+  // Create camera path starting from CURRENT position (not jump)
   createCameraPath();
 
   // Update debug info
@@ -558,6 +562,17 @@ function animate() {
 // Initialize animation system
 export function initAnimationSystem() {
   console.log("Initializing animation system...");
+
+  // FIRST THING: Capture the initial camera state before any animations start
+  initialCameraPosition = camera.position.clone();
+  const direction = new THREE.Vector3(0, 0, -1);
+  direction.applyQuaternion(camera.quaternion);
+  initialCameraTarget = camera.position
+    .clone()
+    .add(direction.multiplyScalar(5));
+
+  console.log("Captured initial camera position:", initialCameraPosition);
+  console.log("Captured initial camera look-at target:", initialCameraTarget);
 
   // Setup debug info
   window.animationDebugInfo = {
