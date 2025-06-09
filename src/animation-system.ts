@@ -83,17 +83,9 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
 
   const ghost = ghosts[ghostKey];
 
-  // Detailed logging for debugging
-  console.log(
-    `Moving ${ghostKey}: scrollProgress=${scrollProgress}, capturedPos:`,
-    capturedPositions[ghostKey]
-  );
-
   // Always use bezier curve for smooth interpolation
   const position = bezierCurves[ghostKey].getPoint(scrollProgress);
   ghost.position.copy(position);
-
-  console.log(`${ghostKey} moved to:`, position);
 
   // Get direction from curve tangent for smooth rotation (except at progress = 0)
   if (scrollProgress > 0.01) {
@@ -334,7 +326,11 @@ function handleScroll() {
 
   // Calculate scroll progress within the home section
   const sectionHeight = homeSection.offsetHeight;
-  const scrolledIntoSection = Math.max(0, windowHeight - rect.top);
+
+  // Korrekte Berechnung: Wie weit sind wir IN die Section gescrollt (von oben)
+  // Wenn rect.top = 0, sind wir am Anfang der Section (scrollProgress = 0)
+  // Wenn rect.top = -sectionHeight, sind wir am Ende der Section (scrollProgress = 1)
+  const scrolledIntoSection = Math.max(0, -rect.top);
   const scrollProgress = Math.min(scrolledIntoSection / sectionHeight, 1);
 
   console.log(
