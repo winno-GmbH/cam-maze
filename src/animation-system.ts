@@ -26,6 +26,11 @@ const MAZE_CENTER = new THREE.Vector3(0.55675, 0.5, 0.45175);
 const GHOSTS_END_AT = 0.8; // Ghosts finish their animation at 80% scroll
 const GHOST_OPACITY_FADE_START = 0.8; // Last 20% of GHOST animation (ghostProgress 0.8-1.0)
 
+// FOV Constants (from backup.js)
+const ORIGINAL_FOV = 50; // Used in HOME state
+const WIDE_FOV = 80; // Used in POV animation
+const END_SEQUENCE_FOV = WIDE_FOV / 4; // 20 - Used in end sequence
+
 // 2. POSITION & BEZIER SYSTEM
 const capturedPositions: { [key: string]: THREE.Vector3 } = {};
 const capturedRotations: { [key: string]: THREE.Euler } = {};
@@ -612,6 +617,9 @@ export function setupScrollTriggers() {
 
 // Main animation loop
 function animate() {
+  // Update FOV based on current animation state
+  updateCameraFOV();
+
   // Update pacman mixer
   if (pacmanMixer) {
     const delta = clock.getDelta();
@@ -907,6 +915,52 @@ const CAM_TEXT_START = 0.3;
 const FADE_OUT_START = 0.8;
 const TRIGGER_DISTANCE = 0.02;
 
+// Get parent elements for POV triggers
+const parentElements = document.querySelectorAll(".cmp--pov.cmp");
+
+const backupTriggerPositions = {
+  ghost1: {
+    triggerPos: new THREE.Vector3(0.65725, 0.55, 0.75325),
+    ghostTextPos: new THREE.Vector3(0.7075, 0.55, 0.8035),
+    camTextPos: new THREE.Vector3(0.75775, 0.55, 0.8035),
+    endPosition: new THREE.Vector3(0.85825, 0.55, 0.8035),
+    parent: parentElements[0] || null,
+    active: false,
+  },
+  ghost2: {
+    triggerPos: new THREE.Vector3(0.9085, 0.55, 0.8035),
+    ghostTextPos: new THREE.Vector3(0.95875, 0.55, 0.85375),
+    camTextPos: new THREE.Vector3(0.95875, 0.55, 0.904),
+    endPosition: new THREE.Vector3(0.95875, 0.55, 1.0045),
+    parent: parentElements[1] || null,
+    active: false,
+  },
+  ghost3: {
+    triggerPos: new THREE.Vector3(0.75775, 0.55, 1.05475),
+    ghostTextPos: new THREE.Vector3(0.7075, 0.55, 1.0045),
+    camTextPos: new THREE.Vector3(0.65725, 0.55, 1.0045),
+    endPosition: new THREE.Vector3(0.55675, 0.55, 1.0045),
+    parent: parentElements[2] || null,
+    active: false,
+  },
+  ghost4: {
+    triggerPos: new THREE.Vector3(0.65725, 0.55, 1.0045),
+    ghostTextPos: new THREE.Vector3(0.5065, 0.55, 1.0045),
+    camTextPos: new THREE.Vector3(0.45625, 0.55, 1.0045),
+    endPosition: new THREE.Vector3(0.35575, 0.55, 1.0045),
+    parent: parentElements[3] || null,
+    active: false,
+  },
+  ghost5: {
+    triggerPos: new THREE.Vector3(0.15475, 0.55, 1.15525),
+    ghostTextPos: new THREE.Vector3(0.205, 0.55, 1.2055),
+    camTextPos: new THREE.Vector3(0.25525, 0.55, 1.2055),
+    endPosition: new THREE.Vector3(0.35575, 0.55, 1.2055),
+    parent: parentElements[4] || null,
+    active: false,
+  },
+};
+
 // Initialize POV Animation System
 function initializePOVAnimation() {
   console.log("🎭 Initializing POV Animation System...");
@@ -924,8 +978,6 @@ function initializePOVAnimation() {
   };
 
   // Initialize trigger positions
-  const parentElements = document.querySelectorAll(".cmp--pov.cmp");
-
   povAnimationState.triggerPositions = {
     ghost1: {
       triggerPos: new THREE.Vector3(0.65725, 0.55, 0.75325),
@@ -934,8 +986,6 @@ function initializePOVAnimation() {
       endPosition: new THREE.Vector3(0.85825, 0.55, 0.8035),
       parent: parentElements[0],
       active: false,
-      ghostTextOpacity: 0,
-      camTextOpacity: 0,
     },
     ghost2: {
       triggerPos: new THREE.Vector3(0.9085, 0.55, 0.8035),
@@ -944,8 +994,6 @@ function initializePOVAnimation() {
       endPosition: new THREE.Vector3(0.95875, 0.55, 1.0045),
       parent: parentElements[1],
       active: false,
-      ghostTextOpacity: 0,
-      camTextOpacity: 0,
     },
     ghost3: {
       triggerPos: new THREE.Vector3(0.75775, 0.55, 1.05475),
@@ -954,8 +1002,6 @@ function initializePOVAnimation() {
       endPosition: new THREE.Vector3(0.55675, 0.55, 1.0045),
       parent: parentElements[2],
       active: false,
-      ghostTextOpacity: 0,
-      camTextOpacity: 0,
     },
     ghost4: {
       triggerPos: new THREE.Vector3(0.65725, 0.55, 1.0045),
@@ -964,8 +1010,6 @@ function initializePOVAnimation() {
       endPosition: new THREE.Vector3(0.35575, 0.55, 1.0045),
       parent: parentElements[3],
       active: false,
-      ghostTextOpacity: 0,
-      camTextOpacity: 0,
     },
     ghost5: {
       triggerPos: new THREE.Vector3(0.15475, 0.55, 1.15525),
@@ -974,8 +1018,6 @@ function initializePOVAnimation() {
       endPosition: new THREE.Vector3(0.35575, 0.55, 1.2055),
       parent: parentElements[4],
       active: false,
-      ghostTextOpacity: 0,
-      camTextOpacity: 0,
     },
   };
 
@@ -1174,26 +1216,35 @@ function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
   previousCameraRotation.copy(camera.quaternion);
 }
 
-// Update POV Ghosts
+// Update POV Ghosts with enhanced triggering (from backup.js)
 function updatePOVGhosts(progress: number) {
-  Object.entries(povAnimationState.ghostPOVPaths).forEach(
-    ([ghostKey, path]) => {
-      const ghost = ghosts[ghostKey];
-      if (!ghost || !path) return;
+  if (!povAnimationState.cameraPOVPath) return;
 
-      // Get position on ghost's POV path
-      const ghostPosition = path.getPointAt(progress);
-      ghost.position.copy(ghostPosition);
+  const cameraPosition = povAnimationState.cameraPOVPath.getPointAt(progress);
 
-      // Make ghost look along its path
-      const tangent = path.getTangentAt(progress).normalize();
-      const lookAtPoint = ghostPosition.clone().add(tangent);
-      ghost.lookAt(lookAtPoint);
+  // Get path mapping for ghosts (from backup.js)
+  const pathMapping = {
+    pacman: "cameraPOVPath", // Pacman follows camera path
+    ghost1: "ghost1POVPath",
+    ghost2: "ghost2POVPath",
+    ghost3: "ghost3POVPath",
+    ghost4: "ghost4POVPath",
+    ghost5: "ghost5POVPath",
+  };
 
-      // Make sure ghost is visible
-      ghost.visible = true;
+  // Update each ghost using enhanced logic
+  Object.entries(ghosts).forEach(([ghostKey, ghost]) => {
+    if (ghostKey === "pacman") {
+      // Pacman stays hidden during POV animation
+      ghost.visible = false;
+      return;
     }
-  );
+
+    const pathKey = pathMapping[ghostKey as keyof typeof pathMapping];
+    if (pathKey && povAnimationState.ghostPOVPaths[pathKey]) {
+      updateGhostInPOV(ghostKey, ghost, pathKey, cameraPosition);
+    }
+  });
 }
 
 // Update POV Text Animations
@@ -1350,7 +1401,7 @@ function findClosestProgressOnPOVPath(
 // POV Animation End Handler
 function onPOVAnimationEnd() {
   // After POV animation, we want to maintain the scroll animation state
-  // so the camera stays at its last scroll position
+  // so the camera stays at its last scroll position and FOV returns to original
   currentAnimationState = "SCROLL_ANIMATION";
 
   // Reset all POV text elements
@@ -1484,6 +1535,149 @@ function handlePOVScroll() {
       console.log("🎭 POV Animation Ended (Scroll)");
       povAnimationState.isActive = false;
       onPOVAnimationEnd();
+    }
+  }
+}
+
+// Update Camera FOV based on animation state
+function updateCameraFOV() {
+  if (!camera) return;
+
+  let targetFOV = ORIGINAL_FOV;
+
+  switch (currentAnimationState) {
+    case "HOME":
+      targetFOV = ORIGINAL_FOV;
+      break;
+    case "SCROLL_ANIMATION":
+      targetFOV = ORIGINAL_FOV;
+      break;
+    case "POV_ANIMATION":
+      targetFOV = WIDE_FOV;
+      break;
+    default:
+      targetFOV = ORIGINAL_FOV;
+  }
+
+  // Smooth FOV transition
+  if (camera.fov !== targetFOV) {
+    const fovDifference = targetFOV - camera.fov;
+    const fovSmoothingFactor = 0.1; // Adjust for smoother/faster transitions
+    camera.fov += fovDifference * fovSmoothingFactor;
+    camera.updateProjectionMatrix();
+  }
+}
+
+// Enhanced ghost update function (from backup.js)
+function updateGhostInPOV(
+  ghostKey: string,
+  ghost: THREE.Object3D,
+  pathKey: string,
+  cameraPosition: THREE.Vector3
+) {
+  if (!pathKey || !povAnimationState.ghostPOVPaths[pathKey]) return;
+
+  const path = povAnimationState.ghostPOVPaths[pathKey];
+  if (!path) return;
+
+  // Check if ghost has trigger position
+  if (ghostKey in backupTriggerPositions) {
+    const trigger =
+      backupTriggerPositions[ghostKey as keyof typeof backupTriggerPositions];
+    const { triggerPos, ghostTextPos, camTextPos, endPosition } = trigger;
+
+    // Calculate distances
+    const distanceToTrigger = cameraPosition.distanceTo(triggerPos);
+    const distanceToGhostText = cameraPosition.distanceTo(ghostTextPos);
+    const distanceToEnd = cameraPosition.distanceTo(endPosition);
+
+    // Determine if ghost should be active
+    const isInTriggerArea = distanceToTrigger <= TRIGGER_DISTANCE;
+    const isInActiveArea = distanceToGhostText <= TRIGGER_DISTANCE * 3;
+
+    if (isInTriggerArea || isInActiveArea) {
+      ghost.visible = true;
+
+      // Calculate progress along the ghost's path
+      const closestProgress = findClosestProgressOnPOVPath(cameraPosition);
+
+      // Move ghost along its path
+      const ghostPosition = path.getPointAt(closestProgress);
+      ghost.position.copy(ghostPosition);
+
+      // Make ghost look along its path
+      const tangent = path.getTangentAt(closestProgress).normalize();
+      const lookAtPoint = ghostPosition.clone().add(tangent);
+      ghost.lookAt(lookAtPoint);
+
+      // Trigger text animations if parent element exists
+      if (trigger.parent) {
+        updateGhostTextTrigger(trigger, cameraPosition, closestProgress);
+      }
+    } else {
+      ghost.visible = false;
+    }
+  } else {
+    // Default behavior for ghosts without triggers
+    const closestProgress = findClosestProgressOnPOVPath(cameraPosition);
+    const ghostPosition = path.getPointAt(closestProgress);
+    ghost.position.copy(ghostPosition);
+
+    const tangent = path.getTangentAt(closestProgress).normalize();
+    const lookAtPoint = ghostPosition.clone().add(tangent);
+    ghost.lookAt(lookAtPoint);
+
+    ghost.visible = true;
+  }
+}
+
+// Update ghost text triggers (from backup.js)
+function updateGhostTextTrigger(
+  trigger: any,
+  cameraPosition: THREE.Vector3,
+  progress: number
+) {
+  if (!trigger.parent) return;
+
+  const { triggerPos, ghostTextPos, camTextPos, endPosition } = trigger;
+
+  // Calculate if camera is in trigger range
+  const distanceToTrigger = cameraPosition.distanceTo(triggerPos);
+  const distanceToEnd = cameraPosition.distanceTo(endPosition);
+
+  if (
+    distanceToTrigger <= TRIGGER_DISTANCE &&
+    distanceToEnd <= TRIGGER_DISTANCE * 2
+  ) {
+    // Show ghost text
+    const ghostText = trigger.parent.querySelector(".cmp--pov-ghost");
+    if (ghostText) {
+      ghostText.classList.remove("hidden");
+      ghostText.style.opacity = "1";
+    }
+
+    // Show cam text after a delay
+    const distanceToCamText = cameraPosition.distanceTo(camTextPos);
+    if (distanceToCamText <= TRIGGER_DISTANCE) {
+      const camText = trigger.parent.querySelector(".cmp--pov-cam");
+      if (camText) {
+        camText.classList.remove("hidden");
+        camText.style.opacity = "1";
+      }
+    }
+  } else {
+    // Hide texts
+    const ghostText = trigger.parent.querySelector(".cmp--pov-ghost");
+    const camText = trigger.parent.querySelector(".cmp--pov-cam");
+
+    if (ghostText) {
+      ghostText.classList.add("hidden");
+      ghostText.style.opacity = "0";
+    }
+
+    if (camText) {
+      camText.classList.add("hidden");
+      camText.style.opacity = "0";
     }
   }
 }
