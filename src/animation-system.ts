@@ -17,6 +17,7 @@ declare global {
       isFirstScroll: boolean;
       capturedPositions: any;
       bezierCurves: any;
+      scrollProgress?: number;
     };
   }
 }
@@ -58,12 +59,15 @@ function createBezierCurves() {
 }
 
 function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
-  if (!bezierCurves[ghostKey] || !ghosts[ghostKey] || ghostKey === "pacman")
-    return;
+  if (!bezierCurves[ghostKey] || !ghosts[ghostKey]) return;
 
   // Get position on curve (0-1)
   const position = bezierCurves[ghostKey].getPoint(scrollProgress);
   ghosts[ghostKey].position.copy(position);
+
+  // Get direction from curve tangent for smooth rotation
+  const tangent = bezierCurves[ghostKey].getTangent(scrollProgress).normalize();
+  ghosts[ghostKey].lookAt(position.clone().add(tangent));
 
   // Handle opacity fade in last 20%
   let opacity = 1;
@@ -71,6 +75,7 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
     const fadeProgress =
       (scrollProgress - OPACITY_FADE_START) / (1 - OPACITY_FADE_START);
     opacity = 1 - fadeProgress;
+    opacity = Math.max(0.1, opacity); // Keep minimum visibility
   }
 
   // Set opacity for both Mesh and Group
@@ -99,11 +104,19 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
 }
 
 // 3. SCROLL MANAGEMENT
+let initialCameraPosition = new THREE.Vector3();
+let initialCameraTarget = new THREE.Vector3();
+
 function onFirstScroll() {
   if (!isFirstScroll) return;
 
   isFirstScroll = false;
   pauseTime = Date.now();
+
+  // Capture initial camera state
+  initialCameraPosition.copy(camera.position);
+  // Assume camera is looking at origin initially or get the current target
+  initialCameraTarget.set(0, 0, 0);
 
   captureGhostPositions();
   createBezierCurves();
@@ -179,13 +192,59 @@ function animationLoop() {
   });
 }
 
+// Camera animation helper
+function animateCamera(progress: number) {
+  // Lerp camera position towards maze center
+  const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
+
+  // Position camera above the maze for a top-down-ish view
+  const cameraTargetPosition = new THREE.Vector3(
+    mazeCenter.x,
+    mazeCenter.y + 1.2, // Higher above the maze
+    mazeCenter.z + 0.6 // Slightly back
+  );
+
+  camera.position.lerpVectors(
+    initialCameraPosition,
+    cameraTargetPosition,
+    progress
+  );
+
+  // Make camera look at maze center
+  const currentTarget = new THREE.Vector3().lerpVectors(
+    initialCameraTarget,
+    mazeCenter,
+    progress
+  );
+  camera.lookAt(currentTarget);
+}
+
 // Scroll event handler
 function handleScroll() {
   const scrollY = window.scrollY;
+  const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+  const scrollProgress = Math.min(scrollY / Math.max(maxScroll * 0.8, 1), 1); // Use 80% of max scroll
 
   if (scrollY > 0 && currentAnimationState === "HOME") {
     onFirstScroll();
-  } else if (scrollY === 0 && currentAnimationState === "SCROLL_ANIMATION") {
+  }
+
+  if (currentAnimationState === "SCROLL_ANIMATION") {
+    // Animate ghosts along bezier curves
+    Object.keys(ghosts).forEach((ghostKey) => {
+      moveGhostOnCurve(ghostKey, scrollProgress);
+    });
+
+    // Animate camera towards maze center
+    animateCamera(scrollProgress);
+
+    // Update debug info
+    if (window.animationDebugInfo) {
+      window.animationDebugInfo.scrollProgress = scrollProgress;
+    }
+  }
+
+  if (scrollY === 0 && currentAnimationState === "SCROLL_ANIMATION") {
     // Reset to home state
     currentAnimationState = "HOME";
     isFirstScroll = true;
@@ -195,10 +254,15 @@ function handleScroll() {
       pauseTime = 0;
     }
 
+    // Reset camera to initial position
+    camera.position.copy(initialCameraPosition);
+    camera.lookAt(initialCameraTarget);
+
     // Update debug info
     if (window.animationDebugInfo) {
       window.animationDebugInfo.state = currentAnimationState;
       window.animationDebugInfo.isFirstScroll = isFirstScroll;
+      window.animationDebugInfo.scrollProgress = 0;
     }
 
     console.log("Returned to top - resuming home animation");
