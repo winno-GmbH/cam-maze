@@ -932,6 +932,12 @@ const povAnimationState: POVAnimationState = {
   cachedStartYAngle: null,
 };
 
+// POV Camera Smoothing State
+let previousCameraRotation: THREE.Quaternion | null = null;
+const CAMERA_ROTATION_SMOOTHING = 0.15; // Smoothing factor (0 = no smoothing, 1 = immediate)
+const MAX_ROTATION_SPEED = Math.PI / 6; // Max 30° rotation per frame
+const LOOK_AHEAD_DISTANCE = 0.02; // How far ahead to look for smooth curves
+
 // POV Text Animation Constants
 const GHOST_TEXT_START = 0.2;
 const CAM_TEXT_START = 0.3;
@@ -1032,6 +1038,9 @@ function onPOVAnimationStart() {
   povAnimationState.rotationStarted = false;
   povAnimationState.cachedStartYAngle = null;
 
+  // Reset smooth camera rotation state
+  previousCameraRotation = null;
+
   // Make sure pacman is visible
   if (ghosts.pacman) {
     ghosts.pacman.visible = true;
@@ -1077,12 +1086,12 @@ function updatePOVCamera(progress: number) {
   }
 
   if (progress < rotationStartingPoint) {
-    // Before rotation phase - look along path
-    const tangent = povAnimationState.cameraPOVPath
-      .getTangentAt(progress)
-      .normalize();
-    const lookAtPoint = camera.position.clone().add(tangent);
-    camera.lookAt(lookAtPoint);
+    // Before rotation phase - smooth camera rotation
+    const smoothedTangent = getSmoothCameraTangent(progress);
+    const lookAtPoint = camera.position.clone().add(smoothedTangent);
+
+    // Apply smooth rotation
+    applySmoothCameraRotation(lookAtPoint);
   } else {
     // Rotation phase - interpolate between start and end look-at
     const rotationProgress =
@@ -1095,13 +1104,111 @@ function updatePOVCamera(progress: number) {
       smoothProgress
     );
 
-    camera.lookAt(currentLookAt);
+    applySmoothCameraRotation(currentLookAt);
   }
 
   // Store previous position
   if (povAnimationState.previousCameraPosition) {
     povAnimationState.previousCameraPosition.copy(cameraPosition);
   }
+}
+
+// Get smoothed tangent for camera movement
+function getSmoothCameraTangent(progress: number): THREE.Vector3 {
+  if (!povAnimationState.cameraPOVPath) return new THREE.Vector3(0, 0, -1);
+
+  // Get current tangent
+  const currentTangent = povAnimationState.cameraPOVPath
+    .getTangentAt(progress)
+    .normalize();
+
+  // Get look-ahead tangent for smoothing
+  const lookAheadProgress = Math.min(progress + LOOK_AHEAD_DISTANCE, 1);
+  const lookAheadTangent = povAnimationState.cameraPOVPath
+    .getTangentAt(lookAheadProgress)
+    .normalize();
+
+  // Get look-behind tangent for more context
+  const lookBehindProgress = Math.max(progress - LOOK_AHEAD_DISTANCE, 0);
+  const lookBehindTangent = povAnimationState.cameraPOVPath
+    .getTangentAt(lookBehindProgress)
+    .normalize();
+
+  // Calculate average tangent for smoothing
+  const averageTangent = new THREE.Vector3()
+    .addVectors(lookBehindTangent, currentTangent)
+    .add(lookAheadTangent)
+    .divideScalar(3)
+    .normalize();
+
+  // Detect S-curves: if current and look-ahead have very different directions
+  const dotProduct = currentTangent.dot(lookAheadTangent);
+  const isSCurve = dotProduct < 0.3; // Less than ~70° similarity = S-curve
+
+  if (isSCurve) {
+    // For S-curves, use more aggressive smoothing
+    return new THREE.Vector3()
+      .addVectors(
+        currentTangent.multiplyScalar(0.3),
+        averageTangent.multiplyScalar(0.7)
+      )
+      .normalize();
+  } else {
+    // For normal curves, use light smoothing
+    return new THREE.Vector3()
+      .addVectors(
+        currentTangent.multiplyScalar(0.7),
+        averageTangent.multiplyScalar(0.3)
+      )
+      .normalize();
+  }
+}
+
+// Apply smooth camera rotation with speed limiting
+function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
+  if (!camera) return;
+
+  // Calculate target rotation
+  const tempMatrix = new THREE.Matrix4();
+  tempMatrix.lookAt(camera.position, targetLookAt, camera.up);
+  const targetQuaternion = new THREE.Quaternion().setFromRotationMatrix(
+    tempMatrix
+  );
+
+  if (!previousCameraRotation) {
+    // First frame - set rotation directly
+    camera.quaternion.copy(targetQuaternion);
+    previousCameraRotation = targetQuaternion.clone();
+    return;
+  }
+
+  // Calculate rotation difference
+  const angleDifference = camera.quaternion.angleTo(targetQuaternion);
+
+  // Limit rotation speed
+  if (angleDifference > MAX_ROTATION_SPEED) {
+    // Too fast rotation - limit it
+    const limitedQuaternion = new THREE.Quaternion();
+    const progress = MAX_ROTATION_SPEED / angleDifference;
+    limitedQuaternion.slerpQuaternions(
+      camera.quaternion,
+      targetQuaternion,
+      progress
+    );
+    camera.quaternion.copy(limitedQuaternion);
+  } else {
+    // Normal rotation - apply smoothing
+    const smoothedQuaternion = new THREE.Quaternion();
+    smoothedQuaternion.slerpQuaternions(
+      camera.quaternion,
+      targetQuaternion,
+      CAMERA_ROTATION_SMOOTHING
+    );
+    camera.quaternion.copy(smoothedQuaternion);
+  }
+
+  // Store for next frame
+  previousCameraRotation.copy(camera.quaternion);
 }
 
 // Update POV Ghosts
@@ -1319,6 +1426,9 @@ function onPOVAnimationEnd() {
   if (window.animationDebugInfo) {
     window.animationDebugInfo.povAnimationActive = false;
   }
+
+  // Reset smooth camera rotation state
+  previousCameraRotation = null;
 }
 
 // Restore ghosts to home positions
