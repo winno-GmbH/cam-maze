@@ -42,20 +42,31 @@ function captureGhostPositions() {
 }
 
 function createBezierCurves() {
+  const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
+
   Object.keys(capturedPositions).forEach((ghostKey) => {
     const startPos = capturedPositions[ghostKey];
-    const endPos = startPos.clone(); // Round trip back to start
 
-    // Create control point that goes through maze center
-    const controlPoint = MAZE_CENTER.clone();
+    // Create quadratic bezier curve from current position to maze center
+    // Control point is halfway between start and end in x/z, but elevated to y=1
+    const controlPoint = new THREE.Vector3(
+      (startPos.x + mazeCenter.x) / 2, // Mittelpunkt x-Distanz
+      1, // Hoch oben bei y=1
+      (startPos.z + mazeCenter.z) / 2 // Mittelpunkt z-Distanz
+    );
 
     bezierCurves[ghostKey] = new THREE.QuadraticBezierCurve3(
       startPos,
       controlPoint,
-      endPos
+      mazeCenter
     );
+
+    console.log(`Created bezier curve for ${ghostKey}:`, {
+      start: startPos,
+      control: controlPoint,
+      end: mazeCenter,
+    });
   });
-  console.log("Bezier curves created");
 }
 
 function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
@@ -221,11 +232,45 @@ function animateCamera(progress: number) {
 
 // Scroll event handler
 function handleScroll() {
-  const scrollY = window.scrollY;
-  const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-  const scrollProgress = Math.min(scrollY / Math.max(maxScroll * 0.8, 1), 1); // Use 80% of max scroll
+  const homeSection = document.querySelector(".sc--home") as HTMLElement;
+  if (!homeSection) {
+    console.warn(".sc--home element not found");
+    return;
+  }
 
-  if (scrollY > 0 && currentAnimationState === "HOME") {
+  const rect = homeSection.getBoundingClientRect();
+  const windowHeight = window.innerHeight;
+
+  // Check if we're scrolling through the home section
+  const isInHomeSection = rect.top < windowHeight && rect.bottom > 0;
+
+  if (!isInHomeSection) {
+    // If we're not in home section and currently in scroll animation, reset
+    if (currentAnimationState === "SCROLL_ANIMATION") {
+      currentAnimationState = "HOME";
+      isFirstScroll = true;
+
+      if (pauseTime) {
+        timeOffset += Date.now() - pauseTime;
+        pauseTime = 0;
+      }
+
+      // Reset camera to initial position
+      camera.position.copy(initialCameraPosition);
+      camera.lookAt(initialCameraTarget);
+
+      console.log("Left home section - resuming home animation");
+    }
+    return;
+  }
+
+  // Calculate scroll progress within the home section
+  const sectionHeight = homeSection.offsetHeight;
+  const scrolledIntoSection = Math.max(0, windowHeight - rect.top);
+  const scrollProgress = Math.min(scrolledIntoSection / sectionHeight, 1);
+
+  // Start scroll animation when we begin scrolling through home section
+  if (scrollProgress > 0 && currentAnimationState === "HOME") {
     onFirstScroll();
   }
 
@@ -242,30 +287,6 @@ function handleScroll() {
     if (window.animationDebugInfo) {
       window.animationDebugInfo.scrollProgress = scrollProgress;
     }
-  }
-
-  if (scrollY === 0 && currentAnimationState === "SCROLL_ANIMATION") {
-    // Reset to home state
-    currentAnimationState = "HOME";
-    isFirstScroll = true;
-
-    if (pauseTime) {
-      timeOffset += Date.now() - pauseTime;
-      pauseTime = 0;
-    }
-
-    // Reset camera to initial position
-    camera.position.copy(initialCameraPosition);
-    camera.lookAt(initialCameraTarget);
-
-    // Update debug info
-    if (window.animationDebugInfo) {
-      window.animationDebugInfo.state = currentAnimationState;
-      window.animationDebugInfo.isFirstScroll = isFirstScroll;
-      window.animationDebugInfo.scrollProgress = 0;
-    }
-
-    console.log("Returned to top - resuming home animation");
   }
 }
 
