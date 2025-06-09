@@ -1574,7 +1574,7 @@ function updateCameraFOV() {
   }
 }
 
-// Enhanced ghost update function (from backup.js)
+// Complete POV ghost triggering system from backup.js
 function updateGhostInPOV(
   ghostKey: string,
   ghost: THREE.Object3D,
@@ -1590,39 +1590,257 @@ function updateGhostInPOV(
   if (ghostKey in backupTriggerPositions) {
     const trigger =
       backupTriggerPositions[ghostKey as keyof typeof backupTriggerPositions];
-    const { triggerPos, ghostTextPos, camTextPos, endPosition } = trigger;
+    const { triggerPos, ghostTextPos, camTextPos, endPosition, parent } =
+      trigger;
 
-    // Calculate distances
-    const distanceToTrigger = cameraPosition.distanceTo(triggerPos);
-    const distanceToGhostText = cameraPosition.distanceTo(ghostTextPos);
-    const distanceToEnd = cameraPosition.distanceTo(endPosition);
+    if (!triggerPos || !endPosition) return;
 
-    // Determine if ghost should be active
-    const isInTriggerArea = distanceToTrigger <= TRIGGER_DISTANCE;
-    const isInActiveArea = distanceToGhostText <= TRIGGER_DISTANCE * 3;
+    const ghostText = parent as HTMLElement;
+    const camText = parent?.querySelector(".cmp--pov-cam") as HTMLElement;
 
-    if (isInTriggerArea || isInActiveArea) {
-      ghost.visible = true;
+    ghost.scale.set(0.5, 0.5, 0.5);
 
-      // Calculate progress along the ghost's path
-      const closestProgress = findClosestProgressOnPOVPath(cameraPosition);
+    // Initialize ghost trigger state if not done already
+    if ((trigger as any).hasBeenTriggered === undefined) {
+      (trigger as any).hasBeenTriggered = false;
+      (trigger as any).hasBeenDeactivated = false;
+      (trigger as any).triggerCameraProgress = null;
+      (trigger as any).ghostTextCameraProgress = null;
+      (trigger as any).camTextCameraProgress = null;
+      (trigger as any).endCameraProgress = null;
+      (trigger as any).currentPathT = 0;
+      (trigger as any).ghostTextOpacity = 0;
+      (trigger as any).camTextOpacity = 0;
+      (trigger as any).lastProgress = 0;
+      (trigger as any).currentRotation = null;
 
-      // Move ghost along its path
-      const ghostPosition = path.getPointAt(closestProgress);
-      ghost.position.copy(ghostPosition);
+      // Make ghost and text invisible initially
+      ghost.visible = false;
+      if (ghostText) {
+        ghostText.classList.add("hidden");
+        ghostText.style.opacity = "0";
+      }
+      if (camText) {
+        camText.classList.add("hidden");
+        camText.style.opacity = "0";
+      }
+    }
 
-      // Make ghost look along its path
-      const tangent = path.getTangentAt(closestProgress).normalize();
-      const lookAtPoint = ghostPosition.clone().add(tangent);
-      ghost.lookAt(lookAtPoint);
+    // Get current camera progress on POV path
+    const currentCameraProgress = findClosestProgressOnPOVPath(cameraPosition);
 
-      // Trigger text animations if parent element exists
-      if (trigger.parent) {
-        updateGhostTextTrigger(trigger, cameraPosition, closestProgress);
+    // Calculate path positions if not done already
+    if ((trigger as any).triggerCameraProgress === null) {
+      (trigger as any).triggerCameraProgress =
+        findClosestProgressOnPOVPath(triggerPos);
+      (trigger as any).ghostTextCameraProgress = ghostTextPos
+        ? findClosestProgressOnPOVPath(ghostTextPos)
+        : (trigger as any).triggerCameraProgress;
+      (trigger as any).camTextCameraProgress = camTextPos
+        ? findClosestProgressOnPOVPath(camTextPos)
+        : (trigger as any).ghostTextCameraProgress;
+      (trigger as any).endCameraProgress =
+        findClosestProgressOnPOVPath(endPosition);
+    }
+
+    const triggerProgress = (trigger as any).triggerCameraProgress;
+    const ghostTextProgress = (trigger as any).ghostTextCameraProgress;
+    const camTextProgress = (trigger as any).camTextCameraProgress;
+    const endProgress = (trigger as any).endCameraProgress;
+
+    // 1. Ghost visibility and position
+    if (
+      currentCameraProgress >= triggerProgress &&
+      currentCameraProgress <= endProgress
+    ) {
+      // Make ghost visible if not already active
+      if (!ghost.visible) {
+        ghost.visible = true;
+        (trigger as any).hasBeenTriggered = true;
+      }
+
+      // Update ghost position
+      const normalizedProgress =
+        (currentCameraProgress - triggerProgress) /
+        (endProgress - triggerProgress);
+      let ghostProgress = Math.max(0, Math.min(1, normalizedProgress));
+
+      // Parameter smoothing
+      if ((trigger as any).currentPathT === undefined) {
+        (trigger as any).currentPathT = ghostProgress;
+      } else {
+        const parameterSmoothingFactor = 0.1;
+        (trigger as any).currentPathT +=
+          (ghostProgress - (trigger as any).currentPathT) *
+          parameterSmoothingFactor;
+      }
+
+      // Final progress with smoothing
+      ghostProgress = (trigger as any).currentPathT;
+
+      // Update ghost position
+      const pathPoint = path.getPointAt(ghostProgress);
+      ghost.position.copy(pathPoint);
+
+      // Update ghost orientation with smooth rotation
+      const tangent = path.getTangentAt(ghostProgress).normalize();
+      const lookAtPoint = ghost.position.clone().add(tangent);
+
+      if (!(trigger as any).currentRotation) {
+        (trigger as any).currentRotation = new THREE.Quaternion();
+        ghost.getWorldQuaternion((trigger as any).currentRotation);
+      }
+
+      const targetQuaternion = new THREE.Quaternion();
+      const lookAtMatrix = new THREE.Matrix4().lookAt(
+        ghost.position,
+        lookAtPoint,
+        new THREE.Vector3(0, 1, 0)
+      );
+      targetQuaternion.setFromRotationMatrix(lookAtMatrix);
+
+      // Smoothly interpolate to target rotation
+      const rotationSmoothingFactor = 0.15;
+      (trigger as any).currentRotation.slerp(
+        targetQuaternion,
+        rotationSmoothingFactor
+      );
+      ghost.quaternion.copy((trigger as any).currentRotation);
+
+      // Fade out at the end
+      if (ghostProgress > 0.9) {
+        (ghost as any).material.opacity = 1 - (ghostProgress - 0.9) / 0.1;
+      } else {
+        (ghost as any).material.opacity = 1;
       }
     } else {
+      // Make ghost invisible when outside range
       ghost.visible = false;
+      (trigger as any).hasBeenTriggered = false;
     }
+
+    // 2. TEXT VISIBILITY: Adjusted timing ranges
+    const sectionLength = endProgress - triggerProgress;
+
+    // Text should appear later and stay visible longer
+    const fadeIn = ghostTextProgress;
+    const fadeInEnd = fadeIn + sectionLength * 0.07;
+    const stayVisibleUntil = endProgress - sectionLength * 0.15;
+    const fadeOutEnd = endProgress;
+
+    // Calculate ghost text visibility
+    let targetGhostOpacity = 0;
+    if (currentCameraProgress >= fadeIn && currentCameraProgress < fadeInEnd) {
+      const fadeProgress =
+        (currentCameraProgress - fadeIn) / (fadeInEnd - fadeIn);
+      targetGhostOpacity = fadeProgress;
+    } else if (
+      currentCameraProgress >= fadeInEnd &&
+      currentCameraProgress < stayVisibleUntil
+    ) {
+      targetGhostOpacity = 1.0;
+    } else if (
+      currentCameraProgress >= stayVisibleUntil &&
+      currentCameraProgress <= fadeOutEnd
+    ) {
+      const fadeProgress =
+        (currentCameraProgress - stayVisibleUntil) /
+        (fadeOutEnd - stayVisibleUntil);
+      targetGhostOpacity = 1.0 - fadeProgress;
+    }
+
+    // Similar logic for CAM text, but slightly offset
+    const camFadeIn = camTextProgress;
+    const camFadeInEnd = camFadeIn + sectionLength * 0.07;
+
+    let targetCamOpacity = 0;
+    if (
+      currentCameraProgress >= camFadeIn &&
+      currentCameraProgress < camFadeInEnd
+    ) {
+      const fadeProgress =
+        (currentCameraProgress - camFadeIn) / (camFadeInEnd - camFadeIn);
+      targetCamOpacity = fadeProgress * 0.8; // Max opacity 0.8
+    } else if (
+      currentCameraProgress >= camFadeInEnd &&
+      currentCameraProgress < stayVisibleUntil
+    ) {
+      targetCamOpacity = 0.8;
+    } else if (
+      currentCameraProgress >= stayVisibleUntil &&
+      currentCameraProgress <= fadeOutEnd
+    ) {
+      const fadeProgress =
+        (currentCameraProgress - stayVisibleUntil) /
+        (fadeOutEnd - stayVisibleUntil);
+      targetCamOpacity = 0.8 * (1.0 - fadeProgress);
+    }
+
+    // 3. OPACITY UPDATES
+    const fadeInSpeed = 0.2; // Faster fade in
+    const fadeOutSpeed = 0.1; // Slower fade out
+
+    // Update ghost text opacity
+    if (targetGhostOpacity > (trigger as any).ghostTextOpacity) {
+      (trigger as any).ghostTextOpacity +=
+        (targetGhostOpacity - (trigger as any).ghostTextOpacity) * fadeInSpeed;
+    } else {
+      (trigger as any).ghostTextOpacity +=
+        (targetGhostOpacity - (trigger as any).ghostTextOpacity) * fadeOutSpeed;
+    }
+
+    // Update CAM text opacity
+    if (targetCamOpacity > (trigger as any).camTextOpacity) {
+      (trigger as any).camTextOpacity +=
+        (targetCamOpacity - (trigger as any).camTextOpacity) * fadeInSpeed;
+    } else {
+      (trigger as any).camTextOpacity +=
+        (targetCamOpacity - (trigger as any).camTextOpacity) * fadeOutSpeed;
+    }
+
+    // 4. DOM UPDATES
+    const ghostTextOpacity = Math.max(
+      0,
+      Math.min(1, Math.round((trigger as any).ghostTextOpacity * 1000) / 1000)
+    );
+    const camTextOpacity = Math.max(
+      0,
+      Math.min(1, Math.round((trigger as any).camTextOpacity * 1000) / 1000)
+    );
+
+    // Update DOM only when necessary
+    if (ghostText) {
+      if (ghostTextOpacity > 0.01) {
+        if (ghostText.classList.contains("hidden")) {
+          ghostText.classList.remove("hidden");
+        }
+        ghostText.style.opacity = ghostTextOpacity.toString();
+      } else if (
+        ghostTextOpacity <= 0.01 &&
+        !ghostText.classList.contains("hidden")
+      ) {
+        ghostText.classList.add("hidden");
+        ghostText.style.opacity = "0";
+      }
+    }
+
+    if (camText) {
+      if (camTextOpacity > 0.01) {
+        if (camText.classList.contains("hidden")) {
+          camText.classList.remove("hidden");
+        }
+        camText.style.opacity = camTextOpacity.toString();
+      } else if (
+        camTextOpacity <= 0.01 &&
+        !camText.classList.contains("hidden")
+      ) {
+        camText.classList.add("hidden");
+        camText.style.opacity = "0";
+      }
+    }
+
+    // Store position for next iteration
+    (trigger as any).lastProgress = currentCameraProgress;
   } else {
     // Default behavior for ghosts without triggers
     const closestProgress = findClosestProgressOnPOVPath(cameraPosition);
@@ -1637,53 +1855,4 @@ function updateGhostInPOV(
   }
 }
 
-// Update ghost text triggers (from backup.js)
-function updateGhostTextTrigger(
-  trigger: any,
-  cameraPosition: THREE.Vector3,
-  progress: number
-) {
-  if (!trigger.parent) return;
-
-  const { triggerPos, ghostTextPos, camTextPos, endPosition } = trigger;
-
-  // Calculate if camera is in trigger range
-  const distanceToTrigger = cameraPosition.distanceTo(triggerPos);
-  const distanceToEnd = cameraPosition.distanceTo(endPosition);
-
-  if (
-    distanceToTrigger <= TRIGGER_DISTANCE &&
-    distanceToEnd <= TRIGGER_DISTANCE * 2
-  ) {
-    // Show ghost text
-    const ghostText = trigger.parent.querySelector(".cmp--pov-ghost");
-    if (ghostText) {
-      ghostText.classList.remove("hidden");
-      ghostText.style.opacity = "1";
-    }
-
-    // Show cam text after a delay
-    const distanceToCamText = cameraPosition.distanceTo(camTextPos);
-    if (distanceToCamText <= TRIGGER_DISTANCE) {
-      const camText = trigger.parent.querySelector(".cmp--pov-cam");
-      if (camText) {
-        camText.classList.remove("hidden");
-        camText.style.opacity = "1";
-      }
-    }
-  } else {
-    // Hide texts
-    const ghostText = trigger.parent.querySelector(".cmp--pov-ghost");
-    const camText = trigger.parent.querySelector(".cmp--pov-cam");
-
-    if (ghostText) {
-      ghostText.classList.add("hidden");
-      ghostText.style.opacity = "0";
-    }
-
-    if (camText) {
-      camText.classList.add("hidden");
-      camText.style.opacity = "0";
-    }
-  }
-}
+// Old updateGhostTextTrigger function is now integrated into updateGhostInPOV
