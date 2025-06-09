@@ -5,7 +5,11 @@ import { renderer, scene } from "./scene";
 import { camera, startQuaternion, endQuaternion } from "./camera";
 
 // 1. STATE MANAGEMENT
-type AnimationState = "HOME" | "SCROLL_ANIMATION" | "POV_ANIMATION";
+type AnimationState =
+  | "HOME"
+  | "SCROLL_ANIMATION"
+  | "POV_ANIMATION"
+  | "FINAL_POSITION";
 let currentAnimationState: AnimationState = "HOME";
 let isFirstScroll = true;
 
@@ -439,10 +443,11 @@ function handleScroll() {
   const isInHomeSection = rect.top < windowHeight && rect.bottom > 0;
 
   if (!isInHomeSection) {
-    // If we're not in home section and currently in scroll animation, reset
+    // If we're not in home section and currently in scroll animation,
+    // switch to a "FINAL_POSITION" state instead of resetting to home
     if (currentAnimationState === "SCROLL_ANIMATION") {
-      resetToHomeState();
-      console.log("Left home section - resuming home animation");
+      currentAnimationState = "FINAL_POSITION";
+      console.log("Left home section - maintaining final position");
     }
     return;
   }
@@ -461,13 +466,17 @@ function handleScroll() {
   );
 
   // Start scroll animation IMMEDIATELY when we begin scrolling through home section
-  if (scrollProgress > 0 && currentAnimationState === "HOME") {
+  if (
+    scrollProgress > 0 &&
+    (currentAnimationState === "HOME" ||
+      currentAnimationState === "FINAL_POSITION")
+  ) {
     console.log("Starting scroll animation...");
     onFirstScroll();
   }
 
   if (currentAnimationState === "SCROLL_ANIMATION") {
-    // If we're back at the very top (scrollProgress = 0), reset everything
+    // If we're back at the very top (scrollProgress = 0), reset to home only if we're actually scrolling back up
     if (scrollProgress === 0) {
       console.log("Scroll progress at 0, resetting to home state");
       resetToHomeState();
@@ -1266,8 +1275,8 @@ function findClosestProgressOnPOVPath(
 
 // POV Animation End Handler
 function onPOVAnimationEnd() {
-  // Reset to HOME state
-  currentAnimationState = "HOME";
+  // Return to FINAL_POSITION state (maintain camera position) instead of HOME
+  currentAnimationState = "FINAL_POSITION";
 
   // Reset all POV text elements
   Object.values(povAnimationState.triggerPositions).forEach((trigger: any) => {
@@ -1368,8 +1377,13 @@ function handlePOVScroll() {
     const scrolledIntoSection = Math.max(0, -sectionTop);
     const progress = Math.min(1, scrolledIntoSection / sectionHeight);
 
-    // Start POV animation if not already active
-    if (!povAnimationState.isActive && progress > 0) {
+    // Start POV animation if not already active and we're in FINAL_POSITION or HOME state
+    if (
+      !povAnimationState.isActive &&
+      progress > 0 &&
+      (currentAnimationState === "FINAL_POSITION" ||
+        currentAnimationState === "HOME")
+    ) {
       console.log("🎭 POV Animation Started (Scroll)");
       povAnimationState.isActive = true;
       onPOVAnimationStart();
