@@ -45,26 +45,26 @@ function createBezierCurves() {
   const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
 
   Object.keys(capturedPositions).forEach((ghostKey) => {
-    const startPos = capturedPositions[ghostKey];
+    const startPos = capturedPositions[ghostKey].clone(); // Aktuelle Position der Geister
+    const endPos = mazeCenter.clone(); // Maze-Mitte als Endpunkt
 
-    // Create quadratic bezier curve from current position to maze center
-    // Control point is halfway between start and end in x/z, but elevated to y=1
+    // Control point: Mittelpunkt zwischen Start und Ende in x/z, aber hoch oben bei y=1
     const controlPoint = new THREE.Vector3(
-      (startPos.x + mazeCenter.x) / 2, // Mittelpunkt x-Distanz
+      (startPos.x + endPos.x) / 2, // Mittelpunkt x zwischen Start und Maze-Mitte
       1, // Hoch oben bei y=1
-      (startPos.z + mazeCenter.z) / 2 // Mittelpunkt z-Distanz
+      (startPos.z + endPos.z) / 2 // Mittelpunkt z zwischen Start und Maze-Mitte
     );
 
     bezierCurves[ghostKey] = new THREE.QuadraticBezierCurve3(
-      startPos,
-      controlPoint,
-      mazeCenter
+      startPos, // Wo Geist ist wenn Animation stoppt
+      controlPoint, // Hoher Bogen-Punkt
+      endPos // Maze-Mitte
     );
 
     console.log(`Created bezier curve for ${ghostKey}:`, {
       start: startPos,
       control: controlPoint,
-      end: mazeCenter,
+      end: endPos,
     });
   });
 }
