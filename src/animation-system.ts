@@ -1602,11 +1602,14 @@ function updateGhostInPOV(
     const ghostText = parent?.querySelector(".cmp--pov-ghost") as HTMLElement;
     const camText = parent?.querySelector(".cmp--pov-cam") as HTMLElement;
 
-    console.log(
-      `🎭 ${ghostKey} - Parent: ${parent ? "found" : "null"}, GhostText: ${
-        ghostText ? "found" : "null"
-      }, CamText: ${camText ? "found" : "null"}`
-    );
+    // Only log once per ghost to avoid spam
+    if (trigger.hasBeenTriggered === undefined) {
+      console.log(
+        `🎭 ${ghostKey} - Parent: ${parent ? "found" : "null"}, GhostText: ${
+          ghostText ? "found" : "null"
+        }, CamText: ${camText ? "found" : "null"}`
+      );
+    }
 
     ghost.scale.set(0.5, 0.5, 0.5);
 
@@ -1697,12 +1700,33 @@ function updateGhostInPOV(
 
       // Fade out at the end
       if (ghostProgress > 0.9) {
-        (ghost as any).material.opacity = 1 - (ghostProgress - 0.9) / 0.1;
+        const fadeOpacity = 1 - (ghostProgress - 0.9) / 0.1;
+        (ghost as any).material.opacity = fadeOpacity;
+        console.log(
+          `🎭 ${ghostKey} fading out: progress=${ghostProgress.toFixed(
+            3
+          )}, opacity=${fadeOpacity.toFixed(3)}`
+        );
       } else {
         (ghost as any).material.opacity = 1;
       }
+
+      console.log(
+        `🎭 ${ghostKey} visible in range: progress=${ghostProgress.toFixed(
+          3
+        )}, cameraProgress=${currentCameraProgress.toFixed(3)}, visible=${
+          ghost.visible
+        }`
+      );
     } else {
       // Make ghost invisible when outside range
+      console.log(
+        `🎭 ${ghostKey} OUT OF RANGE: cameraProgress=${currentCameraProgress.toFixed(
+          3
+        )}, triggerRange=${triggerProgress?.toFixed(3)}-${endProgress?.toFixed(
+          3
+        )}`
+      );
       ghost.visible = false;
       trigger.hasBeenTriggered = false;
     }
@@ -1796,6 +1820,17 @@ function updateGhostInPOV(
       Math.min(1, Math.round(trigger.camTextOpacity * 1000) / 1000)
     );
 
+    // Debug text opacity calculations
+    if (ghostTextOpacity > 0 || camTextOpacity > 0) {
+      console.log(
+        `🎭 ${ghostKey} Text Opacities - Ghost: ${ghostTextOpacity.toFixed(
+          3
+        )}, Cam: ${camTextOpacity.toFixed(
+          3
+        )}, CameraProgress: ${currentCameraProgress.toFixed(3)}`
+      );
+    }
+
     // Update DOM only when necessary
     if (ghostText) {
       if (ghostTextOpacity > 0.01) {
@@ -1803,6 +1838,9 @@ function updateGhostInPOV(
           ghostText.classList.remove("hidden");
         }
         ghostText.style.opacity = ghostTextOpacity.toString();
+        console.log(
+          `🎭 ${ghostKey} Ghost text visible: opacity = ${ghostTextOpacity}`
+        );
       } else if (
         ghostTextOpacity <= 0.01 &&
         !ghostText.classList.contains("hidden")
@@ -1818,6 +1856,9 @@ function updateGhostInPOV(
           camText.classList.remove("hidden");
         }
         camText.style.opacity = camTextOpacity.toString();
+        console.log(
+          `🎭 ${ghostKey} Cam text visible: opacity = ${camTextOpacity}`
+        );
       } else if (
         camTextOpacity <= 0.01 &&
         !camText.classList.contains("hidden")
