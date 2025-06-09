@@ -452,6 +452,14 @@ function handleScroll() {
     return;
   }
 
+  // Special case: If we're near the top of the page and in FINAL_POSITION,
+  // reset to HOME to restore the home animation
+  if (window.scrollY <= 10 && currentAnimationState === "FINAL_POSITION") {
+    console.log("Back at top of page from FINAL_POSITION - resetting to HOME");
+    resetToHomeState();
+    return;
+  }
+
   // Calculate scroll progress within the home section
   const sectionHeight = homeSection.offsetHeight;
 
