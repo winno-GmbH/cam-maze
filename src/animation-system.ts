@@ -455,33 +455,35 @@ function handleIntroScroll() {
   const sectionBottom = rect.bottom;
   const sectionHeight = rect.height;
 
-  // Animation should run from "top top" to "bottom bottom" (GSAP logic)
-  // Start: when section top hits viewport top (sectionTop = 0)
-  // End: when section bottom hits viewport bottom (sectionBottom = -windowHeight)
+  // Simplified GSAP logic: Just use section scrolling from top to bottom
+  if (sectionTop <= 0 && sectionBottom >= 0) {
+    // Section is crossing the viewport
+    const progress = Math.min(1, Math.abs(sectionTop) / sectionHeight);
 
-  if (sectionTop <= 0 && sectionBottom >= -windowHeight) {
-    // Section is in animation range
-    // Total animation distance = sectionHeight + windowHeight
-    const totalAnimationDistance = sectionHeight + windowHeight;
-    const scrolledDistance = Math.max(0, -sectionTop);
-    const progress = Math.min(1, scrolledDistance / totalAnimationDistance);
+    // Calculate when "center center" is reached
+    // "center center" = when section center aligns with viewport center
+    const centerProgress = 0.5; // This happens halfway through the section
 
     // DEBUG: Intro scroll timing
     console.log(
       `🎬 INTRO DEBUG: top=${sectionTop.toFixed(
         1
-      )}, bottom=${sectionBottom.toFixed(1)}, height=${sectionHeight.toFixed(
-        1
-      )}, windowHeight=${windowHeight.toFixed(
-        1
-      )}, totalDistance=${totalAnimationDistance.toFixed(
-        1
-      )}, progress=${progress.toFixed(3)}`
+      )}, height=${sectionHeight.toFixed(1)}, progress=${progress.toFixed(
+        3
+      )}, centerReached=${progress >= centerProgress}`
     );
 
-    // Animate intro elements based on progress
-    animateIntroHeader(progress);
-    animateIntroBody(progress);
+    // Header: "top top" to "center center" (0% to 50%)
+    if (progress <= centerProgress) {
+      const headerProgress = progress / centerProgress; // 0-0.5 maps to 0-1
+      animateIntroHeaderDirect(headerProgress);
+      animateIntroBodyDirect(0); // Body not started yet
+    } else {
+      // Body: "center center" to "bottom bottom" (50% to 100%)
+      const bodyProgress = (progress - centerProgress) / (1 - centerProgress); // 0.5-1 maps to 0-1
+      animateIntroHeaderDirect(1); // Header finished
+      animateIntroBodyDirect(bodyProgress);
+    }
   } else {
     // Section is completely out of view - hide elements
     console.log(
@@ -502,54 +504,46 @@ function handleIntroScroll() {
   }
 }
 
-function animateIntroHeader(progress: number) {
+function animateIntroHeaderDirect(directProgress: number) {
   const introHeader = document.querySelector(".sc_h--intro") as HTMLElement;
   if (!introHeader) return;
 
   // Make visible
   introHeader.style.display = "block";
 
-  // Header animation: "top top" to "center center" (0% to 50% of TOTAL GSAP animation)
-  // GSAP: start="top top" end="center center" = first half of full animation
+  // Header animation: directProgress goes from 0-1 for the full header animation
   let scale = 0;
   let opacity = 0;
 
-  if (progress <= 0.5) {
-    // Map 0-0.5 to 0-1 for full animation (top top to center center)
-    const localProgress = Math.min(1, progress * 2); // 0-0.5 range to 0-1 animation
-
-    if (localProgress <= 0.3) {
+  if (directProgress < 1) {
+    if (directProgress <= 0.3) {
       // 0% - 30%: scale 0->0.8, opacity 0->1
-      const keyframeProgress = localProgress / 0.3;
+      const keyframeProgress = directProgress / 0.3;
       scale = keyframeProgress * 0.8;
       opacity = keyframeProgress;
-    } else if (localProgress <= 0.7) {
+    } else if (directProgress <= 0.7) {
       // 30% - 70%: scale 0.8->1.2, opacity stays 1
-      const keyframeProgress = (localProgress - 0.3) / 0.4;
+      const keyframeProgress = (directProgress - 0.3) / 0.4;
       scale = 0.8 + keyframeProgress * 0.4; // 0.8 -> 1.2
       opacity = 1;
     } else {
       // 70% - 100%: scale 1.2->1.5, opacity 1->0
-      const keyframeProgress = (localProgress - 0.7) / 0.3;
+      const keyframeProgress = (directProgress - 0.7) / 0.3;
       scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
       opacity = 1 - keyframeProgress; // 1 -> 0
     }
 
     console.log(
-      `🎬 HEADER: progress=${progress.toFixed(
+      `🎬 HEADER: directProgress=${directProgress.toFixed(
         3
-      )}, localProgress=${localProgress.toFixed(3)}, scale=${scale.toFixed(
-        2
-      )}, opacity=${opacity.toFixed(2)}`
+      )}, scale=${scale.toFixed(2)}, opacity=${opacity.toFixed(2)}`
     );
   } else {
-    // After 0.5 progress (center center reached), header is fully animated out
+    // Header finished
     scale = 1.5;
     opacity = 0;
     console.log(
-      `🎬 HEADER FINISHED: progress=${progress.toFixed(
-        3
-      )}, scale=${scale}, opacity=${opacity}`
+      `🎬 HEADER FINISHED: directProgress=${directProgress.toFixed(3)}`
     );
   }
 
@@ -557,55 +551,50 @@ function animateIntroHeader(progress: number) {
   introHeader.style.opacity = opacity.toString();
 }
 
-function animateIntroBody(progress: number) {
+function animateIntroBodyDirect(directProgress: number) {
   const introBody = document.querySelector(".sc_b--intro") as HTMLElement;
   if (!introBody) return;
 
-  // Make visible
-  introBody.style.display = "block";
+  // Make visible if progress > 0
+  if (directProgress > 0) {
+    introBody.style.display = "block";
+  } else {
+    introBody.style.display = "none";
+    return;
+  }
 
-  // Body animation: "center center" to "bottom bottom" (50% to 100% of TOTAL GSAP animation)
-  // GSAP: start="center center" end="bottom bottom" = second half of full animation
+  // Body animation: directProgress goes from 0-1 for the full body animation
   let scale = 0.5;
   let opacity = 0;
 
-  if (progress >= 0.5) {
-    // Map 0.5-1.0 to 0-1 for full animation (center center to bottom bottom)
-    const localProgress = Math.min(1, (progress - 0.5) / 0.5); // 0.5-1.0 range to 0-1 animation
-
-    if (localProgress <= 0.3) {
+  if (directProgress > 0) {
+    if (directProgress <= 0.3) {
       // 0% - 30%: scale 0.5->0.8, opacity 0->1
-      const keyframeProgress = localProgress / 0.3;
+      const keyframeProgress = directProgress / 0.3;
       scale = 0.5 + keyframeProgress * 0.3; // 0.5 -> 0.8
       opacity = keyframeProgress;
-    } else if (localProgress <= 0.7) {
+    } else if (directProgress <= 0.7) {
       // 30% - 70%: scale 0.8->1.2, opacity stays 1
-      const keyframeProgress = (localProgress - 0.3) / 0.4;
+      const keyframeProgress = (directProgress - 0.3) / 0.4;
       scale = 0.8 + keyframeProgress * 0.4; // 0.8 -> 1.2
       opacity = 1;
     } else {
       // 70% - 100%: scale 1.2->1.5, opacity 1->0
-      const keyframeProgress = (localProgress - 0.7) / 0.3;
+      const keyframeProgress = (directProgress - 0.7) / 0.3;
       scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
       opacity = 1 - keyframeProgress; // 1 -> 0
     }
 
     console.log(
-      `🎬 BODY: progress=${progress.toFixed(
+      `🎬 BODY: directProgress=${directProgress.toFixed(
         3
-      )}, localProgress=${localProgress.toFixed(3)}, scale=${scale.toFixed(
-        2
-      )}, opacity=${opacity.toFixed(2)}`
+      )}, scale=${scale.toFixed(2)}, opacity=${opacity.toFixed(2)}`
     );
   } else {
-    // Before 0.5 progress (before center center), body is not visible
+    // Body not started yet
     scale = 0.5;
     opacity = 0;
-    console.log(
-      `🎬 BODY WAITING: progress=${progress.toFixed(
-        3
-      )} (waiting for 0.5 - center center)`
-    );
+    console.log(`🎬 BODY WAITING: directProgress=${directProgress.toFixed(3)}`);
   }
 
   introBody.style.transform = `scale(${scale})`;
