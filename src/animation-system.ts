@@ -26,39 +26,6 @@ declare global {
 const MAZE_CENTER = new THREE.Vector3(0.55675, 0.5, 0.45175);
 const GHOSTS_END_AT = 0.8; // Ghosts finish their animation at 80% scroll
 const GHOST_OPACITY_FADE_START = 0.8; // Last 20% of GHOST animation (ghostProgress 0.8-1.0)
-const CAMERA_DELAY = 0.15; // Camera starts 15% later than ghosts
-
-// Rotation constants (easily changeable)
-const ROTATION_AXIS_X: "x" | "y" | "z" = "x"; // Primary rotation axis (e.g., to lay down)
-const ROTATION_AXIS_Y: "x" | "y" | "z" = "y"; // Secondary rotation axis (to next 90° step)
-const ROTATION_AMOUNT_X = Math.PI / 2; // 90 degrees for X-axis
-const USE_SMART_Y_ROTATION = true; // Whether to snap to nearest straight orientation (0° or 180°) on Y-axis
-
-// Helper function to find the nearest 0° or 180° step
-function getNearestStraightOrientation(currentRadians: number): number {
-  // Convert to degrees for easier calculation
-  const currentDegrees = (currentRadians * 180) / Math.PI;
-
-  // Normalize to 0-360 range
-  const normalizedDegrees = ((currentDegrees % 360) + 360) % 360;
-
-  // Find distance to 0° and 180°
-  const distanceTo0 = Math.min(normalizedDegrees, 360 - normalizedDegrees);
-  const distanceTo180 = Math.abs(normalizedDegrees - 180);
-
-  // Choose the nearer one
-  let targetDegrees;
-  if (distanceTo0 <= distanceTo180) {
-    // Nearer to 0° (could be 0° or 360°)
-    targetDegrees = normalizedDegrees <= 180 ? 0 : 360;
-  } else {
-    // Nearer to 180°
-    targetDegrees = 180;
-  }
-
-  // Convert back to radians
-  return (targetDegrees * Math.PI) / 180;
-}
 
 // 2. POSITION & BEZIER SYSTEM
 const capturedPositions: { [key: string]: THREE.Vector3 } = {};
@@ -752,5 +719,5 @@ export function initAnimationSystem() {
   console.log("Animation system initialized");
 }
 
-// Export functions for GSAP integration
+// Export functions for external use
 export { moveGhostOnCurve, captureGhostPositions, createBezierCurves };
