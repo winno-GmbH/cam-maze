@@ -49,12 +49,21 @@ export const ghosts: GhostContainer = {
 Object.values(ghosts).forEach((ghost) => scene.add(ghost));
 
 // Add a test cube to verify rendering
-const testGeometry = new THREE.BoxGeometry(1, 1, 1);
+const testGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
 const testMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 const testCube = new THREE.Mesh(testGeometry, testMaterial);
-testCube.position.set(0, 0, 0);
+testCube.position.set(0.5, 1, 0.5); // Position above maze center
 scene.add(testCube);
-console.log("Test cube added to scene");
+console.log("Test cube added to scene at position:", testCube.position);
+
+// Add another test cube at origin
+const testCube2 = new THREE.Mesh(
+  new THREE.BoxGeometry(0.2, 0.2, 0.2),
+  new THREE.MeshBasicMaterial({ color: 0x0000ff })
+);
+testCube2.position.set(0, 0, 0);
+scene.add(testCube2);
+console.log("Blue test cube added at origin");
 
 // Ghost Container Mapping
 const ghostContainers: GhostContainer = {
@@ -194,10 +203,14 @@ export function loadModel(): Promise<void> {
 
           // MESH PROCESSING
           if ((child as any).isMesh) {
+            console.log("Found mesh:", childName, "Type:", child.type);
+
             if (childName === "CAM-Arena_LowRes_Top") {
+              console.log("Found maze top mesh:", childName);
               (child as THREE.Mesh).material = topMaterial;
               child.castShadow = true;
             } else if (childName === "CAM-Arena_LowRes_Bottom") {
+              console.log("Found maze bottom mesh:", childName);
               (child as THREE.Mesh).material = mazeMaterial;
               child.castShadow = true;
             } else if (childName === "CAM-Floor") {

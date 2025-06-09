@@ -17,8 +17,22 @@ export const camera = new THREE.PerspectiveCamera(
 
 // Initialize Camera
 export function initCamera(): void {
+  console.log("Camera start position:", startPosition);
+  console.log("Camera look at position:", lookAtPosition);
+
   camera.position.copy(startPosition);
   camera.lookAt(lookAtPosition);
+
+  console.log("Camera actual position:", camera.position);
+  console.log("Camera actual target:", lookAtPosition);
+
+  // Add a simple fallback position for debugging
+  // Position camera to look at the maze center (0.5, 0.5, 0.5)
+  camera.position.set(2, 2, 2);
+  camera.lookAt(0.5, 0.5, 0.5);
+
+  console.log("Camera debug position set to:", camera.position);
+  console.log("Camera looking at maze center: (0.5, 0.5, 0.5)");
 }
 
 // Camera Quaternions

@@ -1,15 +1,38 @@
-import * as THREE from 'three';
-import { ASSETS, SHADER_CONFIG } from './config';
-import { MaterialMap } from './types';
+import * as THREE from "three";
+import { ASSETS, SHADER_CONFIG } from "./config";
+import { MaterialMap } from "./types";
 
 // Texture Loader
 const textureLoader = new THREE.TextureLoader();
 
-// Load Textures
-export const mazeTexture = textureLoader.load(ASSETS.mazeTexture);
+// Load Textures with debugging
+console.log("Loading maze texture from:", ASSETS.mazeTexture);
+export const mazeTexture = textureLoader.load(
+  ASSETS.mazeTexture,
+  (texture) => {
+    console.log("Maze texture loaded successfully:", texture);
+  },
+  (progress) => {
+    console.log("Maze texture loading progress:", progress);
+  },
+  (error) => {
+    console.error("Failed to load maze texture:", error);
+  }
+);
 
-// Basic Materials
-export const mazeMaterial = new THREE.MeshMatcapMaterial({ matcap: mazeTexture });
+// Basic Materials with fallbacks
+export const mazeMaterial = new THREE.MeshBasicMaterial({
+  color: 0x00ff00, // Bright green fallback
+  map: mazeTexture,
+});
+
+// Also create a simple fallback material
+export const mazeFallbackMaterial = new THREE.MeshBasicMaterial({
+  color: 0x00ff00, // Bright green
+  wireframe: false,
+});
+
+console.log("Maze material created:", mazeMaterial);
 
 export const topMaterial = new THREE.MeshStandardMaterial({
   color: 0xf2f9f9,
@@ -52,7 +75,7 @@ export const pacmanShaderMaterial = new THREE.ShaderMaterial({
 export const pacmanMaterials = {
   blue: new THREE.MeshBasicMaterial({ color: 0x1469d3 }),
   white: new THREE.MeshBasicMaterial({ color: 0xffffff }),
-  default: new THREE.MeshBasicMaterial({ color: 0x1469d3 })
+  default: new THREE.MeshBasicMaterial({ color: 0x1469d3 }),
 };
 
 // Material Mapping for Pacman Parts
@@ -71,7 +94,7 @@ export const materialMap: MaterialMap = {
   "CAM-Pacman_Top_electronic": pacmanMaterials.white,
   "CAM-Pacman_Bottom_Text": pacmanMaterials.white,
   "CAM-Pacman_Top_Text": pacmanMaterials.white,
-  default: pacmanMaterials.blue
+  default: pacmanMaterials.blue,
 };
 
 // Ghost Cover Materials
