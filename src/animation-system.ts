@@ -67,6 +67,10 @@ const bezierCurves: { [key: string]: THREE.QuadraticBezierCurve3 } = {};
 let timeOffset = 0;
 let pauseTime = 0;
 
+// Smooth animation variables (like GSAP scrub)
+const smoothGhostProgress: { [key: string]: number } = {};
+const SMOOTH_FACTOR = 0.1; // Lower = more lag, Higher = less lag (like scrub value)
+
 function captureGhostPositions() {
   Object.keys(ghosts).forEach((ghostKey) => {
     if (ghosts[ghostKey]) {
@@ -374,6 +378,9 @@ function resetToHomeState() {
       ghosts[ghostKey].position.copy(capturedPositions[ghostKey]);
       ghosts[ghostKey].rotation.copy(capturedRotations[ghostKey]);
 
+      // Reset smooth progress for lag effect
+      smoothGhostProgress[ghostKey] = 0;
+
       // Reset opacity to full
       const ghost = ghosts[ghostKey];
       if (ghost instanceof THREE.Mesh && ghost.material) {
@@ -508,12 +515,22 @@ function handleScroll() {
 
     console.log(`Animating with scrollProgress: ${scrollProgress}`);
 
-    // Animate ghosts along bezier curves (they finish at 80% scroll)
+    // Animate ghosts along bezier curves with smooth lag (they finish at 80% scroll)
     Object.keys(ghosts).forEach((ghostKey) => {
       if (bezierCurves[ghostKey]) {
         // Compress ghost animation into 0-80% range
-        const ghostProgress = Math.min(scrollProgress / GHOSTS_END_AT, 1);
-        moveGhostOnCurve(ghostKey, ghostProgress);
+        const targetGhostProgress = Math.min(scrollProgress / GHOSTS_END_AT, 1);
+
+        // Initialize smooth progress if needed
+        if (!(ghostKey in smoothGhostProgress)) {
+          smoothGhostProgress[ghostKey] = 0;
+        }
+
+        // Smooth interpolation towards target progress (like GSAP scrub)
+        smoothGhostProgress[ghostKey] +=
+          (targetGhostProgress - smoothGhostProgress[ghostKey]) * SMOOTH_FACTOR;
+
+        moveGhostOnCurve(ghostKey, smoothGhostProgress[ghostKey]);
       }
     });
 
