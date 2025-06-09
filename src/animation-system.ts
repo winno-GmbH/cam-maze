@@ -1693,31 +1693,58 @@ function updateGhostInPOV(
           (ghostProgress - trigger.currentPathT) * parameterSmoothingFactor;
       }
 
-      // Final progress with smoothing
-      ghostProgress = trigger.currentPathT;
+      // Final progress with smoothing (for position)
+      const smoothedProgress = trigger.currentPathT;
 
-      // Update ghost position
-      const pathPoint = path.getPointAt(ghostProgress);
+      // CRITICAL FIX: Use normalized progress for fade detection since smoothed progress
+      // with factor 0.1 may never reach 0.9 due to exponential decay
+      const fadeProgress = normalizedProgress; // Use raw normalized progress for fade detection
+      const positionProgress = smoothedProgress; // Use smoothed progress for smooth movement
+
+      console.log(`🔍 ${ghostKey} SMOOTHING ANALYSIS:
+        - normalizedProgress (for fade): ${normalizedProgress.toFixed(3)}
+        - smoothedProgress (for position): ${smoothedProgress.toFixed(3)}
+        - fadeWillTrigger: ${fadeProgress > 0.9}
+        - cameraRange: ${triggerProgress.toFixed(3)} to ${endProgress.toFixed(
+        3
+      )}`);
+
+      // Update ghost position using smoothed progress for smooth movement
+      const pathPoint = path.getPointAt(positionProgress);
       ghost.position.copy(pathPoint);
 
       // Simple ghost orientation: stand upright and face tangent direction
-      const tangent = path.getTangentAt(ghostProgress).normalize();
+      const tangent = path.getTangentAt(positionProgress).normalize();
       const lookAtPoint = ghost.position.clone().add(tangent);
 
       // Make ghost look in tangent direction while staying upright
       ghost.lookAt(lookAtPoint);
 
-      // EXACT backup.js fade-out logic
-      if (ghostProgress > 0.9) {
-        const fadeOpacity = 1 - (ghostProgress - 0.9) / 0.1;
+      // FIXED: Use normalized progress for fade (not smoothed progress)
+      if (fadeProgress > 0.9) {
+        const fadeOpacity = 1 - (fadeProgress - 0.9) / 0.1;
         (ghost as any).material.opacity = fadeOpacity;
         console.log(
-          `🎭 ${ghostKey} fading out: progress=${ghostProgress.toFixed(
+          `🎭 ${ghostKey} FADING OUT: fadeProgress=${fadeProgress.toFixed(
             3
           )}, opacity=${fadeOpacity.toFixed(3)}`
         );
       } else {
         (ghost as any).material.opacity = 1;
+        if (fadeProgress > 0.85) {
+          console.log(
+            `🎭 ${ghostKey} ALMOST FADING: fadeProgress=${fadeProgress.toFixed(
+              3
+            )} (need > 0.9)`
+          );
+        }
+      }
+
+      // Check if ghost actually has material and if it's working
+      if (!(ghost as any).material) {
+        console.error(`❌ ${ghostKey} HAS NO MATERIAL!`);
+      } else if (typeof (ghost as any).material.opacity === "undefined") {
+        console.error(`❌ ${ghostKey} MATERIAL HAS NO OPACITY PROPERTY!`);
       }
 
       console.log(
