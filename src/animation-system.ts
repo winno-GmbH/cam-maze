@@ -541,26 +541,20 @@ function handleIntroScroll() {
 
   const rect = introSection.getBoundingClientRect();
   const windowHeight = window.innerHeight;
-  const sectionHeight = introSection.offsetHeight;
 
-  // Check if we're scrolling through the intro section
-  const isInIntroSection = rect.top < windowHeight && rect.bottom > 0;
+  // Calculate if intro section is in view
+  const sectionTop = rect.top;
+  const sectionHeight = rect.height;
 
-  if (!isInIntroSection) return;
+  if (sectionTop <= windowHeight && sectionTop + sectionHeight >= 0) {
+    // Section is in view - calculate progress
+    const scrolledIntoSection = Math.max(0, -sectionTop);
+    const progress = Math.min(1, scrolledIntoSection / sectionHeight);
 
-  // Calculate scroll progress within the intro section
-  const scrolledIntoSection = Math.max(0, -rect.top);
-  const scrollProgress = Math.min(scrolledIntoSection / sectionHeight, 1);
-
-  console.log(`Intro Scroll Progress: ${scrollProgress.toFixed(3)}`);
-
-  // Header animation: from 0% to 50% of intro section (like backup.js "top top" to "center center")
-  const headerProgress = Math.min(scrollProgress * 2, 1); // 0-50% becomes 0-100%
-  animateIntroHeader(headerProgress);
-
-  // Body animation: from 50% to 100% of intro section (like backup.js "center center" to "bottom bottom")
-  const bodyProgress = Math.max(0, (scrollProgress - 0.5) * 2); // 50-100% becomes 0-100%
-  animateIntroBody(bodyProgress);
+    // Animate intro elements based on progress
+    animateIntroHeader(progress);
+    animateIntroBody(progress);
+  }
 }
 
 function animateIntroHeader(progress: number) {
@@ -635,6 +629,7 @@ export function setupScrollTriggers() {
   // For now, we use basic scroll events
   window.addEventListener("scroll", handleScroll);
   window.addEventListener("scroll", handleIntroScroll);
+  window.addEventListener("scroll", handlePOVScroll);
   console.log("Scroll triggers setup complete");
 }
 
@@ -1002,55 +997,12 @@ function initializePOVAnimation() {
     },
   };
 
-  // Setup POV ScrollTrigger
-  setupPOVScrollTrigger();
+  // POV animation will be handled by handlePOVScroll in setupScrollTriggers
 
   console.log("✅ POV Animation System initialized");
 }
 
-// Setup POV ScrollTrigger
-function setupPOVScrollTrigger() {
-  if (!gsap || !ScrollTrigger) {
-    console.warn("⚠️ GSAP or ScrollTrigger not available for POV animation");
-    return;
-  }
-
-  gsap
-    .timeline({
-      scrollTrigger: {
-        trigger: ".sc--pov",
-        start: "top bottom",
-        end: "bottom top",
-        scrub: 0.5,
-        onStart: () => {
-          console.log("🎭 POV Animation Started");
-          povAnimationState.isActive = true;
-          onPOVAnimationStart();
-        },
-        onUpdate: (self: any) => {
-          updatePOVAnimation(self.progress);
-        },
-        onLeave: () => {
-          console.log("🎭 POV Animation Ended");
-          povAnimationState.isActive = false;
-          onPOVAnimationEnd();
-        },
-        onLeaveBack: () => {
-          console.log("🎭 POV Animation Ended (Back)");
-          povAnimationState.isActive = false;
-          onPOVAnimationEnd();
-        },
-      },
-    })
-    .to(
-      { progress: 0 },
-      {
-        progress: 1,
-        duration: 1,
-        ease: "none",
-      }
-    );
-}
+// POV animation is now handled by handlePOVScroll function in setupScrollTriggers
 
 // POV Animation Start Handler
 function onPOVAnimationStart() {
@@ -1397,4 +1349,42 @@ function getCameraLookAtPoint(): THREE.Vector3 {
   const lookAtPoint = new THREE.Vector3();
   lookAtPoint.copy(camera.position).add(direction.multiplyScalar(10));
   return lookAtPoint;
+}
+
+// Handle POV scroll events
+function handlePOVScroll() {
+  const povSection = document.querySelector(".sc--pov") as HTMLElement;
+  if (!povSection) return;
+
+  const rect = povSection.getBoundingClientRect();
+  const windowHeight = window.innerHeight;
+
+  // Calculate if POV section is in view
+  const sectionTop = rect.top;
+  const sectionHeight = rect.height;
+
+  if (sectionTop <= windowHeight && sectionTop + sectionHeight >= 0) {
+    // Section is in view - calculate progress
+    const scrolledIntoSection = Math.max(0, -sectionTop);
+    const progress = Math.min(1, scrolledIntoSection / sectionHeight);
+
+    // Start POV animation if not already active
+    if (!povAnimationState.isActive && progress > 0) {
+      console.log("🎭 POV Animation Started (Scroll)");
+      povAnimationState.isActive = true;
+      onPOVAnimationStart();
+    }
+
+    // Update POV animation
+    if (povAnimationState.isActive) {
+      updatePOVAnimation(progress);
+    }
+  } else {
+    // Section is out of view - end POV animation
+    if (povAnimationState.isActive) {
+      console.log("🎭 POV Animation Ended (Scroll)");
+      povAnimationState.isActive = false;
+      onPOVAnimationEnd();
+    }
+  }
 }
