@@ -85,11 +85,10 @@ function captureGhostPositions() {
 }
 
 function createBezierCurves() {
-  const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
-
+  // Use the global MAZE_CENTER constant so it can be changed easily
   Object.keys(capturedPositions).forEach((ghostKey) => {
     const startPos = capturedPositions[ghostKey].clone(); // Aktuelle Position der Geister
-    const endPos = mazeCenter.clone(); // Maze-Mitte als Endpunkt
+    const endPos = MAZE_CENTER.clone(); // Use global MAZE_CENTER constant
 
     // Control point: Mittelpunkt zwischen Start und Ende in x/z, aber hoch oben bei y=1
     const controlPoint = new THREE.Vector3(
