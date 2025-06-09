@@ -508,32 +508,17 @@ function handleScroll() {
 
     console.log(`Animating with scrollProgress: ${scrollProgress}`);
 
-    // Smooth scroll progress interpolation (like GSAP scrub)
-    const smoothedScrollProgress =
-      lastScrollProgress +
-      (scrollProgress - lastScrollProgress) * SMOOTH_FACTOR;
-    lastScrollProgress = smoothedScrollProgress;
-
-    console.log(
-      `Scroll Debug: raw=${scrollProgress.toFixed(
-        3
-      )}, smoothed=${smoothedScrollProgress.toFixed(3)}`
-    );
-
     // Animate ghosts along bezier curves (they finish at 80% scroll)
     Object.keys(ghosts).forEach((ghostKey) => {
       if (bezierCurves[ghostKey]) {
-        // Compress ghost animation into 0-80% range using smoothed progress
-        const ghostProgress = Math.min(
-          smoothedScrollProgress / GHOSTS_END_AT,
-          1
-        );
+        // Compress ghost animation into 0-80% range
+        const ghostProgress = Math.min(scrollProgress / GHOSTS_END_AT, 1);
         moveGhostOnCurve(ghostKey, ghostProgress);
       }
     });
 
-    // Animate camera with smoothed progress (0% to 100%)
-    animateCamera(smoothedScrollProgress);
+    // Animate camera normally (0% to 100%)
+    animateCamera(scrollProgress);
 
     // Update debug info
     if (window.animationDebugInfo) {
