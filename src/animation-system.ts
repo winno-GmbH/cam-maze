@@ -28,10 +28,26 @@ let animationStartTime = Date.now();
 let timeOffset = 0;
 let pauseTime = 0;
 
+// Debug counter to reduce console spam
+let debugLogCounter = 0;
+
 // Main animation loop for home state
 export function animationLoop() {
   // Only run home animation if we're in HOME state
-  if (currentAnimationState !== "HOME") return;
+  if (currentAnimationState !== "HOME") {
+    if (debugLogCounter % 60 === 0) {
+      console.log(
+        `⏸️ Skipping home animation - current state: ${currentAnimationState}`
+      );
+    }
+    debugLogCounter++;
+    return;
+  }
+
+  if (debugLogCounter % 60 === 0) {
+    console.log(`🏠 Running home animation - state: ${currentAnimationState}`);
+  }
+  debugLogCounter++;
 
   const currentTime = Date.now();
   const elapsedTime = (currentTime - animationStartTime - timeOffset) / 1000;

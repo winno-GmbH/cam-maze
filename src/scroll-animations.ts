@@ -180,11 +180,23 @@ function createCameraPath() {
 function onFirstScroll() {
   if (!isFirstScroll) return;
 
-  console.log("onFirstScroll called - stopping all animations immediately");
+  console.log("🛑 onFirstScroll called - stopping all animations immediately");
+  console.log("📊 Current ghost positions before capture:");
+  Object.keys(ghosts).forEach((key) => {
+    if (ghosts[key]) {
+      console.log(
+        `  ${key}: (${ghosts[key].position.x.toFixed(2)}, ${ghosts[
+          key
+        ].position.y.toFixed(2)}, ${ghosts[key].position.z.toFixed(2)})`
+      );
+    }
+  });
 
   isFirstScroll = false;
   pauseTime = Date.now();
   currentAnimationState = "SCROLL_ANIMATION";
+
+  console.log("🔄 State changed to SCROLL_ANIMATION");
 
   const currentCameraPosition = camera.position.clone();
   const currentCameraQuaternion = camera.quaternion.clone();
@@ -319,11 +331,11 @@ export function handleScroll() {
   const scrollProgress = Math.min(scrolledIntoSection / sectionHeight, 1);
 
   console.log(
-    `Scroll Debug: rect.top=${rect.top}, windowHeight=${windowHeight}, scrolledIntoSection=${scrolledIntoSection}, sectionHeight=${sectionHeight}, scrollProgress=${scrollProgress}`
+    `Scroll Debug: rect.top=${rect.top}, windowHeight=${windowHeight}, scrolledIntoSection=${scrolledIntoSection}, sectionHeight=${sectionHeight}, scrollProgress=${scrollProgress}, currentState=${currentAnimationState}`
   );
 
   if (scrollProgress > 0 && currentAnimationState === "HOME") {
-    console.log("Starting scroll animation...");
+    console.log("🚀 TRIGGERING FIRST SCROLL - Starting scroll animation...");
     onFirstScroll();
   }
 
@@ -362,5 +374,23 @@ export function initScrollSystem() {
   console.log("Captured initial camera quaternion:", initialCameraQuaternion);
 
   window.addEventListener("scroll", handleScroll);
-  console.log("Scroll system initialized");
+
+  // Debug: Add manual test function to window
+  (window as any).testScrollAnimation = () => {
+    console.log("🧪 Manual test trigger - forcing scroll animation");
+    onFirstScroll();
+    setTimeout(() => {
+      console.log("🧪 Testing animation at 0.5 progress");
+      Object.keys(ghosts).forEach((ghostKey) => {
+        if (bezierCurves[ghostKey]) {
+          moveGhostOnCurve(ghostKey, 0.5);
+        }
+      });
+      animateCamera(0.5);
+    }, 100);
+  };
+
+  console.log(
+    "Scroll system initialized - you can test with window.testScrollAnimation()"
+  );
 }
