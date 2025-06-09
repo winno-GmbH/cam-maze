@@ -977,6 +977,18 @@ function initializePOVAnimation() {
     ghost5: createPOVPath(ghost5POVPathPoints),
   };
 
+  console.log(
+    "🎭 Created ghost POV paths:",
+    Object.keys(povAnimationState.ghostPOVPaths)
+  );
+  console.log("🎭 Ghost path lengths:", {
+    ghost1: povAnimationState.ghostPOVPaths.ghost1?.getLength() || 0,
+    ghost2: povAnimationState.ghostPOVPaths.ghost2?.getLength() || 0,
+    ghost3: povAnimationState.ghostPOVPaths.ghost3?.getLength() || 0,
+    ghost4: povAnimationState.ghostPOVPaths.ghost4?.getLength() || 0,
+    ghost5: povAnimationState.ghostPOVPaths.ghost5?.getLength() || 0,
+  });
+
   // Initialize trigger positions
   povAnimationState.triggerPositions = {
     ghost1: {
@@ -1030,6 +1042,13 @@ function initializePOVAnimation() {
 
 // POV Animation Start Handler
 function onPOVAnimationStart() {
+  console.log("🎭 POV Animation Start Handler Called!");
+  console.log(
+    "🎭 Available ghost paths:",
+    Object.keys(povAnimationState.ghostPOVPaths)
+  );
+  console.log("🎭 Available ghosts:", Object.keys(ghosts));
+
   // Switch to POV state
   currentAnimationState = "POV_ANIMATION";
 
@@ -1051,10 +1070,20 @@ function onPOVAnimationStart() {
     ghosts.pacman.visible = true;
   }
 
+  // Make sure all ghosts are visible for POV animation
+  Object.entries(ghosts).forEach(([ghostKey, ghost]) => {
+    if (ghostKey !== "pacman") {
+      ghost.visible = true;
+      console.log(`🎭 Made ghost ${ghostKey} visible for POV animation`);
+    }
+  });
+
   // Update debug info
   if (window.animationDebugInfo) {
     window.animationDebugInfo.povAnimationActive = true;
   }
+
+  console.log("🎭 POV Animation Start Handler Complete!");
 }
 
 // Update POV Animation
@@ -1222,15 +1251,17 @@ function updatePOVGhosts(progress: number) {
 
   const cameraPosition = povAnimationState.cameraPOVPath.getPointAt(progress);
 
-  // Get path mapping for ghosts (from backup.js)
-  const pathMapping = {
-    pacman: "cameraPOVPath", // Pacman follows camera path
-    ghost1: "ghost1POVPath",
-    ghost2: "ghost2POVPath",
-    ghost3: "ghost3POVPath",
-    ghost4: "ghost4POVPath",
-    ghost5: "ghost5POVPath",
-  };
+  console.log(
+    `🎭 POV Ghost Update - Progress: ${progress.toFixed(
+      3
+    )}, Camera: ${cameraPosition.x.toFixed(2)}, ${cameraPosition.y.toFixed(
+      2
+    )}, ${cameraPosition.z.toFixed(2)}`
+  );
+  console.log(
+    `🎭 Available ghost paths:`,
+    Object.keys(povAnimationState.ghostPOVPaths)
+  );
 
   // Update each ghost using enhanced logic
   Object.entries(ghosts).forEach(([ghostKey, ghost]) => {
@@ -1240,9 +1271,34 @@ function updatePOVGhosts(progress: number) {
       return;
     }
 
-    const pathKey = pathMapping[ghostKey as keyof typeof pathMapping];
-    if (pathKey && povAnimationState.ghostPOVPaths[pathKey]) {
-      updateGhostInPOV(ghostKey, ghost, pathKey, cameraPosition);
+    // Use the ghost key directly since that's how paths are stored
+    if (povAnimationState.ghostPOVPaths[ghostKey]) {
+      console.log(`🎭 Updating ghost ${ghostKey} with path`);
+
+      // For now, make all ghosts visible and positioned along their paths
+      const path = povAnimationState.ghostPOVPaths[ghostKey];
+      const ghostPosition = path.getPointAt(progress);
+      ghost.position.copy(ghostPosition);
+
+      // Make ghost look along its path
+      const tangent = path.getTangentAt(progress).normalize();
+      const lookAtPoint = ghostPosition.clone().add(tangent);
+      ghost.lookAt(lookAtPoint);
+
+      // Make ghost visible
+      ghost.visible = true;
+
+      console.log(
+        `🎭 Ghost ${ghostKey} positioned at: ${ghostPosition.x.toFixed(
+          2
+        )}, ${ghostPosition.y.toFixed(2)}, ${ghostPosition.z.toFixed(
+          2
+        )}, visible: ${ghost.visible}`
+      );
+
+      // updateGhostInPOV(ghostKey, ghost, ghostKey, cameraPosition);
+    } else {
+      console.log(`🎭 No path found for ghost ${ghostKey}`);
     }
   });
 }
