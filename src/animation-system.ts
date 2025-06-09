@@ -23,7 +23,7 @@ declare global {
 }
 
 // Constants
-const MAZE_CENTER = new THREE.Vector3(0.95175, 0.5, 1.05675);
+const MAZE_CENTER = new THREE.Vector3(0.45175, 0.5, 0.55675);
 const OPACITY_FADE_START = 0.8; // Last 20% for opacity fade
 
 // Rotation constants (easily changeable)
@@ -210,10 +210,16 @@ function onFirstScroll() {
   isFirstScroll = false;
   pauseTime = Date.now();
 
-  // Capture initial camera state
+  // Capture initial camera state more accurately
   initialCameraPosition.copy(camera.position);
-  // Assume camera is looking at origin initially or get the current target
-  initialCameraTarget.set(0, 0, 0);
+
+  // Get the current camera direction to calculate where it's looking
+  const direction = new THREE.Vector3(0, 0, -1);
+  direction.applyQuaternion(camera.quaternion);
+  initialCameraTarget.copy(camera.position).add(direction.multiplyScalar(5));
+
+  console.log("Captured camera position:", initialCameraPosition);
+  console.log("Captured camera look-at target:", initialCameraTarget);
 
   captureGhostPositions();
   createBezierCurves();
@@ -234,13 +240,14 @@ function onFirstScroll() {
 let animationStartTime = Date.now();
 
 function animationLoop() {
+  // Only run home animation if we're in HOME state
   if (currentAnimationState !== "HOME") return;
 
   const currentTime = Date.now();
   const elapsedTime = (currentTime - animationStartTime - timeOffset) / 1000; // Convert to seconds
   const t = (elapsedTime * 0.1) % 1; // Speed control (0.1 = slower, 0.2 = faster)
 
-  // Animate ghosts on their home paths
+  // Animate ghosts on their home paths only during HOME state
   Object.entries(ghosts).forEach(([key, ghost]) => {
     if (!pathsMap[key]) {
       // Don't spam warnings, just return
@@ -353,14 +360,14 @@ function resetToHomeState() {
 
 // Camera animation helper
 function animateCamera(progress: number) {
-  // Lerp camera position towards maze center
   const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
 
-  // Position camera above the maze for a top-down-ish view
+  // Based on backup.js camera positioning - closer to POV path style
+  // Start from current position, move to a position above and forward of maze center
   const cameraTargetPosition = new THREE.Vector3(
-    mazeCenter.x,
-    mazeCenter.y + 1.2, // Higher above the maze
-    mazeCenter.z + 0.6 // Slightly back
+    mazeCenter.x - 0.3, // Slightly left of center
+    mazeCenter.y + 0.8, // Above the maze
+    mazeCenter.z + 1.2 // Forward from center for better angle
   );
 
   camera.position.lerpVectors(
@@ -369,10 +376,16 @@ function animateCamera(progress: number) {
     progress
   );
 
-  // Make camera look at maze center
+  // Look at maze center with some adjustment for better view
+  const lookAtTarget = new THREE.Vector3(
+    mazeCenter.x,
+    mazeCenter.y - 0.1, // Slightly below center
+    mazeCenter.z
+  );
+
   const currentTarget = new THREE.Vector3().lerpVectors(
     initialCameraTarget,
-    mazeCenter,
+    lookAtTarget,
     progress
   );
   camera.lookAt(currentTarget);
@@ -437,11 +450,8 @@ function handleScroll() {
       }
     });
 
-    // Animate camera towards maze center (only after 20% scroll progress)
-    if (scrollProgress > 0.2) {
-      const cameraProgress = (scrollProgress - 0.2) / 0.8; // Map 0.2-1.0 to 0-1
-      animateCamera(Math.min(cameraProgress, 1));
-    }
+    // Animate camera towards maze center (starts immediately)
+    animateCamera(scrollProgress);
 
     // Update debug info
     if (window.animationDebugInfo) {
