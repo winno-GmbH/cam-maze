@@ -1625,7 +1625,6 @@ function updateGhostInPOV(
       trigger.ghostTextOpacity = 0;
       trigger.camTextOpacity = 0;
       trigger.lastProgress = 0;
-      trigger.currentRotation = null;
 
       // Make ghost and text invisible initially
       ghost.visible = false;
@@ -1701,27 +1700,12 @@ function updateGhostInPOV(
       const pathPoint = path.getPointAt(ghostProgress);
       ghost.position.copy(pathPoint);
 
-      // Ghost orientation with smooth rotation (from backup.js)
+      // Simple ghost orientation: stand upright and face tangent direction
       const tangent = path.getTangentAt(ghostProgress).normalize();
       const lookAtPoint = ghost.position.clone().add(tangent);
 
-      if (!trigger.currentRotation) {
-        trigger.currentRotation = new THREE.Quaternion();
-        ghost.getWorldQuaternion(trigger.currentRotation);
-      }
-
-      const targetQuaternion = new THREE.Quaternion();
-      const lookAtMatrix = new THREE.Matrix4().lookAt(
-        ghost.position,
-        lookAtPoint,
-        new THREE.Vector3(0, 1, 0)
-      );
-      targetQuaternion.setFromRotationMatrix(lookAtMatrix);
-
-      // Smoothly interpolate to target rotation
-      const rotationSmoothingFactor = 0.15;
-      trigger.currentRotation.slerp(targetQuaternion, rotationSmoothingFactor);
-      ghost.quaternion.copy(trigger.currentRotation);
+      // Make ghost look in tangent direction while staying upright
+      ghost.lookAt(lookAtPoint);
 
       // Fade out at the end
       if (ghostProgress > 0.9) {
