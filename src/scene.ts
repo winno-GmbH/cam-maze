@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import { SELECTORS, isMobile } from './config';
+import * as THREE from "three";
+import { SELECTORS, isMobile } from "./config";
 
 // Scene Setup
 export const scene = new THREE.Scene();
@@ -8,12 +8,15 @@ export const scene = new THREE.Scene();
 export const renderer = new THREE.WebGLRenderer({
   antialias: true,
   alpha: true,
-  powerPreference: 'high-performance',
-  precision: 'highp'
+  powerPreference: "high-performance",
+  precision: "highp",
 });
 
 // Container
-export const container = document.querySelector(SELECTORS.mazeContainer) as HTMLElement;
+const container = document.querySelector(".el--home-maze.el") as HTMLElement;
+if (!container) {
+  console.error("Container .el--home-maze.el not found!");
+}
 
 // Clock for animations
 export const clock = new THREE.Clock();
@@ -39,10 +42,19 @@ function setPixelRatio(): void {
 // Initialize Renderer - FIXED to match backup.js
 export function initRenderer(): void {
   enhanceAntiAliasing();
+
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setSize(container.clientWidth, container.clientHeight);
-  container.appendChild(renderer.domElement);
+
+  if (container) {
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+  } else {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+  }
+
+  console.log("Renderer initialized");
 
   // ADD these event listeners to match backup.js:
   window.addEventListener("load", setPixelRatio);
@@ -68,10 +80,18 @@ export function setupLighting(): void {
   directionalLight.shadow.bias = -0.001;
   directionalLight.shadow.radius = 3;
   directionalLight.castShadow = true;
+
+  console.log("Lighting setup complete");
 }
 
 // Canvas and DOM Elements
 export const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-export const finalSection = document.querySelector(SELECTORS.finalSection) as HTMLElement;
-export const finalContainer = finalSection?.querySelector(".cr--final.cr") as HTMLElement;
-export const parentElements = document.querySelectorAll(SELECTORS.parentElements) as NodeListOf<Element>;
+export const finalSection = document.querySelector(
+  SELECTORS.finalSection
+) as HTMLElement;
+export const finalContainer = finalSection?.querySelector(
+  ".cr--final.cr"
+) as HTMLElement;
+export const parentElements = document.querySelectorAll(
+  SELECTORS.parentElements
+) as NodeListOf<Element>;

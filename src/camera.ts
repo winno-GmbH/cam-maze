@@ -10,7 +10,7 @@ import { container } from "./scene";
 // Camera Setup
 export const camera = new THREE.PerspectiveCamera(
   CAMERA_CONFIG.originalFOV,
-  container.clientWidth / container.clientHeight,
+  window.innerWidth / window.innerHeight,
   CAMERA_CONFIG.near,
   CAMERA_CONFIG.far
 );
@@ -23,16 +23,8 @@ export function initCamera(): void {
   camera.position.copy(startPosition);
   camera.lookAt(lookAtPosition);
 
-  console.log("Camera actual position:", camera.position);
-  console.log("Camera actual target:", lookAtPosition);
-
-  // Add a simple fallback position for debugging
-  // Position camera to look at the maze center (0.5, 0.5, 0.5)
-  camera.position.set(2, 2, 2);
-  camera.lookAt(0.5, 0.5, 0.5);
-
-  console.log("Camera debug position set to:", camera.position);
-  console.log("Camera looking at maze center: (0.5, 0.5, 0.5)");
+  console.log("Camera initialized at position:", camera.position);
+  console.log("Camera looking at:", lookAtPosition);
 }
 
 // Camera Quaternions
@@ -62,10 +54,12 @@ export function getCameraLookAtPoint(): THREE.Vector3 {
   camera.updateMatrixWorld();
 };
 
-// Resize Handler
+// Setup Camera Resize
 export function setupCameraResize(): void {
-  window.addEventListener("resize", () => {
+  const updateCamera = () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
-  });
+  };
+
+  window.addEventListener("resize", updateCamera);
 }
