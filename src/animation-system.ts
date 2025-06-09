@@ -32,27 +32,30 @@ const ROTATION_AXIS_Y: "x" | "y" | "z" = "y"; // Secondary rotation axis (to nex
 const ROTATION_AMOUNT_X = Math.PI / 2; // 90 degrees for X-axis
 const USE_SMART_Y_ROTATION = true; // Whether to snap to next 90° step on Y-axis
 
-// Helper function to find the next 90-degree step
-function getNext90DegreeStep(currentRadians: number): number {
+// Helper function to find the nearest 0° or 180° step
+function getNearestStraightOrientation(currentRadians: number): number {
   // Convert to degrees for easier calculation
   const currentDegrees = (currentRadians * 180) / Math.PI;
 
   // Normalize to 0-360 range
   const normalizedDegrees = ((currentDegrees % 360) + 360) % 360;
 
-  // Find the next 90-degree step (0, 90, 180, 270)
-  const steps = [0, 90, 180, 270, 360];
-  let nextStep = 360; // default
+  // Find distance to 0° and 180°
+  const distanceTo0 = Math.min(normalizedDegrees, 360 - normalizedDegrees);
+  const distanceTo180 = Math.abs(normalizedDegrees - 180);
 
-  for (const step of steps) {
-    if (step > normalizedDegrees) {
-      nextStep = step;
-      break;
-    }
+  // Choose the nearer one
+  let targetDegrees;
+  if (distanceTo0 <= distanceTo180) {
+    // Nearer to 0° (could be 0° or 360°)
+    targetDegrees = normalizedDegrees <= 180 ? 0 : 360;
+  } else {
+    // Nearer to 180°
+    targetDegrees = 180;
   }
 
   // Convert back to radians
-  return (nextStep * Math.PI) / 180;
+  return (targetDegrees * Math.PI) / 180;
 }
 
 // 2. POSITION & BEZIER SYSTEM
@@ -135,10 +138,10 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
     targetRotation.z += ROTATION_AMOUNT_X * scrollProgress;
   }
 
-  // Y-axis rotation (smart rotation to next 90° step)
+  // Y-axis rotation (smart rotation to nearest 0° or 180°)
   if (USE_SMART_Y_ROTATION) {
     const currentYRotation = originalRotation.y;
-    const targetYRotation = getNext90DegreeStep(currentYRotation);
+    const targetYRotation = getNearestStraightOrientation(currentYRotation);
     const yDifference = targetYRotation - currentYRotation;
 
     // Debug logging for the first ghost
