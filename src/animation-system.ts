@@ -474,10 +474,13 @@ function handleScroll() {
   const isInHomeSection = rect.top < windowHeight && rect.bottom > 0;
 
   if (!isInHomeSection) {
-    // If we're not in home section and currently in scroll animation, reset
+    // If we completely left the home section, we could reset
+    // But for now, let's just stay in final position
     if (currentAnimationState === "SCROLL_ANIMATION") {
-      resetToHomeState();
-      console.log("Left home section - resuming home animation");
+      console.log(
+        "Left home section - staying in final position (maze center)"
+      );
+      // Don't reset automatically - stay where we are
     }
     return;
   }
@@ -502,10 +505,13 @@ function handleScroll() {
   }
 
   if (currentAnimationState === "SCROLL_ANIMATION") {
-    // If we're back at the very top (scrollProgress = 0), reset everything
+    // Don't automatically reset when scrollProgress = 0
+    // Stay in final position (maze center) until explicitly told to reset
     if (scrollProgress === 0) {
-      console.log("Scroll progress at 0, resetting to home state");
-      resetToHomeState();
+      console.log(
+        "Scroll progress at 0, but staying in final position (maze center)"
+      );
+      // Just log but don't reset - stay where we are
       return;
     }
 
@@ -561,42 +567,58 @@ function setupIntroAnimations() {
 }
 
 function triggerIntroAnimations() {
-  console.log("Triggering intro text animations...");
+  console.log("🎬 Triggering intro text animations...");
 
   // Animate intro header (.sc_h--intro)
   const introHeader = document.querySelector(".sc_h--intro") as HTMLElement;
   if (introHeader) {
-    // Keyframe animation like backup.js
+    console.log("✅ Found intro header element, starting animation");
+
+    // Keyframe animation like backup.js - but keep visible at the end
     const headerAnimation = [
       { transform: "scale(0)", opacity: "0" },
       { transform: "scale(0.8)", opacity: "1" },
       { transform: "scale(1.2)", opacity: "1" },
-      { transform: "scale(1.5)", opacity: "0" },
+      { transform: "scale(1.0)", opacity: "1" }, // Keep visible instead of fading out
     ];
 
-    introHeader.animate(headerAnimation, {
+    const headerAnimationPromise = introHeader.animate(headerAnimation, {
       duration: 2000,
       easing: "ease-in-out",
       fill: "forwards",
     });
+
+    headerAnimationPromise.addEventListener("finish", () => {
+      console.log("🎯 Intro header animation completed");
+    });
+  } else {
+    console.warn("❌ Intro header element (.sc_h--intro) not found in DOM");
   }
 
   // Animate intro body (.sc_b--intro) with delay
   setTimeout(() => {
     const introBody = document.querySelector(".sc_b--intro") as HTMLElement;
     if (introBody) {
+      console.log("✅ Found intro body element, starting animation");
+
       const bodyAnimation = [
         { transform: "scale(0.5)", opacity: "0" },
         { transform: "scale(0.8)", opacity: "1" },
         { transform: "scale(1.2)", opacity: "1" },
-        { transform: "scale(1.5)", opacity: "0" },
+        { transform: "scale(1.0)", opacity: "1" }, // Keep visible instead of fading out
       ];
 
-      introBody.animate(bodyAnimation, {
+      const bodyAnimationPromise = introBody.animate(bodyAnimation, {
         duration: 2000,
         easing: "ease-in-out",
         fill: "forwards",
       });
+
+      bodyAnimationPromise.addEventListener("finish", () => {
+        console.log("🎯 Intro body animation completed");
+      });
+    } else {
+      console.warn("❌ Intro body element (.sc_b--intro) not found in DOM");
     }
   }, 1000); // 1 second delay between header and body
 }
@@ -693,5 +715,10 @@ export function initAnimationSystem() {
   console.log("Animation system initialized");
 }
 
-// Export functions for GSAP integration
-export { moveGhostOnCurve, captureGhostPositions, createBezierCurves };
+// Export functions for GSAP integration and manual control
+export {
+  moveGhostOnCurve,
+  captureGhostPositions,
+  createBezierCurves,
+  resetToHomeState, // Export for manual reset
+};
