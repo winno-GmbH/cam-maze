@@ -539,14 +539,19 @@ function handleScroll() {
 // 5. GSAP INTEGRATION - To be called by GSAP ScrollTriggers
 // 6. INTRO TEXT ANIMATIONS (after arriving at maze)
 function setupIntroAnimations() {
+  console.log("Setting up intro animations...");
+
   // Setup intro header animation (.sc_h--intro)
   const introHeader = document.querySelector(".sc_h--intro");
   if (introHeader) {
     // Set initial state
     (introHeader as HTMLElement).style.transform = "scale(0)";
     (introHeader as HTMLElement).style.opacity = "0";
+    (introHeader as HTMLElement).style.display = "none"; // Hidden initially
 
-    console.log("Intro header element found and initialized");
+    console.log("✅ Intro header element found and initialized");
+  } else {
+    console.warn("❌ Intro header element (.sc_h--intro) not found in DOM");
   }
 
   // Setup intro body animation (.sc_b--intro)
@@ -555,9 +560,19 @@ function setupIntroAnimations() {
     // Set initial state
     (introBody as HTMLElement).style.transform = "scale(0.5)";
     (introBody as HTMLElement).style.opacity = "0";
+    (introBody as HTMLElement).style.display = "none"; // Hidden initially
 
-    console.log("Intro body element found and initialized");
+    console.log("✅ Intro body element found and initialized");
+  } else {
+    console.warn("❌ Intro body element (.sc_b--intro) not found in DOM");
   }
+
+  // Debug: List all elements in DOM for troubleshooting
+  const allElements = document.querySelectorAll('[class*="intro"]');
+  console.log(
+    `Found ${allElements.length} elements with 'intro' in class name:`,
+    Array.from(allElements).map((el) => el.className)
+  );
 }
 
 function triggerIntroAnimations() {
@@ -566,37 +581,59 @@ function triggerIntroAnimations() {
   // Animate intro header (.sc_h--intro)
   const introHeader = document.querySelector(".sc_h--intro") as HTMLElement;
   if (introHeader) {
-    // Keyframe animation like backup.js
+    console.log("Found intro header element, starting animation");
+
+    // Make element visible first
+    introHeader.style.display = "block";
+
+    // Keyframe animation like backup.js - with proper timing
     const headerAnimation = [
-      { transform: "scale(0)", opacity: "0" },
-      { transform: "scale(0.8)", opacity: "1" },
-      { transform: "scale(1.2)", opacity: "1" },
-      { transform: "scale(1.5)", opacity: "0" },
+      { transform: "scale(0)", opacity: 0, offset: 0 },
+      { transform: "scale(0.8)", opacity: 1, offset: 0.3 },
+      { transform: "scale(1.2)", opacity: 1, offset: 0.7 },
+      { transform: "scale(1.5)", opacity: 0, offset: 1 },
     ];
 
-    introHeader.animate(headerAnimation, {
+    const headerAnimInstance = introHeader.animate(headerAnimation, {
       duration: 2000,
       easing: "ease-in-out",
       fill: "forwards",
     });
+
+    headerAnimInstance.addEventListener("finish", () => {
+      console.log("Header animation finished");
+    });
+  } else {
+    console.warn("Intro header element (.sc_h--intro) not found in DOM");
   }
 
   // Animate intro body (.sc_b--intro) with delay
   setTimeout(() => {
     const introBody = document.querySelector(".sc_b--intro") as HTMLElement;
     if (introBody) {
+      console.log("Found intro body element, starting animation");
+
+      // Make element visible first
+      introBody.style.display = "block";
+
       const bodyAnimation = [
-        { transform: "scale(0.5)", opacity: "0" },
-        { transform: "scale(0.8)", opacity: "1" },
-        { transform: "scale(1.2)", opacity: "1" },
-        { transform: "scale(1.5)", opacity: "0" },
+        { transform: "scale(0.5)", opacity: 0, offset: 0 },
+        { transform: "scale(0.8)", opacity: 1, offset: 0.3 },
+        { transform: "scale(1.2)", opacity: 1, offset: 0.7 },
+        { transform: "scale(1.5)", opacity: 0, offset: 1 },
       ];
 
-      introBody.animate(bodyAnimation, {
+      const bodyAnimInstance = introBody.animate(bodyAnimation, {
         duration: 2000,
         easing: "ease-in-out",
         fill: "forwards",
       });
+
+      bodyAnimInstance.addEventListener("finish", () => {
+        console.log("Body animation finished");
+      });
+    } else {
+      console.warn("Intro body element (.sc_b--intro) not found in DOM");
     }
   }, 1000); // 1 second delay between header and body
 }
