@@ -30,7 +30,7 @@ const OPACITY_FADE_START = 0.8; // Last 20% for opacity fade
 const ROTATION_AXIS_X: "x" | "y" | "z" = "x"; // Primary rotation axis (e.g., to lay down)
 const ROTATION_AXIS_Y: "x" | "y" | "z" = "y"; // Secondary rotation axis (to next 90° step)
 const ROTATION_AMOUNT_X = Math.PI / 2; // 90 degrees for X-axis
-const USE_SMART_Y_ROTATION = true; // Whether to snap to next 90° step on Y-axis
+const USE_SMART_Y_ROTATION = true; // Whether to snap to nearest straight orientation (0° or 180°) on Y-axis
 
 // Helper function to find the nearest 0° or 180° step
 function getNearestStraightOrientation(currentRadians: number): number {
