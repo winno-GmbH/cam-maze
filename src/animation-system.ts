@@ -27,8 +27,33 @@ const MAZE_CENTER = new THREE.Vector3(0.95175, 0.5, 1.05675);
 const OPACITY_FADE_START = 0.8; // Last 20% for opacity fade
 
 // Rotation constants (easily changeable)
-const ROTATION_AXIS: "x" | "y" | "z" = "z"; // 'x', 'y', or 'z' - which axis to rotate around
-const ROTATION_AMOUNT = Math.PI / 2; // 90 degrees in radians
+const ROTATION_AXIS_X: "x" | "y" | "z" = "x"; // Primary rotation axis (e.g., to lay down)
+const ROTATION_AXIS_Y: "x" | "y" | "z" = "y"; // Secondary rotation axis (to next 90° step)
+const ROTATION_AMOUNT_X = Math.PI / 2; // 90 degrees for X-axis
+const USE_SMART_Y_ROTATION = true; // Whether to snap to next 90° step on Y-axis
+
+// Helper function to find the next 90-degree step
+function getNext90DegreeStep(currentRadians: number): number {
+  // Convert to degrees for easier calculation
+  const currentDegrees = (currentRadians * 180) / Math.PI;
+
+  // Normalize to 0-360 range
+  const normalizedDegrees = ((currentDegrees % 360) + 360) % 360;
+
+  // Find the next 90-degree step (0, 90, 180, 270)
+  const steps = [0, 90, 180, 270, 360];
+  let nextStep = 360; // default
+
+  for (const step of steps) {
+    if (step > normalizedDegrees) {
+      nextStep = step;
+      break;
+    }
+  }
+
+  // Convert back to radians
+  return (nextStep * Math.PI) / 180;
+}
 
 // 2. POSITION & BEZIER SYSTEM
 const capturedPositions: { [key: string]: THREE.Vector3 } = {};
@@ -97,17 +122,44 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
   const position = bezierCurves[ghostKey].getPoint(scrollProgress);
   ghost.position.copy(position);
 
-  // Interpolate rotation: Start with original rotation, end with 90° rotated version
+  // Interpolate rotation: Start with original rotation, end with target rotation
   const originalRotation = capturedRotations[ghostKey];
   const targetRotation = originalRotation.clone();
 
-  // Add rotation based on the specified axis
-  if (ROTATION_AXIS === "x") {
-    targetRotation.x += ROTATION_AMOUNT * scrollProgress;
-  } else if (ROTATION_AXIS === "y") {
-    targetRotation.y += ROTATION_AMOUNT * scrollProgress;
-  } else if (ROTATION_AXIS === "z") {
-    targetRotation.z += ROTATION_AMOUNT * scrollProgress;
+  // X-axis rotation (e.g., to lay down) - always add specified amount
+  if (ROTATION_AXIS_X === "x") {
+    targetRotation.x += ROTATION_AMOUNT_X * scrollProgress;
+  } else if (ROTATION_AXIS_X === "y") {
+    targetRotation.y += ROTATION_AMOUNT_X * scrollProgress;
+  } else if (ROTATION_AXIS_X === "z") {
+    targetRotation.z += ROTATION_AMOUNT_X * scrollProgress;
+  }
+
+  // Y-axis rotation (smart rotation to next 90° step)
+  if (USE_SMART_Y_ROTATION) {
+    const currentYRotation = originalRotation.y;
+    const targetYRotation = getNext90DegreeStep(currentYRotation);
+    const yDifference = targetYRotation - currentYRotation;
+
+    // Debug logging for the first ghost
+    if (ghostKey === "ghost1" && scrollProgress > 0.1 && scrollProgress < 0.2) {
+      console.log(
+        `${ghostKey} Y-rotation: current=${(
+          (currentYRotation * 180) /
+          Math.PI
+        ).toFixed(1)}°, target=${((targetYRotation * 180) / Math.PI).toFixed(
+          1
+        )}°, difference=${((yDifference * 180) / Math.PI).toFixed(1)}°`
+      );
+    }
+
+    if (ROTATION_AXIS_Y === "y") {
+      targetRotation.y = originalRotation.y + yDifference * scrollProgress;
+    } else if (ROTATION_AXIS_Y === "x") {
+      targetRotation.x = originalRotation.x + yDifference * scrollProgress;
+    } else if (ROTATION_AXIS_Y === "z") {
+      targetRotation.z = originalRotation.z + yDifference * scrollProgress;
+    }
   }
 
   ghost.rotation.copy(targetRotation);
