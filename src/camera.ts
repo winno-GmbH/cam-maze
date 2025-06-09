@@ -5,7 +5,6 @@ import {
   secondPosition,
   lookAtPosition,
 } from "./config";
-import { container } from "./scene";
 
 // Camera Setup
 export const camera = new THREE.PerspectiveCamera(

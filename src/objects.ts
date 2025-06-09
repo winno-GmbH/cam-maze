@@ -56,17 +56,18 @@ export async function loadModel(): Promise<void> {
         console.log("GLTF model loaded successfully");
         const model = gltf.scene;
 
-        model.traverse((child) => {
+        model.traverse((child: THREE.Object3D) => {
           if (child.name === "CAM-Pacman") {
             const children: THREE.Object3D[] = [];
-            child.traverse((subChild) => {
+            child.traverse((subChild: THREE.Object3D) => {
               if (
                 (subChild as any).isMesh &&
                 subChild.name !== "CAM-Pacman_Shell" &&
                 subChild.name !== "CAM-Pacman_Shell_Boolean"
               ) {
                 const material =
-                  materialMap[subChild.name] || materialMap.default;
+                  materialMap[subChild.name as keyof typeof materialMap] ||
+                  materialMap.default;
                 (subChild as THREE.Mesh).material = material;
                 children.push(subChild);
               } else if (
@@ -85,14 +86,18 @@ export async function loadModel(): Promise<void> {
             pacmanMixer = new THREE.AnimationMixer(ghosts.pacman);
             const pacmanActions: { [key: string]: THREE.AnimationAction } = {};
 
-            gltf.animations.forEach((clip) => {
+            gltf.animations.forEach((clip: THREE.AnimationClip) => {
               const action = pacmanMixer.clipAction(clip);
               pacmanActions[clip.name] = action;
               action.setEffectiveWeight(1);
               action.play();
             });
-          } else if (ghostContainers[child.name]) {
-            const ghostContainer = ghostContainers[child.name];
+          } else if (
+            child.name &&
+            ghostContainers[child.name as keyof typeof ghostContainers]
+          ) {
+            const ghostContainer =
+              ghostContainers[child.name as keyof typeof ghostContainers];
             const ghostGroup = new THREE.Group();
 
             child.rotation.z = Math.PI;
@@ -100,7 +105,7 @@ export async function loadModel(): Promise<void> {
             child.scale.set(0.75, 0.75, 0.75);
 
             const children: THREE.Object3D[] = [];
-            child.traverse((subChild) => {
+            child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
                 if (subChild.name && subChild.name.startsWith("Ghost_Mesh")) {
                   (subChild as THREE.Mesh).material = ghostMaterial;
@@ -145,7 +150,7 @@ export async function loadModel(): Promise<void> {
               child.position.y = -0.1;
               child.position.x = 0;
               child.position.z = 0;
-              child.material = new THREE.MeshBasicMaterial({
+              (child as THREE.Mesh).material = new THREE.MeshBasicMaterial({
                 color: 0xffffff,
                 opacity: 1,
                 transparent: false,
@@ -157,7 +162,7 @@ export async function loadModel(): Promise<void> {
               child.castShadow = true;
               child.scale.set(0.5, 0.5, 0.5);
 
-              clonedChild.material = floorMaterial;
+              (clonedChild as THREE.Mesh).material = floorMaterial;
               clonedChild.position.y = -0.5;
               clonedChild.receiveShadow = true;
               scene.add(clonedChild);
@@ -166,7 +171,7 @@ export async function loadModel(): Promise<void> {
         });
 
         // Add shadows to all meshes
-        model.traverse(function (node) {
+        model.traverse(function (node: THREE.Object3D) {
           if ((node as any).isMesh) {
             node.castShadow = true;
             node.receiveShadow = true;
