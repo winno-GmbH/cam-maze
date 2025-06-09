@@ -615,14 +615,14 @@ function animateIntroBody(progress: number) {
   // Make visible
   introBody.style.display = "block";
 
-  // Body animation: Starts at 40% and runs to 80% of intro section
-  // Earlier start to match faster header completion
+  // Body animation: Starts at 40% and runs to 100% (bottom bottom) of intro section
+  // Finishes at the very end of the intro section like backup.js
   let scale = 0.5;
   let opacity = 0;
 
   if (progress >= 0.4) {
-    // Map 0.4-0.8 to 0-1 for full animation (starts when header finishes)
-    const localProgress = Math.min(1, (progress - 0.4) * 2.5); // Same speed as header
+    // Map 0.4-1.0 to 0-1 for full animation (starts when header finishes, ends at bottom)
+    const localProgress = Math.min(1, (progress - 0.4) / 0.6); // Slower to fit 0.4-1.0 range
 
     if (localProgress <= 0.3) {
       // 0% - 30%: scale 0.5->0.8, opacity 0->1
