@@ -111,7 +111,7 @@ function createBezierCurves() {
   });
 }
 
-function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
+function moveGhostOnCurve(ghostKey: string, ghostProgress: number) {
   if (
     !bezierCurves[ghostKey] ||
     !ghosts[ghostKey] ||
@@ -123,7 +123,7 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
   const ghost = ghosts[ghostKey];
 
   // Always use bezier curve for smooth interpolation
-  const position = bezierCurves[ghostKey].getPoint(scrollProgress);
+  const position = bezierCurves[ghostKey].getPoint(ghostProgress);
   ghost.position.copy(position);
 
   // Interpolate rotation: Start with original rotation, end with target rotation
@@ -132,11 +132,11 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
 
   // X-axis rotation (e.g., to lay down) - always add specified amount
   if (ROTATION_AXIS_X === "x") {
-    targetRotation.x += ROTATION_AMOUNT_X * scrollProgress;
+    targetRotation.x += ROTATION_AMOUNT_X * ghostProgress;
   } else if (ROTATION_AXIS_X === "y") {
-    targetRotation.y += ROTATION_AMOUNT_X * scrollProgress;
+    targetRotation.y += ROTATION_AMOUNT_X * ghostProgress;
   } else if (ROTATION_AXIS_X === "z") {
-    targetRotation.z += ROTATION_AMOUNT_X * scrollProgress;
+    targetRotation.z += ROTATION_AMOUNT_X * ghostProgress;
   }
 
   // Y-axis rotation (smart rotation to nearest 0° or 180°)
@@ -146,7 +146,7 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
     const yDifference = targetYRotation - currentYRotation;
 
     // Debug logging for the first ghost
-    if (ghostKey === "ghost1" && scrollProgress > 0.1 && scrollProgress < 0.2) {
+    if (ghostKey === "ghost1" && ghostProgress > 0.1 && ghostProgress < 0.2) {
       console.log(
         `${ghostKey} Y-rotation: current=${(
           (currentYRotation * 180) /
@@ -158,21 +158,21 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
     }
 
     if (ROTATION_AXIS_Y === "y") {
-      targetRotation.y = originalRotation.y + yDifference * scrollProgress;
+      targetRotation.y = originalRotation.y + yDifference * ghostProgress;
     } else if (ROTATION_AXIS_Y === "x") {
-      targetRotation.x = originalRotation.x + yDifference * scrollProgress;
+      targetRotation.x = originalRotation.x + yDifference * ghostProgress;
     } else if (ROTATION_AXIS_Y === "z") {
-      targetRotation.z = originalRotation.z + yDifference * scrollProgress;
+      targetRotation.z = originalRotation.z + yDifference * ghostProgress;
     }
   }
 
   ghost.rotation.copy(targetRotation);
 
-  // Handle opacity fade in last 20%
+  // Handle opacity fade in last 20% of GHOST animation (not scroll progress!)
   let opacity = 1;
-  if (scrollProgress >= OPACITY_FADE_START) {
+  if (ghostProgress >= OPACITY_FADE_START) {
     const fadeProgress =
-      (scrollProgress - OPACITY_FADE_START) / (1 - OPACITY_FADE_START);
+      (ghostProgress - OPACITY_FADE_START) / (1 - OPACITY_FADE_START);
     opacity = 1 - fadeProgress;
     opacity = Math.max(0.1, opacity); // Keep minimum visibility
   }
