@@ -1228,29 +1228,14 @@ function updatePOVGhosts(progress: number) {
 
     // Use the ghost key directly since that's how paths are stored
     if (povAnimationState.ghostPOVPaths[ghostKey]) {
-      // For now, make all ghosts visible and positioned along their paths
-      const path = povAnimationState.ghostPOVPaths[ghostKey];
-      const ghostPosition = path.getPointAt(progress);
-      ghost.position.copy(ghostPosition);
-
-      // Make ghost look along its path
-      const tangent = path.getTangentAt(progress).normalize();
-      const lookAtPoint = ghostPosition.clone().add(tangent);
-      ghost.lookAt(lookAtPoint);
-
-      // Make ghost visible
-      ghost.visible = true;
-
       console.log(
-        `🎭 Ghost ${ghostKey} positioned at: ${ghostPosition.x.toFixed(
-          2
-        )}, ${ghostPosition.y.toFixed(2)}, ${ghostPosition.z.toFixed(
-          2
-        )}, visible: ${ghost.visible}`
+        `🎭 Updating ghost ${ghostKey} with sophisticated trigger system`
       );
 
-      // updateGhostInPOV(ghostKey, ghost, ghostKey, cameraPosition);
+      // Use the sophisticated trigger system from backup.js
+      updateGhostInPOV(ghostKey, ghost, ghostKey, cameraPosition);
     } else {
+      console.log(`🎭 No POV path found for ghost: ${ghostKey}`);
     }
   });
 }
@@ -1441,8 +1426,18 @@ function onPOVAnimationEnd() {
   // Restore ghosts to their home positions
   restoreGhostsToHomePositions();
 
-  // Make sure pacman is visible and animation is running
-  if (ghosts.pacman) ghosts.pacman.visible = true;
+  // CRITICAL: Properly restore pacman and home animation state
+  if (ghosts.pacman) {
+    ghosts.pacman.visible = true;
+    console.log("🎭 Pacman restored to visible after POV");
+  }
+
+  // If we're at scroll position 0, switch back to HOME state and restart home animation
+  if (window.scrollY === 0) {
+    currentAnimationState = "HOME";
+    // Reset animation timing to continue home animation properly
+    console.log("🎭 Restored to HOME state after POV (at top of page)");
+  }
 
   // Update debug info
   if (window.animationDebugInfo) {
@@ -1463,6 +1458,9 @@ function restoreGhostsToHomePositions() {
         ghost.rotation.copy(captured.rotation);
         ghost.visible = true;
 
+        // Reset scale back to normal
+        ghost.scale.set(1, 1, 1);
+
         // Reset material opacity
         if (
           ghost instanceof THREE.Mesh &&
@@ -1480,7 +1478,14 @@ function restoreGhostsToHomePositions() {
               child.material.opacity = 1;
             }
           });
+        } else {
+          // Handle the case where ghost.material exists but isn't typed
+          (ghost as any).material.opacity = 1;
         }
+
+        console.log(
+          `🎭 Restored ${ghostKey} to home position, visible: ${ghost.visible}`
+        );
       }
     }
   );
