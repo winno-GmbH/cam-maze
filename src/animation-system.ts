@@ -51,7 +51,7 @@ function createBezierCurves() {
     // Control point: Mittelpunkt zwischen Start und Ende in x/z, aber hoch oben bei y=1
     const controlPoint = new THREE.Vector3(
       (startPos.x + endPos.x) / 2, // Mittelpunkt x zwischen Start und Maze-Mitte
-      1, // Hoch oben bei y=1
+      2, // Hoch oben bei y=1
       (startPos.z + endPos.z) / 2 // Mittelpunkt z zwischen Start und Maze-Mitte
     );
 
@@ -70,15 +70,31 @@ function createBezierCurves() {
 }
 
 function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
-  if (!bezierCurves[ghostKey] || !ghosts[ghostKey]) return;
+  if (
+    !bezierCurves[ghostKey] ||
+    !ghosts[ghostKey] ||
+    !capturedPositions[ghostKey]
+  )
+    return;
 
-  // Get position on curve (0-1)
-  const position = bezierCurves[ghostKey].getPoint(scrollProgress);
-  ghosts[ghostKey].position.copy(position);
+  const ghost = ghosts[ghostKey];
 
-  // Get direction from curve tangent for smooth rotation
-  const tangent = bezierCurves[ghostKey].getTangent(scrollProgress).normalize();
-  ghosts[ghostKey].lookAt(position.clone().add(tangent));
+  // Bei scrollProgress = 0: Ursprungsposition
+  // Bei scrollProgress = 1: Maze-Mitte über Bezier-Kurve
+  if (scrollProgress === 0) {
+    // Zurück zur ursprünglichen Position
+    ghost.position.copy(capturedPositions[ghostKey]);
+  } else {
+    // Get position on curve (0-1) - aber nur wenn wir scrollen
+    const position = bezierCurves[ghostKey].getPoint(scrollProgress);
+    ghost.position.copy(position);
+
+    // Get direction from curve tangent for smooth rotation
+    const tangent = bezierCurves[ghostKey]
+      .getTangent(scrollProgress)
+      .normalize();
+    ghost.lookAt(position.clone().add(tangent));
+  }
 
   // Handle opacity fade in last 20%
   let opacity = 1;
@@ -90,7 +106,6 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
   }
 
   // Set opacity for both Mesh and Group
-  const ghost = ghosts[ghostKey];
   if (ghost instanceof THREE.Mesh && ghost.material) {
     if (Array.isArray(ghost.material)) {
       ghost.material.forEach((mat) => {
@@ -203,6 +218,59 @@ function animationLoop() {
   });
 }
 
+// Reset to home state helper
+function resetToHomeState() {
+  currentAnimationState = "HOME";
+  isFirstScroll = true;
+
+  if (pauseTime) {
+    timeOffset += Date.now() - pauseTime;
+    pauseTime = 0;
+  }
+
+  // Reset camera to initial position
+  camera.position.copy(initialCameraPosition);
+  camera.lookAt(initialCameraTarget);
+
+  // Reset all ghosts to their captured positions and full opacity
+  Object.keys(ghosts).forEach((ghostKey) => {
+    if (capturedPositions[ghostKey] && ghosts[ghostKey]) {
+      ghosts[ghostKey].position.copy(capturedPositions[ghostKey]);
+
+      // Reset opacity to full
+      const ghost = ghosts[ghostKey];
+      if (ghost instanceof THREE.Mesh && ghost.material) {
+        if (Array.isArray(ghost.material)) {
+          ghost.material.forEach((mat) => {
+            if ("opacity" in mat) mat.opacity = 1;
+          });
+        } else {
+          if ("opacity" in ghost.material) ghost.material.opacity = 1;
+        }
+      } else if (ghost instanceof THREE.Group) {
+        ghost.traverse((child) => {
+          if (child instanceof THREE.Mesh && child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach((mat) => {
+                if ("opacity" in mat) mat.opacity = 1;
+              });
+            } else {
+              if ("opacity" in child.material) child.material.opacity = 1;
+            }
+          }
+        });
+      }
+    }
+  });
+
+  // Update debug info
+  if (window.animationDebugInfo) {
+    window.animationDebugInfo.state = currentAnimationState;
+    window.animationDebugInfo.isFirstScroll = isFirstScroll;
+    window.animationDebugInfo.scrollProgress = 0;
+  }
+}
+
 // Camera animation helper
 function animateCamera(progress: number) {
   // Lerp camera position towards maze center
@@ -247,18 +315,7 @@ function handleScroll() {
   if (!isInHomeSection) {
     // If we're not in home section and currently in scroll animation, reset
     if (currentAnimationState === "SCROLL_ANIMATION") {
-      currentAnimationState = "HOME";
-      isFirstScroll = true;
-
-      if (pauseTime) {
-        timeOffset += Date.now() - pauseTime;
-        pauseTime = 0;
-      }
-
-      // Reset camera to initial position
-      camera.position.copy(initialCameraPosition);
-      camera.lookAt(initialCameraTarget);
-
+      resetToHomeState();
       console.log("Left home section - resuming home animation");
     }
     return;
@@ -275,6 +332,12 @@ function handleScroll() {
   }
 
   if (currentAnimationState === "SCROLL_ANIMATION") {
+    // If we're back at the top (scrollProgress = 0), reset everything
+    if (scrollProgress === 0) {
+      resetToHomeState();
+      return;
+    }
+
     // Animate ghosts along bezier curves
     Object.keys(ghosts).forEach((ghostKey) => {
       moveGhostOnCurve(ghostKey, scrollProgress);
