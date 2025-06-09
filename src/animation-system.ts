@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { ghosts, pacmanMixer, clock } from "./objects";
 import { pathsMap } from "./paths";
 import { renderer, scene } from "./scene";
-import { camera } from "./camera";
+import { camera, startQuaternion, endQuaternion } from "./camera";
 
 // 1. STATE MANAGEMENT
 type AnimationState = "HOME" | "SCROLL_ANIMATION";
@@ -435,29 +435,20 @@ function animateCamera(progress: number) {
   const mazeCenter = new THREE.Vector3(0.55675, 0.5, 0.45175);
   const targetLookAt = mazeCenter.clone();
 
+  // EXACT backup.js logic: interpolate between startQuaternion and endQuaternion
   if (progress === 0) {
     // At progress 0: keep the EXACT current rotation (no jump!)
     camera.quaternion.copy(initialCameraQuaternion);
   } else {
-    // Smooth transition from initial rotation to looking at maze center
-
-    // Create target quaternion (looking at maze center)
-    const targetMatrix = new THREE.Matrix4().lookAt(
-      position,
-      targetLookAt,
-      camera.up
+    // Backup.js logic: slerp between startQuaternion and endQuaternion
+    // endQuaternion = looking straight down (-90° on X-axis)
+    const currentQuaternion = new THREE.Quaternion();
+    currentQuaternion.slerpQuaternions(
+      initialCameraQuaternion,
+      endQuaternion,
+      progress
     );
-    const targetQuaternion = new THREE.Quaternion().setFromRotationMatrix(
-      targetMatrix
-    );
-
-    // Interpolate between initial rotation and target rotation
-    const easedProgress = smoothStep(progress);
-    const newQuaternion = new THREE.Quaternion()
-      .copy(initialCameraQuaternion)
-      .slerp(targetQuaternion, easedProgress);
-
-    camera.quaternion.copy(newQuaternion);
+    camera.quaternion.copy(currentQuaternion);
   }
 
   console.log(
