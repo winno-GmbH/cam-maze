@@ -67,10 +67,6 @@ const bezierCurves: { [key: string]: THREE.QuadraticBezierCurve3 } = {};
 let timeOffset = 0;
 let pauseTime = 0;
 
-// Smooth animation variables (like GSAP scrub)
-let lastScrollProgress = 0;
-const SMOOTH_FACTOR = 0.1; // Controls smoothing intensity
-
 function captureGhostPositions() {
   Object.keys(ghosts).forEach((ghostKey) => {
     if (ghosts[ghostKey]) {
@@ -506,7 +502,6 @@ function handleScroll() {
     // If we're back at the very top (scrollProgress = 0), reset everything
     if (scrollProgress === 0) {
       console.log("Scroll progress at 0, resetting to home state");
-      lastScrollProgress = 0;
       resetToHomeState();
       return;
     }
