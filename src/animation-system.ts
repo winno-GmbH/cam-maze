@@ -1599,7 +1599,7 @@ function updateGhostInPOV(
 
     if (!triggerPos || !endPosition) return;
 
-    const ghostText = parent?.querySelector(".cmp--pov-ghost") as HTMLElement;
+    const ghostText = parent as HTMLElement; // In backup.js, parent IS the ghost text
     const camText = parent?.querySelector(".cmp--pov-cam") as HTMLElement;
 
     // Only log once per ghost to avoid spam
@@ -1625,6 +1625,7 @@ function updateGhostInPOV(
       trigger.ghostTextOpacity = 0;
       trigger.camTextOpacity = 0;
       trigger.lastProgress = 0;
+      trigger.currentRotation = null;
 
       // Make ghost and text invisible initially
       ghost.visible = false;
@@ -1638,19 +1639,28 @@ function updateGhostInPOV(
       }
     }
 
-    // Get current camera progress on POV path
-    const currentCameraProgress = findClosestProgressOnPOVPath(cameraPosition);
+    // Get current camera progress on POV path (using backup.js method with 800 samples)
+    const currentCameraProgress = findClosestProgressOnPOVPath(
+      cameraPosition,
+      800
+    );
 
-    // Calculate path positions if not done already
+    // Calculate path positions if not done already (using backup.js method with 800 samples)
     if (trigger.triggerCameraProgress === null) {
-      trigger.triggerCameraProgress = findClosestProgressOnPOVPath(triggerPos);
+      trigger.triggerCameraProgress = findClosestProgressOnPOVPath(
+        triggerPos,
+        800
+      );
       trigger.ghostTextCameraProgress = ghostTextPos
-        ? findClosestProgressOnPOVPath(ghostTextPos)
+        ? findClosestProgressOnPOVPath(ghostTextPos, 800)
         : trigger.triggerCameraProgress;
       trigger.camTextCameraProgress = camTextPos
-        ? findClosestProgressOnPOVPath(camTextPos)
+        ? findClosestProgressOnPOVPath(camTextPos, 800)
         : trigger.ghostTextCameraProgress;
-      trigger.endCameraProgress = findClosestProgressOnPOVPath(endPosition);
+      trigger.endCameraProgress = findClosestProgressOnPOVPath(
+        endPosition,
+        800
+      );
     }
 
     const triggerProgress = trigger.triggerCameraProgress;
@@ -1691,12 +1701,27 @@ function updateGhostInPOV(
       const pathPoint = path.getPointAt(ghostProgress);
       ghost.position.copy(pathPoint);
 
-      // Simple ghost orientation: stand upright and face tangent direction
+      // Ghost orientation with smooth rotation (from backup.js)
       const tangent = path.getTangentAt(ghostProgress).normalize();
       const lookAtPoint = ghost.position.clone().add(tangent);
 
-      // Make ghost look in tangent direction while staying upright
-      ghost.lookAt(lookAtPoint);
+      if (!trigger.currentRotation) {
+        trigger.currentRotation = new THREE.Quaternion();
+        ghost.getWorldQuaternion(trigger.currentRotation);
+      }
+
+      const targetQuaternion = new THREE.Quaternion();
+      const lookAtMatrix = new THREE.Matrix4().lookAt(
+        ghost.position,
+        lookAtPoint,
+        new THREE.Vector3(0, 1, 0)
+      );
+      targetQuaternion.setFromRotationMatrix(lookAtMatrix);
+
+      // Smoothly interpolate to target rotation
+      const rotationSmoothingFactor = 0.15;
+      trigger.currentRotation.slerp(targetQuaternion, rotationSmoothingFactor);
+      ghost.quaternion.copy(trigger.currentRotation);
 
       // Fade out at the end
       if (ghostProgress > 0.9) {
