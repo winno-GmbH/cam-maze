@@ -571,14 +571,14 @@ function animateIntroHeader(progress: number) {
   // Make visible
   introHeader.style.display = "block";
 
-  // Header animation: First half of intro section (0-0.5)
-  // Map progress 0-0.5 to full animation 0-1
+  // Header animation: Runs immediately from start to 40% of intro section
+  // More aggressive timing to start early
   let scale = 0;
   let opacity = 0;
 
-  if (progress <= 0.5) {
-    // Map 0-0.5 to 0-1 for full animation
-    const localProgress = progress / 0.5;
+  if (progress <= 0.4) {
+    // Map 0-0.4 to 0-1 for full animation (faster completion)
+    const localProgress = Math.min(1, progress * 2.5); // Even faster
 
     if (localProgress <= 0.3) {
       // 0% - 30%: scale 0->0.8, opacity 0->1
@@ -597,7 +597,7 @@ function animateIntroHeader(progress: number) {
       opacity = 1 - keyframeProgress; // 1 -> 0
     }
   } else {
-    // After 0.5 progress, header is fully animated out
+    // After 0.4 progress, header is fully animated out
     scale = 1.5;
     opacity = 0;
   }
@@ -613,14 +613,14 @@ function animateIntroBody(progress: number) {
   // Make visible
   introBody.style.display = "block";
 
-  // Body animation: Second half of intro section (0.5-1.0)
-  // Map progress 0.5-1.0 to full animation 0-1
+  // Body animation: Starts at 40% and runs to 80% of intro section
+  // Earlier start to match faster header completion
   let scale = 0.5;
   let opacity = 0;
 
-  if (progress > 0.5) {
-    // Map 0.5-1.0 to 0-1 for full animation
-    const localProgress = (progress - 0.5) / 0.5;
+  if (progress >= 0.4) {
+    // Map 0.4-0.8 to 0-1 for full animation (starts when header finishes)
+    const localProgress = Math.min(1, (progress - 0.4) * 2.5); // Same speed as header
 
     if (localProgress <= 0.3) {
       // 0% - 30%: scale 0.5->0.8, opacity 0->1
@@ -639,7 +639,7 @@ function animateIntroBody(progress: number) {
       opacity = 1 - keyframeProgress; // 1 -> 0
     }
   } else {
-    // Before 0.5 progress, body is not visible
+    // Before 0.4 progress, body is not visible
     scale = 0.5;
     opacity = 0;
   }
