@@ -44,12 +44,6 @@ function captureGhostPositions() {
     if (ghosts[ghostKey]) {
       capturedPositions[ghostKey] = ghosts[ghostKey].position.clone();
       capturedRotations[ghostKey] = ghosts[ghostKey].rotation.clone();
-      console.log(
-        `Captured ${ghostKey} at position:`,
-        ghosts[ghostKey].position,
-        "rotation:",
-        ghosts[ghostKey].rotation
-      );
     }
   });
 }
@@ -72,12 +66,6 @@ function createBezierCurves() {
       controlPoint, // Hoher Bogen-Punkt
       endPos // Maze-Mitte
     );
-
-    console.log(`Created bezier curve for ${ghostKey}:`, {
-      start: startPos,
-      control: controlPoint,
-      end: endPos,
-    });
   });
 }
 
@@ -110,24 +98,6 @@ function moveGhostOnCurve(ghostKey: string, ghostProgress: number) {
   );
 
   ghost.rotation.copy(currentRotation);
-
-  // Debug rotation for the problematic ghost
-  if (ghostProgress > 0.9 && (ghostKey === "ghost1" || ghostKey === "pacman")) {
-    console.log(
-      `${ghostKey} at ${ghostProgress.toFixed(2)}: original=(${(
-        (originalRotation.x * 180) /
-        Math.PI
-      ).toFixed(1)}°, ${((originalRotation.y * 180) / Math.PI).toFixed(1)}°, ${(
-        (originalRotation.z * 180) /
-        Math.PI
-      ).toFixed(1)}°) current=(${((currentRotation.x * 180) / Math.PI).toFixed(
-        1
-      )}°, ${((currentRotation.y * 180) / Math.PI).toFixed(1)}°, ${(
-        (currentRotation.z * 180) /
-        Math.PI
-      ).toFixed(1)}°)`
-    );
-  }
 
   // Handle opacity fade in last 20% of GHOST animation (not scroll progress!)
   let opacity = 1;
@@ -198,14 +168,6 @@ function createCameraPath() {
     secondPosition, // Interpolated second position
     new THREE.Vector3(0.55675, 3, 0.45175), // High control point
     new THREE.Vector3(0.55675, 0.5, 0.45175) // End point (maze center)
-  );
-
-  console.log(
-    `Camera path created starting from current position:`,
-    `${startPosition.x.toFixed(2)}, ${startPosition.y.toFixed(
-      2
-    )}, ${startPosition.z.toFixed(2)}`,
-    "to maze center (0.55675, 0.5, 0.45175)"
   );
 }
 
@@ -283,11 +245,6 @@ function resetToHomeState() {
   animationStartTime = Date.now();
   timeOffset = 0;
   pauseTime = 0;
-  console.log(
-    `🔄 Animation timing reset - home animation will continue from progress: ${savedAnimationProgress.toFixed(
-      3
-    )}`
-  );
 
   // Reset camera to initial position and rotation
   camera.position.copy(initialCameraPosition);
@@ -300,10 +257,6 @@ function resetToHomeState() {
       capturedRotations[ghostKey] &&
       ghosts[ghostKey]
     ) {
-      console.log(
-        `Resetting ${ghostKey} to captured position:`,
-        capturedPositions[ghostKey]
-      );
       ghosts[ghostKey].position.copy(capturedPositions[ghostKey]);
       ghosts[ghostKey].rotation.copy(capturedRotations[ghostKey]);
 
@@ -343,7 +296,6 @@ function resetToHomeState() {
 // Camera animation helper - smooth transition from current rotation (ONLY FOV FIX)
 function animateCamera(progress: number) {
   if (!cameraHomePath) {
-    console.warn("Camera path not created yet");
     return;
   }
 
@@ -375,12 +327,6 @@ function animateCamera(progress: number) {
     );
     camera.quaternion.copy(currentQuaternion);
   }
-
-  console.log(
-    `Camera at progress ${progress.toFixed(2)}: position=${position.x.toFixed(
-      2
-    )}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}`
-  );
 }
 
 // Smooth step function from backup.js
@@ -392,7 +338,6 @@ function smoothStep(x: number): number {
 function handleScroll() {
   const homeSection = document.querySelector(".sc--home") as HTMLElement;
   if (!homeSection) {
-    console.warn(".sc--home element not found");
     return;
   }
 
@@ -999,8 +944,6 @@ const backupTriggerPositions = {
 
 // Initialize POV Animation System
 function initializePOVAnimation() {
-  console.log("🎭 Initializing POV Animation System...");
-
   // Create camera POV path
   povAnimationState.cameraPOVPath = createPOVPath(cameraPOVPathPoints);
 
@@ -1012,18 +955,6 @@ function initializePOVAnimation() {
     ghost4: createPOVPath(ghost4POVPathPoints),
     ghost5: createPOVPath(ghost5POVPathPoints),
   };
-
-  console.log(
-    "🎭 Created ghost POV paths:",
-    Object.keys(povAnimationState.ghostPOVPaths)
-  );
-  console.log("🎭 Ghost path lengths:", {
-    ghost1: povAnimationState.ghostPOVPaths.ghost1?.getLength() || 0,
-    ghost2: povAnimationState.ghostPOVPaths.ghost2?.getLength() || 0,
-    ghost3: povAnimationState.ghostPOVPaths.ghost3?.getLength() || 0,
-    ghost4: povAnimationState.ghostPOVPaths.ghost4?.getLength() || 0,
-    ghost5: povAnimationState.ghostPOVPaths.ghost5?.getLength() || 0,
-  });
 
   // Initialize trigger positions
   povAnimationState.triggerPositions = {
@@ -1070,21 +1001,12 @@ function initializePOVAnimation() {
   };
 
   // POV animation will be handled by handlePOVScroll in setupScrollTriggers
-
-  console.log("✅ POV Animation System initialized");
 }
 
 // POV animation is now handled by handlePOVScroll function in setupScrollTriggers
 
 // POV Animation Start Handler
 function onPOVAnimationStart() {
-  console.log("🎭 POV Animation Start Handler Called!");
-  console.log(
-    "🎭 Available ghost paths:",
-    Object.keys(povAnimationState.ghostPOVPaths)
-  );
-  console.log("🎭 Available ghosts:", Object.keys(ghosts));
-
   // Switch to POV state
   currentAnimationState = "POV_ANIMATION";
 
@@ -1110,7 +1032,6 @@ function onPOVAnimationStart() {
   Object.entries(ghosts).forEach(([ghostKey, ghost]) => {
     if (ghostKey !== "pacman") {
       ghost.visible = true;
-      console.log(`🎭 Made ghost ${ghostKey} visible for POV animation`);
     }
   });
 
@@ -1118,8 +1039,6 @@ function onPOVAnimationStart() {
   if (window.animationDebugInfo) {
     window.animationDebugInfo.povAnimationActive = true;
   }
-
-  console.log("🎭 POV Animation Start Handler Complete!");
 }
 
 // Update POV Animation
@@ -1309,8 +1228,6 @@ function updatePOVGhosts(progress: number) {
 
     // Use the ghost key directly since that's how paths are stored
     if (povAnimationState.ghostPOVPaths[ghostKey]) {
-      console.log(`🎭 Updating ghost ${ghostKey} with path`);
-
       // For now, make all ghosts visible and positioned along their paths
       const path = povAnimationState.ghostPOVPaths[ghostKey];
       const ghostPosition = path.getPointAt(progress);
@@ -1334,7 +1251,6 @@ function updatePOVGhosts(progress: number) {
 
       // updateGhostInPOV(ghostKey, ghost, ghostKey, cameraPosition);
     } else {
-      console.log(`🎭 No path found for ghost ${ghostKey}`);
     }
   });
 }
@@ -1612,7 +1528,6 @@ function handlePOVScroll() {
       (currentAnimationState === "SCROLL_ANIMATION" ||
         currentAnimationState === "HOME")
     ) {
-      console.log("🎭 POV Animation Started (Scroll)");
       povAnimationState.isActive = true;
       onPOVAnimationStart();
     }
