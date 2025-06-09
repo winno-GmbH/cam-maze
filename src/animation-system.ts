@@ -1595,7 +1595,7 @@ function handlePOVScroll() {
   }
 }
 
-// Update Camera FOV based on animation state
+// Update Camera FOV based on animation state (INSTANT change)
 function updateCameraFOV() {
   if (!camera) return;
 
@@ -1615,12 +1615,11 @@ function updateCameraFOV() {
       targetFOV = ORIGINAL_FOV;
   }
 
-  // Smooth FOV transition
+  // INSTANT FOV change (no animation)
   if (camera.fov !== targetFOV) {
-    const fovDifference = targetFOV - camera.fov;
-    const fovSmoothingFactor = 0.1; // Adjust for smoother/faster transitions
-    camera.fov += fovDifference * fovSmoothingFactor;
+    camera.fov = targetFOV;
     camera.updateProjectionMatrix();
+    console.log(`🎯 FOV changed instantly to: ${targetFOV}`);
   }
 }
 
