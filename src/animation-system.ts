@@ -141,6 +141,24 @@ function moveGhostOnCurve(ghostKey: string, ghostProgress: number) {
 
   ghost.rotation.copy(currentRotation);
 
+  // Debug rotation for the problematic ghost
+  if (ghostProgress > 0.9 && (ghostKey === "ghost1" || ghostKey === "pacman")) {
+    console.log(
+      `${ghostKey} at ${ghostProgress.toFixed(2)}: original=(${(
+        (originalRotation.x * 180) /
+        Math.PI
+      ).toFixed(1)}°, ${((originalRotation.y * 180) / Math.PI).toFixed(1)}°, ${(
+        (originalRotation.z * 180) /
+        Math.PI
+      ).toFixed(1)}°) current=(${((currentRotation.x * 180) / Math.PI).toFixed(
+        1
+      )}°, ${((currentRotation.y * 180) / Math.PI).toFixed(1)}°, ${(
+        (currentRotation.z * 180) /
+        Math.PI
+      ).toFixed(1)}°)`
+    );
+  }
+
   // Handle opacity fade in last 20% of GHOST animation (not scroll progress!)
   let opacity = 1;
   if (ghostProgress >= GHOST_OPACITY_FADE_START) {
