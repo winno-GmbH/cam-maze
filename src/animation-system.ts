@@ -66,6 +66,7 @@ const capturedRotations: { [key: string]: THREE.Euler } = {};
 const bezierCurves: { [key: string]: THREE.QuadraticBezierCurve3 } = {};
 let timeOffset = 0;
 let pauseTime = 0;
+let introAnimationsTriggered = false;
 
 function captureGhostPositions() {
   Object.keys(ghosts).forEach((ghostKey) => {
@@ -350,6 +351,8 @@ function animationLoop() {
 function resetToHomeState() {
   currentAnimationState = "HOME";
   isFirstScroll = true;
+  introAnimationsTriggered = false;
+  introAnimationsTriggered = false;
 
   if (pauseTime) {
     timeOffset += Date.now() - pauseTime;
@@ -520,6 +523,12 @@ function handleScroll() {
     // Animate camera normally (0% to 100%)
     animateCamera(scrollProgress);
 
+    // Trigger intro animations when scroll animation is complete (100%) - only once
+    if (scrollProgress >= 1.0 && !introAnimationsTriggered) {
+      introAnimationsTriggered = true;
+      triggerIntroAnimations();
+    }
+
     // Update debug info
     if (window.animationDebugInfo) {
       window.animationDebugInfo.scrollProgress = scrollProgress;
@@ -528,7 +537,74 @@ function handleScroll() {
 }
 
 // 5. GSAP INTEGRATION - To be called by GSAP ScrollTriggers
+// 6. INTRO TEXT ANIMATIONS (after arriving at maze)
+function setupIntroAnimations() {
+  // Setup intro header animation (.sc_h--intro)
+  const introHeader = document.querySelector(".sc_h--intro");
+  if (introHeader) {
+    // Set initial state
+    (introHeader as HTMLElement).style.transform = "scale(0)";
+    (introHeader as HTMLElement).style.opacity = "0";
+
+    console.log("Intro header element found and initialized");
+  }
+
+  // Setup intro body animation (.sc_b--intro)
+  const introBody = document.querySelector(".sc_b--intro");
+  if (introBody) {
+    // Set initial state
+    (introBody as HTMLElement).style.transform = "scale(0.5)";
+    (introBody as HTMLElement).style.opacity = "0";
+
+    console.log("Intro body element found and initialized");
+  }
+}
+
+function triggerIntroAnimations() {
+  console.log("Triggering intro text animations...");
+
+  // Animate intro header (.sc_h--intro)
+  const introHeader = document.querySelector(".sc_h--intro") as HTMLElement;
+  if (introHeader) {
+    // Keyframe animation like backup.js
+    const headerAnimation = [
+      { transform: "scale(0)", opacity: "0" },
+      { transform: "scale(0.8)", opacity: "1" },
+      { transform: "scale(1.2)", opacity: "1" },
+      { transform: "scale(1.5)", opacity: "0" },
+    ];
+
+    introHeader.animate(headerAnimation, {
+      duration: 2000,
+      easing: "ease-in-out",
+      fill: "forwards",
+    });
+  }
+
+  // Animate intro body (.sc_b--intro) with delay
+  setTimeout(() => {
+    const introBody = document.querySelector(".sc_b--intro") as HTMLElement;
+    if (introBody) {
+      const bodyAnimation = [
+        { transform: "scale(0.5)", opacity: "0" },
+        { transform: "scale(0.8)", opacity: "1" },
+        { transform: "scale(1.2)", opacity: "1" },
+        { transform: "scale(1.5)", opacity: "0" },
+      ];
+
+      introBody.animate(bodyAnimation, {
+        duration: 2000,
+        easing: "ease-in-out",
+        fill: "forwards",
+      });
+    }
+  }, 1000); // 1 second delay between header and body
+}
+
 export function setupScrollTriggers() {
+  // Setup intro animations
+  setupIntroAnimations();
+
   // This will be implemented when GSAP is available
   // For now, we use basic scroll events
   window.addEventListener("scroll", handleScroll);
