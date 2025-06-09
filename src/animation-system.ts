@@ -52,8 +52,6 @@ function captureGhostPositions() {
       );
     }
   });
-  console.log("All ghost positions captured:", capturedPositions);
-  console.log("All ghost rotations captured:", capturedRotations);
 }
 
 function createBezierCurves() {
@@ -422,16 +420,6 @@ function handleScroll() {
   }
   // else scrollProgress stays 0 (before animation range)
 
-  console.log(
-    `Scroll Debug: rect.top=${rect.top}, rect.bottom=${
-      rect.bottom
-    }, sectionHeight=${
-      rect.height
-    }, scrollProgress=${scrollProgress}, animationRange=${
-      rect.top <= 0 && rect.bottom >= 0 ? rect.height : "outside"
-    }`
-  );
-
   if (isInHomeSection) {
     // We're in the home section or buffer zone - handle scroll animation
 
@@ -445,14 +433,7 @@ function handleScroll() {
           (currentTime - animationStartTime - timeOffset) / 1000;
         savedAnimationProgress =
           (savedAnimationProgress + elapsedTime * 0.1) % 1;
-        console.log(
-          `💾 Saved home animation progress: ${savedAnimationProgress.toFixed(
-            3
-          )}`
-        );
-
         currentAnimationState = "SCROLL_ANIMATION";
-        console.log("Switched to SCROLL_ANIMATION state");
 
         // Capture positions immediately when starting scroll animation
         captureGhostPositions();
@@ -461,7 +442,6 @@ function handleScroll() {
       }
 
       // Always animate based on scroll progress (no state checks)
-      console.log(`Animating with scrollProgress: ${scrollProgress}`);
 
       // Animate ghosts along bezier curves (they finish at 80% scroll)
       Object.keys(ghosts).forEach((ghostKey) => {
@@ -482,7 +462,6 @@ function handleScroll() {
     } else if (scrollProgress === 0) {
       // Back at the beginning of home section - reset to home state
       if (currentAnimationState !== "HOME") {
-        console.log("Scroll progress at 0, resetting to home state");
         resetToHomeState();
       }
     }
@@ -491,7 +470,6 @@ function handleScroll() {
 
     // Check if we're at the very top of the page (above home section)
     if (window.scrollY <= 10) {
-      console.log("At top of page - resetting to HOME");
       resetToHomeState();
     }
   }
@@ -500,8 +478,6 @@ function handleScroll() {
 // 5. GSAP INTEGRATION - To be called by GSAP ScrollTriggers
 // 6. INTRO TEXT ANIMATIONS (after arriving at maze)
 function setupIntroAnimations() {
-  console.log("Setting up intro animations...");
-
   // Setup intro header animation (.sc_h--intro)
   const introHeader = document.querySelector(".sc_h--intro");
   if (introHeader) {
@@ -509,10 +485,6 @@ function setupIntroAnimations() {
     (introHeader as HTMLElement).style.transform = "scale(0)";
     (introHeader as HTMLElement).style.opacity = "0";
     (introHeader as HTMLElement).style.display = "none"; // Hidden initially
-
-    console.log("✅ Intro header element found and initialized");
-  } else {
-    console.warn("❌ Intro header element (.sc_h--intro) not found in DOM");
   }
 
   // Setup intro body animation (.sc_b--intro)
@@ -522,18 +494,7 @@ function setupIntroAnimations() {
     (introBody as HTMLElement).style.transform = "scale(0.5)";
     (introBody as HTMLElement).style.opacity = "0";
     (introBody as HTMLElement).style.display = "none"; // Hidden initially
-
-    console.log("✅ Intro body element found and initialized");
-  } else {
-    console.warn("❌ Intro body element (.sc_b--intro) not found in DOM");
   }
-
-  // Debug: List all elements in DOM for troubleshooting
-  const allElements = document.querySelectorAll('[class*="intro"]');
-  console.log(
-    `Found ${allElements.length} elements with 'intro' in class name:`,
-    Array.from(allElements).map((el) => el.className)
-  );
 }
 
 // Handle intro section scroll animations (like backup.js)
@@ -555,11 +516,26 @@ function handleIntroScroll() {
     const scrolledIntoSection = Math.max(0, -sectionTop);
     const progress = Math.min(1, scrolledIntoSection / sectionHeight);
 
+    // DEBUG: Intro scroll timing
+    console.log(
+      `🎬 INTRO DEBUG: top=${sectionTop.toFixed(
+        1
+      )}, bottom=${sectionBottom.toFixed(1)}, height=${sectionHeight.toFixed(
+        1
+      )}, progress=${progress.toFixed(3)}`
+    );
+
     // Animate intro elements based on progress
     animateIntroHeader(progress);
     animateIntroBody(progress);
   } else {
     // Section is completely out of view - hide elements
+    console.log(
+      `🎬 INTRO HIDDEN: top=${sectionTop.toFixed(
+        1
+      )}, bottom=${sectionBottom.toFixed(1)} - section out of view`
+    );
+
     const introHeader = document.querySelector(".sc_h--intro") as HTMLElement;
     const introBody = document.querySelector(".sc_b--intro") as HTMLElement;
 
@@ -604,10 +580,23 @@ function animateIntroHeader(progress: number) {
       scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
       opacity = 1 - keyframeProgress; // 1 -> 0
     }
+
+    console.log(
+      `🎬 HEADER: progress=${progress.toFixed(
+        3
+      )}, localProgress=${localProgress.toFixed(3)}, scale=${scale.toFixed(
+        2
+      )}, opacity=${opacity.toFixed(2)}`
+    );
   } else {
     // After 0.5 progress, header is fully animated out
     scale = 1.5;
     opacity = 0;
+    console.log(
+      `🎬 HEADER FINISHED: progress=${progress.toFixed(
+        3
+      )}, scale=${scale}, opacity=${opacity}`
+    );
   }
 
   introHeader.style.transform = `scale(${scale})`;
@@ -646,10 +635,21 @@ function animateIntroBody(progress: number) {
       scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
       opacity = 1 - keyframeProgress; // 1 -> 0
     }
+
+    console.log(
+      `🎬 BODY: progress=${progress.toFixed(
+        3
+      )}, localProgress=${localProgress.toFixed(3)}, scale=${scale.toFixed(
+        2
+      )}, opacity=${opacity.toFixed(2)}`
+    );
   } else {
     // Before 0.5 progress, body is not visible
     scale = 0.5;
     opacity = 0;
+    console.log(
+      `🎬 BODY WAITING: progress=${progress.toFixed(3)} (waiting for 0.5)`
+    );
   }
 
   introBody.style.transform = `scale(${scale})`;
@@ -665,7 +665,6 @@ export function setupScrollTriggers() {
   window.addEventListener("scroll", handleScroll);
   window.addEventListener("scroll", handleIntroScroll);
   window.addEventListener("scroll", handlePOVScroll);
-  console.log("Scroll triggers setup complete");
 }
 
 // Main animation loop
@@ -690,8 +689,6 @@ function animate() {
 
 // Initialize animation system
 export function initAnimationSystem() {
-  console.log("Initializing animation system...");
-
   // FIRST THING: Capture the initial camera state before any animations start
   initialCameraPosition = camera.position.clone();
   initialCameraQuaternion = camera.quaternion.clone();
@@ -700,10 +697,6 @@ export function initAnimationSystem() {
   initialCameraTarget = camera.position
     .clone()
     .add(direction.multiplyScalar(5));
-
-  console.log("Captured initial camera position:", initialCameraPosition);
-  console.log("Captured initial camera quaternion:", initialCameraQuaternion);
-  console.log("Captured initial camera look-at target:", initialCameraTarget);
 
   // Setup debug info
   window.animationDebugInfo = {
@@ -717,10 +710,6 @@ export function initAnimationSystem() {
   Object.keys(ghosts).forEach((ghostKey) => {
     if (ghosts[ghostKey]) {
       ghosts[ghostKey].visible = true;
-      console.log(
-        `Ghost ${ghostKey} set to visible:`,
-        ghosts[ghostKey].visible
-      );
 
       const ghost = ghosts[ghostKey];
       if (
@@ -743,17 +732,11 @@ export function initAnimationSystem() {
     }
   });
 
-  // Debug: Check if pathsMap is available
-  console.log("Available paths:", Object.keys(pathsMap));
-  console.log("Ghosts:", Object.keys(ghosts));
-
   setupScrollTriggers();
   animate();
 
   // Initialize POV Animation System
   initializePOVAnimation();
-
-  console.log("Animation system initialized");
 }
 
 // Export functions for external use
