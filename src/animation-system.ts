@@ -5,7 +5,7 @@ import { renderer, scene } from "./scene";
 import { camera, startQuaternion, endQuaternion } from "./camera";
 
 // 1. STATE MANAGEMENT
-type AnimationState = "HOME" | "SCROLL_ANIMATION";
+type AnimationState = "HOME" | "SCROLL_ANIMATION" | "POV_ANIMATION";
 let currentAnimationState: AnimationState = "HOME";
 let isFirstScroll = true;
 
@@ -18,6 +18,7 @@ declare global {
       capturedPositions: any;
       bezierCurves: any;
       scrollProgress?: number;
+      povAnimationActive: boolean;
     };
   }
 }
@@ -677,6 +678,7 @@ export function initAnimationSystem() {
     isFirstScroll: isFirstScroll,
     capturedPositions: capturedPositions,
     bezierCurves: bezierCurves,
+    povAnimationActive: false,
   };
 
   // Ensure all ghosts are visible and have full opacity
@@ -716,8 +718,683 @@ export function initAnimationSystem() {
   setupScrollTriggers();
   animate();
 
+  // Initialize POV Animation System
+  initializePOVAnimation();
+
   console.log("Animation system initialized");
 }
 
 // Export functions for external use
 export { moveGhostOnCurve, captureGhostPositions, createBezierCurves };
+
+/*------------------
+POV Animation System
+------------------*/
+
+// POV Path Points (from backup.js)
+const cameraPOVPathPoints = [
+  {
+    pos: new THREE.Vector3(0.55675, 0.5, 0.45175),
+    type: "curve",
+    curveType: "forwardDownArc",
+  },
+  {
+    pos: new THREE.Vector3(0.55675, 0.55, 0.6025),
+    type: "curve",
+    curveType: "upperArc",
+  },
+  {
+    pos: new THREE.Vector3(0.607, 0.55, 0.703),
+    type: "curve",
+    curveType: "lowerArc",
+  },
+  {
+    pos: new THREE.Vector3(0.65725, 0.55, 0.75325),
+    type: "curve",
+    curveType: "upperArc",
+  },
+  { pos: new THREE.Vector3(0.7075, 0.55, 0.8035), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.9085, 0.55, 0.8035),
+    type: "curve",
+    curveType: "lowerArc",
+  },
+  { pos: new THREE.Vector3(0.95875, 0.55, 0.85375), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.95875, 0.55, 1.15525),
+    type: "curve",
+    curveType: "upperArc",
+  },
+  { pos: new THREE.Vector3(0.9085, 0.55, 1.2055), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.808, 0.55, 1.2055),
+    type: "curve",
+    curveType: "lowerArc",
+  },
+  { pos: new THREE.Vector3(0.75775, 0.55, 1.15525), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.75775, 0.55, 1.05475),
+    type: "curve",
+    curveType: "upperArc",
+  },
+  { pos: new THREE.Vector3(0.7075, 0.55, 1.0045), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.205, 0.55, 1.0045),
+    type: "curve",
+    curveType: "lowerArc",
+  },
+  { pos: new THREE.Vector3(0.15475, 0.55, 1.05475), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.15475, 0.55, 1.15525),
+    type: "curve",
+    curveType: "upperArc",
+  },
+  { pos: new THREE.Vector3(0.205, 0.55, 1.2055), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.5065, 0.55, 1.2055),
+    type: "curve",
+    curveType: "lowerArc",
+  },
+  {
+    pos: new THREE.Vector3(0.55675, 0.55, 1.306),
+    type: "curve",
+    curveType: "upperArc",
+  },
+  { pos: new THREE.Vector3(-0.44825, 1, 2.0095), type: "straight" },
+];
+
+const ghost1POVPathPoints = [
+  { pos: new THREE.Vector3(1.05925, 0.55, 0.703), type: "straight" },
+  {
+    pos: new THREE.Vector3(1.05925, 0.55, 0.75325),
+    type: "curve",
+    curveType: "upperArc",
+  },
+  { pos: new THREE.Vector3(1.009, 0.55, 0.8035), type: "straight" },
+  { pos: new THREE.Vector3(0.9085, 0.55, 0.8035), type: "straight" },
+];
+
+const ghost2POVPathPoints = [
+  { pos: new THREE.Vector3(1.05925, 0.55, 1.2055), type: "straight" },
+  {
+    pos: new THREE.Vector3(1.009, 0.55, 1.2055),
+    type: "curve",
+    curveType: "lowerArc",
+  },
+  { pos: new THREE.Vector3(0.95875, 0.55, 1.15525), type: "straight" },
+  { pos: new THREE.Vector3(0.95875, 0.55, 1.05475), type: "straight" },
+];
+
+const ghost3POVPathPoints = [
+  { pos: new THREE.Vector3(0.35575, 0.55, 0.904), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.35575, 0.55, 0.95425),
+    type: "curve",
+    curveType: "upperArc",
+  },
+  { pos: new THREE.Vector3(0.406, 0.55, 1.0045), type: "straight" },
+  { pos: new THREE.Vector3(0.5065, 0.55, 1.0045), type: "straight" },
+];
+
+const ghost4POVPathPoints = [
+  { pos: new THREE.Vector3(0.15475, 0.55, 1.105), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.15475, 0.55, 1.05475),
+    type: "curve",
+    curveType: "upperArc",
+  },
+  { pos: new THREE.Vector3(0.205, 0.55, 1.0045), type: "straight" },
+  { pos: new THREE.Vector3(0.3055, 0.55, 1.0045), type: "straight" },
+];
+
+const ghost5POVPathPoints = [
+  { pos: new THREE.Vector3(0.55675, 0.55, 1.306), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.55675, 0.55, 1.25575),
+    type: "curve",
+    curveType: "upperArc",
+  },
+  { pos: new THREE.Vector3(0.5065, 0.55, 1.2055), type: "straight" },
+  { pos: new THREE.Vector3(0.406, 0.55, 1.2055), type: "straight" },
+];
+
+// POV Path creation function
+function createPOVPath(pathPoints: any[]): THREE.CurvePath<THREE.Vector3> {
+  const path = new THREE.CurvePath<THREE.Vector3>();
+
+  for (let i = 0; i < pathPoints.length - 1; i++) {
+    const current = pathPoints[i];
+    const next = pathPoints[i + 1];
+
+    if (current.type === "straight") {
+      const line = new THREE.LineCurve3(current.pos, next.pos);
+      path.add(line);
+    } else if (current.type === "curve") {
+      let midPoint: THREE.Vector3;
+      if (current.curveType === "upperArc") {
+        midPoint = new THREE.Vector3(current.pos.x, current.pos.y, next.pos.z);
+      } else if (current.curveType === "lowerArc") {
+        midPoint = new THREE.Vector3(next.pos.x, current.pos.y, current.pos.z);
+      } else if (current.curveType === "forwardDownArc") {
+        midPoint = new THREE.Vector3(current.pos.x, next.pos.y, current.pos.z);
+      } else {
+        midPoint = new THREE.Vector3(
+          (current.pos.x + next.pos.x) / 2,
+          (current.pos.y + next.pos.y) / 2,
+          (current.pos.z + next.pos.z) / 2
+        );
+      }
+      const curve = new THREE.QuadraticBezierCurve3(
+        current.pos,
+        midPoint,
+        next.pos
+      );
+      path.add(curve);
+    }
+  }
+  return path;
+}
+
+// POV Animation State
+interface POVAnimationState {
+  isActive: boolean;
+  cameraPOVPath: THREE.CurvePath<THREE.Vector3> | null;
+  ghostPOVPaths: { [key: string]: THREE.CurvePath<THREE.Vector3> };
+  triggerPositions: { [key: string]: any };
+  previousCameraPosition: THREE.Vector3 | null;
+  startRotationPoint: THREE.Vector3;
+  endRotationPoint: THREE.Vector3;
+  targetLookAt: THREE.Vector3;
+  finalLookAt: THREE.Vector3;
+  rotationStarted: boolean;
+  cachedStartYAngle: number | null;
+}
+
+const povAnimationState: POVAnimationState = {
+  isActive: false,
+  cameraPOVPath: null,
+  ghostPOVPaths: {},
+  triggerPositions: {},
+  previousCameraPosition: null,
+  startRotationPoint: new THREE.Vector3(0.55675, 0.55, 1.306),
+  endRotationPoint: new THREE.Vector3(-0.14675, 1, 1.8085),
+  targetLookAt: new THREE.Vector3(0.55675, 0.1, 1.306),
+  finalLookAt: new THREE.Vector3(-0.14675, 0, 1.8085),
+  rotationStarted: false,
+  cachedStartYAngle: null,
+};
+
+// POV Text Animation Constants
+const GHOST_TEXT_START = 0.2;
+const CAM_TEXT_START = 0.3;
+const FADE_OUT_START = 0.8;
+const TRIGGER_DISTANCE = 0.02;
+
+// Initialize POV Animation System
+function initializePOVAnimation() {
+  console.log("🎭 Initializing POV Animation System...");
+
+  // Create camera POV path
+  povAnimationState.cameraPOVPath = createPOVPath(cameraPOVPathPoints);
+
+  // Create ghost POV paths
+  povAnimationState.ghostPOVPaths = {
+    ghost1: createPOVPath(ghost1POVPathPoints),
+    ghost2: createPOVPath(ghost2POVPathPoints),
+    ghost3: createPOVPath(ghost3POVPathPoints),
+    ghost4: createPOVPath(ghost4POVPathPoints),
+    ghost5: createPOVPath(ghost5POVPathPoints),
+  };
+
+  // Initialize trigger positions
+  const parentElements = document.querySelectorAll(".cmp--pov.cmp");
+
+  povAnimationState.triggerPositions = {
+    ghost1: {
+      triggerPos: new THREE.Vector3(0.65725, 0.55, 0.75325),
+      ghostTextPos: new THREE.Vector3(0.7075, 0.55, 0.8035),
+      camTextPos: new THREE.Vector3(0.75775, 0.55, 0.8035),
+      endPosition: new THREE.Vector3(0.85825, 0.55, 0.8035),
+      parent: parentElements[0],
+      active: false,
+      ghostTextOpacity: 0,
+      camTextOpacity: 0,
+    },
+    ghost2: {
+      triggerPos: new THREE.Vector3(0.9085, 0.55, 0.8035),
+      ghostTextPos: new THREE.Vector3(0.95875, 0.55, 0.85375),
+      camTextPos: new THREE.Vector3(0.95875, 0.55, 0.904),
+      endPosition: new THREE.Vector3(0.95875, 0.55, 1.0045),
+      parent: parentElements[1],
+      active: false,
+      ghostTextOpacity: 0,
+      camTextOpacity: 0,
+    },
+    ghost3: {
+      triggerPos: new THREE.Vector3(0.75775, 0.55, 1.05475),
+      ghostTextPos: new THREE.Vector3(0.7075, 0.55, 1.0045),
+      camTextPos: new THREE.Vector3(0.65725, 0.55, 1.0045),
+      endPosition: new THREE.Vector3(0.55675, 0.55, 1.0045),
+      parent: parentElements[2],
+      active: false,
+      ghostTextOpacity: 0,
+      camTextOpacity: 0,
+    },
+    ghost4: {
+      triggerPos: new THREE.Vector3(0.65725, 0.55, 1.0045),
+      ghostTextPos: new THREE.Vector3(0.5065, 0.55, 1.0045),
+      camTextPos: new THREE.Vector3(0.45625, 0.55, 1.0045),
+      endPosition: new THREE.Vector3(0.35575, 0.55, 1.0045),
+      parent: parentElements[3],
+      active: false,
+      ghostTextOpacity: 0,
+      camTextOpacity: 0,
+    },
+    ghost5: {
+      triggerPos: new THREE.Vector3(0.15475, 0.55, 1.15525),
+      ghostTextPos: new THREE.Vector3(0.205, 0.55, 1.2055),
+      camTextPos: new THREE.Vector3(0.25525, 0.55, 1.2055),
+      endPosition: new THREE.Vector3(0.35575, 0.55, 1.2055),
+      parent: parentElements[4],
+      active: false,
+      ghostTextOpacity: 0,
+      camTextOpacity: 0,
+    },
+  };
+
+  // Setup POV ScrollTrigger
+  setupPOVScrollTrigger();
+
+  console.log("✅ POV Animation System initialized");
+}
+
+// Setup POV ScrollTrigger
+function setupPOVScrollTrigger() {
+  if (!gsap || !ScrollTrigger) {
+    console.warn("⚠️ GSAP or ScrollTrigger not available for POV animation");
+    return;
+  }
+
+  gsap
+    .timeline({
+      scrollTrigger: {
+        trigger: ".sc--pov",
+        start: "top bottom",
+        end: "bottom top",
+        scrub: 0.5,
+        onStart: () => {
+          console.log("🎭 POV Animation Started");
+          povAnimationState.isActive = true;
+          onPOVAnimationStart();
+        },
+        onUpdate: (self: any) => {
+          updatePOVAnimation(self.progress);
+        },
+        onLeave: () => {
+          console.log("🎭 POV Animation Ended");
+          povAnimationState.isActive = false;
+          onPOVAnimationEnd();
+        },
+        onLeaveBack: () => {
+          console.log("🎭 POV Animation Ended (Back)");
+          povAnimationState.isActive = false;
+          onPOVAnimationEnd();
+        },
+      },
+    })
+    .to(
+      { progress: 0 },
+      {
+        progress: 1,
+        duration: 1,
+        ease: "none",
+      }
+    );
+}
+
+// POV Animation Start Handler
+function onPOVAnimationStart() {
+  // Switch to POV state
+  currentAnimationState = "POV_ANIMATION";
+
+  // Initialize previous camera position
+  if (povAnimationState.cameraPOVPath) {
+    povAnimationState.previousCameraPosition =
+      povAnimationState.cameraPOVPath.getPointAt(0);
+  }
+
+  // Reset rotation state
+  povAnimationState.rotationStarted = false;
+  povAnimationState.cachedStartYAngle = null;
+
+  // Make sure pacman is visible
+  if (ghosts.pacman) {
+    ghosts.pacman.visible = true;
+  }
+
+  // Update debug info
+  if (window.animationDebugInfo) {
+    window.animationDebugInfo.povAnimationActive = true;
+  }
+}
+
+// Update POV Animation
+function updatePOVAnimation(progress: number) {
+  if (!povAnimationState.cameraPOVPath || !povAnimationState.isActive) return;
+
+  // Update camera position and rotation
+  updatePOVCamera(progress);
+
+  // Update ghost positions
+  updatePOVGhosts(progress);
+
+  // Update POV texts
+  updatePOVTexts(progress);
+}
+
+// Update POV Camera
+function updatePOVCamera(progress: number) {
+  if (!povAnimationState.cameraPOVPath || !camera) return;
+
+  const cameraPosition = povAnimationState.cameraPOVPath.getPointAt(progress);
+  camera.position.copy(cameraPosition);
+
+  // Handle camera rotation based on progress
+  const rotationStartingPoint = 0.973;
+
+  if (progress >= rotationStartingPoint && !povAnimationState.rotationStarted) {
+    povAnimationState.rotationStarted = true;
+    const lookAtPoint = getCameraLookAtPoint();
+    povAnimationState.cachedStartYAngle = Math.atan2(
+      lookAtPoint.x - camera.position.x,
+      lookAtPoint.z - camera.position.z
+    );
+  }
+
+  if (progress < rotationStartingPoint) {
+    // Before rotation phase - look along path
+    const tangent = povAnimationState.cameraPOVPath
+      .getTangentAt(progress)
+      .normalize();
+    const lookAtPoint = camera.position.clone().add(tangent);
+    camera.lookAt(lookAtPoint);
+  } else {
+    // Rotation phase - interpolate between start and end look-at
+    const rotationProgress =
+      (progress - rotationStartingPoint) / (1 - rotationStartingPoint);
+    const smoothProgress = smoothStep(rotationProgress);
+
+    const currentLookAt = new THREE.Vector3().lerpVectors(
+      povAnimationState.targetLookAt,
+      povAnimationState.finalLookAt,
+      smoothProgress
+    );
+
+    camera.lookAt(currentLookAt);
+  }
+
+  // Store previous position
+  if (povAnimationState.previousCameraPosition) {
+    povAnimationState.previousCameraPosition.copy(cameraPosition);
+  }
+}
+
+// Update POV Ghosts
+function updatePOVGhosts(progress: number) {
+  Object.entries(povAnimationState.ghostPOVPaths).forEach(
+    ([ghostKey, path]) => {
+      const ghost = ghosts[ghostKey];
+      if (!ghost || !path) return;
+
+      // Get position on ghost's POV path
+      const ghostPosition = path.getPointAt(progress);
+      ghost.position.copy(ghostPosition);
+
+      // Make ghost look along its path
+      const tangent = path.getTangentAt(progress).normalize();
+      const lookAtPoint = ghostPosition.clone().add(tangent);
+      ghost.lookAt(lookAtPoint);
+
+      // Make sure ghost is visible
+      ghost.visible = true;
+    }
+  );
+}
+
+// Update POV Text Animations
+function updatePOVTexts(progress: number) {
+  if (!povAnimationState.cameraPOVPath) return;
+
+  const cameraPosition = povAnimationState.cameraPOVPath.getPointAt(progress);
+
+  Object.entries(povAnimationState.triggerPositions).forEach(
+    ([key, trigger]) => {
+      const currentCameraProgress =
+        findClosestProgressOnPOVPath(cameraPosition);
+
+      // Calculate trigger positions on camera path
+      if (!trigger.triggerCameraProgress) {
+        trigger.triggerCameraProgress = findClosestProgressOnPOVPath(
+          trigger.triggerPos
+        );
+        trigger.ghostTextCameraProgress = findClosestProgressOnPOVPath(
+          trigger.ghostTextPos
+        );
+        trigger.camTextCameraProgress = findClosestProgressOnPOVPath(
+          trigger.camTextPos
+        );
+        trigger.endCameraProgress = findClosestProgressOnPOVPath(
+          trigger.endPosition
+        );
+      }
+
+      // Calculate text opacities
+      let targetGhostOpacity = 0;
+      let targetCamOpacity = 0;
+
+      if (currentCameraProgress >= trigger.triggerCameraProgress) {
+        const ghostTextRange =
+          trigger.camTextCameraProgress - trigger.ghostTextCameraProgress;
+        const ghostTextProgress = Math.max(
+          0,
+          Math.min(
+            1,
+            (currentCameraProgress - trigger.ghostTextCameraProgress) /
+              ghostTextRange
+          )
+        );
+
+        if (ghostTextProgress < FADE_OUT_START) {
+          targetGhostOpacity = 1;
+        } else {
+          targetGhostOpacity =
+            1 - (ghostTextProgress - FADE_OUT_START) / (1 - FADE_OUT_START);
+        }
+
+        if (currentCameraProgress >= trigger.camTextCameraProgress) {
+          const camTextRange =
+            trigger.endCameraProgress - trigger.camTextCameraProgress;
+          const camTextProgress = Math.max(
+            0,
+            Math.min(
+              1,
+              (currentCameraProgress - trigger.camTextCameraProgress) /
+                camTextRange
+            )
+          );
+
+          if (camTextProgress < FADE_OUT_START) {
+            targetCamOpacity = 1;
+          } else {
+            targetCamOpacity =
+              1 - (camTextProgress - FADE_OUT_START) / (1 - FADE_OUT_START);
+          }
+        }
+      }
+
+      // Smooth opacity transitions
+      const fadeInSpeed = 0.2;
+      const fadeOutSpeed = 0.1;
+
+      if (targetGhostOpacity > trigger.ghostTextOpacity) {
+        trigger.ghostTextOpacity +=
+          (targetGhostOpacity - trigger.ghostTextOpacity) * fadeInSpeed;
+      } else {
+        trigger.ghostTextOpacity +=
+          (targetGhostOpacity - trigger.ghostTextOpacity) * fadeOutSpeed;
+      }
+
+      if (targetCamOpacity > trigger.camTextOpacity) {
+        trigger.camTextOpacity +=
+          (targetCamOpacity - trigger.camTextOpacity) * fadeInSpeed;
+      } else {
+        trigger.camTextOpacity +=
+          (targetCamOpacity - trigger.camTextOpacity) * fadeOutSpeed;
+      }
+
+      // Update DOM elements
+      updatePOVTextElements(trigger);
+    }
+  );
+}
+
+// Update POV Text DOM Elements
+function updatePOVTextElements(trigger: any) {
+  if (!trigger.parent) return;
+
+  const ghostText = trigger.parent.querySelector(".cmp--pov-ghost");
+  const camText = trigger.parent.querySelector(".cmp--pov-cam");
+
+  if (ghostText) {
+    const ghostOpacity = Math.max(0, Math.min(1, trigger.ghostTextOpacity));
+    if (ghostOpacity > 0.01) {
+      ghostText.classList.remove("hidden");
+      ghostText.style.opacity = ghostOpacity.toString();
+    } else {
+      ghostText.classList.add("hidden");
+      ghostText.style.opacity = "0";
+    }
+  }
+
+  if (camText) {
+    const camOpacity = Math.max(0, Math.min(1, trigger.camTextOpacity));
+    if (camOpacity > 0.01) {
+      camText.classList.remove("hidden");
+      camText.style.opacity = camOpacity.toString();
+    } else {
+      camText.classList.add("hidden");
+      camText.style.opacity = "0";
+    }
+  }
+}
+
+// Find closest progress on POV path
+function findClosestProgressOnPOVPath(
+  targetPoint: THREE.Vector3,
+  samples: number = 2000
+): number {
+  if (!povAnimationState.cameraPOVPath) return 0;
+
+  let closestProgress = 0;
+  let closestDistance = Infinity;
+
+  for (let i = 0; i <= samples; i++) {
+    const progress = i / samples;
+    const point = povAnimationState.cameraPOVPath.getPointAt(progress);
+    const distance = point.distanceTo(targetPoint);
+
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestProgress = progress;
+    }
+  }
+
+  return closestProgress;
+}
+
+// POV Animation End Handler
+function onPOVAnimationEnd() {
+  // Reset to HOME state
+  currentAnimationState = "HOME";
+
+  // Reset all POV text elements
+  Object.values(povAnimationState.triggerPositions).forEach((trigger: any) => {
+    if (trigger.parent) {
+      trigger.parent.classList.add("hidden");
+      trigger.parent.style.opacity = "0";
+
+      const ghostText = trigger.parent.querySelector(".cmp--pov-ghost");
+      const camText = trigger.parent.querySelector(".cmp--pov-cam");
+
+      if (ghostText) {
+        ghostText.classList.add("hidden");
+        ghostText.style.opacity = "0";
+      }
+
+      if (camText) {
+        camText.classList.add("hidden");
+        camText.style.opacity = "0";
+      }
+    }
+
+    // Reset trigger state
+    trigger.active = false;
+    trigger.ghostTextOpacity = 0;
+    trigger.camTextOpacity = 0;
+  });
+
+  // Restore ghosts to their home positions
+  restoreGhostsToHomePositions();
+
+  // Make sure pacman is visible and animation is running
+  if (ghosts.pacman) ghosts.pacman.visible = true;
+
+  // Update debug info
+  if (window.animationDebugInfo) {
+    window.animationDebugInfo.povAnimationActive = false;
+  }
+}
+
+// Restore ghosts to home positions
+function restoreGhostsToHomePositions() {
+  Object.entries(capturedPositions).forEach(
+    ([ghostKey, captured]: [string, any]) => {
+      const ghost = ghosts[ghostKey];
+      if (ghost && captured) {
+        ghost.position.copy(captured.position);
+        ghost.rotation.copy(captured.rotation);
+        ghost.visible = true;
+
+        // Reset material opacity
+        if (
+          ghost instanceof THREE.Mesh &&
+          ghost.material &&
+          "opacity" in ghost.material
+        ) {
+          ghost.material.opacity = 1;
+        } else if (ghost instanceof THREE.Group) {
+          ghost.traverse((child) => {
+            if (
+              child instanceof THREE.Mesh &&
+              child.material &&
+              "opacity" in child.material
+            ) {
+              child.material.opacity = 1;
+            }
+          });
+        }
+      }
+    }
+  );
+}
+
+// Get camera look-at point (from backup.js)
+function getCameraLookAtPoint(): THREE.Vector3 {
+  if (!camera) return new THREE.Vector3();
+
+  const direction = new THREE.Vector3(0, 0, -1);
+  direction.applyQuaternion(camera.quaternion);
+  const lookAtPoint = new THREE.Vector3();
+  lookAtPoint.copy(camera.position).add(direction.multiplyScalar(10));
+  return lookAtPoint;
+}
