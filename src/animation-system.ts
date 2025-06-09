@@ -207,8 +207,13 @@ let initialCameraTarget = new THREE.Vector3();
 function onFirstScroll() {
   if (!isFirstScroll) return;
 
+  console.log("onFirstScroll called - stopping all animations immediately");
+
   isFirstScroll = false;
   pauseTime = Date.now();
+
+  // IMMEDIATELY stop the home animation by changing state first
+  currentAnimationState = "SCROLL_ANIMATION";
 
   // Capture initial camera state more accurately
   initialCameraPosition.copy(camera.position);
@@ -221,9 +226,9 @@ function onFirstScroll() {
   console.log("Captured camera position:", initialCameraPosition);
   console.log("Captured camera look-at target:", initialCameraTarget);
 
+  // Capture ghost positions AFTER stopping animation
   captureGhostPositions();
   createBezierCurves();
-  currentAnimationState = "SCROLL_ANIMATION";
 
   // Update debug info
   if (window.animationDebugInfo) {
@@ -232,7 +237,7 @@ function onFirstScroll() {
   }
 
   console.log(
-    "First scroll detected - animation paused and bezier curves created"
+    "First scroll detected - animation STOPPED immediately, bezier curves created"
   );
 }
 
@@ -358,30 +363,27 @@ function resetToHomeState() {
   }
 }
 
-// Camera animation helper
+// Camera animation helper - based on backup.js POV path style
 function animateCamera(progress: number) {
   const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
 
-  // Based on backup.js camera positioning - closer to POV path style
-  // Start from current position, move to a position above and forward of maze center
+  // Similar to backup.js: camera moves closer to maze center and higher up
+  // Final position should be close to the maze for a "diving into maze" effect
   const cameraTargetPosition = new THREE.Vector3(
-    mazeCenter.x - 0.3, // Slightly left of center
-    mazeCenter.y + 0.8, // Above the maze
-    mazeCenter.z + 1.2 // Forward from center for better angle
+    mazeCenter.x, // Directly above center
+    mazeCenter.y + 1.5, // Higher up for better overview
+    mazeCenter.z + 0.5 // Slightly forward
   );
 
+  // Smooth interpolation from start to target position
   camera.position.lerpVectors(
     initialCameraPosition,
     cameraTargetPosition,
     progress
   );
 
-  // Look at maze center with some adjustment for better view
-  const lookAtTarget = new THREE.Vector3(
-    mazeCenter.x,
-    mazeCenter.y - 0.1, // Slightly below center
-    mazeCenter.z
-  );
+  // Look at maze center directly (like backup.js POV camera)
+  const lookAtTarget = mazeCenter.clone();
 
   const currentTarget = new THREE.Vector3().lerpVectors(
     initialCameraTarget,
@@ -389,6 +391,15 @@ function animateCamera(progress: number) {
     progress
   );
   camera.lookAt(currentTarget);
+
+  // Optional: Adjust FOV like in backup.js (wideFOV)
+  if (progress > 0.5) {
+    const fovProgress = (progress - 0.5) / 0.5; // 0-1 for second half
+    const startFOV = 50; // Default camera FOV
+    const targetFOV = 80; // Wide FOV like backup.js
+    camera.fov = startFOV + (targetFOV - startFOV) * fovProgress;
+    camera.updateProjectionMatrix();
+  }
 }
 
 // Scroll event handler
@@ -427,16 +438,16 @@ function handleScroll() {
     `Scroll Debug: rect.top=${rect.top}, windowHeight=${windowHeight}, scrolledIntoSection=${scrolledIntoSection}, sectionHeight=${sectionHeight}, scrollProgress=${scrollProgress}`
   );
 
-  // Start scroll animation when we begin scrolling through home section (with threshold)
-  if (scrollProgress > 0.05 && currentAnimationState === "HOME") {
+  // Start scroll animation IMMEDIATELY when we begin scrolling through home section
+  if (scrollProgress > 0 && currentAnimationState === "HOME") {
     console.log("Starting scroll animation...");
     onFirstScroll();
   }
 
   if (currentAnimationState === "SCROLL_ANIMATION") {
-    // If we're back at the top (scrollProgress <= 0.02), reset everything
-    if (scrollProgress <= 0.02) {
-      console.log("Scroll progress near 0, resetting to home state");
+    // If we're back at the very top (scrollProgress = 0), reset everything
+    if (scrollProgress === 0) {
+      console.log("Scroll progress at 0, resetting to home state");
       resetToHomeState();
       return;
     }
