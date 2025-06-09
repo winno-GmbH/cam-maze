@@ -9,6 +9,13 @@ import { smoothStep } from "./utils";
 // Types
 type AnimationState = "HOME" | "SCROLL_ANIMATION";
 
+// Global interface for animation system communication
+declare global {
+  interface Window {
+    updateAnimationTimeOffset?: (delta: number) => void;
+  }
+}
+
 // State management
 export let currentAnimationState: AnimationState = "HOME";
 export let isFirstScroll = true;
@@ -235,7 +242,11 @@ export function resetToHomeState() {
   isFirstScroll = true;
 
   if (pauseTime) {
-    timeOffset += Date.now() - pauseTime;
+    // Pass timeOffset update to animation system
+    const timeOffsetDelta = Date.now() - pauseTime;
+    if (window.updateAnimationTimeOffset) {
+      window.updateAnimationTimeOffset(timeOffsetDelta);
+    }
     pauseTime = 0;
   }
 

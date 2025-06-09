@@ -3,7 +3,11 @@ import { ghosts, pacmanMixer, clock } from "./objects";
 import { pathsMap } from "./paths";
 import { renderer, scene } from "./scene";
 import { camera } from "./camera";
-import { initScrollSystem } from "./scroll-animations";
+import {
+  initScrollSystem,
+  currentAnimationState,
+  resetToHomeState,
+} from "./scroll-animations";
 import { initIntroAnimations } from "./intro-animations";
 
 // Debug info for window
@@ -26,6 +30,9 @@ let pauseTime = 0;
 
 // Main animation loop for home state
 export function animationLoop() {
+  // Only run home animation if we're in HOME state
+  if (currentAnimationState !== "HOME") return;
+
   const currentTime = Date.now();
   const elapsedTime = (currentTime - animationStartTime - timeOffset) / 1000;
   const t = (elapsedTime * 0.1) % 1; // Speed control
@@ -138,6 +145,11 @@ export function initAnimationSystem() {
   // Debug: Check if pathsMap is available
   console.log("Available paths:", Object.keys(pathsMap));
   console.log("Ghosts:", Object.keys(ghosts));
+
+  // Provide timeOffset update function for scroll system
+  window.updateAnimationTimeOffset = (delta: number) => {
+    timeOffset += delta;
+  };
 
   // Initialize scroll and intro systems
   initScrollSystem();
