@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { ghosts, pacmanMixer, clock } from "./objects";
 import { pathsMap } from "./paths";
+import { renderer, scene } from "./scene";
+import { camera } from "./camera";
 
 // 1. STATE MANAGEMENT
 type AnimationState = "HOME" | "SCROLL_ANIMATION";
@@ -119,60 +121,59 @@ function onFirstScroll() {
 }
 
 // 4. ANIMATION LOOP
+let animationStartTime = Date.now();
+
 function animationLoop() {
   if (currentAnimationState !== "HOME") return;
 
   const currentTime = Date.now();
-  const adjustedTime = currentTime - timeOffset;
-  const t = ((adjustedTime / 6000) % 6) / 6;
+  const elapsedTime = (currentTime - animationStartTime - timeOffset) / 1000; // Convert to seconds
+  const t = (elapsedTime * 0.1) % 1; // Speed control (0.1 = slower, 0.2 = faster)
 
   // Animate ghosts on their home paths
   Object.entries(ghosts).forEach(([key, ghost]) => {
+    if (!pathsMap[key]) {
+      // Don't spam warnings, just return
+      return;
+    }
+
     if (key === "pacman") {
       // Pacman animation
-      if (pathsMap[key]) {
-        const position = pathsMap[key].getPointAt(t);
-        ghost.position.copy(position);
-        const tangent = pathsMap[key].getTangentAt(t).normalize();
-        ghost.lookAt(position.clone().add(tangent));
+      const position = pathsMap[key].getPointAt(t);
+      ghost.position.copy(position);
+      const tangent = pathsMap[key].getTangentAt(t).normalize();
+      ghost.lookAt(position.clone().add(tangent));
 
-        // Handle pacman rotation smoothing
-        const zRotation = Math.atan2(tangent.x, tangent.z);
-        if ((ghost as any).previousZRotation === undefined) {
-          (ghost as any).previousZRotation = zRotation;
-        }
-
-        let rotationDiff = zRotation - (ghost as any).previousZRotation;
-        if (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;
-        else if (rotationDiff < -Math.PI) rotationDiff += 2 * Math.PI;
-
-        const smoothFactor = 0.1;
-        const smoothedRotation =
-          (ghost as any).previousZRotation + rotationDiff * smoothFactor;
-        (ghost as any).previousZRotation = smoothedRotation;
-
-        ghost.rotation.set(
-          Math.PI / 2,
-          Math.PI,
-          smoothedRotation + Math.PI / 2
-        );
+      // Handle pacman rotation smoothing
+      const zRotation = Math.atan2(tangent.x, tangent.z);
+      if ((ghost as any).previousZRotation === undefined) {
+        (ghost as any).previousZRotation = zRotation;
       }
+
+      let rotationDiff = zRotation - (ghost as any).previousZRotation;
+      if (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;
+      else if (rotationDiff < -Math.PI) rotationDiff += 2 * Math.PI;
+
+      const smoothFactor = 0.1;
+      const smoothedRotation =
+        (ghost as any).previousZRotation + rotationDiff * smoothFactor;
+      (ghost as any).previousZRotation = smoothedRotation;
+
+      ghost.rotation.set(Math.PI / 2, Math.PI, smoothedRotation + Math.PI / 2);
     } else {
       // Ghost animation
-      if (pathsMap[key]) {
-        const position = pathsMap[key].getPointAt(t);
-        ghost.position.copy(position);
-        const tangent = pathsMap[key].getTangentAt(t).normalize();
-        ghost.lookAt(position.clone().add(tangent));
+      const position = pathsMap[key].getPointAt(t);
+      ghost.position.copy(position);
+      const tangent = pathsMap[key].getTangentAt(t).normalize();
+      ghost.lookAt(position.clone().add(tangent));
 
-        // Ensure full opacity
-        if (
-          ghost instanceof THREE.Mesh &&
-          ghost.material &&
-          "opacity" in ghost.material
-        ) {
-          ghost.material.opacity = 1;
-        }
+      // Ensure full opacity
+      if (
+        ghost instanceof THREE.Mesh &&
+        ghost.material &&
+        "opacity" in ghost.material
+      ) {
+        ghost.material.opacity = 1;
       }
     }
   });
@@ -223,6 +224,9 @@ function animate() {
   // Run animation loop if in HOME state
   animationLoop();
 
+  // Render the scene
+  renderer.render(scene, camera);
+
   requestAnimationFrame(animate);
 }
 
@@ -242,6 +246,10 @@ export function initAnimationSystem() {
   Object.keys(ghosts).forEach((ghostKey) => {
     if (ghosts[ghostKey]) {
       ghosts[ghostKey].visible = true;
+      console.log(
+        `Ghost ${ghostKey} set to visible:`,
+        ghosts[ghostKey].visible
+      );
 
       const ghost = ghosts[ghostKey];
       if (
@@ -263,6 +271,10 @@ export function initAnimationSystem() {
       }
     }
   });
+
+  // Debug: Check if pathsMap is available
+  console.log("Available paths:", Object.keys(pathsMap));
+  console.log("Ghosts:", Object.keys(ghosts));
 
   setupScrollTriggers();
   animate();
