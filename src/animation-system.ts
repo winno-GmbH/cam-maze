@@ -25,6 +25,7 @@ declare global {
 // Constants
 const MAZE_CENTER = new THREE.Vector3(0.45175, 0.5, 0.55675);
 const OPACITY_FADE_START = 0.8; // Last 20% for opacity fade
+const CAMERA_DELAY = 0.15; // Camera starts 15% later than ghosts
 
 // Rotation constants (easily changeable)
 const ROTATION_AXIS_X: "x" | "y" | "z" = "x"; // Primary rotation axis (e.g., to lay down)
@@ -515,15 +516,17 @@ function handleScroll() {
 
     console.log(`Animating with scrollProgress: ${scrollProgress}`);
 
-    // Animate ghosts along bezier curves
+    // Animate ghosts along bezier curves (they start immediately)
     Object.keys(ghosts).forEach((ghostKey) => {
       if (bezierCurves[ghostKey]) {
         moveGhostOnCurve(ghostKey, scrollProgress);
       }
     });
 
-    // Animate camera towards maze center (starts immediately)
-    animateCamera(scrollProgress);
+    // Animate camera with delay (so ghosts are always ahead)
+    const cameraProgress = Math.max(0, scrollProgress - CAMERA_DELAY);
+    const normalizedCameraProgress = cameraProgress / (1 - CAMERA_DELAY);
+    animateCamera(Math.min(1, normalizedCameraProgress));
 
     // Update debug info
     if (window.animationDebugInfo) {
