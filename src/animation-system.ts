@@ -240,6 +240,7 @@ function createCameraPath() {
 // 3. SCROLL MANAGEMENT
 let initialCameraPosition = new THREE.Vector3();
 let initialCameraTarget = new THREE.Vector3();
+let initialCameraQuaternion = new THREE.Quaternion();
 let cameraHomePath: THREE.CubicBezierCurve3;
 
 function onFirstScroll() {
@@ -253,8 +254,9 @@ function onFirstScroll() {
   // IMMEDIATELY stop the home animation by changing state first
   currentAnimationState = "SCROLL_ANIMATION";
 
-  // Use the CURRENT camera position as start point (don't use initial anymore, use actual current)
+  // Use the CURRENT camera position and rotation as start point (don't jump!)
   const currentCameraPosition = camera.position.clone();
+  const currentCameraQuaternion = camera.quaternion.clone();
   const currentDirection = new THREE.Vector3(0, 0, -1);
   currentDirection.applyQuaternion(camera.quaternion);
   const currentCameraTarget = camera.position
@@ -262,11 +264,16 @@ function onFirstScroll() {
     .add(currentDirection.multiplyScalar(5));
 
   console.log("Using current camera position for path:", currentCameraPosition);
+  console.log(
+    "Using current camera rotation (quaternion):",
+    currentCameraQuaternion
+  );
   console.log("Using current camera look-at target:", currentCameraTarget);
 
-  // Update the camera start position to current position for smooth path
+  // Update the camera start position and rotation for smooth transition
   initialCameraPosition.copy(currentCameraPosition);
   initialCameraTarget.copy(currentCameraTarget);
+  initialCameraQuaternion.copy(currentCameraQuaternion);
 
   // Capture ghost positions AFTER stopping animation
   captureGhostPositions();
@@ -356,9 +363,9 @@ function resetToHomeState() {
     pauseTime = 0;
   }
 
-  // Reset camera to initial position
+  // Reset camera to initial position and rotation
   camera.position.copy(initialCameraPosition);
-  camera.lookAt(initialCameraTarget);
+  camera.quaternion.copy(initialCameraQuaternion);
 
   // Reset all ghosts to their captured positions, rotations and full opacity
   Object.keys(ghosts).forEach((ghostKey) => {
@@ -408,7 +415,7 @@ function resetToHomeState() {
   }
 }
 
-// Camera animation helper - following backup.js logic more closely
+// Camera animation helper - smooth transition from current rotation
 function animateCamera(progress: number) {
   if (!cameraHomePath) {
     console.warn("Camera path not created yet");
@@ -423,34 +430,33 @@ function animateCamera(progress: number) {
   const position = cameraHomePath.getPointAt(progress);
   camera.position.copy(position);
 
-  // Get tangent for default look direction
-  const tangent = cameraHomePath.getTangentAt(progress).normalize();
-  const defaultLookAt = position.clone().add(tangent);
+  // Calculate target look-at direction (towards maze center)
+  const mazeCenter = new THREE.Vector3(0.55675, 0.5, 0.45175);
+  const targetLookAt = mazeCenter.clone();
 
-  // Implement backup.js camera look-at logic
   if (progress === 0) {
-    // At start: look straight down/forward
-    camera.lookAt(new THREE.Vector3(camera.position.x, 2, camera.position.z));
-  } else if (progress < 0.1) {
-    // First 10%: smooth transition from looking up to looking forward
-    const transitionProgress = progress / 0.1;
-    const upLookAt = new THREE.Vector3(camera.position.x, 1, camera.position.z);
-    const frontLookAt = new THREE.Vector3(
-      camera.position.x,
-      0.5,
-      camera.position.z + 1
+    // At progress 0: keep the EXACT current rotation (no jump!)
+    camera.quaternion.copy(initialCameraQuaternion);
+  } else {
+    // Smooth transition from initial rotation to looking at maze center
+
+    // Create target quaternion (looking at maze center)
+    const targetMatrix = new THREE.Matrix4().lookAt(
+      position,
+      targetLookAt,
+      camera.up
+    );
+    const targetQuaternion = new THREE.Quaternion().setFromRotationMatrix(
+      targetMatrix
     );
 
-    const interpolatedLookAt = new THREE.Vector3();
-    interpolatedLookAt.lerpVectors(
-      upLookAt,
-      frontLookAt,
-      smoothStep(transitionProgress)
-    );
-    camera.lookAt(interpolatedLookAt);
-  } else {
-    // Default: look along the curve tangent (into the maze)
-    camera.lookAt(defaultLookAt);
+    // Interpolate between initial rotation and target rotation
+    const easedProgress = smoothStep(progress);
+    const newQuaternion = new THREE.Quaternion()
+      .copy(initialCameraQuaternion)
+      .slerp(targetQuaternion, easedProgress);
+
+    camera.quaternion.copy(newQuaternion);
   }
 
   console.log(
@@ -565,6 +571,7 @@ export function initAnimationSystem() {
 
   // FIRST THING: Capture the initial camera state before any animations start
   initialCameraPosition = camera.position.clone();
+  initialCameraQuaternion = camera.quaternion.clone();
   const direction = new THREE.Vector3(0, 0, -1);
   direction.applyQuaternion(camera.quaternion);
   initialCameraTarget = camera.position
@@ -572,6 +579,7 @@ export function initAnimationSystem() {
     .add(direction.multiplyScalar(5));
 
   console.log("Captured initial camera position:", initialCameraPosition);
+  console.log("Captured initial camera quaternion:", initialCameraQuaternion);
   console.log("Captured initial camera look-at target:", initialCameraTarget);
 
   // Setup debug info
