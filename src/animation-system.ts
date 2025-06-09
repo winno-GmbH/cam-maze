@@ -544,25 +544,31 @@ function handleIntroScroll() {
   const rect = introSection.getBoundingClientRect();
   const windowHeight = window.innerHeight;
 
-  // Calculate if intro section is in view with buffer zone
+  // Calculate if intro section is in view - NO BUFFER ZONE for precise "bottom bottom" timing
   const sectionTop = rect.top;
+  const sectionBottom = rect.bottom;
   const sectionHeight = rect.height;
 
-  // Add buffer zone for smooth animation completion
-  const animationBuffer = windowHeight * 0.2; // 20% buffer for intro
-  const totalAnimationHeight = sectionHeight + animationBuffer;
-
-  if (
-    sectionTop <= windowHeight &&
-    sectionTop + sectionHeight >= -animationBuffer
-  ) {
-    // Section is in view (including buffer zone) - calculate progress
+  // Animation should run from "top top" to "bottom bottom" exactly
+  if (sectionTop <= windowHeight && sectionBottom >= 0) {
+    // Section is in view - calculate progress based on section position
     const scrolledIntoSection = Math.max(0, -sectionTop);
-    const progress = Math.min(1, scrolledIntoSection / totalAnimationHeight);
+    const progress = Math.min(1, scrolledIntoSection / sectionHeight);
 
     // Animate intro elements based on progress
     animateIntroHeader(progress);
     animateIntroBody(progress);
+  } else {
+    // Section is completely out of view - hide elements
+    const introHeader = document.querySelector(".sc_h--intro") as HTMLElement;
+    const introBody = document.querySelector(".sc_b--intro") as HTMLElement;
+
+    if (introHeader) {
+      introHeader.style.display = "none";
+    }
+    if (introBody) {
+      introBody.style.display = "none";
+    }
   }
 }
 
@@ -573,14 +579,14 @@ function animateIntroHeader(progress: number) {
   // Make visible
   introHeader.style.display = "block";
 
-  // Header animation: Runs immediately from start to 40% of intro section
-  // More aggressive timing to start early
+  // Header animation: Runs from 0% (top top) to 50% (center center) of intro section
+  // Matches backup.js: start "top top", end "center center"
   let scale = 0;
   let opacity = 0;
 
-  if (progress <= 0.4) {
-    // Map 0-0.4 to 0-1 for full animation (faster completion)
-    const localProgress = Math.min(1, progress * 2.5); // Even faster
+  if (progress <= 0.5) {
+    // Map 0-0.5 to 0-1 for full animation (top top to center center)
+    const localProgress = Math.min(1, progress * 2); // 0-0.5 range = 0.5 duration, so *2
 
     if (localProgress <= 0.3) {
       // 0% - 30%: scale 0->0.8, opacity 0->1
@@ -599,7 +605,7 @@ function animateIntroHeader(progress: number) {
       opacity = 1 - keyframeProgress; // 1 -> 0
     }
   } else {
-    // After 0.4 progress, header is fully animated out
+    // After 0.5 progress, header is fully animated out
     scale = 1.5;
     opacity = 0;
   }
@@ -615,14 +621,14 @@ function animateIntroBody(progress: number) {
   // Make visible
   introBody.style.display = "block";
 
-  // Body animation: Starts at 40% and runs to 100% (bottom bottom) of intro section
-  // Finishes at the very end of the intro section like backup.js
+  // Body animation: Starts at 50% (center center) and runs to 100% (bottom bottom)
+  // Matches backup.js: start "center center", end "bottom bottom"
   let scale = 0.5;
   let opacity = 0;
 
-  if (progress >= 0.4) {
-    // Map 0.4-1.0 to 0-1 for full animation (starts when header finishes, ends at bottom)
-    const localProgress = Math.min(1, (progress - 0.4) / 0.6); // Slower to fit 0.4-1.0 range
+  if (progress >= 0.5) {
+    // Map 0.5-1.0 to 0-1 for full animation (center center to bottom bottom)
+    const localProgress = Math.min(1, (progress - 0.5) / 0.5); // 0.5-1.0 range = 0.5 duration
 
     if (localProgress <= 0.3) {
       // 0% - 30%: scale 0.5->0.8, opacity 0->1
@@ -641,7 +647,7 @@ function animateIntroBody(progress: number) {
       opacity = 1 - keyframeProgress; // 1 -> 0
     }
   } else {
-    // Before 0.4 progress, body is not visible
+    // Before 0.5 progress, body is not visible
     scale = 0.5;
     opacity = 0;
   }
