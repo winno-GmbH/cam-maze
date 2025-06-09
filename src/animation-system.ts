@@ -415,48 +415,50 @@ function resetToHomeState() {
   }
 }
 
-// Camera animation helper - smooth transition from current rotation
+// Camera animation helper - exact backup.js logic implementation
 function animateCamera(progress: number) {
   if (!cameraHomePath) {
     console.warn("Camera path not created yet");
     return;
   }
 
-  // Set FOV to wide immediately like backup.js
-  camera.fov = 80; // wideFOV from backup.js
+  // FOV is CONSTANT at wideFOV in backup.js (no animation)
+  camera.fov = 80; // wideFOV from backup.js - CONSTANT!
   camera.updateProjectionMatrix();
 
   // Get position on the backup.js curve
   const position = cameraHomePath.getPointAt(progress);
   camera.position.copy(position);
 
-  // Calculate target look-at direction (towards maze center)
-  const mazeCenter = new THREE.Vector3(0.55675, 0.5, 0.45175);
-  const targetLookAt = mazeCenter.clone();
+  // Get tangent for defaultLookAt (EXACT backup.js logic)
+  const tangent = cameraHomePath.getTangentAt(progress).normalize();
+  const defaultLookAt = position.clone().add(tangent);
 
+  // Implement EXACT backup.js camera look-at logic
   if (progress === 0) {
     // At progress 0: keep the EXACT current rotation (no jump!)
     camera.quaternion.copy(initialCameraQuaternion);
+  } else if (progress < 0.1) {
+    // First 10%: backup.js transition logic
+    const transitionProgress = progress / 0.1;
+    const upLookAt = new THREE.Vector3(camera.position.x, 1, camera.position.z);
+    const frontLookAt = new THREE.Vector3(
+      camera.position.x,
+      0.5,
+      camera.position.z + 1
+    );
+
+    const interpolatedLookAt = new THREE.Vector3();
+    interpolatedLookAt.lerpVectors(
+      upLookAt,
+      frontLookAt,
+      smoothStep(transitionProgress)
+    );
+    camera.lookAt(interpolatedLookAt);
   } else {
-    // Smooth transition from initial rotation to looking at maze center
-
-    // Create target quaternion (looking at maze center)
-    const targetMatrix = new THREE.Matrix4().lookAt(
-      position,
-      targetLookAt,
-      camera.up
-    );
-    const targetQuaternion = new THREE.Quaternion().setFromRotationMatrix(
-      targetMatrix
-    );
-
-    // Interpolate between initial rotation and target rotation
-    const easedProgress = smoothStep(progress);
-    const newQuaternion = new THREE.Quaternion()
-      .copy(initialCameraQuaternion)
-      .slerp(targetQuaternion, easedProgress);
-
-    camera.quaternion.copy(newQuaternion);
+    // Default behavior: look along the curve tangent (backup.js defaultLookAt)
+    // This makes camera follow the curve direction, not look at maze center!
+    camera.lookAt(defaultLookAt);
   }
 
   console.log(
