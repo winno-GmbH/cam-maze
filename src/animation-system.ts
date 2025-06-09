@@ -200,9 +200,41 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
   }
 }
 
+// Create camera path exactly like backup.js
+function createCameraPath() {
+  // Exact same positions as backup.js
+  const isMobile = window.innerWidth < 768;
+  const startMobileCameraPosition = new THREE.Vector3(0.5, 2.5, 2.5);
+  const startDesktopCameraPosition = new THREE.Vector3(-2, 2.5, 2);
+  const startPosition = isMobile
+    ? startMobileCameraPosition
+    : startDesktopCameraPosition;
+
+  const secondPositionMobile = new THREE.Vector3(0.5, 2.5, 2);
+  const secondPositionDesktop = new THREE.Vector3(-1.5, 3, 2);
+  const secondPosition = isMobile
+    ? secondPositionMobile
+    : secondPositionDesktop;
+
+  // Exact same path as backup.js
+  cameraHomePath = new THREE.CubicBezierCurve3(
+    startPosition, // Fixed start position
+    secondPosition, // Fixed second position
+    new THREE.Vector3(0.55675, 3, 0.45175), // High control point
+    new THREE.Vector3(0.55675, 0.5, 0.45175) // End point (maze center)
+  );
+
+  console.log(
+    `Camera path created for ${isMobile ? "mobile" : "desktop"}:`,
+    `from ${startPosition.x}, ${startPosition.y}, ${startPosition.z}`,
+    "to maze center (0.55675, 0.5, 0.45175)"
+  );
+}
+
 // 3. SCROLL MANAGEMENT
 let initialCameraPosition = new THREE.Vector3();
 let initialCameraTarget = new THREE.Vector3();
+let cameraHomePath: THREE.CubicBezierCurve3;
 
 function onFirstScroll() {
   if (!isFirstScroll) return;
@@ -229,6 +261,9 @@ function onFirstScroll() {
   // Capture ghost positions AFTER stopping animation
   captureGhostPositions();
   createBezierCurves();
+
+  // Create camera path exactly like backup.js
+  createCameraPath();
 
   // Update debug info
   if (window.animationDebugInfo) {
@@ -363,43 +398,36 @@ function resetToHomeState() {
   }
 }
 
-// Camera animation helper - based on backup.js POV path style
+// Camera animation helper - EXACT backup.js implementation
 function animateCamera(progress: number) {
-  const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
+  if (!cameraHomePath) {
+    console.warn("Camera path not created yet");
+    return;
+  }
 
-  // Similar to backup.js: camera moves closer to maze center and higher up
-  // Final position should be close to the maze for a "diving into maze" effect
-  const cameraTargetPosition = new THREE.Vector3(
-    mazeCenter.x, // Directly above center
-    mazeCenter.y + 1.5, // Higher up for better overview
-    mazeCenter.z + 0.5 // Slightly forward
-  );
+  // Get position on the exact backup.js curve
+  const position = cameraHomePath.getPointAt(progress);
+  camera.position.copy(position);
 
-  // Smooth interpolation from start to target position
-  camera.position.lerpVectors(
-    initialCameraPosition,
-    cameraTargetPosition,
-    progress
-  );
+  // Get direction from curve tangent for smooth camera direction
+  const tangent = cameraHomePath.getTangentAt(progress).normalize();
+  const lookAtTarget = position.clone().add(tangent);
 
-  // Look at maze center directly (like backup.js POV camera)
-  const lookAtTarget = mazeCenter.clone();
+  camera.lookAt(lookAtTarget);
 
-  const currentTarget = new THREE.Vector3().lerpVectors(
-    initialCameraTarget,
-    lookAtTarget,
-    progress
-  );
-  camera.lookAt(currentTarget);
-
-  // Optional: Adjust FOV like in backup.js (wideFOV)
-  if (progress > 0.5) {
-    const fovProgress = (progress - 0.5) / 0.5; // 0-1 for second half
+  // Adjust FOV like in backup.js (wideFOV at progress > 0)
+  if (progress > 0) {
     const startFOV = 50; // Default camera FOV
     const targetFOV = 80; // Wide FOV like backup.js
-    camera.fov = startFOV + (targetFOV - startFOV) * fovProgress;
+    camera.fov = startFOV + (targetFOV - startFOV) * progress;
     camera.updateProjectionMatrix();
   }
+
+  console.log(
+    `Camera at progress ${progress.toFixed(2)}: position=${position.x.toFixed(
+      2
+    )}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}`
+  );
 }
 
 // Scroll event handler
