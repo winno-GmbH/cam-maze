@@ -68,8 +68,8 @@ let timeOffset = 0;
 let pauseTime = 0;
 
 // Smooth animation variables (like GSAP scrub)
-const smoothGhostProgress: { [key: string]: number } = {};
-const SMOOTH_FACTOR = 0.15; // Lower = more lag, Higher = less lag (like scrub value)
+let lastScrollProgress = 0;
+const SMOOTH_FACTOR = 0.1; // Controls smoothing intensity
 
 function captureGhostPositions() {
   Object.keys(ghosts).forEach((ghostKey) => {
@@ -506,49 +506,39 @@ function handleScroll() {
     // If we're back at the very top (scrollProgress = 0), reset everything
     if (scrollProgress === 0) {
       console.log("Scroll progress at 0, resetting to home state");
-      // Clear smooth progress BEFORE resetting to avoid jumping
-      Object.keys(smoothGhostProgress).forEach((key) => {
-        smoothGhostProgress[key] = 0;
-      });
+      lastScrollProgress = 0;
       resetToHomeState();
       return;
     }
 
     console.log(`Animating with scrollProgress: ${scrollProgress}`);
 
-    // Animate ghosts along bezier curves with smooth lag (they finish at 80% scroll)
+    // Smooth scroll progress interpolation (like GSAP scrub)
+    const smoothedScrollProgress =
+      lastScrollProgress +
+      (scrollProgress - lastScrollProgress) * SMOOTH_FACTOR;
+    lastScrollProgress = smoothedScrollProgress;
+
+    console.log(
+      `Scroll Debug: raw=${scrollProgress.toFixed(
+        3
+      )}, smoothed=${smoothedScrollProgress.toFixed(3)}`
+    );
+
+    // Animate ghosts along bezier curves (they finish at 80% scroll)
     Object.keys(ghosts).forEach((ghostKey) => {
       if (bezierCurves[ghostKey]) {
-        // Compress ghost animation into 0-80% range
-        const targetGhostProgress = Math.min(scrollProgress / GHOSTS_END_AT, 1);
-
-        // Initialize smooth progress if needed
-        if (!(ghostKey in smoothGhostProgress)) {
-          smoothGhostProgress[ghostKey] = 0;
-        }
-
-        // Smooth interpolation towards target progress (like GSAP scrub)
-        const oldProgress = smoothGhostProgress[ghostKey];
-        smoothGhostProgress[ghostKey] +=
-          (targetGhostProgress - smoothGhostProgress[ghostKey]) * SMOOTH_FACTOR;
-
-        // Debug smoothing
-        if (ghostKey === "blinky") {
-          console.log(
-            `Smooth Debug ${ghostKey}: target=${targetGhostProgress.toFixed(
-              3
-            )}, old=${oldProgress.toFixed(3)}, new=${smoothGhostProgress[
-              ghostKey
-            ].toFixed(3)}`
-          );
-        }
-
-        moveGhostOnCurve(ghostKey, smoothGhostProgress[ghostKey]);
+        // Compress ghost animation into 0-80% range using smoothed progress
+        const ghostProgress = Math.min(
+          smoothedScrollProgress / GHOSTS_END_AT,
+          1
+        );
+        moveGhostOnCurve(ghostKey, ghostProgress);
       }
     });
 
-    // Animate camera normally (0% to 100%)
-    animateCamera(scrollProgress);
+    // Animate camera with smoothed progress (0% to 100%)
+    animateCamera(smoothedScrollProgress);
 
     // Update debug info
     if (window.animationDebugInfo) {
