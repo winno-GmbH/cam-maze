@@ -25,7 +25,7 @@ declare global {
 // Constants
 const MAZE_CENTER = new THREE.Vector3(0.55675, 0.5, 0.45175);
 const GHOSTS_END_AT = 0.8; // Ghosts finish their animation at 80% scroll
-const OPACITY_FADE_START = 0.8; // Last 20% for opacity fade (same as ghosts end)
+const GHOST_OPACITY_FADE_START = 0.8; // Last 20% of GHOST animation (ghostProgress 0.8-1.0)
 const CAMERA_DELAY = 0.15; // Camera starts 15% later than ghosts
 
 // Rotation constants (easily changeable)
@@ -126,55 +126,29 @@ function moveGhostOnCurve(ghostKey: string, ghostProgress: number) {
   const position = bezierCurves[ghostKey].getPoint(ghostProgress);
   ghost.position.copy(position);
 
-  // Interpolate rotation: Start with original rotation, end with target rotation
+  // Simple rotation: interpolate from start rotation to (0, 0, 0)
   const originalRotation = capturedRotations[ghostKey];
-  const targetRotation = originalRotation.clone();
+  const targetRotation = new THREE.Euler(0, 0, 0); // Target: (0°, 0°, 0°)
 
-  // X-axis rotation (e.g., to lay down) - always add specified amount
-  if (ROTATION_AXIS_X === "x") {
-    targetRotation.x += ROTATION_AMOUNT_X * ghostProgress;
-  } else if (ROTATION_AXIS_X === "y") {
-    targetRotation.y += ROTATION_AMOUNT_X * ghostProgress;
-  } else if (ROTATION_AXIS_X === "z") {
-    targetRotation.z += ROTATION_AMOUNT_X * ghostProgress;
-  }
+  // Interpolate between original and target rotation
+  const currentRotation = new THREE.Euler(
+    originalRotation.x +
+      (targetRotation.x - originalRotation.x) * ghostProgress,
+    originalRotation.y +
+      (targetRotation.y - originalRotation.y) * ghostProgress,
+    originalRotation.z + (targetRotation.z - originalRotation.z) * ghostProgress
+  );
 
-  // Y-axis rotation (smart rotation to nearest 0° or 180°)
-  if (USE_SMART_Y_ROTATION) {
-    const currentYRotation = originalRotation.y;
-    const targetYRotation = getNearestStraightOrientation(currentYRotation);
-    const yDifference = targetYRotation - currentYRotation;
-
-    // Debug logging for the first ghost
-    if (ghostKey === "ghost1" && ghostProgress > 0.1 && ghostProgress < 0.2) {
-      console.log(
-        `${ghostKey} Y-rotation: current=${(
-          (currentYRotation * 180) /
-          Math.PI
-        ).toFixed(1)}°, target=${((targetYRotation * 180) / Math.PI).toFixed(
-          1
-        )}°, difference=${((yDifference * 180) / Math.PI).toFixed(1)}°`
-      );
-    }
-
-    if (ROTATION_AXIS_Y === "y") {
-      targetRotation.y = originalRotation.y + yDifference * ghostProgress;
-    } else if (ROTATION_AXIS_Y === "x") {
-      targetRotation.x = originalRotation.x + yDifference * ghostProgress;
-    } else if (ROTATION_AXIS_Y === "z") {
-      targetRotation.z = originalRotation.z + yDifference * ghostProgress;
-    }
-  }
-
-  ghost.rotation.copy(targetRotation);
+  ghost.rotation.copy(currentRotation);
 
   // Handle opacity fade in last 20% of GHOST animation (not scroll progress!)
   let opacity = 1;
-  if (ghostProgress >= OPACITY_FADE_START) {
+  if (ghostProgress >= GHOST_OPACITY_FADE_START) {
     const fadeProgress =
-      (ghostProgress - OPACITY_FADE_START) / (1 - OPACITY_FADE_START);
+      (ghostProgress - GHOST_OPACITY_FADE_START) /
+      (1 - GHOST_OPACITY_FADE_START);
     opacity = 1 - fadeProgress;
-    opacity = Math.max(0.1, opacity); // Keep minimum visibility
+    opacity = Math.max(0, opacity); // Allow complete invisibility
   }
 
   // Set opacity for both Mesh and Group
