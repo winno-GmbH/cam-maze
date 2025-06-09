@@ -34,11 +34,15 @@ let pauseTime = 0;
 
 function captureGhostPositions() {
   Object.keys(ghosts).forEach((ghostKey) => {
-    if (ghostKey !== "pacman" && ghosts[ghostKey]) {
+    if (ghosts[ghostKey]) {
       capturedPositions[ghostKey] = ghosts[ghostKey].position.clone();
+      console.log(
+        `Captured ${ghostKey} at position:`,
+        ghosts[ghostKey].position
+      );
     }
   });
-  console.log("Ghost positions captured:", capturedPositions);
+  console.log("All ghost positions captured:", capturedPositions);
 }
 
 function createBezierCurves() {
@@ -79,17 +83,20 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
 
   const ghost = ghosts[ghostKey];
 
-  // Bei scrollProgress = 0: Ursprungsposition
-  // Bei scrollProgress = 1: Maze-Mitte über Bezier-Kurve
-  if (scrollProgress === 0) {
-    // Zurück zur ursprünglichen Position
-    ghost.position.copy(capturedPositions[ghostKey]);
-  } else {
-    // Get position on curve (0-1) - aber nur wenn wir scrollen
-    const position = bezierCurves[ghostKey].getPoint(scrollProgress);
-    ghost.position.copy(position);
+  // Detailed logging for debugging
+  console.log(
+    `Moving ${ghostKey}: scrollProgress=${scrollProgress}, capturedPos:`,
+    capturedPositions[ghostKey]
+  );
 
-    // Get direction from curve tangent for smooth rotation
+  // Always use bezier curve for smooth interpolation
+  const position = bezierCurves[ghostKey].getPoint(scrollProgress);
+  ghost.position.copy(position);
+
+  console.log(`${ghostKey} moved to:`, position);
+
+  // Get direction from curve tangent for smooth rotation (except at progress = 0)
+  if (scrollProgress > 0.01) {
     const tangent = bezierCurves[ghostKey]
       .getTangent(scrollProgress)
       .normalize();
@@ -235,6 +242,10 @@ function resetToHomeState() {
   // Reset all ghosts to their captured positions and full opacity
   Object.keys(ghosts).forEach((ghostKey) => {
     if (capturedPositions[ghostKey] && ghosts[ghostKey]) {
+      console.log(
+        `Resetting ${ghostKey} to captured position:`,
+        capturedPositions[ghostKey]
+      );
       ghosts[ghostKey].position.copy(capturedPositions[ghostKey]);
 
       // Reset opacity to full
@@ -326,21 +337,31 @@ function handleScroll() {
   const scrolledIntoSection = Math.max(0, windowHeight - rect.top);
   const scrollProgress = Math.min(scrolledIntoSection / sectionHeight, 1);
 
+  console.log(
+    `Scroll Debug: rect.top=${rect.top}, windowHeight=${windowHeight}, scrolledIntoSection=${scrolledIntoSection}, sectionHeight=${sectionHeight}, scrollProgress=${scrollProgress}`
+  );
+
   // Start scroll animation when we begin scrolling through home section
   if (scrollProgress > 0 && currentAnimationState === "HOME") {
+    console.log("Starting scroll animation...");
     onFirstScroll();
   }
 
   if (currentAnimationState === "SCROLL_ANIMATION") {
-    // If we're back at the top (scrollProgress = 0), reset everything
-    if (scrollProgress === 0) {
+    // If we're back at the top (scrollProgress <= 0.01), reset everything
+    if (scrollProgress <= 0.01) {
+      console.log("Scroll progress near 0, resetting to home state");
       resetToHomeState();
       return;
     }
 
+    console.log(`Animating with scrollProgress: ${scrollProgress}`);
+
     // Animate ghosts along bezier curves
     Object.keys(ghosts).forEach((ghostKey) => {
-      moveGhostOnCurve(ghostKey, scrollProgress);
+      if (bezierCurves[ghostKey]) {
+        moveGhostOnCurve(ghostKey, scrollProgress);
+      }
     });
 
     // Animate camera towards maze center
