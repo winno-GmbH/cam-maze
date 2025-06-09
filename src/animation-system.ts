@@ -69,7 +69,7 @@ let pauseTime = 0;
 
 // Smooth animation variables (like GSAP scrub)
 const smoothGhostProgress: { [key: string]: number } = {};
-const SMOOTH_FACTOR = 0.1; // Lower = more lag, Higher = less lag (like scrub value)
+const SMOOTH_FACTOR = 0.15; // Lower = more lag, Higher = less lag (like scrub value)
 
 function captureGhostPositions() {
   Object.keys(ghosts).forEach((ghostKey) => {
@@ -378,9 +378,6 @@ function resetToHomeState() {
       ghosts[ghostKey].position.copy(capturedPositions[ghostKey]);
       ghosts[ghostKey].rotation.copy(capturedRotations[ghostKey]);
 
-      // Reset smooth progress for lag effect
-      smoothGhostProgress[ghostKey] = 0;
-
       // Reset opacity to full
       const ghost = ghosts[ghostKey];
       if (ghost instanceof THREE.Mesh && ghost.material) {
@@ -509,6 +506,10 @@ function handleScroll() {
     // If we're back at the very top (scrollProgress = 0), reset everything
     if (scrollProgress === 0) {
       console.log("Scroll progress at 0, resetting to home state");
+      // Clear smooth progress BEFORE resetting to avoid jumping
+      Object.keys(smoothGhostProgress).forEach((key) => {
+        smoothGhostProgress[key] = 0;
+      });
       resetToHomeState();
       return;
     }
@@ -527,8 +528,20 @@ function handleScroll() {
         }
 
         // Smooth interpolation towards target progress (like GSAP scrub)
+        const oldProgress = smoothGhostProgress[ghostKey];
         smoothGhostProgress[ghostKey] +=
           (targetGhostProgress - smoothGhostProgress[ghostKey]) * SMOOTH_FACTOR;
+
+        // Debug smoothing
+        if (ghostKey === "blinky") {
+          console.log(
+            `Smooth Debug ${ghostKey}: target=${targetGhostProgress.toFixed(
+              3
+            )}, old=${oldProgress.toFixed(3)}, new=${smoothGhostProgress[
+              ghostKey
+            ].toFixed(3)}`
+          );
+        }
 
         moveGhostOnCurve(ghostKey, smoothGhostProgress[ghostKey]);
       }
