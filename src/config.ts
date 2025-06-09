@@ -33,8 +33,7 @@ export const lookAtPosition = isMobile
   : CAMERA_POSITIONS.desktopLookAt;
 
 // Maze Center Position for Bezier Curves
-// Updated MAZE_CENTER coordinates based on current animation system
-export const MAZE_CENTER = new THREE.Vector3(0.55675, 0.5, 0.45175);
+export const MAZE_CENTER = new THREE.Vector3(0.45175, 0.5, 0.55675);
 
 // Asset URLs
 export const ASSETS = {

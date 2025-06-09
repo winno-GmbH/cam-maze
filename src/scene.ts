@@ -13,9 +13,9 @@ export const renderer = new THREE.WebGLRenderer({
 });
 
 // Container
-const container = document.querySelector("#canvas-container") as HTMLElement;
+const container = document.querySelector(".el--home-maze.el") as HTMLElement;
 if (!container) {
-  console.error("Container #canvas-container not found!");
+  console.error("Container .el--home-maze.el not found!");
 }
 
 // Clock for animations
