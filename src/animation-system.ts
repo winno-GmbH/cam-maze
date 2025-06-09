@@ -27,7 +27,7 @@ const MAZE_CENTER = new THREE.Vector3(0.95175, 0.5, 1.05675);
 const OPACITY_FADE_START = 0.8; // Last 20% for opacity fade
 
 // Rotation constants (easily changeable)
-const ROTATION_AXIS: "x" | "y" | "z" = "z"; // 'x', 'y', or 'z' - which axis to rotate around
+const ROTATION_AXIS: "x" | "y" | "z" = "x"; // 'x', 'y', or 'z' - which axis to rotate around
 const ROTATION_AMOUNT = Math.PI / 2; // 90 degrees in radians
 
 // 2. POSITION & BEZIER SYSTEM
