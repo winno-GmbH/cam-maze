@@ -37,6 +37,7 @@ const capturedRotations: { [key: string]: THREE.Euler } = {};
 const bezierCurves: { [key: string]: THREE.QuadraticBezierCurve3 } = {};
 let timeOffset = 0;
 let pauseTime = 0;
+let savedAnimationProgress = 0; // Store the home animation progress when pausing
 
 function captureGhostPositions() {
   Object.keys(ghosts).forEach((ghostKey) => {
@@ -225,7 +226,7 @@ function animationLoop() {
 
   const currentTime = Date.now();
   const elapsedTime = (currentTime - animationStartTime - timeOffset) / 1000; // Convert to seconds
-  const t = (elapsedTime * 0.1) % 1; // Speed control (0.1 = slower, 0.2 = faster)
+  const t = (savedAnimationProgress + elapsedTime * 0.1) % 1; // Continue from saved progress
 
   // Animate ghosts on their home paths only during HOME state
   Object.entries(ghosts).forEach(([key, ghost]) => {
@@ -280,11 +281,15 @@ function animationLoop() {
 function resetToHomeState() {
   currentAnimationState = "HOME";
 
-  // CRITICAL FIX: Reset animation timing to start fresh home animation
+  // CRITICAL FIX: Reset animation timing to continue from saved progress
   animationStartTime = Date.now();
   timeOffset = 0;
   pauseTime = 0;
-  console.log("🔄 Animation timing reset - home animation will start fresh");
+  console.log(
+    `🔄 Animation timing reset - home animation will continue from progress: ${savedAnimationProgress.toFixed(
+      3
+    )}`
+  );
 
   // Reset camera to initial position and rotation
   camera.position.copy(initialCameraPosition);
@@ -432,6 +437,18 @@ function handleScroll() {
       // Always animate when scrollProgress > 0, regardless of state
       // Switch to SCROLL_ANIMATION state if not already
       if (currentAnimationState === "HOME") {
+        // Capture current animation progress before switching states
+        const currentTime = Date.now();
+        const elapsedTime =
+          (currentTime - animationStartTime - timeOffset) / 1000;
+        savedAnimationProgress =
+          (savedAnimationProgress + elapsedTime * 0.1) % 1;
+        console.log(
+          `💾 Saved home animation progress: ${savedAnimationProgress.toFixed(
+            3
+          )}`
+        );
+
         currentAnimationState = "SCROLL_ANIMATION";
         console.log("Switched to SCROLL_ANIMATION state");
 
