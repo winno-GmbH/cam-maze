@@ -26,8 +26,13 @@ declare global {
 const MAZE_CENTER = new THREE.Vector3(0.95175, 0.5, 1.05675);
 const OPACITY_FADE_START = 0.8; // Last 20% for opacity fade
 
+// Rotation constants (easily changeable)
+const ROTATION_AXIS: "x" | "y" | "z" = "z"; // 'x', 'y', or 'z' - which axis to rotate around
+const ROTATION_AMOUNT = Math.PI / 2; // 90 degrees in radians
+
 // 2. POSITION & BEZIER SYSTEM
 const capturedPositions: { [key: string]: THREE.Vector3 } = {};
+const capturedRotations: { [key: string]: THREE.Euler } = {};
 const bezierCurves: { [key: string]: THREE.QuadraticBezierCurve3 } = {};
 let timeOffset = 0;
 let pauseTime = 0;
@@ -36,13 +41,17 @@ function captureGhostPositions() {
   Object.keys(ghosts).forEach((ghostKey) => {
     if (ghosts[ghostKey]) {
       capturedPositions[ghostKey] = ghosts[ghostKey].position.clone();
+      capturedRotations[ghostKey] = ghosts[ghostKey].rotation.clone();
       console.log(
         `Captured ${ghostKey} at position:`,
-        ghosts[ghostKey].position
+        ghosts[ghostKey].position,
+        "rotation:",
+        ghosts[ghostKey].rotation
       );
     }
   });
   console.log("All ghost positions captured:", capturedPositions);
+  console.log("All ghost rotations captured:", capturedRotations);
 }
 
 function createBezierCurves() {
@@ -77,7 +86,8 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
   if (
     !bezierCurves[ghostKey] ||
     !ghosts[ghostKey] ||
-    !capturedPositions[ghostKey]
+    !capturedPositions[ghostKey] ||
+    !capturedRotations[ghostKey]
   )
     return;
 
@@ -87,13 +97,20 @@ function moveGhostOnCurve(ghostKey: string, scrollProgress: number) {
   const position = bezierCurves[ghostKey].getPoint(scrollProgress);
   ghost.position.copy(position);
 
-  // Get direction from curve tangent for smooth rotation (except at progress = 0)
-  if (scrollProgress > 0.01) {
-    const tangent = bezierCurves[ghostKey]
-      .getTangent(scrollProgress)
-      .normalize();
-    ghost.lookAt(position.clone().add(tangent));
+  // Interpolate rotation: Start with original rotation, end with 90° rotated version
+  const originalRotation = capturedRotations[ghostKey];
+  const targetRotation = originalRotation.clone();
+
+  // Add rotation based on the specified axis
+  if (ROTATION_AXIS === "x") {
+    targetRotation.x += ROTATION_AMOUNT * scrollProgress;
+  } else if (ROTATION_AXIS === "y") {
+    targetRotation.y += ROTATION_AMOUNT * scrollProgress;
+  } else if (ROTATION_AXIS === "z") {
+    targetRotation.z += ROTATION_AMOUNT * scrollProgress;
   }
+
+  ghost.rotation.copy(targetRotation);
 
   // Handle opacity fade in last 20%
   let opacity = 1;
@@ -231,14 +248,19 @@ function resetToHomeState() {
   camera.position.copy(initialCameraPosition);
   camera.lookAt(initialCameraTarget);
 
-  // Reset all ghosts to their captured positions and full opacity
+  // Reset all ghosts to their captured positions, rotations and full opacity
   Object.keys(ghosts).forEach((ghostKey) => {
-    if (capturedPositions[ghostKey] && ghosts[ghostKey]) {
+    if (
+      capturedPositions[ghostKey] &&
+      capturedRotations[ghostKey] &&
+      ghosts[ghostKey]
+    ) {
       console.log(
         `Resetting ${ghostKey} to captured position:`,
         capturedPositions[ghostKey]
       );
       ghosts[ghostKey].position.copy(capturedPositions[ghostKey]);
+      ghosts[ghostKey].rotation.copy(capturedRotations[ghostKey]);
 
       // Reset opacity to full
       const ghost = ghosts[ghostKey];
@@ -337,15 +359,15 @@ function handleScroll() {
     `Scroll Debug: rect.top=${rect.top}, windowHeight=${windowHeight}, scrolledIntoSection=${scrolledIntoSection}, sectionHeight=${sectionHeight}, scrollProgress=${scrollProgress}`
   );
 
-  // Start scroll animation when we begin scrolling through home section
-  if (scrollProgress > 0 && currentAnimationState === "HOME") {
+  // Start scroll animation when we begin scrolling through home section (with threshold)
+  if (scrollProgress > 0.05 && currentAnimationState === "HOME") {
     console.log("Starting scroll animation...");
     onFirstScroll();
   }
 
   if (currentAnimationState === "SCROLL_ANIMATION") {
-    // If we're back at the top (scrollProgress <= 0.01), reset everything
-    if (scrollProgress <= 0.01) {
+    // If we're back at the top (scrollProgress <= 0.02), reset everything
+    if (scrollProgress <= 0.02) {
       console.log("Scroll progress near 0, resetting to home state");
       resetToHomeState();
       return;
@@ -360,8 +382,11 @@ function handleScroll() {
       }
     });
 
-    // Animate camera towards maze center
-    animateCamera(scrollProgress);
+    // Animate camera towards maze center (only after 20% scroll progress)
+    if (scrollProgress > 0.2) {
+      const cameraProgress = (scrollProgress - 0.2) / 0.8; // Map 0.2-1.0 to 0-1
+      animateCamera(Math.min(cameraProgress, 1));
+    }
 
     // Update debug info
     if (window.animationDebugInfo) {
