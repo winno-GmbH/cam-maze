@@ -23,7 +23,7 @@ declare global {
 }
 
 // Constants
-const MAZE_CENTER = new THREE.Vector3(0.45175, 0.5, 0.55675);
+const MAZE_CENTER = new THREE.Vector3(0.95175, 0.5, 1.05675);
 const OPACITY_FADE_START = 0.8; // Last 20% for opacity fade
 
 // 2. POSITION & BEZIER SYSTEM
