@@ -405,28 +405,30 @@ function handleScroll() {
   const isInHomeSection =
     rect.top <= windowHeight && rect.bottom > -windowHeight;
 
-  // Calculate scroll progress: LIMITED to "top top" -> "top bottom"
+  // Calculate scroll progress: LIMITED to "top top" -> "bottom top" (like backup.js)
   // Animation starts when section top hits viewport top (rect.top = 0)
-  // Animation ends when section top hits viewport bottom (rect.top = -windowHeight)
+  // Animation ends when section bottom hits viewport top (rect.bottom = 0)
 
   let scrollProgress = 0;
 
-  if (rect.top <= 0 && rect.top >= -windowHeight) {
-    // We're in the animation range: top of section is between top and bottom of viewport
-    const animationRange = windowHeight; // Total animation distance
-    const currentPosition = Math.abs(rect.top); // How far past top we are (0 to windowHeight)
-    scrollProgress = currentPosition / animationRange; // 0 to 1
-  } else if (rect.top < -windowHeight) {
-    // Past the animation range - animation complete
+  if (rect.top <= 0 && rect.bottom >= 0) {
+    // We're in the animation range: section is crossing the viewport
+    const sectionHeight = rect.height;
+    const scrolledDistance = Math.abs(rect.top); // How far the section has scrolled past viewport top
+    scrollProgress = Math.min(1, scrolledDistance / sectionHeight); // 0 to 1
+  } else if (rect.bottom < 0) {
+    // Past the animation range - section completely scrolled out, animation complete
     scrollProgress = 1;
   }
   // else scrollProgress stays 0 (before animation range)
 
   console.log(
-    `Scroll Debug: rect.top=${
-      rect.top
-    }, windowHeight=${windowHeight}, scrollProgress=${scrollProgress}, animationRange=${
-      rect.top <= 0 && rect.top >= -windowHeight ? windowHeight : "outside"
+    `Scroll Debug: rect.top=${rect.top}, rect.bottom=${
+      rect.bottom
+    }, sectionHeight=${
+      rect.height
+    }, scrollProgress=${scrollProgress}, animationRange=${
+      rect.top <= 0 && rect.bottom >= 0 ? rect.height : "outside"
     }`
   );
 
