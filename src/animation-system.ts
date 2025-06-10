@@ -3,29 +3,65 @@ import { ghosts, pacmanMixer, clock } from "./objects";
 import { pathsMap } from "./paths";
 import { renderer, scene } from "./scene";
 import { camera, startQuaternion, endQuaternion } from "./camera";
-// GSAP Dynamic Import - works with ES modules and bundlers
-let gsap: any = null;
-let ScrollTrigger: any = null;
+// SIMPLE SMOOTH SCROLL - No external dependencies, always works
+interface SmoothScrollState {
+  targetProgress: number;
+  currentProgress: number;
+  velocity: number;
+  lastTime: number;
+}
 
-// Try to import GSAP dynamically
-async function initGSAP() {
-  try {
-    const gsapModule = await import("gsap");
-    const scrollTriggerModule = await import("gsap/ScrollTrigger");
+const smoothScrollState: SmoothScrollState = {
+  targetProgress: 0,
+  currentProgress: 0,
+  velocity: 0,
+  lastTime: 0,
+};
 
-    gsap = gsapModule.gsap || gsapModule.default;
-    ScrollTrigger =
-      scrollTriggerModule.ScrollTrigger || scrollTriggerModule.default;
+// Simple smooth scroll function
+function applySmoothScroll(targetProgress: number): number {
+  const currentTime = performance.now() / 1000;
 
-    if (gsap && ScrollTrigger && gsap.registerPlugin) {
-      gsap.registerPlugin(ScrollTrigger);
-      console.log("✅ GSAP ScrollTrigger loaded and registered successfully");
-      return true;
-    }
-  } catch (error) {
-    console.warn("⚠️ GSAP dynamic import failed:", error);
+  // Initialize on first run
+  if (smoothScrollState.lastTime === 0) {
+    smoothScrollState.lastTime = currentTime;
+    smoothScrollState.currentProgress = targetProgress;
+    smoothScrollState.targetProgress = targetProgress;
+    return targetProgress;
   }
-  return false;
+
+  const deltaTime = Math.max(currentTime - smoothScrollState.lastTime, 0.001);
+  smoothScrollState.targetProgress = targetProgress;
+
+  // Smooth interpolation settings
+  const smoothness = 0.15; // Higher = more responsive (0.05-0.3)
+  const maxVelocity = 2.0; // Velocity cap
+
+  // Calculate difference and apply smoothing
+  const diff =
+    smoothScrollState.targetProgress - smoothScrollState.currentProgress;
+  smoothScrollState.velocity += diff * smoothness;
+
+  // Apply friction
+  smoothScrollState.velocity *= 0.85;
+
+  // Cap velocity
+  smoothScrollState.velocity = Math.max(
+    -maxVelocity,
+    Math.min(maxVelocity, smoothScrollState.velocity)
+  );
+
+  // Update progress
+  smoothScrollState.currentProgress += smoothScrollState.velocity * deltaTime;
+  smoothScrollState.currentProgress = Math.max(
+    0,
+    Math.min(1, smoothScrollState.currentProgress)
+  );
+
+  // Update time
+  smoothScrollState.lastTime = currentTime;
+
+  return smoothScrollState.currentProgress;
 }
 
 // 1. STATE MANAGEMENT
@@ -669,7 +705,7 @@ function animateIntroBodyDirect(directProgress: number) {
   introBody.style.opacity = opacity.toString();
 }
 
-export async function setupScrollTriggers() {
+export function setupScrollTriggers() {
   // Setup intro animations
   setupIntroAnimations();
 
@@ -677,56 +713,56 @@ export async function setupScrollTriggers() {
   window.addEventListener("scroll", handleScroll);
   window.addEventListener("scroll", handleIntroScroll);
 
-  // Try to initialize GSAP
-  const gsapLoaded = await initGSAP();
+  // Setup smooth scroll for POV section
+  console.log("🎬 Setting up smooth scroll for POV section");
 
-  if (gsapLoaded && gsap && ScrollTrigger) {
-    // GSAP ScrollTrigger for POV Section - PROFESSIONAL SMOOTH SCRUBBING
-    const povSection = document.querySelector(".sc--pov");
-    if (povSection) {
-      try {
-        ScrollTrigger.create({
-          trigger: povSection,
-          start: "top top",
-          end: "bottom bottom",
-          scrub: 0.5, // SMOOTH SCRUBBING! 0.5 seconds lag
-          onUpdate: (self: any) => {
-            const progress = self.progress;
-            console.log(`🎬 GSAP POV: progress=${progress.toFixed(3)}`);
+  // Animation loop for smooth scrolling in POV
+  function smoothScrollLoop() {
+    if (povAnimationState.isActive) {
+      // Get raw scroll progress
+      const povSection = document.querySelector(".sc--pov") as HTMLElement;
+      if (povSection) {
+        const rect = povSection.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
+        const sectionTop = rect.top;
+        const sectionHeight = rect.height;
 
-            // Apply smooth POV animation
-            if (povAnimationState.isActive) {
-              updatePOVAnimation(progress);
-            }
-          },
-          onToggle: (self: any) => {
-            if (self.isActive) {
-              // Start POV animation
-              if (!povAnimationState.isActive) {
-                povAnimationState.isActive = true;
-                onPOVAnimationStart();
-                console.log("🎬 GSAP POV Animation Started");
-              }
-            } else {
-              // End POV animation
-              if (povAnimationState.isActive) {
-                povAnimationState.isActive = false;
-                onPOVAnimationEnd();
-                console.log("🎬 GSAP POV Animation Ended");
-              }
-            }
-          },
-        });
-        console.log("✅ GSAP ScrollTrigger setup complete for POV section");
-      } catch (error) {
-        console.error("❌ Error setting up GSAP ScrollTrigger:", error);
-        setupFallbackPOVScroll();
+        // Calculate progress within POV section
+        const animationBuffer = windowHeight * 0.3;
+        const totalAnimationHeight = sectionHeight + animationBuffer;
+        const scrolledIntoSection = Math.max(0, -sectionTop);
+        const rawProgress = Math.min(
+          1,
+          scrolledIntoSection / totalAnimationHeight
+        );
+
+        // Apply smooth scrolling
+        const smoothProgress = applySmoothScroll(rawProgress);
+
+        // Update POV animations with smooth progress
+        updatePOVAnimation(smoothProgress);
+
+        // Log for debugging
+        if (Math.abs(rawProgress - smoothProgress) > 0.01) {
+          console.log(
+            `📹 Smooth POV: raw=${rawProgress.toFixed(
+              3
+            )}, smooth=${smoothProgress.toFixed(3)}`
+          );
+        }
       }
     }
-  } else {
-    console.warn("⚠️ GSAP not available, using fallback scroll handlers");
-    setupFallbackPOVScroll();
+
+    requestAnimationFrame(smoothScrollLoop);
   }
+
+  // Start the animation loop
+  smoothScrollLoop();
+
+  // Also setup the fallback POV scroll handler
+  setupFallbackPOVScroll();
+
+  console.log("✅ Smooth scroll setup complete");
 }
 
 // Fallback scroll handler for POV if GSAP fails
@@ -800,14 +836,9 @@ export function initAnimationSystem() {
     }
   });
 
-  // Setup scroll triggers (now async)
-  setupScrollTriggers()
-    .then(() => {
-      console.log("🚀 Animation system fully initialized");
-    })
-    .catch((error) => {
-      console.error("❌ Error initializing scroll triggers:", error);
-    });
+  // Setup scroll triggers
+  setupScrollTriggers();
+  console.log("🚀 Animation system fully initialized");
 
   animate();
 
