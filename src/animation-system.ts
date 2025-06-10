@@ -1047,24 +1047,37 @@ function onPOVAnimationStart() {
   }
 }
 
-// GLOBAL SMOOTHING: Apply smooth progression to all POV animations
-function applySmoothProgress(targetProgress: number): number {
+// GSAP-STYLE SCRUBBING: Professional scrub implementation
+function applyGSAPScrubbing(targetProgress: number): number {
   // Update target
   povAnimationState.targetProgress = targetProgress;
 
-  // Apply smoothing - simple and effective
-  const smoothingFactor = 0.08; // Lower = smoother but more lag, higher = more responsive
+  // GSAP Scrub Values:
+  // scrub: true = 0.5 seconds lag
+  // scrub: 1 = 1 second lag
+  // scrub: 0.5 = 0.5 seconds lag
+  // scrub: 0.1 = 0.1 seconds lag
 
+  // SCRUB PRESETS - Choose one:
+  // const scrubTime = 0.1;  // scrub: 0.1 - Very responsive, minimal lag
+  const scrubTime = 0.3; // scrub: 0.3 - Smooth, moderate lag
+  // const scrubTime = 0.5;  // scrub: 0.5 - GSAP default smooth
+  // const scrubTime = 1.0;  // scrub: 1.0 - Very smooth, more lag
+  const deltaTime = 1 / 60; // Assuming 60fps
+  const lerpFactor = deltaTime / (scrubTime + deltaTime);
+
+  // Apply GSAP-style scrubbing
   povAnimationState.smoothedProgress +=
     (povAnimationState.targetProgress - povAnimationState.smoothedProgress) *
-    smoothingFactor;
+    lerpFactor;
 
+  const lag = targetProgress - povAnimationState.smoothedProgress;
   console.log(
-    `🌊 GLOBAL SMOOTH: target=${targetProgress.toFixed(
+    `🎬 GSAP SCRUB: target=${targetProgress.toFixed(
       3
-    )}, smooth=${povAnimationState.smoothedProgress.toFixed(3)}, lag=${(
-      targetProgress - povAnimationState.smoothedProgress
-    ).toFixed(3)}`
+    )}, scrubbed=${povAnimationState.smoothedProgress.toFixed(
+      3
+    )}, lag=${lag.toFixed(3)}, scrubTime=${scrubTime}s`
   );
 
   return povAnimationState.smoothedProgress;
@@ -1074,8 +1087,8 @@ function applySmoothProgress(targetProgress: number): number {
 function updatePOVAnimation(progress: number) {
   if (!povAnimationState.cameraPOVPath || !povAnimationState.isActive) return;
 
-  // Apply global smoothing to ALL animations
-  const smoothProgress = applySmoothProgress(progress);
+  // Apply GSAP-style scrubbing to ALL animations
+  const smoothProgress = applyGSAPScrubbing(progress);
 
   // Update camera position and rotation with smoothed progress
   updatePOVCamera(smoothProgress);
