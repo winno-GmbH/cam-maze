@@ -1544,10 +1544,10 @@ function onPOVAnimationStart() {
     const startPosition = povAnimationState.cameraPOVPath.getPointAt(0);
     camera.position.copy(startPosition);
 
-    // Create look-at point straight up from start position (less extreme)
+    // Create look-at point straight up from start position (adjusted for higher camera)
     const straightUpLookAt = new THREE.Vector3(
       startPosition.x,
-      startPosition.y + 3.0, // Look up but less extreme (was 10.0)
+      startPosition.y + 2.0, // Even less extreme for smoother transition (was 3.0)
       startPosition.z
     );
     camera.lookAt(straightUpLookAt);
@@ -1667,11 +1667,11 @@ function updatePOVCamera(progress: number) {
   if (progress < rotationStartingPoint) {
     // Before rotation phase - start looking straight up, then quickly transition to normal
 
-    const straightUpDuration = 0.03; // Only first 3% of animation looks straight up (was 5%)
+    const straightUpDuration = 0.15; // Longer 15% transition from up to forward (was 3%)
 
     if (progress < straightUpDuration) {
-      // Very beginning: Transition from straight up to forward tangent
-      const transitionProgress = progress / straightUpDuration; // 0 to 1 over first 5%
+      // Extended beginning: Gradual transition from straight up to forward tangent
+      const transitionProgress = progress / straightUpDuration; // 0 to 1 over first 15%
       const smoothTransition = smoothStep(transitionProgress); // Smooth transition curve
 
       const forwardTangent = getSmoothCameraTangent(progress);
@@ -1688,7 +1688,7 @@ function updatePOVCamera(progress: number) {
       const lookAtPoint = camera.position.clone().add(lookAtDirection);
       applySmoothCameraRotation(lookAtPoint);
     } else {
-      // After 5%: Normal forward-looking camera behavior
+      // After 15%: Normal forward-looking camera behavior
       const smoothedTangent = getSmoothCameraTangent(progress);
       const lookAtPoint = camera.position.clone().add(smoothedTangent);
       applySmoothCameraRotation(lookAtPoint);
