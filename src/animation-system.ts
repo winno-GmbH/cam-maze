@@ -1902,6 +1902,7 @@ function updatePOVTexts(progress: number) {
       let targetCamOpacity = 0;
 
       if (currentCameraProgress >= trigger.triggerCameraProgress) {
+        // Simple range: from ghost text start to cam text start
         const ghostTextRange =
           trigger.camTextCameraProgress - trigger.ghostTextCameraProgress;
         const ghostTextProgress = Math.max(
@@ -1913,23 +1914,20 @@ function updatePOVTexts(progress: number) {
           )
         );
 
-        if (ghostTextProgress < FADE_IN_DURATION) {
-          // Fast fade in
-          targetGhostOpacity = Math.min(
-            1,
-            ghostTextProgress / FADE_IN_DURATION
-          );
-        } else if (ghostTextProgress < FADE_OUT_START) {
-          // Full opacity in the middle
-          targetGhostOpacity = 1;
+        // SIMPLIFIED: Quick fade in, long full visibility, quick fade out
+        if (ghostTextProgress <= 0.1) {
+          // First 10%: fade in
+          targetGhostOpacity = ghostTextProgress / 0.1;
+        } else if (ghostTextProgress >= 0.9) {
+          // Last 10%: fade out
+          targetGhostOpacity = (1.0 - ghostTextProgress) / 0.1;
         } else {
-          // Fast fade out - use remaining range (1.0 - FADE_OUT_START)
-          const fadeOutProgress =
-            (ghostTextProgress - FADE_OUT_START) / (1.0 - FADE_OUT_START);
-          targetGhostOpacity = Math.max(0, 1 - fadeOutProgress);
+          // Middle 80%: full opacity
+          targetGhostOpacity = 1.0;
         }
 
         if (currentCameraProgress >= trigger.camTextCameraProgress) {
+          // Simple range: from cam text start to end
           const camTextRange =
             trigger.endCameraProgress - trigger.camTextCameraProgress;
           const camTextProgress = Math.max(
@@ -1941,49 +1939,23 @@ function updatePOVTexts(progress: number) {
             )
           );
 
-          if (camTextProgress < FADE_IN_DURATION) {
-            // Fast fade in
-            targetCamOpacity = Math.min(1, camTextProgress / FADE_IN_DURATION);
-          } else if (camTextProgress < FADE_OUT_START) {
-            // Full opacity in the middle
-            targetCamOpacity = 1;
+          // SIMPLIFIED: Quick fade in, long full visibility, quick fade out
+          if (camTextProgress <= 0.1) {
+            // First 10%: fade in
+            targetCamOpacity = camTextProgress / 0.1;
+          } else if (camTextProgress >= 0.9) {
+            // Last 10%: fade out
+            targetCamOpacity = (1.0 - camTextProgress) / 0.1;
           } else {
-            // Fast fade out - use remaining range (1.0 - FADE_OUT_START)
-            const fadeOutProgress =
-              (camTextProgress - FADE_OUT_START) / (1.0 - FADE_OUT_START);
-            targetCamOpacity = Math.max(0, 1 - fadeOutProgress);
+            // Middle 80%: full opacity
+            targetCamOpacity = 1.0;
           }
         }
       }
 
-      // Smooth opacity transitions - Much faster for quicker response
-      const fadeInSpeed = 0.8; // Much faster fade in
-      const fadeOutSpeed = 0.6; // Much faster fade out
-      const snapThreshold = 0.05; // Snap to target if close enough
-
-      // Ghost text opacity with snap-to-target
-      if (
-        Math.abs(targetGhostOpacity - trigger.ghostTextOpacity) < snapThreshold
-      ) {
-        trigger.ghostTextOpacity = targetGhostOpacity; // Snap to exact target
-      } else if (targetGhostOpacity > trigger.ghostTextOpacity) {
-        trigger.ghostTextOpacity +=
-          (targetGhostOpacity - trigger.ghostTextOpacity) * fadeInSpeed;
-      } else {
-        trigger.ghostTextOpacity +=
-          (targetGhostOpacity - trigger.ghostTextOpacity) * fadeOutSpeed;
-      }
-
-      // Cam text opacity with snap-to-target
-      if (Math.abs(targetCamOpacity - trigger.camTextOpacity) < snapThreshold) {
-        trigger.camTextOpacity = targetCamOpacity; // Snap to exact target
-      } else if (targetCamOpacity > trigger.camTextOpacity) {
-        trigger.camTextOpacity +=
-          (targetCamOpacity - trigger.camTextOpacity) * fadeInSpeed;
-      } else {
-        trigger.camTextOpacity +=
-          (targetCamOpacity - trigger.camTextOpacity) * fadeOutSpeed;
-      }
+      // Direct opacity assignment for perfect 1.0 values
+      trigger.ghostTextOpacity = targetGhostOpacity;
+      trigger.camTextOpacity = targetCamOpacity;
 
       // Update DOM elements
       updatePOVTextElements(trigger);
