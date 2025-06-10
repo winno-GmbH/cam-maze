@@ -3,6 +3,11 @@ import { ghosts, pacmanMixer, clock } from "./objects";
 import { pathsMap } from "./paths";
 import { renderer, scene } from "./scene";
 import { camera, startQuaternion, endQuaternion } from "./camera";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+// Register GSAP ScrollTrigger
+gsap.registerPlugin(ScrollTrigger);
 
 // 1. STATE MANAGEMENT
 type AnimationState = "HOME" | "SCROLL_ANIMATION" | "POV_ANIMATION";
@@ -462,27 +467,23 @@ function handleScroll() {
         createCameraPath();
       }
 
-      // Apply GLOBAL MOMENTUM SMOOTHING to scroll progress
-      const smoothScrollProgress = applyGlobalMomentumSmoothing(scrollProgress);
+      // BACK TO ORIGINAL: No smoothing in home section (it was working fine)
 
-      // Animate ghosts along bezier curves (they finish at 80% scroll) - WITH SMOOTHING
+      // Animate ghosts along bezier curves (they finish at 80% scroll)
       Object.keys(ghosts).forEach((ghostKey) => {
         if (bezierCurves[ghostKey]) {
-          // Compress ghost animation into 0-80% range, use SMOOTHED progress
-          const ghostProgress = Math.min(
-            smoothScrollProgress / GHOSTS_END_AT,
-            1
-          );
+          // Compress ghost animation into 0-80% range
+          const ghostProgress = Math.min(scrollProgress / GHOSTS_END_AT, 1);
           moveGhostOnCurve(ghostKey, ghostProgress);
         }
       });
 
-      // Animate camera normally (0% to 100%) - WITH SMOOTHING
-      animateCamera(smoothScrollProgress);
+      // Animate camera normally (0% to 100%)
+      animateCamera(scrollProgress);
 
       // Update debug info
       if (window.animationDebugInfo) {
-        window.animationDebugInfo.scrollProgress = smoothScrollProgress;
+        window.animationDebugInfo.scrollProgress = scrollProgress;
       }
     } else if (scrollProgress === 0) {
       // Back at the beginning of home section - reset to home state
@@ -653,11 +654,49 @@ export function setupScrollTriggers() {
   // Setup intro animations
   setupIntroAnimations();
 
-  // This will be implemented when GSAP is available
-  // For now, we use basic scroll events
+  // Setup scroll event listeners for home and intro sections
   window.addEventListener("scroll", handleScroll);
   window.addEventListener("scroll", handleIntroScroll);
-  window.addEventListener("scroll", handlePOVScroll);
+
+  // GSAP ScrollTrigger for POV Section - PROFESSIONAL SMOOTH SCRUBBING
+  const povSection = document.querySelector(".sc--pov");
+  if (povSection) {
+    ScrollTrigger.create({
+      trigger: povSection,
+      start: "top top",
+      end: "bottom bottom",
+      scrub: 0.5, // SMOOTH SCRUBBING! 0.5 seconds lag
+      onUpdate: (self) => {
+        const progress = self.progress;
+        console.log(`🎬 GSAP POV: progress=${progress.toFixed(3)}`);
+
+        // Apply smooth POV animation
+        if (povAnimationState.isActive) {
+          updatePOVAnimation(progress);
+        }
+      },
+      onToggle: (self) => {
+        if (self.isActive) {
+          // Start POV animation
+          if (!povAnimationState.isActive) {
+            povAnimationState.isActive = true;
+            onPOVAnimationStart();
+            console.log("🎬 GSAP POV Animation Started");
+          }
+        } else {
+          // End POV animation
+          if (povAnimationState.isActive) {
+            povAnimationState.isActive = false;
+            onPOVAnimationEnd();
+            console.log("🎬 GSAP POV Animation Ended");
+          }
+        }
+      },
+    });
+  }
+
+  // Remove the old POV scroll listener since GSAP handles it now
+  // window.addEventListener("scroll", handlePOVScroll); // REMOVED
 }
 
 // Main animation loop
@@ -1101,8 +1140,8 @@ function onPOVAnimationStart() {
   }
 }
 
-// MOMENTUM-BASED SCRUBBING: Real smooth scrubbing like GSAP
-function applyMomentumScrubbing(targetProgress: number): number {
+// DEPRECATED: GSAP handles all smoothing now
+function applyMomentumScrubbing_DEPRECATED(targetProgress: number): number {
   const currentTime = performance.now() / 1000; // Current time in seconds
 
   // Initialize on first run
@@ -1160,21 +1199,19 @@ function applyMomentumScrubbing(targetProgress: number): number {
   return povAnimationState.smoothedProgress;
 }
 
-// Update POV Animation
+// Update POV Animation - GSAP provides the smoothing, we just use the progress
 function updatePOVAnimation(progress: number) {
   if (!povAnimationState.cameraPOVPath || !povAnimationState.isActive) return;
 
-  // Apply momentum-based scrubbing to ALL animations
-  const smoothProgress = applyMomentumScrubbing(progress);
+  // GSAP ScrollTrigger already provides smooth scrubbing, no need for additional smoothing
+  // Update camera position and rotation with GSAP progress
+  updatePOVCamera(progress);
 
-  // Update camera position and rotation with smoothed progress
-  updatePOVCamera(smoothProgress);
+  // Update ghost positions with GSAP progress
+  updatePOVGhosts(progress);
 
-  // Update ghost positions with smoothed progress
-  updatePOVGhosts(smoothProgress);
-
-  // Update POV texts with smoothed progress
-  updatePOVTexts(smoothProgress);
+  // Update POV texts with GSAP progress
+  updatePOVTexts(progress);
 }
 
 // Update POV Camera
