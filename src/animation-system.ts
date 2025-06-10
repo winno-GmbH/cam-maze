@@ -172,13 +172,6 @@ function applyGlobalMomentumSmoothing(targetProgress: number): number {
   globalSmoothing.lastTime = currentTime;
 
   const lag = targetProgress - globalSmoothing.smoothedProgress;
-  console.log(
-    `🌊 GLOBAL SMOOTH: target=${targetProgress.toFixed(
-      3
-    )}, smooth=${globalSmoothing.smoothedProgress.toFixed(
-      3
-    )}, velocity=${globalSmoothing.velocity.toFixed(3)}, lag=${lag.toFixed(3)}`
-  );
 
   return globalSmoothing.smoothedProgress;
 }
@@ -187,20 +180,11 @@ function applyGlobalMomentumSmoothing(targetProgress: number): number {
 function captureOriginalHomePositions() {
   if (homePositionsCaptured) return; // Already captured
 
-  console.log(
-    "🏠 Capturing ORIGINAL home positions, rotations, and scales (once)"
-  );
   Object.keys(ghosts).forEach((ghostKey) => {
     if (ghosts[ghostKey]) {
       originalHomePositions[ghostKey] = ghosts[ghostKey].position.clone();
       originalHomeRotations[ghostKey] = ghosts[ghostKey].rotation.clone();
       originalHomeScales[ghostKey] = ghosts[ghostKey].scale.clone();
-      console.log(
-        `🏠 Captured ORIGINAL ${ghostKey} - pos:`,
-        originalHomePositions[ghostKey],
-        `scale:`,
-        originalHomeScales[ghostKey]
-      );
     }
   });
   homePositionsCaptured = true;
@@ -604,22 +588,22 @@ function handleScroll() {
 // 5. GSAP INTEGRATION - To be called by GSAP ScrollTriggers
 // 6. INTRO TEXT ANIMATIONS (after arriving at maze)
 function setupIntroAnimations() {
-  // Setup intro header animation (.sc_h--intro)
+  // Setup intro header animation (.sc_h--intro) - CORRECTED initial states
   const introHeader = document.querySelector(".sc_h--intro");
   if (introHeader) {
-    // Set initial state
+    // Set initial state - VISIBLE but transparent
     (introHeader as HTMLElement).style.transform = "scale(0)";
     (introHeader as HTMLElement).style.opacity = "0";
-    (introHeader as HTMLElement).style.display = "none"; // Hidden initially
+    (introHeader as HTMLElement).style.display = "block"; // VISIBLE for animations
   }
 
-  // Setup intro body animation (.sc_b--intro)
+  // Setup intro body animation (.sc_b--intro) - CORRECTED initial states
   const introBody = document.querySelector(".sc_b--intro");
   if (introBody) {
-    // Set initial state
+    // Set initial state - VISIBLE but transparent
     (introBody as HTMLElement).style.transform = "scale(0.5)";
     (introBody as HTMLElement).style.opacity = "0";
-    (introBody as HTMLElement).style.display = "none"; // Hidden initially
+    (introBody as HTMLElement).style.display = "block"; // VISIBLE for animations
   }
 }
 
@@ -657,30 +641,86 @@ function handleIntroScroll() {
       animateIntroBodyDirect(bodyProgress);
     }
   } else {
+    // CORRECTED: Reset to invisible but keep display block for future animations
     const introHeader = document.querySelector(".sc_h--intro") as HTMLElement;
     const introBody = document.querySelector(".sc_b--intro") as HTMLElement;
 
     if (introHeader) {
-      introHeader.style.display = "none";
+      introHeader.style.opacity = "0";
+      introHeader.style.transform = "scale(0)";
     }
     if (introBody) {
-      introBody.style.display = "none";
+      introBody.style.opacity = "0";
+      introBody.style.transform = "scale(0.5)";
     }
+  }
+}
+
+// FIXED intro scroll handler with corrected backup.js timing
+function handleIntroScrollFixed() {
+  const introSection = document.querySelector(".sc--intro") as HTMLElement;
+  if (!introSection) {
+    console.warn("⚠️ .sc--intro section not found");
+    return;
+  }
+
+  const rect = introSection.getBoundingClientRect();
+  const windowHeight = window.innerHeight;
+  const sectionTop = rect.top;
+  const sectionBottom = rect.bottom;
+  const sectionHeight = rect.height;
+
+  // DEBUG: Log current scroll state
+  console.log(
+    `📜 Intro scroll: top=${sectionTop.toFixed(
+      0
+    )}, bottom=${sectionBottom.toFixed(0)}, height=${sectionHeight.toFixed(0)}`
+  );
+
+  // CORRECTED backup.js timing:
+  // Header: "top top" to "center center"
+  // Body: "center center" to "bottom bottom"
+
+  if (sectionTop <= 0 && sectionBottom >= 0) {
+    // Section is visible - calculate overall progress
+    const scrolledDistance = Math.abs(sectionTop);
+    const overallProgress = Math.min(1, scrolledDistance / sectionHeight);
+
+    console.log(`📜 Intro progress: ${(overallProgress * 100).toFixed(1)}%`);
+
+    // HEADER: Animate from 0% to 50% (top top -> center center)
+    if (overallProgress <= 0.5) {
+      const headerProgress = overallProgress / 0.5; // Map 0-0.5 to 0-1
+      console.log(`📜 Header progress: ${(headerProgress * 100).toFixed(1)}%`);
+      animateIntroHeaderDirect(headerProgress);
+      animateIntroBodyDirect(0); // Body stays hidden
+    } else {
+      // BODY: Animate from 50% to 100% (center center -> bottom bottom)
+      const bodyProgress = (overallProgress - 0.5) / 0.5; // Map 0.5-1 to 0-1
+      console.log(`📜 Body progress: ${(bodyProgress * 100).toFixed(1)}%`);
+      animateIntroHeaderDirect(1); // Header finished
+      animateIntroBodyDirect(bodyProgress);
+    }
+  } else {
+    // Section not visible - reset elements
+    console.log("📜 Intro section not visible - resetting");
+    animateIntroHeaderDirect(0);
+    animateIntroBodyDirect(0);
   }
 }
 
 function animateIntroHeaderDirect(directProgress: number) {
   const introHeader = document.querySelector(".sc_h--intro") as HTMLElement;
-  if (!introHeader) return;
-
-  // Make visible
-  introHeader.style.display = "block";
+  if (!introHeader) {
+    console.warn("⚠️ .sc_h--intro element not found");
+    return;
+  }
 
   // Header animation: directProgress goes from 0-1 for the full header animation
   let scale = 0;
   let opacity = 0;
 
-  if (directProgress < 1) {
+  if (directProgress > 0 && directProgress < 1) {
     if (directProgress <= 0.3) {
       // 0% - 30%: scale 0->0.8, opacity 0->1
       const keyframeProgress = directProgress / 0.3;
@@ -697,25 +737,31 @@ function animateIntroHeaderDirect(directProgress: number) {
       scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
       opacity = 1 - keyframeProgress; // 1 -> 0
     }
-  } else {
+  } else if (directProgress >= 1) {
     // Header finished
     scale = 1.5;
+    opacity = 0;
+  } else {
+    // Header not started
+    scale = 0;
     opacity = 0;
   }
 
   introHeader.style.transform = `scale(${scale})`;
   introHeader.style.opacity = opacity.toString();
+
+  // DEBUG
+  console.log(
+    `🎬 Header: progress=${directProgress.toFixed(3)}, scale=${scale.toFixed(
+      3
+    )}, opacity=${opacity.toFixed(3)}`
+  );
 }
 
 function animateIntroBodyDirect(directProgress: number) {
   const introBody = document.querySelector(".sc_b--intro") as HTMLElement;
-  if (!introBody) return;
-
-  // Make visible if progress > 0
-  if (directProgress > 0) {
-    introBody.style.display = "block";
-  } else {
-    introBody.style.display = "none";
+  if (!introBody) {
+    console.warn("⚠️ .sc_b--intro element not found");
     return;
   }
 
@@ -723,7 +769,7 @@ function animateIntroBodyDirect(directProgress: number) {
   let scale = 0.5;
   let opacity = 0;
 
-  if (directProgress > 0) {
+  if (directProgress > 0 && directProgress < 1) {
     if (directProgress <= 0.3) {
       // 0% - 30%: scale 0.5->0.8, opacity 0->1
       const keyframeProgress = directProgress / 0.3;
@@ -740,6 +786,10 @@ function animateIntroBodyDirect(directProgress: number) {
       scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
       opacity = 1 - keyframeProgress; // 1 -> 0
     }
+  } else if (directProgress >= 1) {
+    // Body finished
+    scale = 1.5;
+    opacity = 0;
   } else {
     // Body not started yet
     scale = 0.5;
@@ -748,13 +798,18 @@ function animateIntroBodyDirect(directProgress: number) {
 
   introBody.style.transform = `scale(${scale})`;
   introBody.style.opacity = opacity.toString();
+
+  // DEBUG
+  console.log(
+    `🎬 Body: progress=${directProgress.toFixed(3)}, scale=${scale.toFixed(
+      3
+    )}, opacity=${opacity.toFixed(3)}`
+  );
 }
 
 // GSAP-based intro animations (exact backup.js timing)
 async function setupGSAPIntroAnimations() {
   try {
-    console.log("🎬 Attempting to load GSAP for intro animations...");
-
     // Dynamic import GSAP with validation
     const gsapModule = await import("gsap");
     const scrollTriggerModule = await import("gsap/ScrollTrigger");
@@ -768,10 +823,6 @@ async function setupGSAPIntroAnimations() {
     }
 
     gsap.registerPlugin(ScrollTrigger);
-
-    console.log(
-      "🎬 Setting up GSAP intro animations with exact backup.js timing"
-    );
 
     // EXACT backup.js setupIntroHeader() timing
     gsap.fromTo(
@@ -827,30 +878,12 @@ async function setupGSAPIntroAnimations() {
 }
 
 export function setupScrollTriggers() {
-  // Setup intro animations
+  // Setup intro animations (set initial states correctly)
   setupIntroAnimations();
 
-  // IMMEDIATE fallback first, then try GSAP
-  let gsapFailed = false;
-
-  // Set up manual fallback immediately
-  window.addEventListener("scroll", handleIntroScroll);
-  console.log("📜 Manual intro scroll fallback active");
-
-  // Try GSAP intro animations (exact backup.js timing) - if successful, remove manual
-  setupGSAPIntroAnimations()
-    .then(() => {
-      // GSAP worked - remove manual fallback
-      window.removeEventListener("scroll", handleIntroScroll);
-      console.log("✅ GSAP intro animations active - manual fallback removed");
-    })
-    .catch((error) => {
-      console.warn(
-        "GSAP intro animations failed, keeping manual fallback:",
-        error
-      );
-      gsapFailed = true;
-    });
+  // TEMPORARY: Use only manual system to debug and fix timing
+  console.log("📜 Using manual intro scroll system for debugging");
+  window.addEventListener("scroll", handleIntroScrollFixed);
 
   // Setup scroll event listeners for home section
   window.addEventListener("scroll", handleScroll);
