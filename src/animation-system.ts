@@ -727,22 +727,26 @@ function animateIntroHeaderDirect(directProgress: number) {
     opacity = 0;
   }
 
-  // FIXED POSITIONING: Keep text centered during animation
+  // FIXED POSITIONING: Keep text centered during animation (FORCE with !important)
   if (directProgress > 0 && directProgress < 1) {
-    // Animation running - fix to center of screen with scale
-    introHeader.style.position = "fixed";
-    introHeader.style.top = "50%";
-    introHeader.style.left = "50%";
-    introHeader.style.transform = `translate(-50%, -50%) scale(${scale})`;
-    introHeader.style.zIndex = "1000";
+    // Animation running - fix to center of screen with scale (OVERRIDE CSS)
+    introHeader.style.setProperty("position", "fixed", "important");
+    introHeader.style.setProperty("top", "50%", "important");
+    introHeader.style.setProperty("left", "50%", "important");
+    introHeader.style.setProperty(
+      "transform",
+      `translate(-50%, -50%) scale(${scale})`,
+      "important"
+    );
+    introHeader.style.setProperty("z-index", "1000", "important");
     introHeader.style.opacity = opacity.toString();
   } else {
     // Animation not running - reset positioning and use regular transform
-    introHeader.style.position = "";
-    introHeader.style.top = "";
-    introHeader.style.left = "";
-    introHeader.style.transform = `scale(${scale})`;
-    introHeader.style.zIndex = "";
+    introHeader.style.removeProperty("position");
+    introHeader.style.removeProperty("top");
+    introHeader.style.removeProperty("left");
+    introHeader.style.removeProperty("z-index");
+    introHeader.style.setProperty("transform", `scale(${scale})`, "important");
     introHeader.style.opacity = opacity.toString();
   }
 }
@@ -784,22 +788,26 @@ function animateIntroBodyDirect(directProgress: number) {
     opacity = 0;
   }
 
-  // FIXED POSITIONING: Keep text centered during animation
+  // FIXED POSITIONING: Keep text centered during animation (FORCE with !important)
   if (directProgress > 0 && directProgress < 1) {
-    // Animation running - fix to center of screen with scale
-    introBody.style.position = "fixed";
-    introBody.style.top = "50%";
-    introBody.style.left = "50%";
-    introBody.style.transform = `translate(-50%, -50%) scale(${scale})`;
-    introBody.style.zIndex = "1000";
+    // Animation running - fix to center of screen with scale (OVERRIDE CSS)
+    introBody.style.setProperty("position", "fixed", "important");
+    introBody.style.setProperty("top", "50%", "important");
+    introBody.style.setProperty("left", "50%", "important");
+    introBody.style.setProperty(
+      "transform",
+      `translate(-50%, -50%) scale(${scale})`,
+      "important"
+    );
+    introBody.style.setProperty("z-index", "1000", "important");
     introBody.style.opacity = opacity.toString();
   } else {
     // Animation not running - reset positioning and use regular transform
-    introBody.style.position = "";
-    introBody.style.top = "";
-    introBody.style.left = "";
-    introBody.style.transform = `scale(${scale})`;
-    introBody.style.zIndex = "";
+    introBody.style.removeProperty("position");
+    introBody.style.removeProperty("top");
+    introBody.style.removeProperty("left");
+    introBody.style.removeProperty("z-index");
+    introBody.style.setProperty("transform", `scale(${scale})`, "important");
     introBody.style.opacity = opacity.toString();
   }
 }
