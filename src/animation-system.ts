@@ -594,10 +594,10 @@ function setupIntroAnimations() {
   // Setup intro body animation (.sc_b--intro) - CORRECTED initial states
   const introBody = document.querySelector(".sc_b--intro");
   if (introBody) {
-    // Set initial state - VISIBLE but transparent
+    // Set initial state - transparent but no display manipulation
     (introBody as HTMLElement).style.transform = "scale(0.5)";
     (introBody as HTMLElement).style.opacity = "0";
-    (introBody as HTMLElement).style.display = "block"; // VISIBLE for animations
+    // Removed display: block - let CSS handle positioning
   }
 }
 
@@ -789,7 +789,17 @@ async function setupGSAPIntroAnimations() {
 
     gsap.registerPlugin(ScrollTrigger);
 
-    // EXACT backup.js setupIntroHeader() timing
+    // SMOOTH GSAP settings to prevent flickering
+    gsap.config({
+      force3D: true, // Hardware acceleration
+      nullTargetWarn: false,
+    });
+
+    console.log(
+      "🎬 Setting up GSAP intro animations with exact backup.js timing"
+    );
+
+    // EXACT backup.js setupIntroHeader() timing - SMOOTH VERSION
     gsap.fromTo(
       ".sc_h--intro",
       { scale: 0, opacity: 0 },
@@ -799,8 +809,9 @@ async function setupGSAPIntroAnimations() {
         scrollTrigger: {
           trigger: ".sc--intro",
           start: "top top", // Starts immediately when intro section enters
-          end: "center center", // Ends when intro section center hits viewport center
-          scrub: 0.5,
+          end: "+=50vh", // EXTENDED: 50vh after trigger start for longer sticky behavior
+          scrub: true, // TRUE for smoothest possible scrubbing (no lag)
+          refreshPriority: 1, // High priority for smooth updates
         },
         ease: "none",
         keyframes: [
@@ -816,9 +827,10 @@ async function setupGSAPIntroAnimations() {
       .timeline({
         scrollTrigger: {
           trigger: ".sc--intro",
-          start: "center center", // Starts when intro section center hits viewport center
-          end: "bottom bottom", // Ends when intro section bottom hits viewport bottom
-          scrub: 0.5,
+          start: "+=50vh", // EXTENDED: Starts 50vh after section start (after header finishes)
+          end: "+=100vh", // EXTENDED: Continues for 100vh for longer sticky behavior
+          scrub: true, // TRUE for smoothest possible scrubbing (no lag)
+          refreshPriority: 1, // High priority for smooth updates
         },
       })
       .fromTo(
