@@ -1914,13 +1914,17 @@ function updatePOVTexts(progress: number) {
           )
         );
 
-        // Full opacity until 80%, then fade out to 0 at 100%
-        if (ghostTextProgress >= 0 && ghostTextProgress <= 0.8) {
-          targetGhostOpacity = 1.0; // Full opacity for first 80%
+        // 3-Phase Animation: Fade In → Full Visibility → Fade Out
+        if (ghostTextProgress >= 0 && ghostTextProgress <= 0.1) {
+          // Phase 1: Fade in from 0% to 10%
+          targetGhostOpacity = ghostTextProgress / 0.1; // 0 to 1
+        } else if (ghostTextProgress > 0.1 && ghostTextProgress <= 0.8) {
+          // Phase 2: Full opacity from 10% to 80%
+          targetGhostOpacity = 1.0;
         } else if (ghostTextProgress > 0.8 && ghostTextProgress <= 1.0) {
-          // Fade out from 80% to 100%
-          const fadeOutProgress = (ghostTextProgress - 0.8) / 0.2; // 0 to 1 over last 20%
-          targetGhostOpacity = 1.0 - fadeOutProgress;
+          // Phase 3: Fade out from 80% to 100%
+          const fadeOutProgress = (ghostTextProgress - 0.8) / 0.2; // 0 to 1
+          targetGhostOpacity = 1.0 - fadeOutProgress; // 1 to 0
         } else {
           targetGhostOpacity = 0;
         }
@@ -1938,13 +1942,17 @@ function updatePOVTexts(progress: number) {
             )
           );
 
-          // Full opacity until 80%, then fade out to 0 at 100%
-          if (camTextProgress >= 0 && camTextProgress <= 0.8) {
-            targetCamOpacity = 1.0; // Full opacity for first 80%
+          // 3-Phase Animation: Fade In → Full Visibility → Fade Out
+          if (camTextProgress >= 0 && camTextProgress <= 0.1) {
+            // Phase 1: Fade in from 0% to 10%
+            targetCamOpacity = camTextProgress / 0.1; // 0 to 1
+          } else if (camTextProgress > 0.1 && camTextProgress <= 0.8) {
+            // Phase 2: Full opacity from 10% to 80%
+            targetCamOpacity = 1.0;
           } else if (camTextProgress > 0.8 && camTextProgress <= 1.0) {
-            // Fade out from 80% to 100%
-            const fadeOutProgress = (camTextProgress - 0.8) / 0.2; // 0 to 1 over last 20%
-            targetCamOpacity = 1.0 - fadeOutProgress;
+            // Phase 3: Fade out from 80% to 100%
+            const fadeOutProgress = (camTextProgress - 0.8) / 0.2; // 0 to 1
+            targetCamOpacity = 1.0 - fadeOutProgress; // 1 to 0
           } else {
             targetCamOpacity = 0;
           }
