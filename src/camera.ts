@@ -16,14 +16,8 @@ export const camera = new THREE.PerspectiveCamera(
 
 // Initialize Camera
 export function initCamera(): void {
-  console.log("Camera start position:", startPosition);
-  console.log("Camera look at position:", lookAtPosition);
-
   camera.position.copy(startPosition);
   camera.lookAt(lookAtPosition);
-
-  console.log("Camera initialized at position:", camera.position);
-  console.log("Camera looking at:", lookAtPosition);
 }
 
 // Camera Quaternions

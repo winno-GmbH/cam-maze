@@ -464,15 +464,6 @@ function handleIntroScroll() {
     // "center center" = when section center aligns with viewport center
     const centerProgress = 0.5; // This happens halfway through the section
 
-    // DEBUG: Intro scroll timing
-    console.log(
-      `🎬 INTRO DEBUG: top=${sectionTop.toFixed(
-        1
-      )}, height=${sectionHeight.toFixed(1)}, progress=${progress.toFixed(
-        3
-      )}, centerReached=${progress >= centerProgress}`
-    );
-
     // Header: "top top" to "center center" (0% to 50%)
     if (progress <= centerProgress) {
       const headerProgress = progress / centerProgress; // 0-0.5 maps to 0-1
@@ -485,13 +476,6 @@ function handleIntroScroll() {
       animateIntroBodyDirect(bodyProgress);
     }
   } else {
-    // Section is completely out of view - hide elements
-    console.log(
-      `🎬 INTRO HIDDEN: top=${sectionTop.toFixed(
-        1
-      )}, bottom=${sectionBottom.toFixed(1)} - section out of view`
-    );
-
     const introHeader = document.querySelector(".sc_h--intro") as HTMLElement;
     const introBody = document.querySelector(".sc_b--intro") as HTMLElement;
 
@@ -532,19 +516,10 @@ function animateIntroHeaderDirect(directProgress: number) {
       scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
       opacity = 1 - keyframeProgress; // 1 -> 0
     }
-
-    console.log(
-      `🎬 HEADER: directProgress=${directProgress.toFixed(
-        3
-      )}, scale=${scale.toFixed(2)}, opacity=${opacity.toFixed(2)}`
-    );
   } else {
     // Header finished
     scale = 1.5;
     opacity = 0;
-    console.log(
-      `🎬 HEADER FINISHED: directProgress=${directProgress.toFixed(3)}`
-    );
   }
 
   introHeader.style.transform = `scale(${scale})`;
@@ -584,17 +559,10 @@ function animateIntroBodyDirect(directProgress: number) {
       scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
       opacity = 1 - keyframeProgress; // 1 -> 0
     }
-
-    console.log(
-      `🎬 BODY: directProgress=${directProgress.toFixed(
-        3
-      )}, scale=${scale.toFixed(2)}, opacity=${opacity.toFixed(2)}`
-    );
   } else {
     // Body not started yet
     scale = 0.5;
     opacity = 0;
-    console.log(`🎬 BODY WAITING: directProgress=${directProgress.toFixed(3)}`);
   }
 
   introBody.style.transform = `scale(${scale})`;
@@ -1108,15 +1076,6 @@ function applyMomentumScrubbing(targetProgress: number): number {
   povAnimationState.lastTime = currentTime;
 
   const lag = targetProgress - povAnimationState.smoothedProgress;
-  console.log(
-    `🚀 MOMENTUM SCRUB: target=${targetProgress.toFixed(
-      3
-    )}, smooth=${povAnimationState.smoothedProgress.toFixed(
-      3
-    )}, velocity=${povAnimationState.velocity.toFixed(3)}, lag=${lag.toFixed(
-      3
-    )}`
-  );
 
   return povAnimationState.smoothedProgress;
 }
@@ -1289,18 +1248,6 @@ function updatePOVGhosts(progress: number) {
 
   const cameraPosition = povAnimationState.cameraPOVPath.getPointAt(progress);
 
-  console.log(
-    `🎭 POV Ghost Update - Progress: ${progress.toFixed(
-      3
-    )}, Camera: ${cameraPosition.x.toFixed(2)}, ${cameraPosition.y.toFixed(
-      2
-    )}, ${cameraPosition.z.toFixed(2)}`
-  );
-  console.log(
-    `🎭 Available ghost paths:`,
-    Object.keys(povAnimationState.ghostPOVPaths)
-  );
-
   // Update each ghost using enhanced logic
   Object.entries(ghosts).forEach(([ghostKey, ghost]) => {
     if (ghostKey === "pacman") {
@@ -1311,14 +1258,7 @@ function updatePOVGhosts(progress: number) {
 
     // Use the ghost key directly since that's how paths are stored
     if (povAnimationState.ghostPOVPaths[ghostKey]) {
-      console.log(
-        `🎭 Updating ghost ${ghostKey} with sophisticated trigger system`
-      );
-
-      // Use the sophisticated trigger system from backup.js
       updateGhostInPOV(ghostKey, ghost, ghostKey, cameraPosition);
-    } else {
-      console.log(`🎭 No POV path found for ghost: ${ghostKey}`);
     }
   });
 }
@@ -1512,14 +1452,11 @@ function onPOVAnimationEnd() {
   // CRITICAL: Properly restore pacman and home animation state
   if (ghosts.pacman) {
     ghosts.pacman.visible = true;
-    console.log("🎭 Pacman restored to visible after POV");
   }
 
   // If we're at scroll position 0, switch back to HOME state and restart home animation
   if (window.scrollY === 0) {
     currentAnimationState = "HOME";
-    // Reset animation timing to continue home animation properly
-    console.log("🎭 Restored to HOME state after POV (at top of page)");
   }
 
   // Update debug info
@@ -1565,10 +1502,6 @@ function restoreGhostsToHomePositions() {
           // Handle the case where ghost.material exists but isn't typed
           (ghost as any).material.opacity = 1;
         }
-
-        console.log(
-          `🎭 Restored ${ghostKey} to home position, visible: ${ghost.visible}`
-        );
       }
     }
   );
@@ -1627,7 +1560,6 @@ function handlePOVScroll() {
   } else {
     // Section is out of view (beyond buffer zone) - end POV animation
     if (povAnimationState.isActive) {
-      console.log("🎭 POV Animation Ended (Scroll)");
       povAnimationState.isActive = false;
       onPOVAnimationEnd();
     }
@@ -1658,7 +1590,6 @@ function updateCameraFOV() {
   if (camera.fov !== targetFOV) {
     camera.fov = targetFOV;
     camera.updateProjectionMatrix();
-    console.log(`🎯 FOV changed instantly to: ${targetFOV}`);
   }
 }
 
@@ -1684,15 +1615,6 @@ function updateGhostInPOV(
 
     const ghostText = parent as HTMLElement; // In backup.js, parent IS the ghost text
     const camText = parent?.querySelector(".cmp--pov-cam") as HTMLElement;
-
-    // Only log once per ghost to avoid spam
-    if (trigger.hasBeenTriggered === undefined) {
-      console.log(
-        `🎭 ${ghostKey} - Parent: ${parent ? "found" : "null"}, GhostText: ${
-          ghostText ? "found" : "null"
-        }, CamText: ${camText ? "found" : "null"}`
-      );
-    }
 
     ghost.scale.set(0.5, 0.5, 0.5);
 
@@ -1768,13 +1690,6 @@ function updateGhostInPOV(
       let ghostProgress = Math.max(0, Math.min(1, normalizedProgress));
 
       // SIMPLE: Use ghost progress directly (already globally smoothed)
-      console.log(`🔍 ${ghostKey} SIMPLE GHOST:
-        - normalizedProgress: ${normalizedProgress.toFixed(3)}
-        - ghostProgress: ${ghostProgress.toFixed(3)}
-        - fadeCheck: ${ghostProgress > 0.9}
-        - cameraRange: ${triggerProgress.toFixed(3)} to ${endProgress.toFixed(
-        3
-      )}`);
 
       // Update ghost position
       const pathPoint = path.getPointAt(ghostProgress);
@@ -1789,11 +1704,6 @@ function updateGhostInPOV(
       if (ghostProgress > 0.9) {
         const fadeOpacity = 1 - (ghostProgress - 0.9) / 0.1;
         (ghost as any).material.opacity = Math.max(0, Math.min(1, fadeOpacity));
-        console.log(
-          `🎭 ${ghostKey} FADING: progress=${ghostProgress.toFixed(
-            3
-          )}, opacity=${fadeOpacity.toFixed(3)}`
-        );
       } else {
         (ghost as any).material.opacity = 1;
       }
@@ -1804,23 +1714,9 @@ function updateGhostInPOV(
       } else if (typeof (ghost as any).material.opacity === "undefined") {
         console.error(`❌ ${ghostKey} MATERIAL HAS NO OPACITY PROPERTY!`);
       }
-
-      console.log(
-        `🎭 ${ghostKey} visible in range: ghostProgress=${ghostProgress.toFixed(
-          3
-        )}, cameraProgress=${currentCameraProgress.toFixed(3)}, visible=${
-          ghost.visible
-        }`
-      );
     } else {
       // EXACT backup.js logic: Ghost invisible when outside range
-      console.log(
-        `🎭 ${ghostKey} OUT OF RANGE: cameraProgress=${currentCameraProgress.toFixed(
-          3
-        )}, triggerRange=${triggerProgress?.toFixed(3)}-${endProgress?.toFixed(
-          3
-        )}`
-      );
+
       ghost.visible = false;
       trigger.hasBeenTriggered = false;
     }
@@ -1916,13 +1812,6 @@ function updateGhostInPOV(
 
     // Debug text opacity calculations
     if (ghostTextOpacity > 0 || camTextOpacity > 0) {
-      console.log(
-        `🎭 ${ghostKey} Text Opacities - Ghost: ${ghostTextOpacity.toFixed(
-          3
-        )}, Cam: ${camTextOpacity.toFixed(
-          3
-        )}, CameraProgress: ${currentCameraProgress.toFixed(3)}`
-      );
     }
 
     // Update DOM only when necessary
@@ -1932,9 +1821,6 @@ function updateGhostInPOV(
           ghostText.classList.remove("hidden");
         }
         ghostText.style.opacity = ghostTextOpacity.toString();
-        console.log(
-          `🎭 ${ghostKey} Ghost text visible: opacity = ${ghostTextOpacity}`
-        );
       } else if (
         ghostTextOpacity <= 0.01 &&
         !ghostText.classList.contains("hidden")
@@ -1950,9 +1836,6 @@ function updateGhostInPOV(
           camText.classList.remove("hidden");
         }
         camText.style.opacity = camTextOpacity.toString();
-        console.log(
-          `🎭 ${ghostKey} Cam text visible: opacity = ${camTextOpacity}`
-        );
       } else if (
         camTextOpacity <= 0.01 &&
         !camText.classList.contains("hidden")

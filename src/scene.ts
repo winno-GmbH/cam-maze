@@ -54,8 +54,6 @@ export function initRenderer(): void {
     document.body.appendChild(renderer.domElement);
   }
 
-  console.log("Renderer initialized");
-
   // ADD these event listeners to match backup.js:
   window.addEventListener("load", setPixelRatio);
   window.addEventListener("resize", setPixelRatio);
@@ -80,8 +78,6 @@ export function setupLighting(): void {
   directionalLight.shadow.bias = -0.001;
   directionalLight.shadow.radius = 3;
   directionalLight.castShadow = true;
-
-  console.log("Lighting setup complete");
 }
 
 // Canvas and DOM Elements

@@ -48,12 +48,9 @@ Object.values(ghosts).forEach((ghost) => scene.add(ghost));
 // Model Loading Function
 export async function loadModel(): Promise<void> {
   return new Promise((resolve, reject) => {
-    console.log("Loading model from:", ASSETS.mazeModel);
-
     loader.load(
       ASSETS.mazeModel,
       function (gltf) {
-        console.log("GLTF model loaded successfully");
         const model = gltf.scene;
 
         model.traverse((child: THREE.Object3D) => {
@@ -138,11 +135,9 @@ export async function loadModel(): Promise<void> {
 
           if ((child as any).isMesh) {
             if (child.name === "CAM-Arena_LowRes_Top") {
-              console.log("Found maze top mesh:", child.name);
               (child as THREE.Mesh).material = topMaterial;
               child.castShadow = true;
             } else if (child.name === "CAM-Arena_LowRes_Bottom") {
-              console.log("Found maze bottom mesh:", child.name);
               (child as THREE.Mesh).material = mazeMaterial;
               child.castShadow = true;
             } else if (child.name === "CAM-Floor") {
@@ -182,18 +177,12 @@ export async function loadModel(): Promise<void> {
         scene.add(model);
         model.position.set(0.5, 0.5, 0.5);
 
-        console.log(
-          "Model added to scene with",
-          scene.children.length,
-          "total children"
-        );
         resolve();
       },
       function (progress) {
-        console.log("Loading progress:", progress);
+        console.log("Loading progress:", progress); // TODO: Remove this
       },
       function (error) {
-        console.error("Error loading 3D model:", error);
         reject(error);
       }
     );
