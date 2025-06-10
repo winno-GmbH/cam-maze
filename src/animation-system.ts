@@ -1956,11 +1956,17 @@ function updatePOVTexts(progress: number) {
         }
       }
 
-      // Smooth opacity transitions - Faster for quicker response
-      const fadeInSpeed = 0.35; // Faster fade in (was 0.2)
-      const fadeOutSpeed = 0.25; // Faster fade out (was 0.1)
+      // Smooth opacity transitions - Much faster for quicker response
+      const fadeInSpeed = 0.8; // Much faster fade in
+      const fadeOutSpeed = 0.6; // Much faster fade out
+      const snapThreshold = 0.05; // Snap to target if close enough
 
-      if (targetGhostOpacity > trigger.ghostTextOpacity) {
+      // Ghost text opacity with snap-to-target
+      if (
+        Math.abs(targetGhostOpacity - trigger.ghostTextOpacity) < snapThreshold
+      ) {
+        trigger.ghostTextOpacity = targetGhostOpacity; // Snap to exact target
+      } else if (targetGhostOpacity > trigger.ghostTextOpacity) {
         trigger.ghostTextOpacity +=
           (targetGhostOpacity - trigger.ghostTextOpacity) * fadeInSpeed;
       } else {
@@ -1968,7 +1974,10 @@ function updatePOVTexts(progress: number) {
           (targetGhostOpacity - trigger.ghostTextOpacity) * fadeOutSpeed;
       }
 
-      if (targetCamOpacity > trigger.camTextOpacity) {
+      // Cam text opacity with snap-to-target
+      if (Math.abs(targetCamOpacity - trigger.camTextOpacity) < snapThreshold) {
+        trigger.camTextOpacity = targetCamOpacity; // Snap to exact target
+      } else if (targetCamOpacity > trigger.camTextOpacity) {
         trigger.camTextOpacity +=
           (targetCamOpacity - trigger.camTextOpacity) * fadeInSpeed;
       } else {
