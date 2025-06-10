@@ -1078,7 +1078,7 @@ const povAnimationState: POVAnimationState = {
   previousCameraPosition: null,
   startRotationPoint: new THREE.Vector3(0.55675, 0.55, 1.306),
   endRotationPoint: new THREE.Vector3(-0.14675, 1, 1.8085),
-  targetLookAt: new THREE.Vector3(0.55675, 0.6, 1.306),
+  targetLookAt: new THREE.Vector3(0.55675, 5.0, 1.306), // Look straight up
   finalLookAt: new THREE.Vector3(-0.14675, 0, 1.8085),
   rotationStarted: false,
   cachedStartYAngle: null,
@@ -1229,6 +1229,22 @@ function onPOVAnimationStart() {
   // Reset smooth camera rotation state
   previousCameraRotation = null;
 
+  // CRITICAL: Set camera to look straight up at POV start
+  if (povAnimationState.cameraPOVPath && camera) {
+    const startPosition = povAnimationState.cameraPOVPath.getPointAt(0);
+    camera.position.copy(startPosition);
+
+    // Create look-at point straight up from start position
+    const straightUpLookAt = new THREE.Vector3(
+      startPosition.x,
+      startPosition.y + 10.0, // Look straight up (high Y value)
+      startPosition.z
+    );
+    camera.lookAt(straightUpLookAt);
+
+    console.log("📹 POV Start: Camera set to look straight up");
+  }
+
   // Make sure pacman is visible
   if (ghosts.pacman) {
     ghosts.pacman.visible = true;
@@ -1341,9 +1357,24 @@ function updatePOVCamera(progress: number) {
   }
 
   if (progress < rotationStartingPoint) {
-    // Before rotation phase - smooth camera rotation
-    const smoothedTangent = getSmoothCameraTangent(progress);
-    const lookAtPoint = camera.position.clone().add(smoothedTangent);
+    // Before rotation phase - look straight up with slight forward tilt as we progress
+
+    // At start (progress 0): Look straight up
+    // Near rotation start (progress ~0.97): Look more forward
+    const straightUpFactor = 1.0 - progress / rotationStartingPoint;
+
+    const forwardTangent = getSmoothCameraTangent(progress);
+    const straightUpVector = new THREE.Vector3(0, 1, 0); // Straight up
+
+    // Interpolate between straight up and forward tangent
+    const lookAtDirection = new THREE.Vector3()
+      .addVectors(
+        straightUpVector.multiplyScalar(straightUpFactor),
+        forwardTangent.multiplyScalar(1.0 - straightUpFactor)
+      )
+      .normalize();
+
+    const lookAtPoint = camera.position.clone().add(lookAtDirection);
 
     // Apply smooth rotation
     applySmoothCameraRotation(lookAtPoint);
