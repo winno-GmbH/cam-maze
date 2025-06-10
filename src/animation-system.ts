@@ -706,6 +706,10 @@ function handleIntroScrollFixed() {
   }
 }
 
+// State tracking to prevent conflicts
+let isHeaderAnimating = false;
+let isBodyAnimating = false;
+
 function animateIntroHeaderDirect(directProgress: number) {
   const introHeader = document.querySelector(".sc_h--intro") as HTMLElement;
   if (!introHeader) {
@@ -743,22 +747,32 @@ function animateIntroHeaderDirect(directProgress: number) {
     opacity = 0;
   }
 
-  // ROBUST FIXED POSITIONING: Use CSS class + transform
-  if (directProgress > 0 && directProgress < 1) {
-    // Animation running - add fixed class and center with transform
+  // ROBUST STATE-TRACKED POSITIONING
+  const shouldBeFixed = directProgress > 0 && directProgress < 1;
+
+  if (shouldBeFixed && !isHeaderAnimating) {
+    // Start animation - add fixed class once
+    isHeaderAnimating = true;
     introHeader.classList.add("intro-text-fixed");
+    console.log("🎬 Header: Fixed positioning ON");
+  } else if (!shouldBeFixed && isHeaderAnimating) {
+    // End animation - remove fixed class once
+    isHeaderAnimating = false;
+    introHeader.classList.remove("intro-text-fixed");
+    console.log("🎬 Header: Fixed positioning OFF");
+  }
+
+  // Always update transform and opacity based on current state
+  if (isHeaderAnimating) {
     introHeader.style.setProperty(
       "transform",
       `translate(-50%, -50%) scale(${scale})`,
       "important"
     );
-    introHeader.style.opacity = opacity.toString();
   } else {
-    // Animation not running - remove fixed class and use regular transform
-    introHeader.classList.remove("intro-text-fixed");
     introHeader.style.setProperty("transform", `scale(${scale})`, "important");
-    introHeader.style.opacity = opacity.toString();
   }
+  introHeader.style.opacity = opacity.toString();
 }
 
 function animateIntroBodyDirect(directProgress: number) {
@@ -798,22 +812,32 @@ function animateIntroBodyDirect(directProgress: number) {
     opacity = 0;
   }
 
-  // ROBUST FIXED POSITIONING: Use CSS class + transform
-  if (directProgress > 0 && directProgress < 1) {
-    // Animation running - add fixed class and center with transform
+  // ROBUST STATE-TRACKED POSITIONING
+  const shouldBeFixed = directProgress > 0 && directProgress < 1;
+
+  if (shouldBeFixed && !isBodyAnimating) {
+    // Start animation - add fixed class once
+    isBodyAnimating = true;
     introBody.classList.add("intro-text-fixed");
+    console.log("🎬 Body: Fixed positioning ON");
+  } else if (!shouldBeFixed && isBodyAnimating) {
+    // End animation - remove fixed class once
+    isBodyAnimating = false;
+    introBody.classList.remove("intro-text-fixed");
+    console.log("🎬 Body: Fixed positioning OFF");
+  }
+
+  // Always update transform and opacity based on current state
+  if (isBodyAnimating) {
     introBody.style.setProperty(
       "transform",
       `translate(-50%, -50%) scale(${scale})`,
       "important"
     );
-    introBody.style.opacity = opacity.toString();
   } else {
-    // Animation not running - remove fixed class and use regular transform
-    introBody.classList.remove("intro-text-fixed");
     introBody.style.setProperty("transform", `scale(${scale})`, "important");
-    introBody.style.opacity = opacity.toString();
   }
+  introBody.style.opacity = opacity.toString();
 }
 
 // GSAP-based intro animations (exact backup.js timing)
@@ -937,79 +961,78 @@ export function setupScrollTriggers() {
   // TRY GSAP FIRST, fallback to manual on failure
   console.log("🎬 Attempting to setup GSAP intro animations...");
 
-  setupGSAPIntroAnimations()
-    .then(() => {
-      console.log("✅ GSAP intro animations successfully activated!");
-      // GSAP is now handling intro animations via ScrollTrigger
-    })
-    .catch((error) => {
-      console.warn("❌ GSAP failed, setting up manual fallback:", error);
+  // DISABLE GSAP FOR NOW - Use reliable manual system only
+  console.log("🔧 Using manual intro animations for maximum reliability");
 
-      // FALLBACK: Manual scroll handler
-      let scrollCount = 0;
-      window.addEventListener("scroll", () => {
-        scrollCount++;
-        if (scrollCount % 10 === 0) {
-          // Only log every 10th scroll to avoid spam
-          console.log(`📜 SCROLL #${scrollCount} - Y: ${window.scrollY}`);
-        }
+  // MANUAL SYSTEM ONLY: Skip GSAP, go straight to manual fallback
+  {
+    console.log("🎬 Setting up reliable manual intro animations");
 
-        // Test if we can find intro elements
-        const intro = document.querySelector(".sc--intro");
-        const header = document.querySelector(".sc_h--intro");
-        const body = document.querySelector(".sc_b--intro");
+    // Manual scroll handler
+    let scrollCount = 0;
+    window.addEventListener("scroll", () => {
+      scrollCount++;
+      if (scrollCount % 10 === 0) {
+        // Only log every 10th scroll to avoid spam
+        console.log(`📜 SCROLL #${scrollCount} - Y: ${window.scrollY}`);
+      }
 
-        if (scrollCount === 1) {
-          // Log once on first scroll
-          console.log("🔍 Elements found:", {
-            intro: !!intro,
-            header: !!header,
-            body: !!body,
-          });
-        }
+      // Test if we can find intro elements
+      const intro = document.querySelector(".sc--intro");
+      const header = document.querySelector(".sc_h--intro");
+      const body = document.querySelector(".sc_b--intro");
 
-        // WORKING INTRO ANIMATION: Use the exact backup.js timing
-        if (intro && header && body) {
-          const rect = intro.getBoundingClientRect();
+      if (scrollCount === 1) {
+        // Log once on first scroll
+        console.log("🔍 Elements found:", {
+          intro: !!intro,
+          header: !!header,
+          body: !!body,
+        });
+      }
 
-          if (rect.top <= 0 && rect.bottom >= 0) {
-            // Section is visible - calculate progress
-            const scrolledDistance = Math.abs(rect.top);
-            const overallProgress = Math.min(1, scrolledDistance / rect.height);
+      // WORKING INTRO ANIMATION: Use the exact backup.js timing
+      if (intro && header && body) {
+        const rect = intro.getBoundingClientRect();
 
-            // HEADER: 0% to 50% (backup.js: "top top" to "center center")
-            if (overallProgress <= 0.5) {
-              const headerProgress = overallProgress / 0.5;
-              animateIntroHeaderDirect(headerProgress);
-              animateIntroBodyDirect(0);
-            } else {
-              // BODY: 50% to 100% (backup.js: "center center" to "bottom bottom")
-              const bodyProgress = (overallProgress - 0.5) / 0.5;
-              animateIntroHeaderDirect(1);
-              animateIntroBodyDirect(bodyProgress);
-            }
+        if (rect.top <= 0 && rect.bottom >= 0) {
+          // Section is visible - calculate progress
+          const scrolledDistance = Math.abs(rect.top);
+          const overallProgress = Math.min(1, scrolledDistance / rect.height);
 
-            if (scrollCount % 20 === 0) {
-              console.log(
-                `🎬 Intro: ${(overallProgress * 100).toFixed(0)}% - Header: ${
-                  overallProgress <= 0.5
-                    ? ((overallProgress / 0.5) * 100).toFixed(0)
-                    : 100
-                }% - Body: ${
-                  overallProgress > 0.5
-                    ? (((overallProgress - 0.5) / 0.5) * 100).toFixed(0)
-                    : 0
-                }%`
-              );
-            }
-          } else {
-            // Section not visible - reset
-            animateIntroHeaderDirect(0);
+          // HEADER: 0% to 50% (backup.js: "top top" to "center center")
+          if (overallProgress <= 0.5) {
+            const headerProgress = overallProgress / 0.5;
+            animateIntroHeaderDirect(headerProgress);
             animateIntroBodyDirect(0);
+          } else {
+            // BODY: 50% to 100% (backup.js: "center center" to "bottom bottom")
+            const bodyProgress = (overallProgress - 0.5) / 0.5;
+            animateIntroHeaderDirect(1);
+            animateIntroBodyDirect(bodyProgress);
           }
+
+          if (scrollCount % 20 === 0) {
+            console.log(
+              `🎬 Intro: ${(overallProgress * 100).toFixed(0)}% - Header: ${
+                overallProgress <= 0.5
+                  ? ((overallProgress / 0.5) * 100).toFixed(0)
+                  : 100
+              }% - Body: ${
+                overallProgress > 0.5
+                  ? (((overallProgress - 0.5) / 0.5) * 100).toFixed(0)
+                  : 0
+              }%`
+            );
+          }
+        } else {
+          // Section not visible - reset
+          animateIntroHeaderDirect(0);
+          animateIntroBodyDirect(0);
         }
-      });
-    }); // End of setupGSAPIntroAnimations().catch()
+      }
+    });
+  } // End of manual intro animations block
 
   // Setup scroll event listeners for home section
   window.addEventListener("scroll", handleScroll);
