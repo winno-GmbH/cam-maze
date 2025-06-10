@@ -599,6 +599,22 @@ function setupIntroAnimations() {
     (introBody as HTMLElement).style.opacity = "0";
     // Removed display: block - let CSS handle positioning
   }
+
+  // INJECT CSS FOR FIXED POSITIONING - Override any sticky behavior
+  if (!document.getElementById("intro-fixed-styles")) {
+    const style = document.createElement("style");
+    style.id = "intro-fixed-styles";
+    style.textContent = `
+      .intro-text-fixed {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        z-index: 1000 !important;
+        pointer-events: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
 }
 
 // Handle intro section scroll animations (like backup.js)
@@ -727,25 +743,19 @@ function animateIntroHeaderDirect(directProgress: number) {
     opacity = 0;
   }
 
-  // FIXED POSITIONING: Keep text centered during animation (FORCE with !important)
+  // ROBUST FIXED POSITIONING: Use CSS class + transform
   if (directProgress > 0 && directProgress < 1) {
-    // Animation running - fix to center of screen with scale (OVERRIDE CSS)
-    introHeader.style.setProperty("position", "fixed", "important");
-    introHeader.style.setProperty("top", "50%", "important");
-    introHeader.style.setProperty("left", "50%", "important");
+    // Animation running - add fixed class and center with transform
+    introHeader.classList.add("intro-text-fixed");
     introHeader.style.setProperty(
       "transform",
       `translate(-50%, -50%) scale(${scale})`,
       "important"
     );
-    introHeader.style.setProperty("z-index", "1000", "important");
     introHeader.style.opacity = opacity.toString();
   } else {
-    // Animation not running - reset positioning and use regular transform
-    introHeader.style.removeProperty("position");
-    introHeader.style.removeProperty("top");
-    introHeader.style.removeProperty("left");
-    introHeader.style.removeProperty("z-index");
+    // Animation not running - remove fixed class and use regular transform
+    introHeader.classList.remove("intro-text-fixed");
     introHeader.style.setProperty("transform", `scale(${scale})`, "important");
     introHeader.style.opacity = opacity.toString();
   }
@@ -788,25 +798,19 @@ function animateIntroBodyDirect(directProgress: number) {
     opacity = 0;
   }
 
-  // FIXED POSITIONING: Keep text centered during animation (FORCE with !important)
+  // ROBUST FIXED POSITIONING: Use CSS class + transform
   if (directProgress > 0 && directProgress < 1) {
-    // Animation running - fix to center of screen with scale (OVERRIDE CSS)
-    introBody.style.setProperty("position", "fixed", "important");
-    introBody.style.setProperty("top", "50%", "important");
-    introBody.style.setProperty("left", "50%", "important");
+    // Animation running - add fixed class and center with transform
+    introBody.classList.add("intro-text-fixed");
     introBody.style.setProperty(
       "transform",
       `translate(-50%, -50%) scale(${scale})`,
       "important"
     );
-    introBody.style.setProperty("z-index", "1000", "important");
     introBody.style.opacity = opacity.toString();
   } else {
-    // Animation not running - reset positioning and use regular transform
-    introBody.style.removeProperty("position");
-    introBody.style.removeProperty("top");
-    introBody.style.removeProperty("left");
-    introBody.style.removeProperty("z-index");
+    // Animation not running - remove fixed class and use regular transform
+    introBody.classList.remove("intro-text-fixed");
     introBody.style.setProperty("transform", `scale(${scale})`, "important");
     introBody.style.opacity = opacity.toString();
   }
@@ -846,18 +850,15 @@ async function setupGSAPIntroAnimations() {
       "🎬 Setting up GSAP intro animations with exact backup.js timing"
     );
 
-    // EXACT backup.js setupIntroHeader() timing - FIXED POSITIONING VERSION
+    // EXACT backup.js setupIntroHeader() timing - ROBUST FIXED POSITIONING
     gsap.fromTo(
       ".sc_h--intro",
       {
         scale: 0,
         opacity: 0,
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        xPercent: -50,
-        yPercent: -50,
-        zIndex: 1000,
+        className: "+=intro-text-fixed", // Add CSS class for fixed positioning
+        x: "-50%",
+        y: "-50%",
       },
       {
         scale: 1.5,
@@ -871,14 +872,9 @@ async function setupGSAPIntroAnimations() {
         },
         onComplete: () => {
           // Reset positioning after animation
-          gsap.set(".sc_h--intro", {
-            position: "",
-            top: "",
-            left: "",
-            xPercent: 0,
-            yPercent: 0,
-            zIndex: "",
-          });
+          document
+            .querySelector(".sc_h--intro")
+            ?.classList.remove("intro-text-fixed");
         },
         ease: "none",
         keyframes: [
@@ -905,12 +901,9 @@ async function setupGSAPIntroAnimations() {
         {
           scale: 0.5,
           opacity: 0,
-          position: "fixed",
-          top: "50%",
-          left: "50%",
-          xPercent: -50,
-          yPercent: -50,
-          zIndex: 1000,
+          className: "+=intro-text-fixed", // Add CSS class for fixed positioning
+          x: "-50%",
+          y: "-50%",
         },
         {
           keyframes: [
@@ -921,14 +914,9 @@ async function setupGSAPIntroAnimations() {
           ],
           onComplete: () => {
             // Reset positioning after animation
-            gsap.set(".sc_b--intro", {
-              position: "",
-              top: "",
-              left: "",
-              xPercent: 0,
-              yPercent: 0,
-              zIndex: "",
-            });
+            document
+              .querySelector(".sc_b--intro")
+              ?.classList.remove("intro-text-fixed");
           },
         }
       );
