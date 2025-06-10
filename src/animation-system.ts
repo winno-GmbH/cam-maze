@@ -33,17 +33,17 @@ function applySmoothScroll(targetProgress: number): number {
   const deltaTime = Math.max(currentTime - smoothScrollState.lastTime, 0.001);
   smoothScrollState.targetProgress = targetProgress;
 
-  // Smooth interpolation settings
-  const smoothness = 0.15; // Higher = more responsive (0.05-0.3)
-  const maxVelocity = 2.0; // Velocity cap
+  // Smooth interpolation settings - TUNED for responsive stopping
+  const smoothness = 0.2; // Higher = more responsive (0.05-0.3)
+  const maxVelocity = 3.0; // Velocity cap
 
   // Calculate difference and apply smoothing
   const diff =
     smoothScrollState.targetProgress - smoothScrollState.currentProgress;
   smoothScrollState.velocity += diff * smoothness;
 
-  // Apply friction
-  smoothScrollState.velocity *= 0.85;
+  // Apply stronger friction for faster stopping
+  smoothScrollState.velocity *= 0.75; // Stronger friction (was 0.85)
 
   // Cap velocity
   smoothScrollState.velocity = Math.max(
@@ -718,37 +718,61 @@ export function setupScrollTriggers() {
 
   // Animation loop for smooth scrolling in POV
   function smoothScrollLoop() {
-    if (povAnimationState.isActive) {
-      // Get raw scroll progress
-      const povSection = document.querySelector(".sc--pov") as HTMLElement;
-      if (povSection) {
-        const rect = povSection.getBoundingClientRect();
-        const windowHeight = window.innerHeight;
-        const sectionTop = rect.top;
-        const sectionHeight = rect.height;
+    // ALWAYS check POV section - handle activation/deactivation + smooth scrolling
+    const povSection = document.querySelector(".sc--pov") as HTMLElement;
+    if (povSection) {
+      const rect = povSection.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      const sectionTop = rect.top;
+      const sectionHeight = rect.height;
 
-        // Calculate progress within POV section
-        const animationBuffer = windowHeight * 0.3;
-        const totalAnimationHeight = sectionHeight + animationBuffer;
+      // Calculate progress within POV section
+      const animationBuffer = windowHeight * 0.3;
+      const totalAnimationHeight = sectionHeight + animationBuffer;
+
+      if (
+        sectionTop <= windowHeight &&
+        sectionTop + sectionHeight >= -animationBuffer
+      ) {
+        // POV section is in view - calculate progress
         const scrolledIntoSection = Math.max(0, -sectionTop);
         const rawProgress = Math.min(
           1,
           scrolledIntoSection / totalAnimationHeight
         );
 
-        // Apply smooth scrolling
-        const smoothProgress = applySmoothScroll(rawProgress);
+        // Start POV animation if not already active and we're in correct state
+        if (
+          !povAnimationState.isActive &&
+          rawProgress > 0 &&
+          (currentAnimationState === "SCROLL_ANIMATION" ||
+            currentAnimationState === "HOME")
+        ) {
+          povAnimationState.isActive = true;
+          onPOVAnimationStart();
+          console.log("🎬 POV Animation Started (smooth)");
+        }
 
-        // Update POV animations with smooth progress
-        updatePOVAnimation(smoothProgress);
+        // Update POV animation with SMOOTH progress
+        if (povAnimationState.isActive) {
+          const smoothProgress = applySmoothScroll(rawProgress);
+          updatePOVAnimation(smoothProgress);
 
-        // Log for debugging
-        if (Math.abs(rawProgress - smoothProgress) > 0.01) {
-          console.log(
-            `📹 Smooth POV: raw=${rawProgress.toFixed(
-              3
-            )}, smooth=${smoothProgress.toFixed(3)}`
-          );
+          // Log for debugging
+          if (Math.abs(rawProgress - smoothProgress) > 0.01) {
+            console.log(
+              `📹 Smooth POV: raw=${rawProgress.toFixed(
+                3
+              )}, smooth=${smoothProgress.toFixed(3)}`
+            );
+          }
+        }
+      } else {
+        // POV section is out of view - end animation
+        if (povAnimationState.isActive) {
+          povAnimationState.isActive = false;
+          onPOVAnimationEnd();
+          console.log("🎬 POV Animation Ended (smooth)");
         }
       }
     }
@@ -759,9 +783,7 @@ export function setupScrollTriggers() {
   // Start the animation loop
   smoothScrollLoop();
 
-  // Also setup the fallback POV scroll handler
-  setupFallbackPOVScroll();
-
+  // NO fallback POV scroll handler - smooth scroll loop handles everything
   console.log("✅ Smooth scroll setup complete");
 }
 
