@@ -815,10 +815,12 @@ async function setupGSAPIntroAnimations() {
         scrollTrigger: {
           trigger: ".sc--intro",
           start: "top top", // Starts immediately when intro section enters
-          end: "center center", // BACKUP.JS: Header ends at center center
+          end: "+=150vh", // EXTENDED: Much longer for proper sticky behavior
           scrub: 0.5, // SMOOTH: 0.5 second lag for momentum-like feel
           refreshPriority: 1, // High priority for smooth updates
           anticipatePin: 1, // Prevent fast scroll jumping
+          pin: true, // PIN: Keep element centered during animation
+          pinSpacing: false, // Don't add extra space
         },
         ease: "none",
         keyframes: [
@@ -834,11 +836,13 @@ async function setupGSAPIntroAnimations() {
       .timeline({
         scrollTrigger: {
           trigger: ".sc--intro",
-          start: "center center", // BACKUP.JS: Body starts at center center
-          end: "bottom bottom", // BACKUP.JS: Body ends at bottom bottom
+          start: "+=150vh", // Start after header animation
+          end: "+=150vh", // EXTENDED: Same length as header for balance
           scrub: 0.5, // SMOOTH: 0.5 second lag for momentum-like feel
           refreshPriority: 1, // High priority for smooth updates
           anticipatePin: 1, // Prevent fast scroll jumping
+          pin: true, // PIN: Keep element centered during animation
+          pinSpacing: false, // Don't add extra space
         },
       })
       .fromTo(
