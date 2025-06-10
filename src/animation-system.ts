@@ -727,30 +727,30 @@ function animateIntroHeaderDirect(directProgress: number) {
 
   if (directProgress > 0 && directProgress < 1) {
     if (directProgress <= 0.2) {
-      // 0% - 20%: scale 0->0.8, opacity 0.1->1 (SMOOTHER: Nie komplett unsichtbar)
+      // 0% - 20%: scale 0->0.8, opacity 0->1 (RESTORED: Back to original behavior)
       const keyframeProgress = directProgress / 0.2;
       const easedProgress = easeInOutCubic(keyframeProgress);
       scale = easedProgress * 0.8;
-      opacity = 0.1 + easedProgress * 0.9; // 0.1 -> 1.0
+      opacity = easedProgress; // 0.0 -> 1.0
     } else if (directProgress <= 0.8) {
       // 20% - 80%: scale 0.8->1.2, opacity stays 1 (LÄNGER sichtbar)
       const keyframeProgress = (directProgress - 0.2) / 0.6;
       scale = 0.8 + keyframeProgress * 0.4; // 0.8 -> 1.2
       opacity = 1;
     } else {
-      // 80% - 100%: scale 1.2->1.5, opacity 1->0.1 (SMOOTHER: Sanfteres Fade)
+      // 80% - 100%: scale 1.2->1.5, opacity 1->0 (RESTORED: Back to original behavior)
       const keyframeProgress = (directProgress - 0.8) / 0.2;
       scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
-      opacity = 1 - keyframeProgress * 0.9; // 1 -> 0.1
+      opacity = 1 - keyframeProgress; // 1 -> 0.0
     }
   } else if (directProgress >= 1) {
     // Header finished
     scale = 1.5;
-    opacity = 0.1; // MINIMUM statt 0 für weniger Flackern
+    opacity = 0; // RESTORED: Back to original behavior
   } else {
     // Header not started
     scale = 0;
-    opacity = 0.1; // MINIMUM statt 0 für weniger Flackern
+    opacity = 0; // RESTORED: Back to original behavior
   }
 
   // ROBUST STATE-TRACKED POSITIONING
@@ -793,30 +793,30 @@ function animateIntroBodyDirect(directProgress: number) {
 
   if (directProgress > 0 && directProgress < 1) {
     if (directProgress <= 0.2) {
-      // 0% - 20%: scale 0.5->0.8, opacity 0.1->1 (SMOOTHER: Nie komplett unsichtbar)
+      // 0% - 20%: scale 0.5->0.8, opacity 0->1 (RESTORED: Back to original behavior)
       const keyframeProgress = directProgress / 0.2;
       const easedProgress = easeInOutCubic(keyframeProgress);
       scale = 0.5 + easedProgress * 0.3; // 0.5 -> 0.8
-      opacity = 0.1 + easedProgress * 0.9; // 0.1 -> 1.0
+      opacity = easedProgress; // 0.0 -> 1.0
     } else if (directProgress <= 0.8) {
       // 20% - 80%: scale 0.8->1.2, opacity stays 1 (LÄNGER sichtbar)
       const keyframeProgress = (directProgress - 0.2) / 0.6;
       scale = 0.8 + keyframeProgress * 0.4; // 0.8 -> 1.2
       opacity = 1;
     } else {
-      // 80% - 100%: scale 1.2->1.5, opacity 1->0.1 (SMOOTHER: Sanfteres Fade)
+      // 80% - 100%: scale 1.2->1.5, opacity 1->0 (RESTORED: Back to original behavior)
       const keyframeProgress = (directProgress - 0.8) / 0.2;
       scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
-      opacity = 1 - keyframeProgress * 0.9; // 1 -> 0.1
+      opacity = 1 - keyframeProgress; // 1 -> 0.0
     }
   } else if (directProgress >= 1) {
     // Body finished
     scale = 1.5;
-    opacity = 0.1; // MINIMUM statt 0 für weniger Flackern
+    opacity = 0; // RESTORED: Back to original behavior
   } else {
     // Body not started yet
     scale = 0.5;
-    opacity = 0.1; // MINIMUM statt 0 für weniger Flackern
+    opacity = 0; // RESTORED: Back to original behavior
   }
 
   // ROBUST STATE-TRACKED POSITIONING
@@ -1667,11 +1667,11 @@ function updatePOVCamera(progress: number) {
   if (progress < rotationStartingPoint) {
     // Before rotation phase - start looking straight up, then quickly transition to normal
 
-    const straightUpDuration = 0.15; // Longer 15% transition from up to forward (was 3%)
+    const straightUpDuration = 0.08; // Moderate 8% transition from up to forward (was 3%, 15% was too long)
 
     if (progress < straightUpDuration) {
-      // Extended beginning: Gradual transition from straight up to forward tangent
-      const transitionProgress = progress / straightUpDuration; // 0 to 1 over first 15%
+      // Moderate beginning: Gradual transition from straight up to forward tangent
+      const transitionProgress = progress / straightUpDuration; // 0 to 1 over first 8%
       const smoothTransition = smoothStep(transitionProgress); // Smooth transition curve
 
       const forwardTangent = getSmoothCameraTangent(progress);
@@ -1688,7 +1688,7 @@ function updatePOVCamera(progress: number) {
       const lookAtPoint = camera.position.clone().add(lookAtDirection);
       applySmoothCameraRotation(lookAtPoint);
     } else {
-      // After 15%: Normal forward-looking camera behavior
+      // After 8%: Normal forward-looking camera behavior
       const smoothedTangent = getSmoothCameraTangent(progress);
       const lookAtPoint = camera.position.clone().add(smoothedTangent);
       applySmoothCameraRotation(lookAtPoint);
