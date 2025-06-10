@@ -868,9 +868,12 @@ interface POVAnimationState {
   finalLookAt: THREE.Vector3;
   rotationStarted: boolean;
   cachedStartYAngle: number | null;
-  // Global smoothing
+  // MOMENTUM-BASED SCRUBBING
   smoothedProgress: number;
   targetProgress: number;
+  velocity: number;
+  lastTargetProgress: number;
+  lastTime: number;
 }
 
 const povAnimationState: POVAnimationState = {
@@ -885,9 +888,12 @@ const povAnimationState: POVAnimationState = {
   finalLookAt: new THREE.Vector3(-0.14675, 0, 1.8085),
   rotationStarted: false,
   cachedStartYAngle: null,
-  // Global smoothing
+  // MOMENTUM-BASED SCRUBBING
   smoothedProgress: 0,
   targetProgress: 0,
+  velocity: 0,
+  lastTargetProgress: 0,
+  lastTime: 0,
 };
 
 // POV Camera Smoothing State
@@ -1047,37 +1053,69 @@ function onPOVAnimationStart() {
   }
 }
 
-// GSAP-STYLE SCRUBBING: Professional scrub implementation
-function applyGSAPScrubbing(targetProgress: number): number {
-  // Update target
-  povAnimationState.targetProgress = targetProgress;
+// MOMENTUM-BASED SCRUBBING: Real smooth scrubbing like GSAP
+function applyMomentumScrubbing(targetProgress: number): number {
+  const currentTime = performance.now() / 1000; // Current time in seconds
 
-  // GSAP Scrub Values:
-  // scrub: true = 0.5 seconds lag
-  // scrub: 1 = 1 second lag
-  // scrub: 0.5 = 0.5 seconds lag
-  // scrub: 0.1 = 0.1 seconds lag
+  // Initialize on first run
+  if (povAnimationState.lastTime === 0) {
+    povAnimationState.lastTime = currentTime;
+    povAnimationState.lastTargetProgress = targetProgress;
+    povAnimationState.smoothedProgress = targetProgress;
+    return targetProgress;
+  }
 
-  // SCRUB PRESETS - Choose one:
-  // const scrubTime = 0.1;  // scrub: 0.1 - Very responsive, minimal lag
-  const scrubTime = 10; // scrub: 0.3 - Smooth, moderate lag
-  // const scrubTime = 0.5;  // scrub: 0.5 - GSAP default smooth
-  // const scrubTime = 1.0;  // scrub: 1.0 - Very smooth, more lag
-  const deltaTime = 1 / 60; // Assuming 60fps
-  const lerpFactor = deltaTime / (scrubTime + deltaTime);
+  const deltaTime = currentTime - povAnimationState.lastTime;
 
-  // Apply GSAP-style scrubbing
-  povAnimationState.smoothedProgress +=
-    (povAnimationState.targetProgress - povAnimationState.smoothedProgress) *
-    lerpFactor;
+  // Calculate input velocity (how fast user is scrolling)
+  const inputVelocity =
+    (targetProgress - povAnimationState.lastTargetProgress) /
+    Math.max(deltaTime, 0.001);
+
+  // SCRUB SETTINGS - Adjust these for different feels:
+  const friction = 0.85; // Higher = more momentum (0.8-0.95)
+  const responsiveness = 0.15; // Higher = more responsive (0.05-0.3)
+  const maxVelocity = 2.0; // Maximum velocity cap
+
+  // Apply friction to current velocity
+  povAnimationState.velocity *= friction;
+
+  // Add input influence based on difference and input velocity
+  const progressDiff = targetProgress - povAnimationState.smoothedProgress;
+  const velocityInfluence = inputVelocity * 0.1; // How much input velocity affects our velocity
+
+  // Update velocity with responsiveness and input influence
+  povAnimationState.velocity +=
+    progressDiff * responsiveness + velocityInfluence;
+
+  // Cap velocity to prevent overshoot
+  povAnimationState.velocity = Math.max(
+    -maxVelocity,
+    Math.min(maxVelocity, povAnimationState.velocity)
+  );
+
+  // Apply velocity to position
+  povAnimationState.smoothedProgress += povAnimationState.velocity * deltaTime;
+
+  // Clamp to valid range
+  povAnimationState.smoothedProgress = Math.max(
+    0,
+    Math.min(1, povAnimationState.smoothedProgress)
+  );
+
+  // Update tracking variables
+  povAnimationState.lastTargetProgress = targetProgress;
+  povAnimationState.lastTime = currentTime;
 
   const lag = targetProgress - povAnimationState.smoothedProgress;
   console.log(
-    `🎬 GSAP SCRUB: target=${targetProgress.toFixed(
+    `🚀 MOMENTUM SCRUB: target=${targetProgress.toFixed(
       3
-    )}, scrubbed=${povAnimationState.smoothedProgress.toFixed(
+    )}, smooth=${povAnimationState.smoothedProgress.toFixed(
       3
-    )}, lag=${lag.toFixed(3)}, scrubTime=${scrubTime}s`
+    )}, velocity=${povAnimationState.velocity.toFixed(3)}, lag=${lag.toFixed(
+      3
+    )}`
   );
 
   return povAnimationState.smoothedProgress;
@@ -1087,8 +1125,8 @@ function applyGSAPScrubbing(targetProgress: number): number {
 function updatePOVAnimation(progress: number) {
   if (!povAnimationState.cameraPOVPath || !povAnimationState.isActive) return;
 
-  // Apply GSAP-style scrubbing to ALL animations
-  const smoothProgress = applyGSAPScrubbing(progress);
+  // Apply momentum-based scrubbing to ALL animations
+  const smoothProgress = applyMomentumScrubbing(progress);
 
   // Update camera position and rotation with smoothed progress
   updatePOVCamera(smoothProgress);
