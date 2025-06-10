@@ -1914,16 +1914,21 @@ function updatePOVTexts(progress: number) {
           )
         );
 
-        // SIMPLIFIED: Quick fade in, long full visibility, quick fade out
-        if (ghostTextProgress <= 0.1) {
-          // First 10%: fade in
-          targetGhostOpacity = ghostTextProgress / 0.1;
-        } else if (ghostTextProgress >= 0.9) {
-          // Last 10%: fade out
-          targetGhostOpacity = (1.0 - ghostTextProgress) / 0.1;
+        // DEBUG: Log the values to see what's wrong
+        console.log("Ghost Text Debug:", {
+          currentCameraProgress,
+          ghostTextCameraProgress: trigger.ghostTextCameraProgress,
+          camTextCameraProgress: trigger.camTextCameraProgress,
+          ghostTextRange,
+          ghostTextProgress,
+          targetGhostOpacity: targetGhostOpacity,
+        });
+
+        // SIMPLE: Just set to 1.0 when in range, 0 otherwise
+        if (ghostTextProgress >= 0 && ghostTextProgress <= 1) {
+          targetGhostOpacity = 1.0; // Always full opacity when in range
         } else {
-          // Middle 80%: full opacity
-          targetGhostOpacity = 1.0;
+          targetGhostOpacity = 0;
         }
 
         if (currentCameraProgress >= trigger.camTextCameraProgress) {
@@ -1939,16 +1944,11 @@ function updatePOVTexts(progress: number) {
             )
           );
 
-          // SIMPLIFIED: Quick fade in, long full visibility, quick fade out
-          if (camTextProgress <= 0.1) {
-            // First 10%: fade in
-            targetCamOpacity = camTextProgress / 0.1;
-          } else if (camTextProgress >= 0.9) {
-            // Last 10%: fade out
-            targetCamOpacity = (1.0 - camTextProgress) / 0.1;
+          // SIMPLE: Just set to 1.0 when in range, 0 otherwise
+          if (camTextProgress >= 0 && camTextProgress <= 1) {
+            targetCamOpacity = 1.0; // Always full opacity when in range
           } else {
-            // Middle 80%: full opacity
-            targetCamOpacity = 1.0;
+            targetCamOpacity = 0;
           }
         }
       }
