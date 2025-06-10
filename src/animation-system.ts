@@ -750,13 +750,81 @@ function animateIntroBodyDirect(directProgress: number) {
   introBody.style.opacity = opacity.toString();
 }
 
+// GSAP-based intro animations (exact backup.js timing)
+async function setupGSAPIntroAnimations() {
+  // Dynamic import GSAP
+  const { gsap } = await import("gsap");
+  const { ScrollTrigger } = await import("gsap/ScrollTrigger");
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  console.log(
+    "🎬 Setting up GSAP intro animations with exact backup.js timing"
+  );
+
+  // EXACT backup.js setupIntroHeader() timing
+  gsap.fromTo(
+    ".sc_h--intro",
+    { scale: 0, opacity: 0 },
+    {
+      scale: 1.5,
+      opacity: 0,
+      scrollTrigger: {
+        trigger: ".sc--intro",
+        start: "top top", // Starts immediately when intro section enters
+        end: "center center", // Ends when intro section center hits viewport center
+        scrub: 0.5,
+      },
+      ease: "none",
+      keyframes: [
+        { scale: 0, opacity: 0, duration: 0 },
+        { scale: 0.8, opacity: 1, duration: 0.3 },
+        { scale: 1.2, opacity: 1, duration: 0.4 },
+        { scale: 1.5, opacity: 0, duration: 0.3 },
+      ],
+    }
+  );
+
+  // EXACT backup.js initIntro() body animation timing
+  gsap
+    .timeline({
+      scrollTrigger: {
+        trigger: ".sc--intro",
+        start: "center center", // Starts when intro section center hits viewport center
+        end: "bottom bottom", // Ends when intro section bottom hits viewport bottom
+        scrub: 0.5,
+      },
+    })
+    .fromTo(
+      ".sc_b--intro",
+      { scale: 0.5, opacity: 0 },
+      {
+        keyframes: [
+          { scale: 0.5, opacity: 0, duration: 0 },
+          { scale: 0.8, opacity: 1, duration: 0.3 },
+          { scale: 1.2, opacity: 1, duration: 0.4 },
+          { scale: 1.5, opacity: 0, duration: 0.3 },
+        ],
+      }
+    );
+
+  console.log("✅ GSAP intro animations successfully setup");
+}
+
 export function setupScrollTriggers() {
   // Setup intro animations
   setupIntroAnimations();
 
-  // Setup scroll event listeners for home and intro sections
+  // Try GSAP intro animations first (exact backup.js timing), fallback to manual
+  try {
+    setupGSAPIntroAnimations();
+  } catch (error) {
+    console.warn("GSAP intro animations failed, using manual fallback:", error);
+    window.addEventListener("scroll", handleIntroScroll);
+  }
+
+  // Setup scroll event listeners for home section
   window.addEventListener("scroll", handleScroll);
-  window.addEventListener("scroll", handleIntroScroll);
 
   // Setup smooth scroll for POV section
   console.log("🎬 Setting up smooth scroll for POV section");
