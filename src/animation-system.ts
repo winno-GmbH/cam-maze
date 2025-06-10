@@ -336,9 +336,6 @@ function animationLoop() {
   // Only run home animation if we're in HOME state
   if (currentAnimationState !== "HOME") return;
 
-  // Reduced debug logging
-  // console.log("🏠 HOME Animation Loop Running");
-
   const currentTime = Date.now();
   const elapsedTime = (currentTime - animationStartTime - timeOffset) / 1000; // Convert to seconds
   const t = (savedAnimationProgress + elapsedTime * HOME_ANIMATION_SPEED) % 1; // Use consistent speed
@@ -556,9 +553,6 @@ function handleScroll() {
           // Compress ghost animation into 0-80% range
           const ghostProgress = Math.min(scrollProgress / GHOSTS_END_AT, 1);
           moveGhostOnCurve(ghostKey, ghostProgress);
-
-          // Reduced debug logging
-          // console.log(`📜 SCROLL Animation: ${ghostKey} at ${ghostProgress.toFixed(3)}`);
         }
       });
 
@@ -660,7 +654,6 @@ function handleIntroScroll() {
 function handleIntroScrollFixed() {
   const introSection = document.querySelector(".sc--intro") as HTMLElement;
   if (!introSection) {
-    console.warn("⚠️ .sc--intro section not found");
     return;
   }
 
@@ -669,13 +662,6 @@ function handleIntroScrollFixed() {
   const sectionTop = rect.top;
   const sectionBottom = rect.bottom;
   const sectionHeight = rect.height;
-
-  // DEBUG: Log current scroll state
-  console.log(
-    `📜 Intro scroll: top=${sectionTop.toFixed(
-      0
-    )}, bottom=${sectionBottom.toFixed(0)}, height=${sectionHeight.toFixed(0)}`
-  );
 
   // CORRECTED backup.js timing:
   // Header: "top top" to "center center"
@@ -686,24 +672,19 @@ function handleIntroScrollFixed() {
     const scrolledDistance = Math.abs(sectionTop);
     const overallProgress = Math.min(1, scrolledDistance / sectionHeight);
 
-    console.log(`📜 Intro progress: ${(overallProgress * 100).toFixed(1)}%`);
-
     // HEADER: Animate from 0% to 50% (top top -> center center)
     if (overallProgress <= 0.5) {
       const headerProgress = overallProgress / 0.5; // Map 0-0.5 to 0-1
-      console.log(`📜 Header progress: ${(headerProgress * 100).toFixed(1)}%`);
       animateIntroHeaderDirect(headerProgress);
       animateIntroBodyDirect(0); // Body stays hidden
     } else {
       // BODY: Animate from 50% to 100% (center center -> bottom bottom)
       const bodyProgress = (overallProgress - 0.5) / 0.5; // Map 0.5-1 to 0-1
-      console.log(`📜 Body progress: ${(bodyProgress * 100).toFixed(1)}%`);
       animateIntroHeaderDirect(1); // Header finished
       animateIntroBodyDirect(bodyProgress);
     }
   } else {
     // Section not visible - reset elements
-    console.log("📜 Intro section not visible - resetting");
     animateIntroHeaderDirect(0);
     animateIntroBodyDirect(0);
   }
@@ -712,7 +693,6 @@ function handleIntroScrollFixed() {
 function animateIntroHeaderDirect(directProgress: number) {
   const introHeader = document.querySelector(".sc_h--intro") as HTMLElement;
   if (!introHeader) {
-    console.warn("⚠️ .sc_h--intro element not found");
     return;
   }
 
@@ -749,19 +729,11 @@ function animateIntroHeaderDirect(directProgress: number) {
 
   introHeader.style.transform = `scale(${scale})`;
   introHeader.style.opacity = opacity.toString();
-
-  // DEBUG
-  console.log(
-    `🎬 Header: progress=${directProgress.toFixed(3)}, scale=${scale.toFixed(
-      3
-    )}, opacity=${opacity.toFixed(3)}`
-  );
 }
 
 function animateIntroBodyDirect(directProgress: number) {
   const introBody = document.querySelector(".sc_b--intro") as HTMLElement;
   if (!introBody) {
-    console.warn("⚠️ .sc_b--intro element not found");
     return;
   }
 
@@ -798,13 +770,6 @@ function animateIntroBodyDirect(directProgress: number) {
 
   introBody.style.transform = `scale(${scale})`;
   introBody.style.opacity = opacity.toString();
-
-  // DEBUG
-  console.log(
-    `🎬 Body: progress=${directProgress.toFixed(3)}, scale=${scale.toFixed(
-      3
-    )}, opacity=${opacity.toFixed(3)}`
-  );
 }
 
 // GSAP-based intro animations (exact backup.js timing)
@@ -847,7 +812,6 @@ async function setupGSAPIntroAnimations() {
       }
     );
 
-    // EXACT backup.js initIntro() body animation timing
     gsap
       .timeline({
         scrollTrigger: {
@@ -881,15 +845,27 @@ export function setupScrollTriggers() {
   // Setup intro animations (set initial states correctly)
   setupIntroAnimations();
 
-  // TEMPORARY: Use only manual system to debug and fix timing
-  console.log("📜 Using manual intro scroll system for debugging");
-  window.addEventListener("scroll", handleIntroScrollFixed);
+  const introSection = document.querySelector(".sc--intro");
+  const introHeader = document.querySelector(".sc_h--intro");
+  const introBody = document.querySelector(".sc_b--intro");
+
+  // SIMPLE test scroll handler
+  window.addEventListener("scroll", () => {
+    const intro = document.querySelector(".sc--intro") as HTMLElement;
+    if (intro) {
+      const rect = intro.getBoundingClientRect();
+
+      // SIMPLE test: Make header visible when intro section is in view
+      const header = document.querySelector(".sc_h--intro") as HTMLElement;
+      if (header && rect.top <= window.innerHeight && rect.bottom >= 0) {
+        header.style.opacity = "1";
+        header.style.transform = "scale(1)";
+      }
+    }
+  });
 
   // Setup scroll event listeners for home section
   window.addEventListener("scroll", handleScroll);
-
-  // Setup smooth scroll for POV section
-  console.log("🎬 Setting up smooth scroll for POV section");
 
   // Animation loop for smooth scrolling in POV
   function smoothScrollLoop() {
@@ -925,27 +901,18 @@ export function setupScrollTriggers() {
         ) {
           povAnimationState.isActive = true;
           onPOVAnimationStart();
-          console.log("🎬 POV Animation Started (smooth)");
         }
 
         // Update POV animation with SMOOTH progress
         if (povAnimationState.isActive) {
           const smoothProgress = applySmoothScroll(rawProgress);
           updatePOVAnimation(smoothProgress);
-
-          // Only log significant changes to avoid console spam
-          if (Math.abs(rawProgress - smoothProgress) > 0.02) {
-            console.log(
-              `🔄 POV: ${rawProgress.toFixed(3)} → ${smoothProgress.toFixed(3)}`
-            );
-          }
         }
       } else {
         // POV section is out of view - end animation
         if (povAnimationState.isActive) {
           povAnimationState.isActive = false;
           onPOVAnimationEnd();
-          console.log("🎬 POV Animation Ended (smooth)");
         }
       }
     }
@@ -955,15 +922,11 @@ export function setupScrollTriggers() {
 
   // Start the animation loop
   smoothScrollLoop();
-
-  // NO fallback POV scroll handler - smooth scroll loop handles everything
-  console.log("✅ Smooth scroll setup complete");
 }
 
 // Fallback scroll handler for POV if GSAP fails
 function setupFallbackPOVScroll() {
   window.addEventListener("scroll", handlePOVScroll);
-  console.log("📜 Fallback POV scroll handler set up");
 }
 
 // Main animation loop
@@ -1036,7 +999,6 @@ export function initAnimationSystem() {
 
   // Setup scroll triggers
   setupScrollTriggers();
-  console.log("🚀 Animation system fully initialized");
 
   animate();
 
@@ -1412,8 +1374,6 @@ function onPOVAnimationStart() {
       startPosition.z
     );
     camera.lookAt(straightUpLookAt);
-
-    console.log("📹 POV Start: Camera set to look straight up");
   }
 
   // Make sure pacman is visible
@@ -1884,10 +1844,6 @@ function onPOVAnimationEnd() {
     ghosts.pacman.visible = true;
   }
 
-  // CRITICAL: Make sure ALL ghosts are visible after POV and restore original scales
-  console.log(
-    "🔧 POV End: Making all ghosts visible and restoring original scales"
-  );
   Object.keys(ghosts).forEach((ghostKey) => {
     if (ghosts[ghostKey] && originalHomeScales[ghostKey]) {
       const wasVisible = ghosts[ghostKey].visible;
@@ -1914,11 +1870,6 @@ function onPOVAnimationEnd() {
           }
         });
       }
-
-      console.log(
-        `🔧 ${ghostKey}: was ${wasVisible} → now ${ghosts[ghostKey].visible}, scale=`,
-        originalHomeScales[ghostKey]
-      );
     }
   });
 
@@ -1931,7 +1882,6 @@ function onPOVAnimationEnd() {
     // If we're back in HOME section area, switch to HOME state
     if (rect.top <= windowHeight && rect.bottom >= 0) {
       currentAnimationState = "HOME";
-      console.log("🏠 Restored to HOME state after POV");
 
       // FORCE restart HOME animation timing
       animationStartTime = Date.now();
@@ -1944,15 +1894,11 @@ function onPOVAnimationEnd() {
 
   // FORCE all ghosts visible one more time after state change AND restore scales
   setTimeout(() => {
-    console.log("🔧 Final ghost visibility and scale check");
     Object.keys(ghosts).forEach((ghostKey) => {
       if (ghosts[ghostKey] && originalHomeScales[ghostKey]) {
         const wasVisible = ghosts[ghostKey].visible;
         ghosts[ghostKey].visible = true;
         ghosts[ghostKey].scale.copy(originalHomeScales[ghostKey]); // ENSURE correct scale
-        if (!wasVisible) {
-          console.log(`🔧 FORCED ${ghostKey} visible with original scale`);
-        }
       }
     });
   }, 100); // Small delay to ensure state change is complete
@@ -1968,8 +1914,6 @@ function onPOVAnimationEnd() {
 
 // Restore ghosts to ORIGINAL home positions with FORCE visibility
 function restoreGhostsToHomePositions() {
-  console.log("🔄 Restoring ghosts to ORIGINAL home positions");
-
   // Use ORIGINAL home positions, not captured scroll positions
   Object.entries(originalHomePositions).forEach(
     ([ghostKey, originalPosition]: [string, any]) => {
@@ -2010,17 +1954,6 @@ function restoreGhostsToHomePositions() {
           // Handle the case where ghost.material exists but isn't typed
           (ghost as any).material.opacity = 1;
         }
-
-        console.log(
-          `✅ Restored ${ghostKey} to ORIGINAL: visible=${ghost.visible}, pos=`,
-          originalPosition,
-          `scale=`,
-          originalScale
-        );
-      } else {
-        console.warn(
-          `⚠️ Missing original position/rotation/scale for ${ghostKey}`
-        );
       }
     }
   );
