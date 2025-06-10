@@ -1902,66 +1902,97 @@ function updatePOVTexts(progress: number) {
       let targetCamOpacity = 0;
 
       if (currentCameraProgress >= trigger.triggerCameraProgress) {
-        // Simple range: from ghost text start to cam text start
-        const ghostTextRange =
-          trigger.camTextCameraProgress - trigger.ghostTextCameraProgress;
-        const ghostTextProgress = Math.max(
-          0,
-          Math.min(
-            1,
-            (currentCameraProgress - trigger.ghostTextCameraProgress) /
-              ghostTextRange
-          )
-        );
+        // BACKUP.JS EXACT LOGIC: Use actual section length for calculations
+        const sectionLength =
+          trigger.endCameraProgress - trigger.triggerCameraProgress;
 
-        // 3-Phase Animation: Fade In → Full Visibility → Fade Out
-        if (ghostTextProgress >= 0 && ghostTextProgress <= 0.1) {
-          // Phase 1: Fade in from 0% to 10%
-          targetGhostOpacity = ghostTextProgress / 0.1; // 0 to 1
-        } else if (ghostTextProgress > 0.1 && ghostTextProgress <= 0.8) {
-          // Phase 2: Full opacity from 10% to 80%
+        // Ghost Text Animation (backup.js style)
+        const fadeInStart = trigger.ghostTextCameraProgress;
+        const fadeInEnd = fadeInStart + sectionLength * 0.07; // 7% for fade in
+        const stayVisibleUntil =
+          trigger.endCameraProgress - sectionLength * 0.15; // Stay visible until 85%
+        const fadeOutEnd = trigger.endCameraProgress;
+
+        if (
+          currentCameraProgress >= fadeInStart &&
+          currentCameraProgress < fadeInEnd
+        ) {
+          // Einblendphase
+          const fadeProgress =
+            (currentCameraProgress - fadeInStart) / (fadeInEnd - fadeInStart);
+          targetGhostOpacity = fadeProgress;
+        } else if (
+          currentCameraProgress >= fadeInEnd &&
+          currentCameraProgress < stayVisibleUntil
+        ) {
+          // Voll sichtbare Phase
           targetGhostOpacity = 1.0;
-        } else if (ghostTextProgress > 0.8 && ghostTextProgress <= 1.0) {
-          // Phase 3: Fade out from 80% to 100%
-          const fadeOutProgress = (ghostTextProgress - 0.8) / 0.2; // 0 to 1
-          targetGhostOpacity = 1.0 - fadeOutProgress; // 1 to 0
-        } else {
-          targetGhostOpacity = 0;
+        } else if (
+          currentCameraProgress >= stayVisibleUntil &&
+          currentCameraProgress <= fadeOutEnd
+        ) {
+          // Ausblendphase
+          const fadeProgress =
+            (currentCameraProgress - stayVisibleUntil) /
+            (fadeOutEnd - stayVisibleUntil);
+          targetGhostOpacity = 1.0 - fadeProgress;
         }
 
+        // Cam Text Animation (backup.js style with max 0.8 opacity)
         if (currentCameraProgress >= trigger.camTextCameraProgress) {
-          // Simple range: from cam text start to end
-          const camTextRange =
-            trigger.endCameraProgress - trigger.camTextCameraProgress;
-          const camTextProgress = Math.max(
-            0,
-            Math.min(
-              1,
-              (currentCameraProgress - trigger.camTextCameraProgress) /
-                camTextRange
-            )
-          );
+          const camFadeInStart = trigger.camTextCameraProgress;
+          const camFadeInEnd = camFadeInStart + sectionLength * 0.07;
+          const camStayVisibleUntil = stayVisibleUntil; // Same as ghost
 
-          // 3-Phase Animation: Fade In → Full Visibility → Fade Out
-          if (camTextProgress >= 0 && camTextProgress <= 0.1) {
-            // Phase 1: Fade in from 0% to 10%
-            targetCamOpacity = camTextProgress / 0.1; // 0 to 1
-          } else if (camTextProgress > 0.1 && camTextProgress <= 0.8) {
-            // Phase 2: Full opacity from 10% to 80%
-            targetCamOpacity = 1.0;
-          } else if (camTextProgress > 0.8 && camTextProgress <= 1.0) {
-            // Phase 3: Fade out from 80% to 100%
-            const fadeOutProgress = (camTextProgress - 0.8) / 0.2; // 0 to 1
-            targetCamOpacity = 1.0 - fadeOutProgress; // 1 to 0
-          } else {
-            targetCamOpacity = 0;
+          if (
+            currentCameraProgress >= camFadeInStart &&
+            currentCameraProgress < camFadeInEnd
+          ) {
+            // Einblendphase
+            const fadeProgress =
+              (currentCameraProgress - camFadeInStart) /
+              (camFadeInEnd - camFadeInStart);
+            targetCamOpacity = fadeProgress * 0.8; // Maximale Opazität 0.8
+          } else if (
+            currentCameraProgress >= camFadeInEnd &&
+            currentCameraProgress < camStayVisibleUntil
+          ) {
+            // Voll sichtbare Phase
+            targetCamOpacity = 0.8;
+          } else if (
+            currentCameraProgress >= camStayVisibleUntil &&
+            currentCameraProgress <= fadeOutEnd
+          ) {
+            // Ausblendphase
+            const fadeProgress =
+              (currentCameraProgress - camStayVisibleUntil) /
+              (fadeOutEnd - camStayVisibleUntil);
+            targetCamOpacity = 0.8 * (1.0 - fadeProgress);
           }
         }
       }
 
-      // Direct opacity assignment for perfect 1.0 values
-      trigger.ghostTextOpacity = targetGhostOpacity;
-      trigger.camTextOpacity = targetCamOpacity;
+      // BACKUP.JS EXACT SMOOTH INTERPOLATION
+      const fadeInSpeed = 0.2; // Schnelleres Einblenden
+      const fadeOutSpeed = 0.1; // Langsameres Ausblenden
+
+      // Update Ghost-Text Opazität
+      if (targetGhostOpacity > trigger.ghostTextOpacity) {
+        trigger.ghostTextOpacity +=
+          (targetGhostOpacity - trigger.ghostTextOpacity) * fadeInSpeed;
+      } else {
+        trigger.ghostTextOpacity +=
+          (targetGhostOpacity - trigger.ghostTextOpacity) * fadeOutSpeed;
+      }
+
+      // Update CAM-Text Opazität
+      if (targetCamOpacity > trigger.camTextOpacity) {
+        trigger.camTextOpacity +=
+          (targetCamOpacity - trigger.camTextOpacity) * fadeInSpeed;
+      } else {
+        trigger.camTextOpacity +=
+          (targetCamOpacity - trigger.camTextOpacity) * fadeOutSpeed;
+      }
 
       // Update DOM elements
       updatePOVTextElements(trigger);
@@ -1977,22 +2008,39 @@ function updatePOVTextElements(trigger: any) {
   const camText = trigger.parent.querySelector(".cmp--pov-cam");
 
   if (ghostText) {
-    const ghostOpacity = Math.max(0, Math.min(1, trigger.ghostTextOpacity));
+    // BACKUP.JS EXACT ROUNDING: Opazitätswerte abrunden
+    const ghostOpacity = Math.max(
+      0,
+      Math.min(1, Math.round(trigger.ghostTextOpacity * 1000) / 1000)
+    );
+
     if (ghostOpacity > 0.01) {
-      ghostText.classList.remove("hidden");
+      if (ghostText.classList.contains("hidden")) {
+        ghostText.classList.remove("hidden");
+      }
       ghostText.style.opacity = ghostOpacity.toString();
-    } else {
+    } else if (
+      ghostOpacity <= 0.01 &&
+      !ghostText.classList.contains("hidden")
+    ) {
       ghostText.classList.add("hidden");
       ghostText.style.opacity = "0";
     }
   }
 
   if (camText) {
-    const camOpacity = Math.max(0, Math.min(1, trigger.camTextOpacity));
+    // BACKUP.JS EXACT ROUNDING: Opazitätswerte abrunden
+    const camOpacity = Math.max(
+      0,
+      Math.min(1, Math.round(trigger.camTextOpacity * 1000) / 1000)
+    );
+
     if (camOpacity > 0.01) {
-      camText.classList.remove("hidden");
+      if (camText.classList.contains("hidden")) {
+        camText.classList.remove("hidden");
+      }
       camText.style.opacity = camOpacity.toString();
-    } else {
+    } else if (camOpacity <= 0.01 && !camText.classList.contains("hidden")) {
       camText.classList.add("hidden");
       camText.style.opacity = "0";
     }
