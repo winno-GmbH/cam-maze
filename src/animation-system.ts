@@ -39,6 +39,82 @@ let timeOffset = 0;
 let pauseTime = 0;
 let savedAnimationProgress = 0; // Store the home animation progress when pausing
 
+// GLOBAL MOMENTUM SMOOTHING for all scroll animations
+interface GlobalSmoothingState {
+  smoothedProgress: number;
+  targetProgress: number;
+  velocity: number;
+  lastTargetProgress: number;
+  lastTime: number;
+}
+
+const globalSmoothing: GlobalSmoothingState = {
+  smoothedProgress: 0,
+  targetProgress: 0,
+  velocity: 0,
+  lastTargetProgress: 0,
+  lastTime: 0,
+};
+
+// Apply momentum smoothing to ANY scroll progress
+function applyGlobalMomentumSmoothing(targetProgress: number): number {
+  const currentTime = performance.now() / 1000;
+
+  // Initialize on first run
+  if (globalSmoothing.lastTime === 0) {
+    globalSmoothing.lastTime = currentTime;
+    globalSmoothing.lastTargetProgress = targetProgress;
+    globalSmoothing.smoothedProgress = targetProgress;
+    return targetProgress;
+  }
+
+  const deltaTime = Math.max(currentTime - globalSmoothing.lastTime, 0.001);
+
+  // Calculate input velocity (how fast user is scrolling)
+  const inputVelocity =
+    (targetProgress - globalSmoothing.lastTargetProgress) / deltaTime;
+
+  // SMOOTH SETTINGS:
+  const friction = 0.88; // Higher = more momentum
+  const responsiveness = 0.2; // Higher = more direct response
+  const maxVelocity = 3.0; // Max velocity cap
+
+  // Apply friction
+  globalSmoothing.velocity *= friction;
+
+  // Add input influence
+  const progressDiff = targetProgress - globalSmoothing.smoothedProgress;
+  const velocityInfluence = inputVelocity * 0.15;
+
+  globalSmoothing.velocity += progressDiff * responsiveness + velocityInfluence;
+  globalSmoothing.velocity = Math.max(
+    -maxVelocity,
+    Math.min(maxVelocity, globalSmoothing.velocity)
+  );
+
+  // Apply velocity
+  globalSmoothing.smoothedProgress += globalSmoothing.velocity * deltaTime;
+  globalSmoothing.smoothedProgress = Math.max(
+    0,
+    Math.min(1, globalSmoothing.smoothedProgress)
+  );
+
+  // Update tracking
+  globalSmoothing.lastTargetProgress = targetProgress;
+  globalSmoothing.lastTime = currentTime;
+
+  const lag = targetProgress - globalSmoothing.smoothedProgress;
+  console.log(
+    `🌊 GLOBAL SMOOTH: target=${targetProgress.toFixed(
+      3
+    )}, smooth=${globalSmoothing.smoothedProgress.toFixed(
+      3
+    )}, velocity=${globalSmoothing.velocity.toFixed(3)}, lag=${lag.toFixed(3)}`
+  );
+
+  return globalSmoothing.smoothedProgress;
+}
+
 function captureGhostPositions() {
   Object.keys(ghosts).forEach((ghostKey) => {
     if (ghosts[ghostKey]) {
@@ -386,23 +462,27 @@ function handleScroll() {
         createCameraPath();
       }
 
-      // Always animate based on scroll progress (no state checks)
+      // Apply GLOBAL MOMENTUM SMOOTHING to scroll progress
+      const smoothScrollProgress = applyGlobalMomentumSmoothing(scrollProgress);
 
-      // Animate ghosts along bezier curves (they finish at 80% scroll)
+      // Animate ghosts along bezier curves (they finish at 80% scroll) - WITH SMOOTHING
       Object.keys(ghosts).forEach((ghostKey) => {
         if (bezierCurves[ghostKey]) {
-          // Compress ghost animation into 0-80% range
-          const ghostProgress = Math.min(scrollProgress / GHOSTS_END_AT, 1);
+          // Compress ghost animation into 0-80% range, use SMOOTHED progress
+          const ghostProgress = Math.min(
+            smoothScrollProgress / GHOSTS_END_AT,
+            1
+          );
           moveGhostOnCurve(ghostKey, ghostProgress);
         }
       });
 
-      // Animate camera normally (0% to 100%)
-      animateCamera(scrollProgress);
+      // Animate camera normally (0% to 100%) - WITH SMOOTHING
+      animateCamera(smoothScrollProgress);
 
       // Update debug info
       if (window.animationDebugInfo) {
-        window.animationDebugInfo.scrollProgress = scrollProgress;
+        window.animationDebugInfo.scrollProgress = smoothScrollProgress;
       }
     } else if (scrollProgress === 0) {
       // Back at the beginning of home section - reset to home state
