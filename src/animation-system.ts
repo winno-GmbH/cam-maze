@@ -1060,7 +1060,7 @@ function applyGSAPScrubbing(targetProgress: number): number {
 
   // SCRUB PRESETS - Choose one:
   // const scrubTime = 0.1;  // scrub: 0.1 - Very responsive, minimal lag
-  const scrubTime = 0.3; // scrub: 0.3 - Smooth, moderate lag
+  const scrubTime = 1; // scrub: 0.3 - Smooth, moderate lag
   // const scrubTime = 0.5;  // scrub: 0.5 - GSAP default smooth
   // const scrubTime = 1.0;  // scrub: 1.0 - Very smooth, more lag
   const deltaTime = 1 / 60; // Assuming 60fps
