@@ -1914,19 +1914,13 @@ function updatePOVTexts(progress: number) {
           )
         );
 
-        // DEBUG: Log the values to see what's wrong
-        console.log("Ghost Text Debug:", {
-          currentCameraProgress,
-          ghostTextCameraProgress: trigger.ghostTextCameraProgress,
-          camTextCameraProgress: trigger.camTextCameraProgress,
-          ghostTextRange,
-          ghostTextProgress,
-          targetGhostOpacity: targetGhostOpacity,
-        });
-
-        // SIMPLE: Just set to 1.0 when in range, 0 otherwise
-        if (ghostTextProgress >= 0 && ghostTextProgress <= 1) {
-          targetGhostOpacity = 1.0; // Always full opacity when in range
+        // Full opacity until 80%, then fade out to 0 at 100%
+        if (ghostTextProgress >= 0 && ghostTextProgress <= 0.8) {
+          targetGhostOpacity = 1.0; // Full opacity for first 80%
+        } else if (ghostTextProgress > 0.8 && ghostTextProgress <= 1.0) {
+          // Fade out from 80% to 100%
+          const fadeOutProgress = (ghostTextProgress - 0.8) / 0.2; // 0 to 1 over last 20%
+          targetGhostOpacity = 1.0 - fadeOutProgress;
         } else {
           targetGhostOpacity = 0;
         }
@@ -1944,9 +1938,13 @@ function updatePOVTexts(progress: number) {
             )
           );
 
-          // SIMPLE: Just set to 1.0 when in range, 0 otherwise
-          if (camTextProgress >= 0 && camTextProgress <= 1) {
-            targetCamOpacity = 1.0; // Always full opacity when in range
+          // Full opacity until 80%, then fade out to 0 at 100%
+          if (camTextProgress >= 0 && camTextProgress <= 0.8) {
+            targetCamOpacity = 1.0; // Full opacity for first 80%
+          } else if (camTextProgress > 0.8 && camTextProgress <= 1.0) {
+            // Fade out from 80% to 100%
+            const fadeOutProgress = (camTextProgress - 0.8) / 0.2; // 0 to 1 over last 20%
+            targetCamOpacity = 1.0 - fadeOutProgress;
           } else {
             targetCamOpacity = 0;
           }
