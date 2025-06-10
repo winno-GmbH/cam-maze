@@ -727,8 +727,24 @@ function animateIntroHeaderDirect(directProgress: number) {
     opacity = 0;
   }
 
-  introHeader.style.transform = `scale(${scale})`;
-  introHeader.style.opacity = opacity.toString();
+  // FIXED POSITIONING: Keep text centered during animation
+  if (directProgress > 0 && directProgress < 1) {
+    // Animation running - fix to center of screen with scale
+    introHeader.style.position = "fixed";
+    introHeader.style.top = "50%";
+    introHeader.style.left = "50%";
+    introHeader.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    introHeader.style.zIndex = "1000";
+    introHeader.style.opacity = opacity.toString();
+  } else {
+    // Animation not running - reset positioning and use regular transform
+    introHeader.style.position = "";
+    introHeader.style.top = "";
+    introHeader.style.left = "";
+    introHeader.style.transform = `scale(${scale})`;
+    introHeader.style.zIndex = "";
+    introHeader.style.opacity = opacity.toString();
+  }
 }
 
 function animateIntroBodyDirect(directProgress: number) {
@@ -768,8 +784,24 @@ function animateIntroBodyDirect(directProgress: number) {
     opacity = 0;
   }
 
-  introBody.style.transform = `scale(${scale})`;
-  introBody.style.opacity = opacity.toString();
+  // FIXED POSITIONING: Keep text centered during animation
+  if (directProgress > 0 && directProgress < 1) {
+    // Animation running - fix to center of screen with scale
+    introBody.style.position = "fixed";
+    introBody.style.top = "50%";
+    introBody.style.left = "50%";
+    introBody.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    introBody.style.zIndex = "1000";
+    introBody.style.opacity = opacity.toString();
+  } else {
+    // Animation not running - reset positioning and use regular transform
+    introBody.style.position = "";
+    introBody.style.top = "";
+    introBody.style.left = "";
+    introBody.style.transform = `scale(${scale})`;
+    introBody.style.zIndex = "";
+    introBody.style.opacity = opacity.toString();
+  }
 }
 
 // GSAP-based intro animations (exact backup.js timing)
@@ -806,10 +838,19 @@ async function setupGSAPIntroAnimations() {
       "🎬 Setting up GSAP intro animations with exact backup.js timing"
     );
 
-    // EXACT backup.js setupIntroHeader() timing - SMOOTH VERSION
+    // EXACT backup.js setupIntroHeader() timing - FIXED POSITIONING VERSION
     gsap.fromTo(
       ".sc_h--intro",
-      { scale: 0, opacity: 0 },
+      {
+        scale: 0,
+        opacity: 0,
+        position: "fixed",
+        top: "50%",
+        left: "50%",
+        xPercent: -50,
+        yPercent: -50,
+        zIndex: 1000,
+      },
       {
         scale: 1.5,
         opacity: 0,
@@ -819,6 +860,17 @@ async function setupGSAPIntroAnimations() {
           end: "center center", // BACKUP.JS: Exact same as original
           scrub: 0.3, // OPTIMIZED: Faster response for fast scrolling
           invalidateOnRefresh: true, // Ensure proper recalculation
+        },
+        onComplete: () => {
+          // Reset positioning after animation
+          gsap.set(".sc_h--intro", {
+            position: "",
+            top: "",
+            left: "",
+            xPercent: 0,
+            yPercent: 0,
+            zIndex: "",
+          });
         },
         ease: "none",
         keyframes: [
@@ -842,7 +894,16 @@ async function setupGSAPIntroAnimations() {
       })
       .fromTo(
         ".sc_b--intro",
-        { scale: 0.5, opacity: 0 },
+        {
+          scale: 0.5,
+          opacity: 0,
+          position: "fixed",
+          top: "50%",
+          left: "50%",
+          xPercent: -50,
+          yPercent: -50,
+          zIndex: 1000,
+        },
         {
           keyframes: [
             { scale: 0.5, opacity: 0, duration: 0 },
@@ -850,6 +911,17 @@ async function setupGSAPIntroAnimations() {
             { scale: 1.2, opacity: 1, duration: 0.4 },
             { scale: 1.5, opacity: 0, duration: 0.3 },
           ],
+          onComplete: () => {
+            // Reset positioning after animation
+            gsap.set(".sc_b--intro", {
+              position: "",
+              top: "",
+              left: "",
+              xPercent: 0,
+              yPercent: 0,
+              zIndex: "",
+            });
+          },
         }
       );
 
