@@ -710,6 +710,11 @@ function handleIntroScrollFixed() {
 let isHeaderAnimating = false;
 let isBodyAnimating = false;
 
+// Smooth easing function for opacity transitions
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
 function animateIntroHeaderDirect(directProgress: number) {
   const introHeader = document.querySelector(".sc_h--intro") as HTMLElement;
   if (!introHeader) {
@@ -721,30 +726,31 @@ function animateIntroHeaderDirect(directProgress: number) {
   let opacity = 0;
 
   if (directProgress > 0 && directProgress < 1) {
-    if (directProgress <= 0.3) {
-      // 0% - 30%: scale 0->0.8, opacity 0->1
-      const keyframeProgress = directProgress / 0.3;
-      scale = keyframeProgress * 0.8;
-      opacity = keyframeProgress;
-    } else if (directProgress <= 0.7) {
-      // 30% - 70%: scale 0.8->1.2, opacity stays 1
-      const keyframeProgress = (directProgress - 0.3) / 0.4;
+    if (directProgress <= 0.2) {
+      // 0% - 20%: scale 0->0.8, opacity 0.1->1 (SMOOTHER: Nie komplett unsichtbar)
+      const keyframeProgress = directProgress / 0.2;
+      const easedProgress = easeInOutCubic(keyframeProgress);
+      scale = easedProgress * 0.8;
+      opacity = 0.1 + easedProgress * 0.9; // 0.1 -> 1.0
+    } else if (directProgress <= 0.8) {
+      // 20% - 80%: scale 0.8->1.2, opacity stays 1 (LÄNGER sichtbar)
+      const keyframeProgress = (directProgress - 0.2) / 0.6;
       scale = 0.8 + keyframeProgress * 0.4; // 0.8 -> 1.2
       opacity = 1;
     } else {
-      // 70% - 100%: scale 1.2->1.5, opacity 1->0
-      const keyframeProgress = (directProgress - 0.7) / 0.3;
+      // 80% - 100%: scale 1.2->1.5, opacity 1->0.1 (SMOOTHER: Sanfteres Fade)
+      const keyframeProgress = (directProgress - 0.8) / 0.2;
       scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
-      opacity = 1 - keyframeProgress; // 1 -> 0
+      opacity = 1 - keyframeProgress * 0.9; // 1 -> 0.1
     }
   } else if (directProgress >= 1) {
     // Header finished
     scale = 1.5;
-    opacity = 0;
+    opacity = 0.1; // MINIMUM statt 0 für weniger Flackern
   } else {
     // Header not started
     scale = 0;
-    opacity = 0;
+    opacity = 0.1; // MINIMUM statt 0 für weniger Flackern
   }
 
   // ROBUST STATE-TRACKED POSITIONING
@@ -786,30 +792,31 @@ function animateIntroBodyDirect(directProgress: number) {
   let opacity = 0;
 
   if (directProgress > 0 && directProgress < 1) {
-    if (directProgress <= 0.3) {
-      // 0% - 30%: scale 0.5->0.8, opacity 0->1
-      const keyframeProgress = directProgress / 0.3;
-      scale = 0.5 + keyframeProgress * 0.3; // 0.5 -> 0.8
-      opacity = keyframeProgress;
-    } else if (directProgress <= 0.7) {
-      // 30% - 70%: scale 0.8->1.2, opacity stays 1
-      const keyframeProgress = (directProgress - 0.3) / 0.4;
+    if (directProgress <= 0.2) {
+      // 0% - 20%: scale 0.5->0.8, opacity 0.1->1 (SMOOTHER: Nie komplett unsichtbar)
+      const keyframeProgress = directProgress / 0.2;
+      const easedProgress = easeInOutCubic(keyframeProgress);
+      scale = 0.5 + easedProgress * 0.3; // 0.5 -> 0.8
+      opacity = 0.1 + easedProgress * 0.9; // 0.1 -> 1.0
+    } else if (directProgress <= 0.8) {
+      // 20% - 80%: scale 0.8->1.2, opacity stays 1 (LÄNGER sichtbar)
+      const keyframeProgress = (directProgress - 0.2) / 0.6;
       scale = 0.8 + keyframeProgress * 0.4; // 0.8 -> 1.2
       opacity = 1;
     } else {
-      // 70% - 100%: scale 1.2->1.5, opacity 1->0
-      const keyframeProgress = (directProgress - 0.7) / 0.3;
+      // 80% - 100%: scale 1.2->1.5, opacity 1->0.1 (SMOOTHER: Sanfteres Fade)
+      const keyframeProgress = (directProgress - 0.8) / 0.2;
       scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
-      opacity = 1 - keyframeProgress; // 1 -> 0
+      opacity = 1 - keyframeProgress * 0.9; // 1 -> 0.1
     }
   } else if (directProgress >= 1) {
     // Body finished
     scale = 1.5;
-    opacity = 0;
+    opacity = 0.1; // MINIMUM statt 0 für weniger Flackern
   } else {
     // Body not started yet
     scale = 0.5;
-    opacity = 0;
+    opacity = 0.1; // MINIMUM statt 0 für weniger Flackern
   }
 
   // ROBUST STATE-TRACKED POSITIONING
@@ -1191,7 +1198,7 @@ POV Animation System
 // POV Path Points (from backup.js)
 const cameraPOVPathPoints = [
   {
-    pos: new THREE.Vector3(0.55675, 0.5, 0.45175),
+    pos: new THREE.Vector3(0.55675, 1, 0.45175),
     type: "curve",
     curveType: "forwardDownArc",
   },
