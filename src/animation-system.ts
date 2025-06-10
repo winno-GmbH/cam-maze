@@ -1457,7 +1457,7 @@ function getSmoothCameraTangent(progress: number): THREE.Vector3 {
   }
 }
 
-// Apply smooth camera rotation with speed limiting
+// Apply smooth camera rotation with dynamic smoothing based on scroll speed
 function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
   if (!camera) return;
 
@@ -1478,27 +1478,24 @@ function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
   // Calculate rotation difference
   const angleDifference = camera.quaternion.angleTo(targetQuaternion);
 
-  // Limit rotation speed
-  if (angleDifference > MAX_ROTATION_SPEED) {
-    // Too fast rotation - limit it
-    const limitedQuaternion = new THREE.Quaternion();
-    const progress = MAX_ROTATION_SPEED / angleDifference;
-    limitedQuaternion.slerpQuaternions(
-      camera.quaternion,
-      targetQuaternion,
-      progress
-    );
-    camera.quaternion.copy(limitedQuaternion);
-  } else {
-    // Normal rotation - apply smoothing
-    const smoothedQuaternion = new THREE.Quaternion();
-    smoothedQuaternion.slerpQuaternions(
-      camera.quaternion,
-      targetQuaternion,
-      CAMERA_ROTATION_SMOOTHING
-    );
-    camera.quaternion.copy(smoothedQuaternion);
+  // DYNAMIC SMOOTHING: More smoothing for larger angle changes (corners)
+  let dynamicSmoothing = CAMERA_ROTATION_SMOOTHING;
+  if (angleDifference > Math.PI / 8) {
+    // > 22.5° = sharp corner
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.4; // Much more smoothing for corners
+  } else if (angleDifference > Math.PI / 16) {
+    // > 11.25° = moderate corner
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.7; // More smoothing
   }
+
+  // Always apply smoothing (no speed limiting - causes jumps)
+  const smoothedQuaternion = new THREE.Quaternion();
+  smoothedQuaternion.slerpQuaternions(
+    camera.quaternion,
+    targetQuaternion,
+    dynamicSmoothing
+  );
+  camera.quaternion.copy(smoothedQuaternion);
 
   // Store for next frame
   previousCameraRotation.copy(camera.quaternion);
@@ -1716,9 +1713,48 @@ function onPOVAnimationEnd() {
     ghosts.pacman.visible = true;
   }
 
-  // If we're at scroll position 0, switch back to HOME state and restart home animation
-  if (window.scrollY === 0) {
-    currentAnimationState = "HOME";
+  // CRITICAL: Make sure ALL ghosts are visible after POV
+  Object.keys(ghosts).forEach((ghostKey) => {
+    if (ghosts[ghostKey]) {
+      ghosts[ghostKey].visible = true;
+
+      // Reset scale and opacity to normal
+      ghosts[ghostKey].scale.set(1, 1, 1);
+
+      const ghost = ghosts[ghostKey];
+      if (
+        ghost instanceof THREE.Mesh &&
+        ghost.material &&
+        "opacity" in ghost.material
+      ) {
+        ghost.material.opacity = 1;
+      } else if (ghost instanceof THREE.Group) {
+        ghost.traverse((child) => {
+          if (
+            child instanceof THREE.Mesh &&
+            child.material &&
+            "opacity" in child.material
+          ) {
+            child.material.opacity = 1;
+          }
+        });
+      }
+    }
+  });
+
+  // Check current scroll position to determine correct state
+  const homeSection = document.querySelector(".sc--home") as HTMLElement;
+  if (homeSection) {
+    const rect = homeSection.getBoundingClientRect();
+    const windowHeight = window.innerHeight;
+
+    // If we're back in HOME section area, switch to HOME state
+    if (rect.top <= windowHeight && rect.bottom >= 0) {
+      currentAnimationState = "HOME";
+      console.log("🏠 Restored to HOME state after POV");
+    } else {
+      currentAnimationState = "SCROLL_ANIMATION";
+    }
   }
 
   // Update debug info
@@ -1730,40 +1766,50 @@ function onPOVAnimationEnd() {
   previousCameraRotation = null;
 }
 
-// Restore ghosts to home positions
+// Restore ghosts to home positions with FORCE visibility
 function restoreGhostsToHomePositions() {
+  console.log("🔄 Restoring ghosts to home positions");
+
   Object.entries(capturedPositions).forEach(
     ([ghostKey, captured]: [string, any]) => {
       const ghost = ghosts[ghostKey];
       if (ghost && captured) {
         ghost.position.copy(captured.position);
         ghost.rotation.copy(captured.rotation);
+
+        // FORCE visibility - super important!
         ghost.visible = true;
 
         // Reset scale back to normal
         ghost.scale.set(1, 1, 1);
 
-        // Reset material opacity
-        if (
-          ghost instanceof THREE.Mesh &&
-          ghost.material &&
-          "opacity" in ghost.material
-        ) {
-          ghost.material.opacity = 1;
+        // Reset material opacity with better handling
+        if (ghost instanceof THREE.Mesh && ghost.material) {
+          if (Array.isArray(ghost.material)) {
+            ghost.material.forEach((mat) => {
+              if ("opacity" in mat) mat.opacity = 1;
+            });
+          } else if ("opacity" in ghost.material) {
+            ghost.material.opacity = 1;
+          }
         } else if (ghost instanceof THREE.Group) {
           ghost.traverse((child) => {
-            if (
-              child instanceof THREE.Mesh &&
-              child.material &&
-              "opacity" in child.material
-            ) {
-              child.material.opacity = 1;
+            if (child instanceof THREE.Mesh && child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((mat) => {
+                  if ("opacity" in mat) mat.opacity = 1;
+                });
+              } else if ("opacity" in child.material) {
+                child.material.opacity = 1;
+              }
             }
           });
-        } else {
+        } else if ((ghost as any).material) {
           // Handle the case where ghost.material exists but isn't typed
           (ghost as any).material.opacity = 1;
         }
+
+        console.log(`✅ Restored ${ghostKey}: visible=${ghost.visible}`);
       }
     }
   );
