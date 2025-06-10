@@ -97,6 +97,7 @@ const capturedPositions: { [key: string]: THREE.Vector3 } = {};
 const capturedRotations: { [key: string]: THREE.Euler } = {};
 const originalHomePositions: { [key: string]: THREE.Vector3 } = {}; // ORIGINAL home positions captured at start
 const originalHomeRotations: { [key: string]: THREE.Euler } = {}; // ORIGINAL home rotations captured at start
+const originalHomeScales: { [key: string]: THREE.Vector3 } = {}; // ORIGINAL home scales captured at start
 let homePositionsCaptured = false; // Flag to ensure we only capture home positions once
 const bezierCurves: { [key: string]: THREE.QuadraticBezierCurve3 } = {};
 let timeOffset = 0;
@@ -186,14 +187,19 @@ function applyGlobalMomentumSmoothing(targetProgress: number): number {
 function captureOriginalHomePositions() {
   if (homePositionsCaptured) return; // Already captured
 
-  console.log("🏠 Capturing ORIGINAL home positions (once)");
+  console.log(
+    "🏠 Capturing ORIGINAL home positions, rotations, and scales (once)"
+  );
   Object.keys(ghosts).forEach((ghostKey) => {
     if (ghosts[ghostKey]) {
       originalHomePositions[ghostKey] = ghosts[ghostKey].position.clone();
       originalHomeRotations[ghostKey] = ghosts[ghostKey].rotation.clone();
+      originalHomeScales[ghostKey] = ghosts[ghostKey].scale.clone();
       console.log(
-        `🏠 Captured ORIGINAL ${ghostKey} at:`,
-        originalHomePositions[ghostKey]
+        `🏠 Captured ORIGINAL ${ghostKey} - pos:`,
+        originalHomePositions[ghostKey],
+        `scale:`,
+        originalHomeScales[ghostKey]
       );
     }
   });
@@ -415,15 +421,17 @@ function resetToHomeState() {
   camera.position.copy(initialCameraPosition);
   camera.quaternion.copy(initialCameraQuaternion);
 
-  // Reset all ghosts to their ORIGINAL home positions, rotations and full opacity
+  // Reset all ghosts to their ORIGINAL home positions, rotations, scales and full opacity
   Object.keys(ghosts).forEach((ghostKey) => {
     if (
       originalHomePositions[ghostKey] &&
       originalHomeRotations[ghostKey] &&
+      originalHomeScales[ghostKey] &&
       ghosts[ghostKey]
     ) {
       ghosts[ghostKey].position.copy(originalHomePositions[ghostKey]);
       ghosts[ghostKey].rotation.copy(originalHomeRotations[ghostKey]);
+      ghosts[ghostKey].scale.copy(originalHomeScales[ghostKey]); // CRITICAL: Restore original scale
 
       // Reset opacity to full
       const ghost = ghosts[ghostKey];
@@ -1746,15 +1754,17 @@ function onPOVAnimationEnd() {
     ghosts.pacman.visible = true;
   }
 
-  // CRITICAL: Make sure ALL ghosts are visible after POV
-  console.log("🔧 POV End: Making all ghosts visible");
+  // CRITICAL: Make sure ALL ghosts are visible after POV and restore original scales
+  console.log(
+    "🔧 POV End: Making all ghosts visible and restoring original scales"
+  );
   Object.keys(ghosts).forEach((ghostKey) => {
-    if (ghosts[ghostKey]) {
+    if (ghosts[ghostKey] && originalHomeScales[ghostKey]) {
       const wasVisible = ghosts[ghostKey].visible;
       ghosts[ghostKey].visible = true;
 
-      // Reset scale and opacity to normal
-      ghosts[ghostKey].scale.set(1, 1, 1);
+      // CRITICAL: Reset scale to ORIGINAL scale (not 1,1,1)
+      ghosts[ghostKey].scale.copy(originalHomeScales[ghostKey]);
 
       const ghost = ghosts[ghostKey];
       if (
@@ -1776,7 +1786,8 @@ function onPOVAnimationEnd() {
       }
 
       console.log(
-        `🔧 ${ghostKey}: was ${wasVisible} → now ${ghosts[ghostKey].visible}`
+        `🔧 ${ghostKey}: was ${wasVisible} → now ${ghosts[ghostKey].visible}, scale=`,
+        originalHomeScales[ghostKey]
       );
     }
   });
@@ -1801,15 +1812,16 @@ function onPOVAnimationEnd() {
     }
   }
 
-  // FORCE all ghosts visible one more time after state change
+  // FORCE all ghosts visible one more time after state change AND restore scales
   setTimeout(() => {
-    console.log("🔧 Final ghost visibility check");
+    console.log("🔧 Final ghost visibility and scale check");
     Object.keys(ghosts).forEach((ghostKey) => {
-      if (ghosts[ghostKey]) {
+      if (ghosts[ghostKey] && originalHomeScales[ghostKey]) {
         const wasVisible = ghosts[ghostKey].visible;
         ghosts[ghostKey].visible = true;
+        ghosts[ghostKey].scale.copy(originalHomeScales[ghostKey]); // ENSURE correct scale
         if (!wasVisible) {
-          console.log(`🔧 FORCED ${ghostKey} visible`);
+          console.log(`🔧 FORCED ${ghostKey} visible with original scale`);
         }
       }
     });
@@ -1833,16 +1845,15 @@ function restoreGhostsToHomePositions() {
     ([ghostKey, originalPosition]: [string, any]) => {
       const ghost = ghosts[ghostKey];
       const originalRotation = originalHomeRotations[ghostKey];
+      const originalScale = originalHomeScales[ghostKey];
 
-      if (ghost && originalPosition && originalRotation) {
+      if (ghost && originalPosition && originalRotation && originalScale) {
         ghost.position.copy(originalPosition);
         ghost.rotation.copy(originalRotation);
+        ghost.scale.copy(originalScale); // CRITICAL: Restore original scale (especially for Pacman: 0.05)
 
         // FORCE visibility - super important!
         ghost.visible = true;
-
-        // Reset scale back to normal
-        ghost.scale.set(1, 1, 1);
 
         // Reset material opacity with better handling
         if (ghost instanceof THREE.Mesh && ghost.material) {
@@ -1871,11 +1882,15 @@ function restoreGhostsToHomePositions() {
         }
 
         console.log(
-          `✅ Restored ${ghostKey} to ORIGINAL position: visible=${ghost.visible}, pos=`,
-          originalPosition
+          `✅ Restored ${ghostKey} to ORIGINAL: visible=${ghost.visible}, pos=`,
+          originalPosition,
+          `scale=`,
+          originalScale
         );
       } else {
-        console.warn(`⚠️ Missing original position/rotation for ${ghostKey}`);
+        console.warn(
+          `⚠️ Missing original position/rotation/scale for ${ghostKey}`
+        );
       }
     }
   );
