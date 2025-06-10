@@ -95,6 +95,9 @@ const END_SEQUENCE_FOV = WIDE_FOV / 4; // 20 - Used in end sequence
 // 2. POSITION & BEZIER SYSTEM
 const capturedPositions: { [key: string]: THREE.Vector3 } = {};
 const capturedRotations: { [key: string]: THREE.Euler } = {};
+const originalHomePositions: { [key: string]: THREE.Vector3 } = {}; // ORIGINAL home positions captured at start
+const originalHomeRotations: { [key: string]: THREE.Euler } = {}; // ORIGINAL home rotations captured at start
+let homePositionsCaptured = false; // Flag to ensure we only capture home positions once
 const bezierCurves: { [key: string]: THREE.QuadraticBezierCurve3 } = {};
 let timeOffset = 0;
 let pauseTime = 0;
@@ -179,6 +182,25 @@ function applyGlobalMomentumSmoothing(targetProgress: number): number {
   return globalSmoothing.smoothedProgress;
 }
 
+// Capture ORIGINAL home positions (called only once at start)
+function captureOriginalHomePositions() {
+  if (homePositionsCaptured) return; // Already captured
+
+  console.log("🏠 Capturing ORIGINAL home positions (once)");
+  Object.keys(ghosts).forEach((ghostKey) => {
+    if (ghosts[ghostKey]) {
+      originalHomePositions[ghostKey] = ghosts[ghostKey].position.clone();
+      originalHomeRotations[ghostKey] = ghosts[ghostKey].rotation.clone();
+      console.log(
+        `🏠 Captured ORIGINAL ${ghostKey} at:`,
+        originalHomePositions[ghostKey]
+      );
+    }
+  });
+  homePositionsCaptured = true;
+}
+
+// Capture current positions for scroll animation (may be called multiple times)
 function captureGhostPositions() {
   Object.keys(ghosts).forEach((ghostKey) => {
     if (ghosts[ghostKey]) {
@@ -393,15 +415,15 @@ function resetToHomeState() {
   camera.position.copy(initialCameraPosition);
   camera.quaternion.copy(initialCameraQuaternion);
 
-  // Reset all ghosts to their captured positions, rotations and full opacity
+  // Reset all ghosts to their ORIGINAL home positions, rotations and full opacity
   Object.keys(ghosts).forEach((ghostKey) => {
     if (
-      capturedPositions[ghostKey] &&
-      capturedRotations[ghostKey] &&
+      originalHomePositions[ghostKey] &&
+      originalHomeRotations[ghostKey] &&
       ghosts[ghostKey]
     ) {
-      ghosts[ghostKey].position.copy(capturedPositions[ghostKey]);
-      ghosts[ghostKey].rotation.copy(capturedRotations[ghostKey]);
+      ghosts[ghostKey].position.copy(originalHomePositions[ghostKey]);
+      ghosts[ghostKey].rotation.copy(originalHomeRotations[ghostKey]);
 
       // Reset opacity to full
       const ghost = ghosts[ghostKey];
@@ -837,6 +859,9 @@ export function initAnimationSystem() {
     .clone()
     .add(direction.multiplyScalar(5));
 
+  // CRITICAL: Capture ORIGINAL home positions before any animations start
+  captureOriginalHomePositions();
+
   // Setup debug info
   window.animationDebugInfo = {
     state: currentAnimationState,
@@ -882,7 +907,12 @@ export function initAnimationSystem() {
 }
 
 // Export functions for external use
-export { moveGhostOnCurve, captureGhostPositions, createBezierCurves };
+export {
+  moveGhostOnCurve,
+  captureGhostPositions,
+  createBezierCurves,
+  captureOriginalHomePositions,
+};
 
 /*------------------
 POV Animation System
@@ -1794,16 +1824,19 @@ function onPOVAnimationEnd() {
   previousCameraRotation = null;
 }
 
-// Restore ghosts to home positions with FORCE visibility
+// Restore ghosts to ORIGINAL home positions with FORCE visibility
 function restoreGhostsToHomePositions() {
-  console.log("🔄 Restoring ghosts to home positions");
+  console.log("🔄 Restoring ghosts to ORIGINAL home positions");
 
-  Object.entries(capturedPositions).forEach(
-    ([ghostKey, captured]: [string, any]) => {
+  // Use ORIGINAL home positions, not captured scroll positions
+  Object.entries(originalHomePositions).forEach(
+    ([ghostKey, originalPosition]: [string, any]) => {
       const ghost = ghosts[ghostKey];
-      if (ghost && captured) {
-        ghost.position.copy(captured.position);
-        ghost.rotation.copy(captured.rotation);
+      const originalRotation = originalHomeRotations[ghostKey];
+
+      if (ghost && originalPosition && originalRotation) {
+        ghost.position.copy(originalPosition);
+        ghost.rotation.copy(originalRotation);
 
         // FORCE visibility - super important!
         ghost.visible = true;
@@ -1837,7 +1870,12 @@ function restoreGhostsToHomePositions() {
           (ghost as any).material.opacity = 1;
         }
 
-        console.log(`✅ Restored ${ghostKey}: visible=${ghost.visible}`);
+        console.log(
+          `✅ Restored ${ghostKey} to ORIGINAL position: visible=${ghost.visible}, pos=`,
+          originalPosition
+        );
+      } else {
+        console.warn(`⚠️ Missing original position/rotation for ${ghostKey}`);
       }
     }
   );
