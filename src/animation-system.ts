@@ -33,17 +33,17 @@ function applySmoothScroll(targetProgress: number): number {
   const deltaTime = Math.max(currentTime - smoothScrollState.lastTime, 0.001);
   smoothScrollState.targetProgress = targetProgress;
 
-  // Smooth interpolation settings - TUNED for responsive stopping
-  const smoothness = 0.2; // Higher = more responsive (0.05-0.3)
-  const maxVelocity = 3.0; // Velocity cap
+  // Smooth interpolation settings - BALANCED smooth but responsive
+  const smoothness = 0.12; // Moderate smoothness
+  const maxVelocity = 2.5; // Velocity cap
 
   // Calculate difference and apply smoothing
   const diff =
     smoothScrollState.targetProgress - smoothScrollState.currentProgress;
   smoothScrollState.velocity += diff * smoothness;
 
-  // Apply stronger friction for faster stopping
-  smoothScrollState.velocity *= 0.75; // Stronger friction (was 0.85)
+  // Apply moderate friction for good stopping
+  smoothScrollState.velocity *= 0.8; // Balanced friction
 
   // Cap velocity
   smoothScrollState.velocity = Math.max(
@@ -472,6 +472,11 @@ function smoothStep(x: number): number {
 
 // Scroll event handler
 function handleScroll() {
+  // CRITICAL: Don't update HOME ghosts when POV animation is active!
+  if (povAnimationState.isActive) {
+    return; // POV system handles everything
+  }
+
   const homeSection = document.querySelector(".sc--home") as HTMLElement;
   if (!homeSection) {
     return;
