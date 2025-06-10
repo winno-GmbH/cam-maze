@@ -1406,10 +1406,12 @@ const CAMERA_ROTATION_SMOOTHING = 0.08; // Much gentler smoothing (was 0.15)
 const MAX_ROTATION_SPEED = Math.PI / 12; // Slower max rotation (15° per frame, was 30°)
 const LOOK_AHEAD_DISTANCE = 0.01; // Smaller look-ahead for less jitter (was 0.02)
 
-// POV Text Animation Constants
-const GHOST_TEXT_START = 0.2;
-const CAM_TEXT_START = 0.3;
-const FADE_OUT_START = 0.8;
+// POV Text Animation Constants - Faster fade in/out, more time at full opacity
+const GHOST_TEXT_START = 0.1; // Faster fade in (was 0.2)
+const CAM_TEXT_START = 0.15; // Faster fade in (was 0.3)
+const FADE_OUT_START = 0.85; // Later fade out for more full opacity time (was 0.8)
+const FADE_IN_DURATION = 0.1; // Quick fade in over 10% of range
+const FADE_OUT_DURATION = 0.15; // Quick fade out over 15% of range
 const TRIGGER_DISTANCE = 0.02;
 
 // Get parent elements for POV triggers
@@ -1911,11 +1913,16 @@ function updatePOVTexts(progress: number) {
           )
         );
 
-        if (ghostTextProgress < FADE_OUT_START) {
+        if (ghostTextProgress < FADE_IN_DURATION) {
+          // Fast fade in
+          targetGhostOpacity = ghostTextProgress / FADE_IN_DURATION;
+        } else if (ghostTextProgress < FADE_OUT_START) {
+          // Full opacity in the middle
           targetGhostOpacity = 1;
         } else {
+          // Fast fade out
           targetGhostOpacity =
-            1 - (ghostTextProgress - FADE_OUT_START) / (1 - FADE_OUT_START);
+            1 - (ghostTextProgress - FADE_OUT_START) / FADE_OUT_DURATION;
         }
 
         if (currentCameraProgress >= trigger.camTextCameraProgress) {
@@ -1930,18 +1937,23 @@ function updatePOVTexts(progress: number) {
             )
           );
 
-          if (camTextProgress < FADE_OUT_START) {
+          if (camTextProgress < FADE_IN_DURATION) {
+            // Fast fade in
+            targetCamOpacity = camTextProgress / FADE_IN_DURATION;
+          } else if (camTextProgress < FADE_OUT_START) {
+            // Full opacity in the middle
             targetCamOpacity = 1;
           } else {
+            // Fast fade out
             targetCamOpacity =
-              1 - (camTextProgress - FADE_OUT_START) / (1 - FADE_OUT_START);
+              1 - (camTextProgress - FADE_OUT_START) / FADE_OUT_DURATION;
           }
         }
       }
 
-      // Smooth opacity transitions
-      const fadeInSpeed = 0.2;
-      const fadeOutSpeed = 0.1;
+      // Smooth opacity transitions - Faster for quicker response
+      const fadeInSpeed = 0.35; // Faster fade in (was 0.2)
+      const fadeOutSpeed = 0.25; // Faster fade out (was 0.1)
 
       if (targetGhostOpacity > trigger.ghostTextOpacity) {
         trigger.ghostTextOpacity +=
