@@ -847,47 +847,82 @@ export function setupScrollTriggers() {
   // Setup intro animations (set initial states correctly)
   setupIntroAnimations();
 
-  // BASIC TEST: Just console log on every scroll
-  let scrollCount = 0;
-  window.addEventListener("scroll", () => {
-    scrollCount++;
-    if (scrollCount % 10 === 0) {
-      // Only log every 10th scroll to avoid spam
-      console.log(`📜 SCROLL #${scrollCount} - Y: ${window.scrollY}`);
-    }
+  // TRY GSAP FIRST, fallback to manual on failure
+  console.log("🎬 Attempting to setup GSAP intro animations...");
 
-    // Test if we can find intro elements
-    const intro = document.querySelector(".sc--intro");
-    const header = document.querySelector(".sc_h--intro");
-    const body = document.querySelector(".sc_b--intro");
+  setupGSAPIntroAnimations()
+    .then(() => {
+      console.log("✅ GSAP intro animations successfully activated!");
+      // GSAP is now handling intro animations via ScrollTrigger
+    })
+    .catch((error) => {
+      console.warn("❌ GSAP failed, setting up manual fallback:", error);
 
-    if (scrollCount === 1) {
-      // Log once on first scroll
-      console.log("🔍 Elements found:", {
-        intro: !!intro,
-        header: !!header,
-        body: !!body,
-      });
-    }
-
-    // SIMPLE TEST: If intro section exists and is in view, make header red and visible
-    if (intro && header) {
-      const rect = intro.getBoundingClientRect();
-      if (rect.top <= window.innerHeight && rect.bottom >= 0) {
-        const headerElement = header as HTMLElement;
-        headerElement.style.opacity = "1";
-        headerElement.style.transform = "scale(1)";
-        headerElement.style.backgroundColor = "red"; // Make it VERY obvious
-        headerElement.style.color = "white";
-        headerElement.style.padding = "20px";
-        headerElement.style.zIndex = "9999";
-
-        if (scrollCount % 20 === 0) {
-          console.log("🎬 Making header RED and visible!");
+      // FALLBACK: Manual scroll handler
+      let scrollCount = 0;
+      window.addEventListener("scroll", () => {
+        scrollCount++;
+        if (scrollCount % 10 === 0) {
+          // Only log every 10th scroll to avoid spam
+          console.log(`📜 SCROLL #${scrollCount} - Y: ${window.scrollY}`);
         }
-      }
-    }
-  });
+
+        // Test if we can find intro elements
+        const intro = document.querySelector(".sc--intro");
+        const header = document.querySelector(".sc_h--intro");
+        const body = document.querySelector(".sc_b--intro");
+
+        if (scrollCount === 1) {
+          // Log once on first scroll
+          console.log("🔍 Elements found:", {
+            intro: !!intro,
+            header: !!header,
+            body: !!body,
+          });
+        }
+
+        // WORKING INTRO ANIMATION: Use the exact backup.js timing
+        if (intro && header && body) {
+          const rect = intro.getBoundingClientRect();
+
+          if (rect.top <= 0 && rect.bottom >= 0) {
+            // Section is visible - calculate progress
+            const scrolledDistance = Math.abs(rect.top);
+            const overallProgress = Math.min(1, scrolledDistance / rect.height);
+
+            // HEADER: 0% to 50% (backup.js: "top top" to "center center")
+            if (overallProgress <= 0.5) {
+              const headerProgress = overallProgress / 0.5;
+              animateIntroHeaderDirect(headerProgress);
+              animateIntroBodyDirect(0);
+            } else {
+              // BODY: 50% to 100% (backup.js: "center center" to "bottom bottom")
+              const bodyProgress = (overallProgress - 0.5) / 0.5;
+              animateIntroHeaderDirect(1);
+              animateIntroBodyDirect(bodyProgress);
+            }
+
+            if (scrollCount % 20 === 0) {
+              console.log(
+                `🎬 Intro: ${(overallProgress * 100).toFixed(0)}% - Header: ${
+                  overallProgress <= 0.5
+                    ? ((overallProgress / 0.5) * 100).toFixed(0)
+                    : 100
+                }% - Body: ${
+                  overallProgress > 0.5
+                    ? (((overallProgress - 0.5) / 0.5) * 100).toFixed(0)
+                    : 0
+                }%`
+              );
+            }
+          } else {
+            // Section not visible - reset
+            animateIntroHeaderDirect(0);
+            animateIntroBodyDirect(0);
+          }
+        }
+      });
+    }); // End of setupGSAPIntroAnimations().catch()
 
   // Setup scroll event listeners for home section
   window.addEventListener("scroll", handleScroll);
