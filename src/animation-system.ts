@@ -33,17 +33,17 @@ function applySmoothScroll(targetProgress: number): number {
   const deltaTime = Math.max(currentTime - smoothScrollState.lastTime, 0.001);
   smoothScrollState.targetProgress = targetProgress;
 
-  // Smooth interpolation settings - LIGHT smoothing, more responsive
-  const smoothness = 0.25; // Higher = more responsive
-  const maxVelocity = 4.0; // Higher velocity cap
+  // Smooth interpolation settings - VERY LIGHT smoothing, highly responsive
+  const smoothness = 0.4; // Much higher = more responsive
+  const maxVelocity = 6.0; // Higher velocity cap
 
   // Calculate difference and apply smoothing
   const diff =
     smoothScrollState.targetProgress - smoothScrollState.currentProgress;
   smoothScrollState.velocity += diff * smoothness;
 
-  // Apply light friction for quicker stopping
-  smoothScrollState.velocity *= 0.85; // Light friction
+  // Apply minimal friction for quick stopping
+  smoothScrollState.velocity *= 0.9; // Minimal friction
 
   // Cap velocity
   smoothScrollState.velocity = Math.max(
@@ -51,7 +51,7 @@ function applySmoothScroll(targetProgress: number): number {
     Math.min(maxVelocity, smoothScrollState.velocity)
   );
 
-  // Update progress
+  // Update progress with higher precision
   smoothScrollState.currentProgress += smoothScrollState.velocity * deltaTime;
   smoothScrollState.currentProgress = Math.max(
     0,
@@ -61,7 +61,8 @@ function applySmoothScroll(targetProgress: number): number {
   // Update time
   smoothScrollState.lastTime = currentTime;
 
-  return smoothScrollState.currentProgress;
+  // Return with higher precision (more decimal places for smoother animation)
+  return Math.round(smoothScrollState.currentProgress * 10000) / 10000;
 }
 
 // 1. STATE MANAGEMENT
@@ -320,8 +321,8 @@ function animationLoop() {
   // Only run home animation if we're in HOME state
   if (currentAnimationState !== "HOME") return;
 
-  // DEBUG: Show when HOME animation runs
-  console.log("🏠 HOME Animation Loop Running");
+  // Reduced debug logging
+  // console.log("🏠 HOME Animation Loop Running");
 
   const currentTime = Date.now();
   const elapsedTime = (currentTime - animationStartTime - timeOffset) / 1000; // Convert to seconds
@@ -539,10 +540,8 @@ function handleScroll() {
           const ghostProgress = Math.min(scrollProgress / GHOSTS_END_AT, 1);
           moveGhostOnCurve(ghostKey, ghostProgress);
 
-          // DEBUG: Show when SCROLL animation updates ghosts
-          console.log(
-            `📜 SCROLL Animation: ${ghostKey} at ${ghostProgress.toFixed(3)}`
-          );
+          // Reduced debug logging
+          // console.log(`📜 SCROLL Animation: ${ghostKey} at ${ghostProgress.toFixed(3)}`);
         }
       });
 
@@ -771,12 +770,12 @@ export function setupScrollTriggers() {
           const smoothProgress = applySmoothScroll(rawProgress);
           updatePOVAnimation(smoothProgress);
 
-          // DEBUG: Show what state we're in
-          console.log(
-            `🔄 POV Active - State: ${currentAnimationState}, Raw: ${rawProgress.toFixed(
-              3
-            )}, Smooth: ${smoothProgress.toFixed(3)}`
-          );
+          // Only log significant changes to avoid console spam
+          if (Math.abs(rawProgress - smoothProgress) > 0.02) {
+            console.log(
+              `🔄 POV: ${rawProgress.toFixed(3)} → ${smoothProgress.toFixed(3)}`
+            );
+          }
         }
       } else {
         // POV section is out of view - end animation
@@ -1868,27 +1867,27 @@ function updateGhostInPOV(
       }
     }
 
-    // Get current camera progress on POV path (using backup.js method with 800 samples)
+    // Get current camera progress on POV path (HIGH SAMPLES for smooth animation)
     const currentCameraProgress = findClosestProgressOnPOVPath(
       cameraPosition,
-      800
+      4000 // MUCH higher samples for smoother interpolation
     );
 
-    // Calculate path positions if not done already (using backup.js method with 800 samples)
+    // Calculate path positions if not done already (HIGH SAMPLES for precision)
     if (trigger.triggerCameraProgress === null) {
       trigger.triggerCameraProgress = findClosestProgressOnPOVPath(
         triggerPos,
-        800
+        4000
       );
       trigger.ghostTextCameraProgress = ghostTextPos
-        ? findClosestProgressOnPOVPath(ghostTextPos, 800)
+        ? findClosestProgressOnPOVPath(ghostTextPos, 4000)
         : trigger.triggerCameraProgress;
       trigger.camTextCameraProgress = camTextPos
-        ? findClosestProgressOnPOVPath(camTextPos, 800)
+        ? findClosestProgressOnPOVPath(camTextPos, 4000)
         : trigger.ghostTextCameraProgress;
       trigger.endCameraProgress = findClosestProgressOnPOVPath(
         endPosition,
-        800
+        4000
       );
     }
 
@@ -2071,8 +2070,8 @@ function updateGhostInPOV(
     // Store position for next iteration
     trigger.lastProgress = currentCameraProgress;
   } else {
-    // Default behavior for ghosts without triggers
-    const closestProgress = findClosestProgressOnPOVPath(cameraPosition);
+    // Default behavior for ghosts without triggers (HIGH SAMPLES for smoothness)
+    const closestProgress = findClosestProgressOnPOVPath(cameraPosition, 4000);
     const ghostPosition = path.getPointAt(closestProgress);
     ghost.position.copy(ghostPosition);
 
