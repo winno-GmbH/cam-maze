@@ -1667,14 +1667,16 @@ function updatePOVCamera(progress: number) {
   }
 
   if (progress < rotationStartingPoint) {
-    // Before rotation phase - 3-phase camera transition for smoother entry
+    // Before rotation phase - 3-phase camera transition based on actual path points
 
-    const phase1Duration = 0.04; // First 4%: 45° forward-up look
-    const phase2Duration = 0.08; // Next 4%: 45° forward-down look
-    const phase3Duration = 0.12; // Next 4%: transition to tangent look
+    // Calculate progress for specific camera path points
+    const totalPoints = cameraPOVPathPoints.length;
+    const point1Progress = 1 / (totalPoints - 1); // Progress to reach point 1
+    const point2Progress = 2 / (totalPoints - 1); // Progress to reach point 2
+    const point3Progress = 3 / (totalPoints - 1); // Progress to reach point 3 (for transition end)
 
-    if (progress < phase1Duration) {
-      // Phase 1: 45° nach vorne-oben schauen
+    if (progress < point1Progress) {
+      // Phase 1: 45° nach vorne-oben schauen (Start bis Punkt 1)
       const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
       const upVector = new THREE.Vector3(0, 1, 0); // Up
 
@@ -1685,8 +1687,8 @@ function updatePOVCamera(progress: number) {
 
       const lookAtPoint = camera.position.clone().add(forwardUpDirection);
       applySmoothCameraRotation(lookAtPoint);
-    } else if (progress < phase2Duration) {
-      // Phase 2: 45° nach vorne-unten schauen
+    } else if (progress < point2Progress) {
+      // Phase 2: 45° nach vorne-unten schauen (Punkt 1 bis Punkt 2)
       const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
       const downVector = new THREE.Vector3(0, -1, 0); // Down
 
@@ -1697,10 +1699,10 @@ function updatePOVCamera(progress: number) {
 
       const lookAtPoint = camera.position.clone().add(forwardDownDirection);
       applySmoothCameraRotation(lookAtPoint);
-    } else if (progress < phase3Duration) {
-      // Phase 3: Übergang von 45° forward-down zu tangent look
+    } else if (progress < point3Progress) {
+      // Phase 3: Übergang von 45° forward-down zu tangent look (Punkt 2 bis Punkt 3)
       const transitionProgress =
-        (progress - phase2Duration) / (phase3Duration - phase2Duration); // 0 to 1
+        (progress - point2Progress) / (point3Progress - point2Progress); // 0 to 1
       const smoothTransition = smoothStep(transitionProgress);
 
       const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
