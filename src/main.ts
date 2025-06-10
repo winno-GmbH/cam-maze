@@ -5,35 +5,19 @@ import { initAnimationSystem } from "./animation-system";
 
 // Initialize everything
 async function init() {
-  console.log("Starting CAM 3D Animation...");
-
   try {
     initRenderer();
-    console.log("Renderer initialized");
 
     setupLighting();
-    console.log("Lighting setup complete");
 
     initCamera();
-    console.log("Camera initialized");
 
     setupCameraResize();
-    console.log("Camera resize setup complete");
 
-    console.log("Loading 3D model...");
     await loadModel();
-    console.log("Model loading complete");
 
     // Initialize animation system (handles rendering and animations)
-    console.log("Initializing animation system...");
     initAnimationSystem();
-    console.log("Animation system initialized");
-
-    // Debug scene contents
-    console.log("Scene children count:", scene.children.length);
-    scene.children.forEach((child, index) => {
-      console.log(`Child ${index}:`, child.type, child.name || "unnamed");
-    });
   } catch (error) {
     console.error("Initialization error:", error);
   }

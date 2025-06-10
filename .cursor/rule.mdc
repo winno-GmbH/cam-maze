@@ -204,10 +204,9 @@ module.exports = {
 
 ### Debugging Steps
 1. **Enable source maps** for TypeScript debugging
-2. **Add strategic console.log** statements
-3. **Use browser DevTools** with Three.js inspector
-4. **Test step-by-step** by commenting out imports
-5. **Check webpack bundle analyzer** for size issues
+2. **Use browser DevTools** with Three.js inspector
+3. **Test step-by-step** by commenting out imports
+4. **Check webpack bundle analyzer** for size issues
 
 ---
 

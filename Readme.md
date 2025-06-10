@@ -96,12 +96,6 @@ This is usually caused by:
 ### Debug Commands
 
 ```javascript
-// In browser console
-console.log("THREE.js:", typeof THREE !== "undefined");
-console.log("GLTFLoader:", typeof THREE.GLTFLoader !== "undefined");
-console.log("GSAP:", typeof gsap !== "undefined");
-console.log("ScrollTrigger:", typeof ScrollTrigger !== "undefined");
-
 // Check app status
 CAMApp.getInitializationStatus();
 ```

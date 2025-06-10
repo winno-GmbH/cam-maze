@@ -1710,9 +1710,7 @@ function updateGhostInPOV(
 
       // Check if ghost actually has material and if it's working
       if (!(ghost as any).material) {
-        console.error(`❌ ${ghostKey} HAS NO MATERIAL!`);
       } else if (typeof (ghost as any).material.opacity === "undefined") {
-        console.error(`❌ ${ghostKey} MATERIAL HAS NO OPACITY PROPERTY!`);
       }
     } else {
       // EXACT backup.js logic: Ghost invisible when outside range
