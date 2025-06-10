@@ -1357,27 +1357,34 @@ function updatePOVCamera(progress: number) {
   }
 
   if (progress < rotationStartingPoint) {
-    // Before rotation phase - look straight up with slight forward tilt as we progress
+    // Before rotation phase - start looking straight up, then quickly transition to normal
 
-    // At start (progress 0): Look straight up
-    // Near rotation start (progress ~0.97): Look more forward
-    const straightUpFactor = 1.0 - progress / rotationStartingPoint;
+    const straightUpDuration = 0.05; // Only first 5% of animation looks straight up
 
-    const forwardTangent = getSmoothCameraTangent(progress);
-    const straightUpVector = new THREE.Vector3(0, 1, 0); // Straight up
+    if (progress < straightUpDuration) {
+      // Very beginning: Transition from straight up to forward tangent
+      const transitionProgress = progress / straightUpDuration; // 0 to 1 over first 5%
+      const smoothTransition = smoothStep(transitionProgress); // Smooth transition curve
 
-    // Interpolate between straight up and forward tangent
-    const lookAtDirection = new THREE.Vector3()
-      .addVectors(
-        straightUpVector.multiplyScalar(straightUpFactor),
-        forwardTangent.multiplyScalar(1.0 - straightUpFactor)
-      )
-      .normalize();
+      const forwardTangent = getSmoothCameraTangent(progress);
+      const straightUpVector = new THREE.Vector3(0, 1, 0); // Straight up
 
-    const lookAtPoint = camera.position.clone().add(lookAtDirection);
+      // Interpolate from straight up to forward direction
+      const lookAtDirection = new THREE.Vector3()
+        .addVectors(
+          straightUpVector.multiplyScalar(1.0 - smoothTransition),
+          forwardTangent.multiplyScalar(smoothTransition)
+        )
+        .normalize();
 
-    // Apply smooth rotation
-    applySmoothCameraRotation(lookAtPoint);
+      const lookAtPoint = camera.position.clone().add(lookAtDirection);
+      applySmoothCameraRotation(lookAtPoint);
+    } else {
+      // After 5%: Normal forward-looking camera behavior
+      const smoothedTangent = getSmoothCameraTangent(progress);
+      const lookAtPoint = camera.position.clone().add(smoothedTangent);
+      applySmoothCameraRotation(lookAtPoint);
+    }
   } else {
     // Rotation phase - interpolate between start and end look-at
     const rotationProgress =
