@@ -1504,9 +1504,9 @@ function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
   previousCameraRotation.copy(camera.quaternion);
 }
 
-// Update POV Ghosts with enhanced triggering (from backup.js)
+// Update POV Ghosts with enhanced triggering (from backup.js) - ONLY during active POV
 function updatePOVGhosts(progress: number) {
-  if (!povAnimationState.cameraPOVPath) return;
+  if (!povAnimationState.cameraPOVPath || !povAnimationState.isActive) return;
 
   const cameraPosition = povAnimationState.cameraPOVPath.getPointAt(progress);
 
@@ -1717,8 +1717,10 @@ function onPOVAnimationEnd() {
   }
 
   // CRITICAL: Make sure ALL ghosts are visible after POV
+  console.log("🔧 POV End: Making all ghosts visible");
   Object.keys(ghosts).forEach((ghostKey) => {
     if (ghosts[ghostKey]) {
+      const wasVisible = ghosts[ghostKey].visible;
       ghosts[ghostKey].visible = true;
 
       // Reset scale and opacity to normal
@@ -1742,6 +1744,10 @@ function onPOVAnimationEnd() {
           }
         });
       }
+
+      console.log(
+        `🔧 ${ghostKey}: was ${wasVisible} → now ${ghosts[ghostKey].visible}`
+      );
     }
   });
 
@@ -1755,10 +1761,29 @@ function onPOVAnimationEnd() {
     if (rect.top <= windowHeight && rect.bottom >= 0) {
       currentAnimationState = "HOME";
       console.log("🏠 Restored to HOME state after POV");
+
+      // FORCE restart HOME animation timing
+      animationStartTime = Date.now();
+      timeOffset = 0;
+      pauseTime = 0;
     } else {
       currentAnimationState = "SCROLL_ANIMATION";
     }
   }
+
+  // FORCE all ghosts visible one more time after state change
+  setTimeout(() => {
+    console.log("🔧 Final ghost visibility check");
+    Object.keys(ghosts).forEach((ghostKey) => {
+      if (ghosts[ghostKey]) {
+        const wasVisible = ghosts[ghostKey].visible;
+        ghosts[ghostKey].visible = true;
+        if (!wasVisible) {
+          console.log(`🔧 FORCED ${ghostKey} visible`);
+        }
+      }
+    });
+  }, 100); // Small delay to ensure state change is complete
 
   // Update debug info
   if (window.animationDebugInfo) {
