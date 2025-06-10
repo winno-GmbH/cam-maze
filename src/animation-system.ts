@@ -1090,11 +1090,11 @@ const povAnimationState: POVAnimationState = {
   lastTime: 0,
 };
 
-// POV Camera Smoothing State
+// POV Camera Smoothing State - GENTLER SETTINGS
 let previousCameraRotation: THREE.Quaternion | null = null;
-const CAMERA_ROTATION_SMOOTHING = 0.15; // Smoothing factor (0 = no smoothing, 1 = immediate)
-const MAX_ROTATION_SPEED = Math.PI / 6; // Max 30° rotation per frame
-const LOOK_AHEAD_DISTANCE = 0.02; // How far ahead to look for smooth curves
+const CAMERA_ROTATION_SMOOTHING = 0.08; // Much gentler smoothing (was 0.15)
+const MAX_ROTATION_SPEED = Math.PI / 12; // Slower max rotation (15° per frame, was 30°)
+const LOOK_AHEAD_DISTANCE = 0.01; // Smaller look-ahead for less jitter (was 0.02)
 
 // POV Text Animation Constants
 const GHOST_TEXT_START = 0.2;
@@ -1234,10 +1234,10 @@ function onPOVAnimationStart() {
     const startPosition = povAnimationState.cameraPOVPath.getPointAt(0);
     camera.position.copy(startPosition);
 
-    // Create look-at point straight up from start position
+    // Create look-at point straight up from start position (less extreme)
     const straightUpLookAt = new THREE.Vector3(
       startPosition.x,
-      startPosition.y + 10.0, // Look straight up (high Y value)
+      startPosition.y + 3.0, // Look up but less extreme (was 10.0)
       startPosition.z
     );
     camera.lookAt(straightUpLookAt);
@@ -1359,7 +1359,7 @@ function updatePOVCamera(progress: number) {
   if (progress < rotationStartingPoint) {
     // Before rotation phase - start looking straight up, then quickly transition to normal
 
-    const straightUpDuration = 0.05; // Only first 5% of animation looks straight up
+    const straightUpDuration = 0.03; // Only first 3% of animation looks straight up (was 5%)
 
     if (progress < straightUpDuration) {
       // Very beginning: Transition from straight up to forward tangent
@@ -1436,22 +1436,22 @@ function getSmoothCameraTangent(progress: number): THREE.Vector3 {
 
   // Detect S-curves: if current and look-ahead have very different directions
   const dotProduct = currentTangent.dot(lookAheadTangent);
-  const isSCurve = dotProduct < 0.3; // Less than ~70° similarity = S-curve
+  const isSCurve = dotProduct < 0.5; // More lenient S-curve detection (was 0.3)
 
   if (isSCurve) {
-    // For S-curves, use more aggressive smoothing
+    // For S-curves, use gentler smoothing (was 0.3/0.7)
     return new THREE.Vector3()
       .addVectors(
-        currentTangent.multiplyScalar(0.3),
-        averageTangent.multiplyScalar(0.7)
+        currentTangent.multiplyScalar(0.6),
+        averageTangent.multiplyScalar(0.4)
       )
       .normalize();
   } else {
-    // For normal curves, use light smoothing
+    // For normal curves, use very light smoothing (was 0.7/0.3)
     return new THREE.Vector3()
       .addVectors(
-        currentTangent.multiplyScalar(0.7),
-        averageTangent.multiplyScalar(0.3)
+        currentTangent.multiplyScalar(0.85),
+        averageTangent.multiplyScalar(0.15)
       )
       .normalize();
   }
