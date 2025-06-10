@@ -100,6 +100,9 @@ let timeOffset = 0;
 let pauseTime = 0;
 let savedAnimationProgress = 0; // Store the home animation progress when pausing
 
+// HOME ANIMATION SPEED - Keep this consistent everywhere!
+const HOME_ANIMATION_SPEED = 0.03; // 3x slower than original (was 0.1)
+
 // GLOBAL MOMENTUM SMOOTHING for all scroll animations
 interface GlobalSmoothingState {
   smoothedProgress: number;
@@ -326,7 +329,7 @@ function animationLoop() {
 
   const currentTime = Date.now();
   const elapsedTime = (currentTime - animationStartTime - timeOffset) / 1000; // Convert to seconds
-  const t = (savedAnimationProgress + elapsedTime * 0.03) % 1; // SLOWER: 0.03 instead of 0.1 (3x slower!)
+  const t = (savedAnimationProgress + elapsedTime * HOME_ANIMATION_SPEED) % 1; // Use consistent speed
 
   // Animate ghosts on their home paths only during HOME state
   Object.entries(ghosts).forEach(([key, ghost]) => {
@@ -522,7 +525,7 @@ function handleScroll() {
         const elapsedTime =
           (currentTime - animationStartTime - timeOffset) / 1000;
         savedAnimationProgress =
-          (savedAnimationProgress + elapsedTime * 0.1) % 1;
+          (savedAnimationProgress + elapsedTime * HOME_ANIMATION_SPEED) % 1;
         currentAnimationState = "SCROLL_ANIMATION";
 
         // Capture positions immediately when starting scroll animation
