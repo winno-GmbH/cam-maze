@@ -1915,14 +1915,18 @@ function updatePOVTexts(progress: number) {
 
         if (ghostTextProgress < FADE_IN_DURATION) {
           // Fast fade in
-          targetGhostOpacity = ghostTextProgress / FADE_IN_DURATION;
+          targetGhostOpacity = Math.min(
+            1,
+            ghostTextProgress / FADE_IN_DURATION
+          );
         } else if (ghostTextProgress < FADE_OUT_START) {
           // Full opacity in the middle
           targetGhostOpacity = 1;
         } else {
-          // Fast fade out
-          targetGhostOpacity =
-            1 - (ghostTextProgress - FADE_OUT_START) / FADE_OUT_DURATION;
+          // Fast fade out - use remaining range (1.0 - FADE_OUT_START)
+          const fadeOutProgress =
+            (ghostTextProgress - FADE_OUT_START) / (1.0 - FADE_OUT_START);
+          targetGhostOpacity = Math.max(0, 1 - fadeOutProgress);
         }
 
         if (currentCameraProgress >= trigger.camTextCameraProgress) {
@@ -1939,14 +1943,15 @@ function updatePOVTexts(progress: number) {
 
           if (camTextProgress < FADE_IN_DURATION) {
             // Fast fade in
-            targetCamOpacity = camTextProgress / FADE_IN_DURATION;
+            targetCamOpacity = Math.min(1, camTextProgress / FADE_IN_DURATION);
           } else if (camTextProgress < FADE_OUT_START) {
             // Full opacity in the middle
             targetCamOpacity = 1;
           } else {
-            // Fast fade out
-            targetCamOpacity =
-              1 - (camTextProgress - FADE_OUT_START) / FADE_OUT_DURATION;
+            // Fast fade out - use remaining range (1.0 - FADE_OUT_START)
+            const fadeOutProgress =
+              (camTextProgress - FADE_OUT_START) / (1.0 - FADE_OUT_START);
+            targetCamOpacity = Math.max(0, 1 - fadeOutProgress);
           }
         }
       }
