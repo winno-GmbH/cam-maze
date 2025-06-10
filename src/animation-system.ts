@@ -842,24 +842,49 @@ async function setupGSAPIntroAnimations() {
 }
 
 export function setupScrollTriggers() {
+  console.log("🚀 setupScrollTriggers called!");
+
   // Setup intro animations (set initial states correctly)
   setupIntroAnimations();
 
-  const introSection = document.querySelector(".sc--intro");
-  const introHeader = document.querySelector(".sc_h--intro");
-  const introBody = document.querySelector(".sc_b--intro");
-
-  // SIMPLE test scroll handler
+  // BASIC TEST: Just console log on every scroll
+  let scrollCount = 0;
   window.addEventListener("scroll", () => {
-    const intro = document.querySelector(".sc--intro") as HTMLElement;
-    if (intro) {
-      const rect = intro.getBoundingClientRect();
+    scrollCount++;
+    if (scrollCount % 10 === 0) {
+      // Only log every 10th scroll to avoid spam
+      console.log(`📜 SCROLL #${scrollCount} - Y: ${window.scrollY}`);
+    }
 
-      // SIMPLE test: Make header visible when intro section is in view
-      const header = document.querySelector(".sc_h--intro") as HTMLElement;
-      if (header && rect.top <= window.innerHeight && rect.bottom >= 0) {
-        header.style.opacity = "1";
-        header.style.transform = "scale(1)";
+    // Test if we can find intro elements
+    const intro = document.querySelector(".sc--intro");
+    const header = document.querySelector(".sc_h--intro");
+    const body = document.querySelector(".sc_b--intro");
+
+    if (scrollCount === 1) {
+      // Log once on first scroll
+      console.log("🔍 Elements found:", {
+        intro: !!intro,
+        header: !!header,
+        body: !!body,
+      });
+    }
+
+    // SIMPLE TEST: If intro section exists and is in view, make header red and visible
+    if (intro && header) {
+      const rect = intro.getBoundingClientRect();
+      if (rect.top <= window.innerHeight && rect.bottom >= 0) {
+        const headerElement = header as HTMLElement;
+        headerElement.style.opacity = "1";
+        headerElement.style.transform = "scale(1)";
+        headerElement.style.backgroundColor = "red"; // Make it VERY obvious
+        headerElement.style.color = "white";
+        headerElement.style.padding = "20px";
+        headerElement.style.zIndex = "9999";
+
+        if (scrollCount % 20 === 0) {
+          console.log("🎬 Making header RED and visible!");
+        }
       }
     }
   });
