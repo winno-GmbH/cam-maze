@@ -868,6 +868,9 @@ interface POVAnimationState {
   finalLookAt: THREE.Vector3;
   rotationStarted: boolean;
   cachedStartYAngle: number | null;
+  // Global smoothing
+  smoothedProgress: number;
+  targetProgress: number;
 }
 
 const povAnimationState: POVAnimationState = {
@@ -882,6 +885,9 @@ const povAnimationState: POVAnimationState = {
   finalLookAt: new THREE.Vector3(-0.14675, 0, 1.8085),
   rotationStarted: false,
   cachedStartYAngle: null,
+  // Global smoothing
+  smoothedProgress: 0,
+  targetProgress: 0,
 };
 
 // POV Camera Smoothing State
@@ -1041,18 +1047,44 @@ function onPOVAnimationStart() {
   }
 }
 
+// GLOBAL SMOOTHING: Apply smooth progression to all POV animations
+function applySmoothProgress(targetProgress: number): number {
+  // Update target
+  povAnimationState.targetProgress = targetProgress;
+
+  // Apply smoothing - simple and effective
+  const smoothingFactor = 0.08; // Lower = smoother but more lag, higher = more responsive
+
+  povAnimationState.smoothedProgress +=
+    (povAnimationState.targetProgress - povAnimationState.smoothedProgress) *
+    smoothingFactor;
+
+  console.log(
+    `🌊 GLOBAL SMOOTH: target=${targetProgress.toFixed(
+      3
+    )}, smooth=${povAnimationState.smoothedProgress.toFixed(3)}, lag=${(
+      targetProgress - povAnimationState.smoothedProgress
+    ).toFixed(3)}`
+  );
+
+  return povAnimationState.smoothedProgress;
+}
+
 // Update POV Animation
 function updatePOVAnimation(progress: number) {
   if (!povAnimationState.cameraPOVPath || !povAnimationState.isActive) return;
 
-  // Update camera position and rotation
-  updatePOVCamera(progress);
+  // Apply global smoothing to ALL animations
+  const smoothProgress = applySmoothProgress(progress);
 
-  // Update ghost positions
-  updatePOVGhosts(progress);
+  // Update camera position and rotation with smoothed progress
+  updatePOVCamera(smoothProgress);
 
-  // Update POV texts
-  updatePOVTexts(progress);
+  // Update ghost positions with smoothed progress
+  updatePOVGhosts(smoothProgress);
+
+  // Update POV texts with smoothed progress
+  updatePOVTexts(smoothProgress);
 }
 
 // Update POV Camera
@@ -1684,92 +1716,35 @@ function updateGhostInPOV(
         (endProgress - triggerProgress);
       let ghostProgress = Math.max(0, Math.min(1, normalizedProgress));
 
-      // GSAP-style scrub system: scrub controls animation lag/smoothness
-      // scrub: 1.0 = no lag (direct scroll tie), 0.5 = moderate lag, 0.1 = very laggy
-      const scrubValue = 0.5; // Try 0.1, 0.5, or 1.0 to see different effects
-
-      // Parameter smoothing with scrub control
-      if (trigger.currentPathT === undefined) {
-        trigger.currentPathT = ghostProgress;
-      } else {
-        // Convert scrub to smoothing factor: scrub 1.0 = factor 1.0, scrub 0.5 = factor 0.5
-        const scrubSmoothingFactor = scrubValue;
-        trigger.currentPathT +=
-          (ghostProgress - trigger.currentPathT) * scrubSmoothingFactor;
-      }
-
-      // Final progress with smoothing (for position)
-      const smoothedProgress = trigger.currentPathT;
-
-      // CRITICAL FIX: Use normalized progress for fade detection since smoothed progress
-      // with factor 0.1 may never reach 0.9 due to exponential decay
-      const fadeProgress = normalizedProgress; // Use raw normalized progress for fade detection
-      const positionProgress = smoothedProgress; // Use smoothed progress for smooth movement
-
-      console.log(`🔍 ${ghostKey} SCRUB ANALYSIS:
-        - scrubValue: ${scrubValue}
-        - normalizedProgress (target): ${normalizedProgress.toFixed(3)}
-        - smoothedProgress (actual): ${smoothedProgress.toFixed(3)}
-        - lag: ${(normalizedProgress - smoothedProgress).toFixed(3)}
-        - fadeWillTrigger: ${fadeProgress > 0.9}
+      // SIMPLE: Use ghost progress directly (already globally smoothed)
+      console.log(`🔍 ${ghostKey} SIMPLE GHOST:
+        - normalizedProgress: ${normalizedProgress.toFixed(3)}
+        - ghostProgress: ${ghostProgress.toFixed(3)}
+        - fadeCheck: ${ghostProgress > 0.9}
         - cameraRange: ${triggerProgress.toFixed(3)} to ${endProgress.toFixed(
         3
       )}`);
 
-      // Show scrub effect
-      if (Math.abs(normalizedProgress - smoothedProgress) > 0.01) {
-        console.log(
-          `🎯 ${ghostKey} SCRUB LAG: target=${normalizedProgress.toFixed(
-            3
-          )}, current=${smoothedProgress.toFixed(3)}, catching up...`
-        );
-      }
-
-      // Update ghost position using smoothed progress for smooth movement
-      const pathPoint = path.getPointAt(positionProgress);
+      // Update ghost position
+      const pathPoint = path.getPointAt(ghostProgress);
       ghost.position.copy(pathPoint);
 
-      // Simple ghost orientation: stand upright and face tangent direction
-      const tangent = path.getTangentAt(positionProgress).normalize();
+      // Simple ghost orientation
+      const tangent = path.getTangentAt(ghostProgress).normalize();
       const lookAtPoint = ghost.position.clone().add(tangent);
-
-      // Make ghost look in tangent direction while staying upright
       ghost.lookAt(lookAtPoint);
 
-      // SMOOTH FADE: Calculate target opacity based on normalized progress, then smooth the opacity change
-      let targetOpacity = 1;
-      if (fadeProgress > 0.9) {
-        targetOpacity = 1 - (fadeProgress - 0.9) / 0.1;
-        targetOpacity = Math.max(0, Math.min(1, targetOpacity));
-      }
-
-      // Initialize opacity tracking if not exists
-      if (trigger.currentOpacity === undefined) {
-        trigger.currentOpacity = 1;
-      }
-
-      // Smooth opacity transition with scrub control
-      const opacityScrub = Math.min(1.0, scrubValue * 1.5); // Opacity slightly more responsive than position
-      trigger.currentOpacity +=
-        (targetOpacity - trigger.currentOpacity) * opacityScrub;
-
-      // Apply smoothed opacity
-      (ghost as any).material.opacity = trigger.currentOpacity;
-
-      if (fadeProgress > 0.9) {
+      // Simple fade: Use ghostProgress directly for fade
+      if (ghostProgress > 0.9) {
+        const fadeOpacity = 1 - (ghostProgress - 0.9) / 0.1;
+        (ghost as any).material.opacity = Math.max(0, Math.min(1, fadeOpacity));
         console.log(
-          `🎭 ${ghostKey} FADING: fadeProgress=${fadeProgress.toFixed(
+          `🎭 ${ghostKey} FADING: progress=${ghostProgress.toFixed(
             3
-          )}, targetOpacity=${targetOpacity.toFixed(
-            3
-          )}, currentOpacity=${trigger.currentOpacity.toFixed(3)}`
+          )}, opacity=${fadeOpacity.toFixed(3)}`
         );
-      } else if (fadeProgress > 0.85) {
-        console.log(
-          `🎭 ${ghostKey} ALMOST FADING: fadeProgress=${fadeProgress.toFixed(
-            3
-          )} (will trigger at > 0.9)`
-        );
+      } else {
+        (ghost as any).material.opacity = 1;
       }
 
       // Check if ghost actually has material and if it's working
@@ -1780,9 +1755,7 @@ function updateGhostInPOV(
       }
 
       console.log(
-        `🎭 ${ghostKey} visible in range: positionProgress=${positionProgress.toFixed(
-          3
-        )}, fadeProgress=${fadeProgress.toFixed(
+        `🎭 ${ghostKey} visible in range: ghostProgress=${ghostProgress.toFixed(
           3
         )}, cameraProgress=${currentCameraProgress.toFixed(3)}, visible=${
           ghost.visible
