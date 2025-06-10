@@ -1684,13 +1684,18 @@ function updateGhostInPOV(
         (endProgress - triggerProgress);
       let ghostProgress = Math.max(0, Math.min(1, normalizedProgress));
 
-      // Parameter smoothing (EXACT backup.js logic)
+      // GSAP-style scrub system: scrub controls animation lag/smoothness
+      // scrub: 1.0 = no lag (direct scroll tie), 0.5 = moderate lag, 0.1 = very laggy
+      const scrubValue = 0.5; // Try 0.1, 0.5, or 1.0 to see different effects
+
+      // Parameter smoothing with scrub control
       if (trigger.currentPathT === undefined) {
         trigger.currentPathT = ghostProgress;
       } else {
-        const parameterSmoothingFactor = 0.1;
+        // Convert scrub to smoothing factor: scrub 1.0 = factor 1.0, scrub 0.5 = factor 0.5
+        const scrubSmoothingFactor = scrubValue;
         trigger.currentPathT +=
-          (ghostProgress - trigger.currentPathT) * parameterSmoothingFactor;
+          (ghostProgress - trigger.currentPathT) * scrubSmoothingFactor;
       }
 
       // Final progress with smoothing (for position)
@@ -1701,13 +1706,24 @@ function updateGhostInPOV(
       const fadeProgress = normalizedProgress; // Use raw normalized progress for fade detection
       const positionProgress = smoothedProgress; // Use smoothed progress for smooth movement
 
-      console.log(`🔍 ${ghostKey} SMOOTHING ANALYSIS:
-        - normalizedProgress (for fade): ${normalizedProgress.toFixed(3)}
-        - smoothedProgress (for position): ${smoothedProgress.toFixed(3)}
+      console.log(`🔍 ${ghostKey} SCRUB ANALYSIS:
+        - scrubValue: ${scrubValue}
+        - normalizedProgress (target): ${normalizedProgress.toFixed(3)}
+        - smoothedProgress (actual): ${smoothedProgress.toFixed(3)}
+        - lag: ${(normalizedProgress - smoothedProgress).toFixed(3)}
         - fadeWillTrigger: ${fadeProgress > 0.9}
         - cameraRange: ${triggerProgress.toFixed(3)} to ${endProgress.toFixed(
         3
       )}`);
+
+      // Show scrub effect
+      if (Math.abs(normalizedProgress - smoothedProgress) > 0.01) {
+        console.log(
+          `🎯 ${ghostKey} SCRUB LAG: target=${normalizedProgress.toFixed(
+            3
+          )}, current=${smoothedProgress.toFixed(3)}, catching up...`
+        );
+      }
 
       // Update ghost position using smoothed progress for smooth movement
       const pathPoint = path.getPointAt(positionProgress);
@@ -1732,10 +1748,10 @@ function updateGhostInPOV(
         trigger.currentOpacity = 1;
       }
 
-      // Smooth opacity transition for smooth fade effect
-      const opacitySmoothingFactor = 0.15; // Faster than position smoothing for responsive fade
+      // Smooth opacity transition with scrub control
+      const opacityScrub = Math.min(1.0, scrubValue * 1.5); // Opacity slightly more responsive than position
       trigger.currentOpacity +=
-        (targetOpacity - trigger.currentOpacity) * opacitySmoothingFactor;
+        (targetOpacity - trigger.currentOpacity) * opacityScrub;
 
       // Apply smoothed opacity
       (ghost as any).material.opacity = trigger.currentOpacity;
