@@ -3,11 +3,30 @@ import { ghosts, pacmanMixer, clock } from "./objects";
 import { pathsMap } from "./paths";
 import { renderer, scene } from "./scene";
 import { camera, startQuaternion, endQuaternion } from "./camera";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+// GSAP Dynamic Import - works with ES modules and bundlers
+let gsap: any = null;
+let ScrollTrigger: any = null;
 
-// Register GSAP ScrollTrigger
-gsap.registerPlugin(ScrollTrigger);
+// Try to import GSAP dynamically
+async function initGSAP() {
+  try {
+    const gsapModule = await import("gsap");
+    const scrollTriggerModule = await import("gsap/ScrollTrigger");
+
+    gsap = gsapModule.gsap || gsapModule.default;
+    ScrollTrigger =
+      scrollTriggerModule.ScrollTrigger || scrollTriggerModule.default;
+
+    if (gsap && ScrollTrigger && gsap.registerPlugin) {
+      gsap.registerPlugin(ScrollTrigger);
+      console.log("✅ GSAP ScrollTrigger loaded and registered successfully");
+      return true;
+    }
+  } catch (error) {
+    console.warn("⚠️ GSAP dynamic import failed:", error);
+  }
+  return false;
+}
 
 // 1. STATE MANAGEMENT
 type AnimationState = "HOME" | "SCROLL_ANIMATION" | "POV_ANIMATION";
@@ -650,7 +669,7 @@ function animateIntroBodyDirect(directProgress: number) {
   introBody.style.opacity = opacity.toString();
 }
 
-export function setupScrollTriggers() {
+export async function setupScrollTriggers() {
   // Setup intro animations
   setupIntroAnimations();
 
@@ -658,45 +677,62 @@ export function setupScrollTriggers() {
   window.addEventListener("scroll", handleScroll);
   window.addEventListener("scroll", handleIntroScroll);
 
-  // GSAP ScrollTrigger for POV Section - PROFESSIONAL SMOOTH SCRUBBING
-  const povSection = document.querySelector(".sc--pov");
-  if (povSection) {
-    ScrollTrigger.create({
-      trigger: povSection,
-      start: "top top",
-      end: "bottom bottom",
-      scrub: 0.5, // SMOOTH SCRUBBING! 0.5 seconds lag
-      onUpdate: (self) => {
-        const progress = self.progress;
-        console.log(`🎬 GSAP POV: progress=${progress.toFixed(3)}`);
+  // Try to initialize GSAP
+  const gsapLoaded = await initGSAP();
 
-        // Apply smooth POV animation
-        if (povAnimationState.isActive) {
-          updatePOVAnimation(progress);
-        }
-      },
-      onToggle: (self) => {
-        if (self.isActive) {
-          // Start POV animation
-          if (!povAnimationState.isActive) {
-            povAnimationState.isActive = true;
-            onPOVAnimationStart();
-            console.log("🎬 GSAP POV Animation Started");
-          }
-        } else {
-          // End POV animation
-          if (povAnimationState.isActive) {
-            povAnimationState.isActive = false;
-            onPOVAnimationEnd();
-            console.log("🎬 GSAP POV Animation Ended");
-          }
-        }
-      },
-    });
+  if (gsapLoaded && gsap && ScrollTrigger) {
+    // GSAP ScrollTrigger for POV Section - PROFESSIONAL SMOOTH SCRUBBING
+    const povSection = document.querySelector(".sc--pov");
+    if (povSection) {
+      try {
+        ScrollTrigger.create({
+          trigger: povSection,
+          start: "top top",
+          end: "bottom bottom",
+          scrub: 0.5, // SMOOTH SCRUBBING! 0.5 seconds lag
+          onUpdate: (self: any) => {
+            const progress = self.progress;
+            console.log(`🎬 GSAP POV: progress=${progress.toFixed(3)}`);
+
+            // Apply smooth POV animation
+            if (povAnimationState.isActive) {
+              updatePOVAnimation(progress);
+            }
+          },
+          onToggle: (self: any) => {
+            if (self.isActive) {
+              // Start POV animation
+              if (!povAnimationState.isActive) {
+                povAnimationState.isActive = true;
+                onPOVAnimationStart();
+                console.log("🎬 GSAP POV Animation Started");
+              }
+            } else {
+              // End POV animation
+              if (povAnimationState.isActive) {
+                povAnimationState.isActive = false;
+                onPOVAnimationEnd();
+                console.log("🎬 GSAP POV Animation Ended");
+              }
+            }
+          },
+        });
+        console.log("✅ GSAP ScrollTrigger setup complete for POV section");
+      } catch (error) {
+        console.error("❌ Error setting up GSAP ScrollTrigger:", error);
+        setupFallbackPOVScroll();
+      }
+    }
+  } else {
+    console.warn("⚠️ GSAP not available, using fallback scroll handlers");
+    setupFallbackPOVScroll();
   }
+}
 
-  // Remove the old POV scroll listener since GSAP handles it now
-  // window.addEventListener("scroll", handlePOVScroll); // REMOVED
+// Fallback scroll handler for POV if GSAP fails
+function setupFallbackPOVScroll() {
+  window.addEventListener("scroll", handlePOVScroll);
+  console.log("📜 Fallback POV scroll handler set up");
 }
 
 // Main animation loop
@@ -764,7 +800,15 @@ export function initAnimationSystem() {
     }
   });
 
-  setupScrollTriggers();
+  // Setup scroll triggers (now async)
+  setupScrollTriggers()
+    .then(() => {
+      console.log("🚀 Animation system fully initialized");
+    })
+    .catch((error) => {
+      console.error("❌ Error initializing scroll triggers:", error);
+    });
+
   animate();
 
   // Initialize POV Animation System

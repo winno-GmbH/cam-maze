@@ -179,9 +179,7 @@ export async function loadModel(): Promise<void> {
 
         resolve();
       },
-      function (progress) {
-        console.log("Loading progress:", progress); // TODO: Remove this
-      },
+      function (progress) {},
       function (error) {
         reject(error);
       }
