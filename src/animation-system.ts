@@ -796,9 +796,10 @@ async function setupGSAPIntroAnimations() {
       autoSleep: 60, // Keep animations responsive
     });
 
-    // Optimize ScrollTrigger for smooth performance
+    // Optimize ScrollTrigger for smooth performance + fast scroll handling
     ScrollTrigger.config({
       autoRefreshEvents: "visibilitychange,DOMContentLoaded,load", // Reduce refresh triggers
+      limitCallbacks: true, // Prevent callback overload during fast scrolling
     });
 
     console.log(
@@ -814,13 +815,10 @@ async function setupGSAPIntroAnimations() {
         opacity: 0,
         scrollTrigger: {
           trigger: ".sc--intro",
-          start: "top top", // Starts immediately when intro section enters
-          end: "+=150vh", // EXTENDED: Much longer for proper sticky behavior
-          scrub: 0.5, // SMOOTH: 0.5 second lag for momentum-like feel
-          refreshPriority: 1, // High priority for smooth updates
-          anticipatePin: 1, // Prevent fast scroll jumping
-          pin: true, // PIN: Keep element centered during animation
-          pinSpacing: false, // Don't add extra space
+          start: "top top", // BACKUP.JS: Exact same as original
+          end: "center center", // BACKUP.JS: Exact same as original
+          scrub: 0.3, // OPTIMIZED: Faster response for fast scrolling
+          invalidateOnRefresh: true, // Ensure proper recalculation
         },
         ease: "none",
         keyframes: [
@@ -836,13 +834,10 @@ async function setupGSAPIntroAnimations() {
       .timeline({
         scrollTrigger: {
           trigger: ".sc--intro",
-          start: "+=150vh", // Start after header animation
-          end: "+=150vh", // EXTENDED: Same length as header for balance
-          scrub: 0.5, // SMOOTH: 0.5 second lag for momentum-like feel
-          refreshPriority: 1, // High priority for smooth updates
-          anticipatePin: 1, // Prevent fast scroll jumping
-          pin: true, // PIN: Keep element centered during animation
-          pinSpacing: false, // Don't add extra space
+          start: "center center", // BACKUP.JS: Exact same as original
+          end: "bottom bottom", // BACKUP.JS: Exact same as original
+          scrub: 0.3, // OPTIMIZED: Faster response for fast scrolling
+          invalidateOnRefresh: true, // Ensure proper recalculation
         },
       })
       .fromTo(
