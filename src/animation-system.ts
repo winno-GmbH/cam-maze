@@ -789,10 +789,16 @@ async function setupGSAPIntroAnimations() {
 
     gsap.registerPlugin(ScrollTrigger);
 
-    // SMOOTH GSAP settings to prevent flickering
+    // SMOOTH GSAP settings to prevent flickering + fast scroll issues
     gsap.config({
       force3D: true, // Hardware acceleration
       nullTargetWarn: false,
+      autoSleep: 60, // Keep animations responsive
+    });
+
+    // Optimize ScrollTrigger for smooth performance
+    ScrollTrigger.config({
+      autoRefreshEvents: "visibilitychange,DOMContentLoaded,load", // Reduce refresh triggers
     });
 
     console.log(
@@ -810,8 +816,9 @@ async function setupGSAPIntroAnimations() {
           trigger: ".sc--intro",
           start: "top top", // Starts immediately when intro section enters
           end: "center center", // BACKUP.JS: Header ends at center center
-          scrub: true, // TRUE for smoothest possible scrubbing (no lag)
+          scrub: 0.5, // SMOOTH: 0.5 second lag for momentum-like feel
           refreshPriority: 1, // High priority for smooth updates
+          anticipatePin: 1, // Prevent fast scroll jumping
         },
         ease: "none",
         keyframes: [
@@ -829,8 +836,9 @@ async function setupGSAPIntroAnimations() {
           trigger: ".sc--intro",
           start: "center center", // BACKUP.JS: Body starts at center center
           end: "bottom bottom", // BACKUP.JS: Body ends at bottom bottom
-          scrub: true, // TRUE for smoothest possible scrubbing (no lag)
+          scrub: 0.5, // SMOOTH: 0.5 second lag for momentum-like feel
           refreshPriority: 1, // High priority for smooth updates
+          anticipatePin: 1, // Prevent fast scroll jumping
         },
       })
       .fromTo(
