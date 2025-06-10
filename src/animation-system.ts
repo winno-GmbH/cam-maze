@@ -326,7 +326,7 @@ function animationLoop() {
 
   const currentTime = Date.now();
   const elapsedTime = (currentTime - animationStartTime - timeOffset) / 1000; // Convert to seconds
-  const t = (savedAnimationProgress + elapsedTime * 0.1) % 1; // Continue from saved progress
+  const t = (savedAnimationProgress + elapsedTime * 0.03) % 1; // SLOWER: 0.03 instead of 0.1 (3x slower!)
 
   // Animate ghosts on their home paths only during HOME state
   Object.entries(ghosts).forEach(([key, ghost]) => {
