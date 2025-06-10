@@ -809,7 +809,7 @@ async function setupGSAPIntroAnimations() {
         scrollTrigger: {
           trigger: ".sc--intro",
           start: "top top", // Starts immediately when intro section enters
-          end: "+=50vh", // EXTENDED: 50vh after trigger start for longer sticky behavior
+          end: "center center", // BACKUP.JS: Header ends at center center
           scrub: true, // TRUE for smoothest possible scrubbing (no lag)
           refreshPriority: 1, // High priority for smooth updates
         },
@@ -827,8 +827,8 @@ async function setupGSAPIntroAnimations() {
       .timeline({
         scrollTrigger: {
           trigger: ".sc--intro",
-          start: "+=50vh", // EXTENDED: Starts 50vh after section start (after header finishes)
-          end: "+=100vh", // EXTENDED: Continues for 100vh for longer sticky behavior
+          start: "center center", // BACKUP.JS: Body starts at center center
+          end: "bottom bottom", // BACKUP.JS: Body ends at bottom bottom
           scrub: true, // TRUE for smoothest possible scrubbing (no lag)
           refreshPriority: 1, // High priority for smooth updates
         },
