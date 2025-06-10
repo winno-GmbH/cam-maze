@@ -1545,7 +1545,7 @@ function onPOVAnimationStart() {
     camera.position.copy(startPosition);
 
     // Create 45° forward-up look direction (sanfter als direkt nach oben)
-    const forwardVector = new THREE.Vector3(0, 0, -1); // Forward
+    const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
     const upVector = new THREE.Vector3(0, 1, 0); // Up
     const forwardUpDirection = new THREE.Vector3()
       .addVectors(forwardVector, upVector)
@@ -1675,7 +1675,7 @@ function updatePOVCamera(progress: number) {
 
     if (progress < phase1Duration) {
       // Phase 1: 45° nach vorne-oben schauen
-      const forwardVector = new THREE.Vector3(0, 0, -1); // Forward
+      const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
       const upVector = new THREE.Vector3(0, 1, 0); // Up
 
       // 45° forward-up direction
@@ -1687,7 +1687,7 @@ function updatePOVCamera(progress: number) {
       applySmoothCameraRotation(lookAtPoint);
     } else if (progress < phase2Duration) {
       // Phase 2: 45° nach vorne-unten schauen
-      const forwardVector = new THREE.Vector3(0, 0, -1); // Forward
+      const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
       const downVector = new THREE.Vector3(0, -1, 0); // Down
 
       // 45° forward-down direction
@@ -1703,7 +1703,7 @@ function updatePOVCamera(progress: number) {
         (progress - phase2Duration) / (phase3Duration - phase2Duration); // 0 to 1
       const smoothTransition = smoothStep(transitionProgress);
 
-      const forwardVector = new THREE.Vector3(0, 0, -1);
+      const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
       const downVector = new THREE.Vector3(0, -1, 0);
       const forwardDownDirection = new THREE.Vector3()
         .addVectors(forwardVector, downVector)
