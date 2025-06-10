@@ -1388,7 +1388,7 @@ const povAnimationState: POVAnimationState = {
   previousCameraPosition: null,
   startRotationPoint: new THREE.Vector3(0.55675, 0.55, 1.306),
   endRotationPoint: new THREE.Vector3(-0.14675, 1, 1.8085),
-  targetLookAt: new THREE.Vector3(0.55675, 5.0, 1.306), // Look straight up
+  targetLookAt: new THREE.Vector3(0.55675, 1, 1.306), // Look straight up
   finalLookAt: new THREE.Vector3(-0.14675, 0, 1.8085),
   rotationStarted: false,
   cachedStartYAngle: null,
@@ -1547,7 +1547,7 @@ function onPOVAnimationStart() {
     // Create look-at point straight up from start position (adjusted for higher camera)
     const straightUpLookAt = new THREE.Vector3(
       startPosition.x,
-      startPosition.y + 2.0, // Even less extreme for smoother transition (was 3.0)
+      startPosition.y + 2.0,
       startPosition.z
     );
     camera.lookAt(straightUpLookAt);
