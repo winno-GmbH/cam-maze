@@ -33,17 +33,17 @@ function applySmoothScroll(targetProgress: number): number {
   const deltaTime = Math.max(currentTime - smoothScrollState.lastTime, 0.001);
   smoothScrollState.targetProgress = targetProgress;
 
-  // Smooth interpolation settings - BALANCED smooth but responsive
-  const smoothness = 0.12; // Moderate smoothness
-  const maxVelocity = 2.5; // Velocity cap
+  // Smooth interpolation settings - LIGHT smoothing, more responsive
+  const smoothness = 0.25; // Higher = more responsive
+  const maxVelocity = 4.0; // Higher velocity cap
 
   // Calculate difference and apply smoothing
   const diff =
     smoothScrollState.targetProgress - smoothScrollState.currentProgress;
   smoothScrollState.velocity += diff * smoothness;
 
-  // Apply moderate friction for good stopping
-  smoothScrollState.velocity *= 0.8; // Balanced friction
+  // Apply light friction for quicker stopping
+  smoothScrollState.velocity *= 0.85; // Light friction
 
   // Cap velocity
   smoothScrollState.velocity = Math.max(
@@ -320,6 +320,9 @@ function animationLoop() {
   // Only run home animation if we're in HOME state
   if (currentAnimationState !== "HOME") return;
 
+  // DEBUG: Show when HOME animation runs
+  console.log("🏠 HOME Animation Loop Running");
+
   const currentTime = Date.now();
   const elapsedTime = (currentTime - animationStartTime - timeOffset) / 1000; // Convert to seconds
   const t = (savedAnimationProgress + elapsedTime * 0.1) % 1; // Continue from saved progress
@@ -535,6 +538,11 @@ function handleScroll() {
           // Compress ghost animation into 0-80% range
           const ghostProgress = Math.min(scrollProgress / GHOSTS_END_AT, 1);
           moveGhostOnCurve(ghostKey, ghostProgress);
+
+          // DEBUG: Show when SCROLL animation updates ghosts
+          console.log(
+            `📜 SCROLL Animation: ${ghostKey} at ${ghostProgress.toFixed(3)}`
+          );
         }
       });
 
@@ -763,14 +771,12 @@ export function setupScrollTriggers() {
           const smoothProgress = applySmoothScroll(rawProgress);
           updatePOVAnimation(smoothProgress);
 
-          // Log for debugging
-          if (Math.abs(rawProgress - smoothProgress) > 0.01) {
-            console.log(
-              `📹 Smooth POV: raw=${rawProgress.toFixed(
-                3
-              )}, smooth=${smoothProgress.toFixed(3)}`
-            );
-          }
+          // DEBUG: Show what state we're in
+          console.log(
+            `🔄 POV Active - State: ${currentAnimationState}, Raw: ${rawProgress.toFixed(
+              3
+            )}, Smooth: ${smoothProgress.toFixed(3)}`
+          );
         }
       } else {
         // POV section is out of view - end animation
