@@ -6,6 +6,7 @@ import {
   mazeMaterial,
   topMaterial,
   ghostMaterial,
+  ghostMaterials,
   floorMaterial,
   materialMap,
 } from "./materials";
@@ -23,14 +24,14 @@ export let pacmanMixer: THREE.AnimationMixer;
 export const pacman = new THREE.Group();
 scene.add(pacman);
 
-// Ghost Objects
+// Ghost Objects - Each with unique glass material
 export const ghosts: GhostContainer = {
   pacman: pacman,
-  ghost1: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
-  ghost2: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
-  ghost3: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
-  ghost4: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
-  ghost5: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
+  ghost1: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterials.ghost1), // Red glass
+  ghost2: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterials.ghost2), // Cyan glass
+  ghost3: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterials.ghost3), // Yellow glass
+  ghost4: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterials.ghost4), // Green glass
+  ghost5: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterials.ghost5), // Purple glass
 };
 
 // Ghost containers mapping (like in backup.js)
@@ -40,6 +41,15 @@ const ghostContainers = {
   Ghost_YEN: ghosts.ghost3,
   Ghost_USD: ghosts.ghost4,
   Ghost_GBP: ghosts.ghost5,
+};
+
+// Ghost material mapping
+const ghostMaterialMap = {
+  Ghost_EUR: ghostMaterials.ghost1,
+  Ghost_CHF: ghostMaterials.ghost2,
+  Ghost_YEN: ghostMaterials.ghost3,
+  Ghost_USD: ghostMaterials.ghost4,
+  Ghost_GBP: ghostMaterials.ghost5,
 };
 
 // Add ghosts to scene
@@ -93,8 +103,10 @@ export async function loadModel(): Promise<void> {
             child.name &&
             ghostContainers[child.name as keyof typeof ghostContainers]
           ) {
-            const ghostContainer =
+            const ghostData =
               ghostContainers[child.name as keyof typeof ghostContainers];
+            const ghostContainer = ghostData.container;
+            const ghostMaterial = ghostData.material;
             const ghostGroup = new THREE.Group();
 
             child.rotation.z = Math.PI;

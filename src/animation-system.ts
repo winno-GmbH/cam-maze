@@ -3,6 +3,7 @@ import { ghosts, pacmanMixer, clock } from "./objects";
 import { pathsMap } from "./paths";
 import { renderer, scene } from "./scene";
 import { camera, startQuaternion, endQuaternion } from "./camera";
+import { updateGlassShaderTime } from "./materials";
 // Removed redundant smooth scroll system - using direct progress for precise control
 
 // 1. STATE MANAGEMENT
@@ -1056,6 +1057,10 @@ function animate() {
     const delta = clock.getDelta();
     pacmanMixer.update(delta);
   }
+
+  // Update glass shader time for shimmer effects
+  const time = clock.getElapsedTime();
+  updateGlassShaderTime(time);
 
   // Run animation loop if in HOME state
   animationLoop();
