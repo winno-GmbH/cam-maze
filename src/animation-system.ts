@@ -1574,19 +1574,42 @@ function applyMomentumScrubbing_DEPRECATED(targetProgress: number): number {
   return povAnimationState.smoothedProgress;
 }
 
-// Update POV Animation - Use direct progress for precise trigger control
+// Update POV Animation - Separate progress for triggers vs visuals
 function updatePOVAnimation(progress: number) {
   if (!povAnimationState.cameraPOVPath || !povAnimationState.isActive) return;
 
-  // Use direct progress for precise trigger control - no additional smoothing
-  // The camera movement smoothing happens only in the rotation/movement, not in trigger detection
-  updatePOVCamera(progress);
+  // Apply light smoothing ONLY for visual camera movement (not triggers)
+  const visualProgress = applyLightVisualSmoothing(progress);
 
-  // Update ghost positions with direct progress for precise triggering
+  // Use smoothed progress for camera movement (visual smoothness)
+  updatePOVCamera(visualProgress);
+
+  // Use direct progress for ghost triggers (precise triggering)
   updatePOVGhosts(progress);
 
-  // Update POV texts with direct progress
+  // Use direct progress for text triggers (precise timing)
   updatePOVTexts(progress);
+}
+
+// Light smoothing only for visual camera movement
+function applyLightVisualSmoothing(targetProgress: number): number {
+  // Store smoothing state on the function
+  if (
+    typeof (applyLightVisualSmoothing as any).smoothedProgress === "undefined"
+  ) {
+    (applyLightVisualSmoothing as any).smoothedProgress = targetProgress;
+    return targetProgress;
+  }
+
+  // Very light smoothing for visual comfort only
+  const smoothingFactor = 0.15; // Light smoothing (higher = more responsive)
+  const smoothedProgress =
+    (applyLightVisualSmoothing as any).smoothedProgress +
+    (targetProgress - (applyLightVisualSmoothing as any).smoothedProgress) *
+      smoothingFactor;
+
+  (applyLightVisualSmoothing as any).smoothedProgress = smoothedProgress;
+  return smoothedProgress;
 }
 
 // Update POV Camera
@@ -2201,8 +2224,7 @@ function handlePOVScroll() {
     const scrolledIntoSection = Math.max(0, -sectionTop);
     const progress = Math.min(1, scrolledIntoSection / totalAnimationHeight);
 
-    // NO scroll smoothing - use direct progress for precise trigger detection
-    // All smoothing happens only at the camera/rotation level
+    // Direct progress for triggers - smoothing happens internally in updatePOVAnimation
 
     // Start POV animation if not already active and we're in SCROLL_ANIMATION or HOME state
     if (
@@ -2215,10 +2237,9 @@ function handlePOVScroll() {
       onPOVAnimationStart();
     }
 
-    // Update POV animation with direct progress for triggers, smoothed for visuals
+    // Update POV animation with hybrid approach: direct for triggers, smoothed for visuals
     if (povAnimationState.isActive) {
-      // Use raw progress for trigger detection, smoothed for camera movement
-      updatePOVAnimation(progress); // Direct progress ensures triggers fire correctly
+      updatePOVAnimation(progress); // Triggers use direct progress, camera uses internal smoothing
     }
   } else {
     // Section is out of view (beyond buffer zone) - end POV animation
