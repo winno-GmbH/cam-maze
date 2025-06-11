@@ -103,10 +103,22 @@ export async function loadModel(): Promise<void> {
             child.name &&
             ghostContainers[child.name as keyof typeof ghostContainers]
           ) {
-            const ghostData =
+            const ghostContainer =
               ghostContainers[child.name as keyof typeof ghostContainers];
-            const ghostContainer = ghostData.container;
-            const ghostMaterial = ghostData.material;
+
+            // Get the appropriate glass material for this ghost
+            const ghostMaterial =
+              child.name === "Ghost_EUR"
+                ? ghostMaterials.ghost1
+                : child.name === "Ghost_CHF"
+                ? ghostMaterials.ghost2
+                : child.name === "Ghost_YEN"
+                ? ghostMaterials.ghost3
+                : child.name === "Ghost_USD"
+                ? ghostMaterials.ghost4
+                : child.name === "Ghost_GBP"
+                ? ghostMaterials.ghost5
+                : ghostMaterials.ghost1; // fallback
             const ghostGroup = new THREE.Group();
 
             child.rotation.z = Math.PI;
@@ -142,7 +154,9 @@ export async function loadModel(): Promise<void> {
               ghostGroup.add(item);
             });
 
-            ghostContainer.add(ghostGroup);
+            (ghostContainer as any).container
+              ? (ghostContainer as any).container.add(ghostGroup)
+              : ghostContainer.add(ghostGroup);
           }
 
           if ((child as any).isMesh) {
