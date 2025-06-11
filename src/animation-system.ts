@@ -3,67 +3,7 @@ import { ghosts, pacmanMixer, clock } from "./objects";
 import { pathsMap } from "./paths";
 import { renderer, scene } from "./scene";
 import { camera, startQuaternion, endQuaternion } from "./camera";
-// SIMPLE SMOOTH SCROLL - No external dependencies, always works
-interface SmoothScrollState {
-  targetProgress: number;
-  currentProgress: number;
-  velocity: number;
-  lastTime: number;
-}
-
-const smoothScrollState: SmoothScrollState = {
-  targetProgress: 0,
-  currentProgress: 0,
-  velocity: 0,
-  lastTime: 0,
-};
-
-// Simple smooth scroll function
-function applySmoothScroll(targetProgress: number): number {
-  const currentTime = performance.now() / 1000;
-
-  // Initialize on first run
-  if (smoothScrollState.lastTime === 0) {
-    smoothScrollState.lastTime = currentTime;
-    smoothScrollState.currentProgress = targetProgress;
-    smoothScrollState.targetProgress = targetProgress;
-    return targetProgress;
-  }
-
-  const deltaTime = Math.max(currentTime - smoothScrollState.lastTime, 0.001);
-  smoothScrollState.targetProgress = targetProgress;
-
-  // Smooth interpolation settings - VERY LIGHT smoothing, highly responsive
-  const smoothness = 0.4; // Much higher = more responsive
-  const maxVelocity = 6.0; // Higher velocity cap
-
-  // Calculate difference and apply smoothing
-  const diff =
-    smoothScrollState.targetProgress - smoothScrollState.currentProgress;
-  smoothScrollState.velocity += diff * smoothness;
-
-  // Apply minimal friction for quick stopping
-  smoothScrollState.velocity *= 0.9; // Minimal friction
-
-  // Cap velocity
-  smoothScrollState.velocity = Math.max(
-    -maxVelocity,
-    Math.min(maxVelocity, smoothScrollState.velocity)
-  );
-
-  // Update progress with higher precision
-  smoothScrollState.currentProgress += smoothScrollState.velocity * deltaTime;
-  smoothScrollState.currentProgress = Math.max(
-    0,
-    Math.min(1, smoothScrollState.currentProgress)
-  );
-
-  // Update time
-  smoothScrollState.lastTime = currentTime;
-
-  // Return with higher precision (more decimal places for smoother animation)
-  return Math.round(smoothScrollState.currentProgress * 10000) / 10000;
-}
+// Removed redundant smooth scroll system - using direct progress for precise control
 
 // 1. STATE MANAGEMENT
 type AnimationState = "HOME" | "SCROLL_ANIMATION" | "POV_ANIMATION";
@@ -1082,8 +1022,8 @@ export function setupScrollTriggers() {
 
         // Update POV animation with SMOOTH progress
         if (povAnimationState.isActive) {
-          const smoothProgress = applySmoothScroll(rawProgress);
-          updatePOVAnimation(smoothProgress);
+          // Use direct progress for precise trigger control
+          updatePOVAnimation(rawProgress);
         }
       } else {
         // POV section is out of view - end animation
@@ -1402,7 +1342,7 @@ const povAnimationState: POVAnimationState = {
 
 // POV Camera Smoothing State - GENTLER SETTINGS
 let previousCameraRotation: THREE.Quaternion | null = null;
-const CAMERA_ROTATION_SMOOTHING = 0.08; // Much gentler smoothing (was 0.15)
+const CAMERA_ROTATION_SMOOTHING = 0.25; // More responsive for direct control (was 0.08)
 const MAX_ROTATION_SPEED = Math.PI / 12; // Slower max rotation (15° per frame, was 30°)
 const LOOK_AHEAD_DISTANCE = 0.01; // Smaller look-ahead for less jitter (was 0.02)
 
@@ -1634,18 +1574,18 @@ function applyMomentumScrubbing_DEPRECATED(targetProgress: number): number {
   return povAnimationState.smoothedProgress;
 }
 
-// Update POV Animation - GSAP provides the smoothing, we just use the progress
+// Update POV Animation - Use direct progress for precise trigger control
 function updatePOVAnimation(progress: number) {
   if (!povAnimationState.cameraPOVPath || !povAnimationState.isActive) return;
 
-  // GSAP ScrollTrigger already provides smooth scrubbing, no need for additional smoothing
-  // Update camera position and rotation with GSAP progress
+  // Use direct progress for precise trigger control - no additional smoothing
+  // The camera movement smoothing happens only in the rotation/movement, not in trigger detection
   updatePOVCamera(progress);
 
-  // Update ghost positions with GSAP progress
+  // Update ghost positions with direct progress for precise triggering
   updatePOVGhosts(progress);
 
-  // Update POV texts with GSAP progress
+  // Update POV texts with direct progress
   updatePOVTexts(progress);
 }
 
@@ -1830,10 +1770,10 @@ function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
   let dynamicSmoothing = CAMERA_ROTATION_SMOOTHING;
   if (angleDifference > Math.PI / 8) {
     // > 22.5° = sharp corner
-    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.4; // Much more smoothing for corners
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.7; // Less aggressive smoothing for corners (was 0.4)
   } else if (angleDifference > Math.PI / 16) {
     // > 11.25° = moderate corner
-    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.7; // More smoothing
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.85; // Less smoothing for moderate turns (was 0.7)
   }
 
   // Always apply smoothing (no speed limiting - causes jumps)
@@ -2237,7 +2177,7 @@ function getCameraLookAtPoint(): THREE.Vector3 {
   return lookAtPoint;
 }
 
-// Handle POV scroll events
+// Handle POV scroll events - DIRECT control for precise triggering
 function handlePOVScroll() {
   const povSection = document.querySelector(".sc--pov") as HTMLElement;
   if (!povSection) return;
@@ -2249,8 +2189,8 @@ function handlePOVScroll() {
   const sectionTop = rect.top;
   const sectionHeight = rect.height;
 
-  // Add buffer zone for smooth animation completion
-  const animationBuffer = windowHeight * 0.3; // 30% buffer for POV
+  // Reduced buffer zone for more responsive control
+  const animationBuffer = windowHeight * 0.1; // 10% buffer for POV (was 30%)
   const totalAnimationHeight = sectionHeight + animationBuffer;
 
   if (
@@ -2260,6 +2200,9 @@ function handlePOVScroll() {
     // Section is in view (including buffer zone) - calculate progress
     const scrolledIntoSection = Math.max(0, -sectionTop);
     const progress = Math.min(1, scrolledIntoSection / totalAnimationHeight);
+
+    // NO scroll smoothing - use direct progress for precise trigger detection
+    // All smoothing happens only at the camera/rotation level
 
     // Start POV animation if not already active and we're in SCROLL_ANIMATION or HOME state
     if (
@@ -2272,9 +2215,10 @@ function handlePOVScroll() {
       onPOVAnimationStart();
     }
 
-    // Update POV animation
+    // Update POV animation with direct progress for triggers, smoothed for visuals
     if (povAnimationState.isActive) {
-      updatePOVAnimation(progress);
+      // Use raw progress for trigger detection, smoothed for camera movement
+      updatePOVAnimation(progress); // Direct progress ensures triggers fire correctly
     }
   } else {
     // Section is out of view (beyond buffer zone) - end POV animation
