@@ -3,7 +3,6 @@ import { ghosts, pacmanMixer, clock } from "./objects";
 import { pathsMap } from "./paths";
 import { renderer, scene } from "./scene";
 import { camera, startQuaternion, endQuaternion } from "./camera";
-import { updateGlassShaderTime } from "./materials";
 // Removed redundant smooth scroll system - using direct progress for precise control
 
 // 1. STATE MANAGEMENT
@@ -1058,10 +1057,6 @@ function animate() {
     pacmanMixer.update(delta);
   }
 
-  // Update glass shader time for shimmer effects
-  const time = clock.getElapsedTime();
-  updateGlassShaderTime(time);
-
   // Run animation loop if in HOME state
   animationLoop();
 
@@ -1323,6 +1318,12 @@ interface POVAnimationState {
   velocity: number;
   lastTargetProgress: number;
   lastTime: number;
+  // AUTO-STOP SYSTEM for Ghost Encounters
+  isPaused: boolean;
+  pausedAtProgress: number;
+  pausedAtGhost: string | null;
+  lastTriggeredGhost: string | null;
+  canContinue: boolean;
 }
 
 const povAnimationState: POVAnimationState = {
@@ -1343,6 +1344,12 @@ const povAnimationState: POVAnimationState = {
   velocity: 0,
   lastTargetProgress: 0,
   lastTime: 0,
+  // AUTO-STOP SYSTEM for Ghost Encounters
+  isPaused: false,
+  pausedAtProgress: 0,
+  pausedAtGhost: null,
+  lastTriggeredGhost: null,
+  canContinue: false,
 };
 
 // POV Camera Smoothing State - GENTLER SETTINGS
@@ -1418,6 +1425,9 @@ function initializePOVAnimation() {
     ghost4: createPOVPath(ghost4POVPathPoints),
     ghost5: createPOVPath(ghost5POVPathPoints),
   };
+
+  // Setup ghost encounter controls
+  setupGhostEncounterControls();
 
   // Initialize trigger positions
   povAnimationState.triggerPositions = {
@@ -1579,144 +1589,193 @@ function applyMomentumScrubbing_DEPRECATED(targetProgress: number): number {
   return povAnimationState.smoothedProgress;
 }
 
-// Update POV Animation - Separate progress for triggers vs visuals
-function updatePOVAnimation(progress: number) {
+// Update POV Animation - Auto-Stop at Ghost Encounters
+function updatePOVAnimation(rawProgress: number) {
   if (!povAnimationState.cameraPOVPath || !povAnimationState.isActive) return;
 
+  // AUTO-STOP SYSTEM: Check if we should pause at a ghost encounter
+  let effectiveProgress = handleAutoStopSystem(rawProgress);
+
   // Apply light smoothing ONLY for visual camera movement (not triggers)
-  const visualProgress = applyLightVisualSmoothing(progress);
+  const visualProgress = applyLightVisualSmoothing(effectiveProgress);
 
   // Use smoothed progress for camera movement (visual smoothness)
   updatePOVCamera(visualProgress);
 
   // Use direct progress for ghost triggers (precise triggering)
-  updatePOVGhosts(progress);
+  updatePOVGhosts(effectiveProgress);
 
   // Use direct progress for text triggers (precise timing)
-  updatePOVTexts(progress);
+  updatePOVTexts(effectiveProgress);
 }
 
-// Smart smoothing with auto-slow at ghost encounters
+// Auto-Stop System: Pause at each ghost encounter
+function handleAutoStopSystem(rawProgress: number): number {
+  if (!povAnimationState.cameraPOVPath) return rawProgress;
+
+  const cameraPosition =
+    povAnimationState.cameraPOVPath.getPointAt(rawProgress);
+
+  // Check if we're encountering a new ghost
+  Object.entries(povAnimationState.triggerPositions).forEach(
+    ([ghostKey, trigger]) => {
+      if (!trigger.triggerCameraProgress) {
+        trigger.triggerCameraProgress = findClosestProgressOnPOVPath(
+          trigger.triggerPos,
+          4000
+        );
+      }
+
+      const triggerProgress = trigger.triggerCameraProgress;
+      const threshold = 0.005; // Small threshold for trigger detection
+
+      // Check if we've reached a new ghost trigger
+      if (
+        rawProgress >= triggerProgress - threshold &&
+        rawProgress <= triggerProgress + threshold &&
+        povAnimationState.lastTriggeredGhost !== ghostKey &&
+        !povAnimationState.isPaused
+      ) {
+        // 🛑 PAUSE at this ghost!
+        povAnimationState.isPaused = true;
+        povAnimationState.pausedAtProgress = triggerProgress;
+        povAnimationState.pausedAtGhost = ghostKey;
+        povAnimationState.lastTriggeredGhost = ghostKey;
+        povAnimationState.canContinue = false;
+
+        // Show pause indicator
+        showGhostPauseIndicator(ghostKey);
+
+        // Set up continue mechanism after short delay
+        setTimeout(() => {
+          povAnimationState.canContinue = true;
+          console.log(
+            `🎬 PAUSED at ${ghostKey.toUpperCase()}! Press SPACE or scroll to continue...`
+          );
+        }, 500);
+
+        return triggerProgress; // Stop exactly at trigger point
+      }
+    }
+  );
+
+  // If paused, check for continue conditions
+  if (povAnimationState.isPaused) {
+    // Check if user wants to continue (scroll forward significantly)
+    const scrollForwardThreshold = 0.02; // User must scroll forward by 2%
+    if (
+      rawProgress >
+      povAnimationState.pausedAtProgress + scrollForwardThreshold
+    ) {
+      // User scrolled forward - continue!
+      resumePOVAnimation();
+      return rawProgress;
+    }
+
+    // Stay paused - return the paused progress
+    return povAnimationState.pausedAtProgress;
+  }
+
+  return rawProgress;
+}
+
+// Resume POV Animation
+function resumePOVAnimation() {
+  povAnimationState.isPaused = false;
+  povAnimationState.pausedAtGhost = null;
+  hideGhostPauseIndicator();
+  console.log(`🎬 Continuing POV animation...`);
+}
+
+// Setup keyboard controls for ghost encounters
+function setupGhostEncounterControls() {
+  document.addEventListener("keydown", (event) => {
+    if (povAnimationState.isPaused && povAnimationState.canContinue) {
+      if (event.code === "Space" || event.code === "Enter") {
+        event.preventDefault();
+        resumePOVAnimation();
+      }
+    }
+  });
+}
+
+// Show visual pause indicator
+function showGhostPauseIndicator(ghostKey: string) {
+  const indicator = createPauseIndicator(ghostKey);
+  document.body.appendChild(indicator);
+}
+
+// Hide pause indicator
+function hideGhostPauseIndicator() {
+  const indicator = document.querySelector(".pov-pause-indicator");
+  if (indicator) {
+    indicator.remove();
+  }
+}
+
+// Create pause indicator UI
+function createPauseIndicator(ghostKey: string): HTMLElement {
+  const indicator = document.createElement("div");
+  indicator.className = "pov-pause-indicator";
+  indicator.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 20px 30px;
+    border-radius: 10px;
+    font-family: Arial, sans-serif;
+    font-size: 18px;
+    text-align: center;
+    z-index: 10000;
+    pointer-events: none;
+    animation: pauseFadeIn 0.3s ease-out;
+  `;
+
+  indicator.innerHTML = `
+    <div style="margin-bottom: 10px; font-size: 24px;">👻</div>
+    <div style="font-weight: bold; margin-bottom: 8px;">${ghostKey.toUpperCase()} ENCOUNTER</div>
+    <div style="font-size: 14px; opacity: 0.8; margin-bottom: 5px;">Scroll down or press SPACE to continue</div>
+    <div style="font-size: 12px; opacity: 0.6;">🖱️ Scroll | ⌨️ SPACE/ENTER</div>
+  `;
+
+  // Add CSS animation
+  if (!document.querySelector("#pov-pause-styles")) {
+    const style = document.createElement("style");
+    style.id = "pov-pause-styles";
+    style.textContent = `
+      @keyframes pauseFadeIn {
+        from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  return indicator;
+}
+
+// Light smoothing only for visual camera movement
 function applyLightVisualSmoothing(targetProgress: number): number {
   // Store smoothing state on the function
   if (
     typeof (applyLightVisualSmoothing as any).smoothedProgress === "undefined"
   ) {
     (applyLightVisualSmoothing as any).smoothedProgress = targetProgress;
-    (applyLightVisualSmoothing as any).lastTargetProgress = targetProgress;
     return targetProgress;
   }
 
-  // Check if we're near a ghost trigger for auto-slow
-  const isNearGhost = checkIfNearGhostTrigger(targetProgress);
-  const scrollDirection =
-    targetProgress - (applyLightVisualSmoothing as any).lastTargetProgress;
-
-  // Dynamic smoothing factor based on ghost proximity
-  let smoothingFactor = 0.15; // Normal smoothing
-
-  if (isNearGhost) {
-    // Much stronger smoothing (slower movement) when near ghosts
-    smoothingFactor = 0.03; // Very slow when encountering ghosts
-    console.log("🎭 Ghost detected - auto-slowing for better experience");
-
-    // Optional: Add visual feedback that auto-slow is active
-    showAutoSlowFeedback();
-  } else {
-    hideAutoSlowFeedback();
-  }
-
+  // Very light smoothing for visual comfort only
+  const smoothingFactor = 0.15; // Light smoothing (higher = more responsive)
   const smoothedProgress =
     (applyLightVisualSmoothing as any).smoothedProgress +
     (targetProgress - (applyLightVisualSmoothing as any).smoothedProgress) *
       smoothingFactor;
 
   (applyLightVisualSmoothing as any).smoothedProgress = smoothedProgress;
-  (applyLightVisualSmoothing as any).lastTargetProgress = targetProgress;
   return smoothedProgress;
-}
-
-// Check if camera is near any ghost trigger position
-function checkIfNearGhostTrigger(progress: number): boolean {
-  if (!povAnimationState.cameraPOVPath || !povAnimationState.isActive)
-    return false;
-
-  const cameraPosition = povAnimationState.cameraPOVPath.getPointAt(progress);
-  const currentCameraProgress = findClosestProgressOnPOVPath(
-    cameraPosition,
-    1000
-  );
-
-  // Check all ghost triggers
-  for (const [ghostKey, trigger] of Object.entries(
-    povAnimationState.triggerPositions
-  )) {
-    if (!trigger.triggerCameraProgress) {
-      // Calculate trigger position if not done yet
-      trigger.triggerCameraProgress = findClosestProgressOnPOVPath(
-        trigger.triggerPos,
-        1000
-      );
-    }
-
-    const triggerProgress = trigger.triggerCameraProgress;
-    const proximityThreshold = 0.08; // 8% of path = larger slow zone around each ghost
-
-    // Check if we're approaching the trigger (not just near it)
-    const distanceToTrigger = Math.abs(currentCameraProgress - triggerProgress);
-    const isInSlowZone = distanceToTrigger < proximityThreshold;
-
-    // Additional check: Are we approaching the trigger? (not leaving)
-    const isApproaching =
-      currentCameraProgress <= triggerProgress + proximityThreshold &&
-      currentCameraProgress >= triggerProgress - proximityThreshold;
-
-    if (isInSlowZone && isApproaching) {
-      // Store which ghost we're slowing for (for debugging)
-      if (!(checkIfNearGhostTrigger as any).currentGhost) {
-        (checkIfNearGhostTrigger as any).currentGhost = ghostKey;
-        console.log(`🎭 Approaching ${ghostKey} - activating auto-slow`);
-      }
-      return true;
-    }
-  }
-
-  // Reset current ghost if we're not near any
-  (checkIfNearGhostTrigger as any).currentGhost = null;
-  return false;
-}
-
-// Visual feedback functions for auto-slow feature
-function showAutoSlowFeedback() {
-  // Create or show auto-slow indicator
-  let indicator = document.getElementById("auto-slow-indicator");
-  if (!indicator) {
-    indicator = document.createElement("div");
-    indicator.id = "auto-slow-indicator";
-    indicator.innerHTML = "👻 Auto-Slow Active";
-    indicator.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: rgba(0,0,0,0.8);
-      color: white;
-      padding: 10px 15px;
-      border-radius: 20px;
-      font-size: 14px;
-      z-index: 10000;
-      transition: opacity 0.3s ease;
-      pointer-events: none;
-    `;
-    document.body.appendChild(indicator);
-  }
-  indicator.style.opacity = "1";
-}
-
-function hideAutoSlowFeedback() {
-  const indicator = document.getElementById("auto-slow-indicator");
-  if (indicator) {
-    indicator.style.opacity = "0";
-  }
 }
 
 // Update POV Camera
