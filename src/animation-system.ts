@@ -1591,25 +1591,127 @@ function updatePOVAnimation(progress: number) {
   updatePOVTexts(progress);
 }
 
-// Light smoothing only for visual camera movement
+// Smart smoothing with auto-slow at ghost encounters
 function applyLightVisualSmoothing(targetProgress: number): number {
   // Store smoothing state on the function
   if (
     typeof (applyLightVisualSmoothing as any).smoothedProgress === "undefined"
   ) {
     (applyLightVisualSmoothing as any).smoothedProgress = targetProgress;
+    (applyLightVisualSmoothing as any).lastTargetProgress = targetProgress;
     return targetProgress;
   }
 
-  // Very light smoothing for visual comfort only
-  const smoothingFactor = 0.15; // Light smoothing (higher = more responsive)
+  // Check if we're near a ghost trigger for auto-slow
+  const isNearGhost = checkIfNearGhostTrigger(targetProgress);
+  const scrollDirection =
+    targetProgress - (applyLightVisualSmoothing as any).lastTargetProgress;
+
+  // Dynamic smoothing factor based on ghost proximity
+  let smoothingFactor = 0.15; // Normal smoothing
+
+  if (isNearGhost) {
+    // Much stronger smoothing (slower movement) when near ghosts
+    smoothingFactor = 0.03; // Very slow when encountering ghosts
+    console.log("🎭 Ghost detected - auto-slowing for better experience");
+
+    // Optional: Add visual feedback that auto-slow is active
+    showAutoSlowFeedback();
+  } else {
+    hideAutoSlowFeedback();
+  }
+
   const smoothedProgress =
     (applyLightVisualSmoothing as any).smoothedProgress +
     (targetProgress - (applyLightVisualSmoothing as any).smoothedProgress) *
       smoothingFactor;
 
   (applyLightVisualSmoothing as any).smoothedProgress = smoothedProgress;
+  (applyLightVisualSmoothing as any).lastTargetProgress = targetProgress;
   return smoothedProgress;
+}
+
+// Check if camera is near any ghost trigger position
+function checkIfNearGhostTrigger(progress: number): boolean {
+  if (!povAnimationState.cameraPOVPath || !povAnimationState.isActive)
+    return false;
+
+  const cameraPosition = povAnimationState.cameraPOVPath.getPointAt(progress);
+  const currentCameraProgress = findClosestProgressOnPOVPath(
+    cameraPosition,
+    1000
+  );
+
+  // Check all ghost triggers
+  for (const [ghostKey, trigger] of Object.entries(
+    povAnimationState.triggerPositions
+  )) {
+    if (!trigger.triggerCameraProgress) {
+      // Calculate trigger position if not done yet
+      trigger.triggerCameraProgress = findClosestProgressOnPOVPath(
+        trigger.triggerPos,
+        1000
+      );
+    }
+
+    const triggerProgress = trigger.triggerCameraProgress;
+    const proximityThreshold = 0.08; // 8% of path = larger slow zone around each ghost
+
+    // Check if we're approaching the trigger (not just near it)
+    const distanceToTrigger = Math.abs(currentCameraProgress - triggerProgress);
+    const isInSlowZone = distanceToTrigger < proximityThreshold;
+
+    // Additional check: Are we approaching the trigger? (not leaving)
+    const isApproaching =
+      currentCameraProgress <= triggerProgress + proximityThreshold &&
+      currentCameraProgress >= triggerProgress - proximityThreshold;
+
+    if (isInSlowZone && isApproaching) {
+      // Store which ghost we're slowing for (for debugging)
+      if (!(checkIfNearGhostTrigger as any).currentGhost) {
+        (checkIfNearGhostTrigger as any).currentGhost = ghostKey;
+        console.log(`🎭 Approaching ${ghostKey} - activating auto-slow`);
+      }
+      return true;
+    }
+  }
+
+  // Reset current ghost if we're not near any
+  (checkIfNearGhostTrigger as any).currentGhost = null;
+  return false;
+}
+
+// Visual feedback functions for auto-slow feature
+function showAutoSlowFeedback() {
+  // Create or show auto-slow indicator
+  let indicator = document.getElementById("auto-slow-indicator");
+  if (!indicator) {
+    indicator = document.createElement("div");
+    indicator.id = "auto-slow-indicator";
+    indicator.innerHTML = "👻 Auto-Slow Active";
+    indicator.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 10px 15px;
+      border-radius: 20px;
+      font-size: 14px;
+      z-index: 10000;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    `;
+    document.body.appendChild(indicator);
+  }
+  indicator.style.opacity = "1";
+}
+
+function hideAutoSlowFeedback() {
+  const indicator = document.getElementById("auto-slow-indicator");
+  if (indicator) {
+    indicator.style.opacity = "0";
+  }
 }
 
 // Update POV Camera
