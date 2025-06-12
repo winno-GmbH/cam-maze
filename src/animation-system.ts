@@ -1628,47 +1628,57 @@ const ghostPauseState: GhostPauseState = {
 
 // Light smoothing only for visual camera movement
 function applyLightVisualSmoothing(targetProgress: number): number {
-  // Check for ghost pauses first
-  const pauseAdjustedProgress = handleGhostPauses(targetProgress);
+  // No more pause handling here - that's done at the main scroll level
+  // This function now only handles visual smoothing
 
   // Store smoothing state on the function
   if (
     typeof (applyLightVisualSmoothing as any).smoothedProgress === "undefined"
   ) {
-    (applyLightVisualSmoothing as any).smoothedProgress = pauseAdjustedProgress;
-    return pauseAdjustedProgress;
+    (applyLightVisualSmoothing as any).smoothedProgress = targetProgress;
+    return targetProgress;
   }
 
   // Very light smoothing for visual comfort only
   const smoothingFactor = 0.15; // Light smoothing (higher = more responsive)
   const smoothedProgress =
     (applyLightVisualSmoothing as any).smoothedProgress +
-    (pauseAdjustedProgress -
-      (applyLightVisualSmoothing as any).smoothedProgress) *
+    (targetProgress - (applyLightVisualSmoothing as any).smoothedProgress) *
       smoothingFactor;
 
   (applyLightVisualSmoothing as any).smoothedProgress = smoothedProgress;
   return smoothedProgress;
 }
 
-// Handle ghost pauses - stops briefly at each ghost
-function handleGhostPauses(targetProgress: number): number {
+// Main ghost pause control - controls the actual scroll progress
+function applyGhostPauseControl(rawProgress: number): number {
   const currentTime = performance.now();
 
   // Check if we've hit a new ghost trigger
   let hitNewGhost = false;
   let newGhostKey = null;
 
-  // Check each ghost trigger position
+  // Check each ghost trigger position BEFORE they're calculated
   Object.entries(povAnimationState.triggerPositions).forEach(
     ([ghostKey, trigger]) => {
+      // We need to calculate trigger positions first if not done
+      if (!trigger.triggerCameraProgress && povAnimationState.cameraPOVPath) {
+        const triggerPos = trigger.triggerPos;
+        if (triggerPos) {
+          trigger.triggerCameraProgress = findClosestProgressOnPOVPath(
+            triggerPos,
+            4000
+          );
+        }
+      }
+
       if (!trigger.triggerCameraProgress) return;
 
       const triggerProgress = trigger.triggerCameraProgress;
-      const triggerWindow = 0.01; // 1% window around trigger
+      const triggerWindow = 0.015; // 1.5% window around trigger (slightly larger)
 
       // Check if we're hitting this ghost trigger for the first time
-      if (Math.abs(targetProgress - triggerProgress) < triggerWindow) {
+      if (Math.abs(rawProgress - triggerProgress) < triggerWindow) {
         if (!trigger.hasBeenPausedAt) {
           hitNewGhost = true;
           newGhostKey = ghostKey;
@@ -1680,29 +1690,35 @@ function handleGhostPauses(targetProgress: number): number {
 
   // Start new pause if we hit a ghost
   if (hitNewGhost && !ghostPauseState.isPaused) {
-    console.log(`🛑 Pausing at ghost: ${newGhostKey}`);
+    console.log(
+      `🛑 SCROLL PAUSED at ghost: ${newGhostKey} (${(rawProgress * 100).toFixed(
+        1
+      )}%)`
+    );
     ghostPauseState.isPaused = true;
     ghostPauseState.pauseStartTime = currentTime;
-    ghostPauseState.pausedAtProgress = targetProgress;
+    ghostPauseState.pausedAtProgress = rawProgress;
     ghostPauseState.currentGhost = newGhostKey;
     ghostPauseState.userScrolledPast = false;
 
-    // Show visual indicator for pause (optional)
-    // showGhostPauseIndicator(newGhostKey); // TODO: Implement visual indicator
-
-    return targetProgress; // Stay at current position
+    return rawProgress; // Freeze scroll progress at trigger point
   }
 
   // Handle active pause
   if (ghostPauseState.isPaused) {
     const pauseElapsed = currentTime - ghostPauseState.pauseStartTime;
     const userScrollDelta = Math.abs(
-      targetProgress - ghostPauseState.pausedAtProgress
+      rawProgress - ghostPauseState.pausedAtProgress
     );
 
     // Check if user scrolled significantly past the pause point
     if (userScrollDelta > ghostPauseState.resumeThreshold) {
       ghostPauseState.userScrolledPast = true;
+      console.log(
+        `📜 User scrolled past pause threshold: ${(
+          userScrollDelta * 100
+        ).toFixed(1)}%`
+      );
     }
 
     // Resume if timeout elapsed OR user scrolled past
@@ -1710,17 +1726,25 @@ function handleGhostPauses(targetProgress: number): number {
       pauseElapsed > ghostPauseState.pauseDuration ||
       ghostPauseState.userScrolledPast
     ) {
-      console.log(`✅ Resuming from ghost: ${ghostPauseState.currentGhost}`);
+      console.log(
+        `✅ SCROLL RESUMED from ghost: ${ghostPauseState.currentGhost}`
+      );
       ghostPauseState.isPaused = false;
       ghostPauseState.currentGhost = null;
-      return targetProgress; // Resume with current scroll position
+      return rawProgress; // Resume with current scroll position
     }
 
-    // Stay paused - return the paused progress
+    // Stay paused - freeze the scroll progress
     return ghostPauseState.pausedAtProgress;
   }
 
   // No pause active - return normal progress
+  return rawProgress;
+}
+
+// Handle ghost pauses - DEPRECATED - using applyGhostPauseControl instead
+function handleGhostPauses(targetProgress: number): number {
+  // This function is now deprecated - main pause control happens in applyGhostPauseControl
   return targetProgress;
 }
 
@@ -2334,14 +2358,15 @@ function handlePOVScroll() {
   ) {
     // Section is in view (including buffer zone) - calculate progress
     const scrolledIntoSection = Math.max(0, -sectionTop);
-    const progress = Math.min(1, scrolledIntoSection / totalAnimationHeight);
+    const rawProgress = Math.min(1, scrolledIntoSection / totalAnimationHeight);
 
-    // Direct progress for triggers - smoothing happens internally in updatePOVAnimation
+    // Apply ghost pauses to the main progress (stops everything, not just visuals)
+    const pauseControlledProgress = applyGhostPauseControl(rawProgress);
 
     // Start POV animation if not already active and we're in SCROLL_ANIMATION or HOME state
     if (
       !povAnimationState.isActive &&
-      progress > 0 &&
+      pauseControlledProgress > 0 &&
       (currentAnimationState === "SCROLL_ANIMATION" ||
         currentAnimationState === "HOME")
     ) {
@@ -2349,9 +2374,9 @@ function handlePOVScroll() {
       onPOVAnimationStart();
     }
 
-    // Update POV animation with hybrid approach: direct for triggers, smoothed for visuals
+    // Update POV animation with pause-controlled progress
     if (povAnimationState.isActive) {
-      updatePOVAnimation(progress); // Triggers use direct progress, camera uses internal smoothing
+      updatePOVAnimation(pauseControlledProgress); // All systems use pause-controlled progress
     }
   } else {
     // Section is out of view (beyond buffer zone) - end POV animation
