@@ -1620,9 +1620,9 @@ function updatePOVAnimation(rawProgress: number) {
 function handleAutoStopSystem(rawProgress: number): number {
   if (!povAnimationState.cameraPOVPath) return rawProgress;
 
-  // Don't apply auto-stop if already paused (handled in handlePOVScroll)
+  // If already paused, just return current progress (scroll can continue)
   if (povAnimationState.isPaused) {
-    return povAnimationState.pausedAtProgress;
+    return rawProgress; // Allow natural progress, just keep indicator visible
   }
 
   const cameraPosition =
@@ -1639,38 +1639,49 @@ function handleAutoStopSystem(rawProgress: number): number {
       }
 
       const triggerProgress = trigger.triggerCameraProgress;
-      const threshold = 0.01; // Slightly larger threshold for better detection
+      const threshold = 0.008; // Smaller threshold for precise detection
 
       // Check if we've reached a new ghost trigger
       if (
-        rawProgress >= triggerProgress - threshold &&
+        rawProgress >= triggerProgress &&
         rawProgress <= triggerProgress + threshold &&
         povAnimationState.lastTriggeredGhost !== ghostKey
       ) {
-        // 🛑 PAUSE at this ghost!
-        console.log(`🎬 Auto-stopping at ${ghostKey.toUpperCase()}...`);
+        // 📍 MARK pause point but DON'T stop scroll!
+        console.log(
+          `🎬 Reached ${ghostKey.toUpperCase()} - showing pause option...`
+        );
 
         povAnimationState.isPaused = true;
         povAnimationState.pausedAtProgress = triggerProgress;
         povAnimationState.pausedAtGhost = ghostKey;
         povAnimationState.lastTriggeredGhost = ghostKey;
-        povAnimationState.canContinue = false;
+        povAnimationState.canContinue = true; // Immediately allow continue
 
-        // Show pause indicator after a short delay to let ghost/text animations start
+        // Show pause indicator but don't stop the progress
         setTimeout(() => {
           showGhostPauseIndicator(ghostKey);
-          povAnimationState.canContinue = true;
           console.log(
-            `🎬 PAUSED at ${ghostKey.toUpperCase()}! Scroll down or press SPACE to continue...`
+            `🎬 At ${ghostKey.toUpperCase()}! Keep scrolling or press SPACE to acknowledge...`
           );
-        }, 1000); // Longer delay to let animations play
 
-        return triggerProgress; // Stop exactly at trigger point
+          // Auto-hide indicator after 3 seconds if user doesn't interact
+          setTimeout(() => {
+            if (povAnimationState.pausedAtGhost === ghostKey) {
+              hideGhostPauseIndicator();
+              povAnimationState.isPaused = false;
+              povAnimationState.pausedAtGhost = null;
+              console.log(`🎬 Auto-resumed from ${ghostKey.toUpperCase()}`);
+            }
+          }, 3000); // Auto-hide after 3 seconds
+        }, 800); // Short delay to let animations start
+
+        // DON'T return triggerProgress - let scroll continue naturally
       }
     }
   );
 
-  return rawProgress;
+  return rawProgress; // Always allow natural progress
 }
 
 // Resume POV Animation
@@ -1731,8 +1742,8 @@ function createPauseIndicator(ghostKey: string): HTMLElement {
   indicator.innerHTML = `
     <div style="margin-bottom: 10px; font-size: 24px;">👻</div>
     <div style="font-weight: bold; margin-bottom: 8px;">${ghostKey.toUpperCase()} ENCOUNTER</div>
-    <div style="font-size: 14px; opacity: 0.8; margin-bottom: 5px;">Scroll down or press SPACE to continue</div>
-    <div style="font-size: 12px; opacity: 0.6;">🖱️ Scroll | ⌨️ SPACE/ENTER</div>
+    <div style="font-size: 14px; opacity: 0.8; margin-bottom: 5px;">Continue scrolling or acknowledge with SPACE</div>
+    <div style="font-size: 12px; opacity: 0.6;">🖱️ Keep scrolling | ⌨️ SPACE to acknowledge</div>
   `;
 
   // Add CSS animation
@@ -2384,25 +2395,24 @@ function handlePOVScroll() {
     const scrolledIntoSection = Math.max(0, -sectionTop);
     let progress = Math.min(1, scrolledIntoSection / totalAnimationHeight);
 
-    // CRITICAL: If paused, prevent scroll from advancing beyond pause point
+    // SMART PAUSE: Show indicator but allow scrolling to continue
     if (povAnimationState.isPaused) {
-      // Allow user to scroll down to continue, but cap progress at pause point
-      const scrollForwardThreshold = 0.02; // User must scroll 2% forward to continue
+      // Check if user scrolled significantly forward
+      const scrollForwardThreshold = 0.015; // User must scroll 1.5% forward to continue
       if (
         progress >
         povAnimationState.pausedAtProgress + scrollForwardThreshold
       ) {
         // User wants to continue - resume and allow normal progress
+        console.log(
+          `🎬 User scrolled forward - continuing from ${povAnimationState.pausedAtGhost}...`
+        );
         resumePOVAnimation();
+        // Don't modify progress - let it continue naturally
       } else {
-        // Still paused - freeze progress at pause point
-        progress = povAnimationState.pausedAtProgress;
-
-        // Prevent page scroll when paused
-        window.scrollTo({
-          top: window.scrollY,
-          behavior: "instant",
-        });
+        // Show pause indicator but DON'T freeze scroll
+        // This allows reading the cards while showing the pause option
+        // Progress continues naturally, just with the pause indicator visible
       }
     }
 
