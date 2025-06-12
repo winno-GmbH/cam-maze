@@ -26,25 +26,32 @@ export const ghostMaterial = new THREE.MeshPhysicalMaterial({
   transparent: true,
   opacity: 0.8,
 
-  // Glass properties
-  transmission: 0.9, // High transmission for glass effect
-  roughness: 0.1, // Very smooth surface
+  // Glass properties with strong distortion
+  transmission: 1.0, // Full transmission for maximum glass effect
+  roughness: 0.0, // Perfectly smooth for clear distortion
   metalness: 0.0, // No metallic properties for pure glass
 
-  // Index of refraction (glass-like)
-  ior: 1.5, // Glass-like refraction
+  // Index of refraction for strong distortion
+  ior: 2.33, // Higher IOR (like diamond) for more distortion
+
+  // Attenuation for realistic glass depth
+  attenuationDistance: 0.5, // Distance light travels through material
+  attenuationColor: new THREE.Color(0xffffff), // White attenuation
 
   // Advanced glass effects
   clearcoat: 1.0, // Clear coating on surface
-  clearcoatRoughness: 0.1, // Slightly rough clear coat
+  clearcoatRoughness: 0.0, // Perfectly smooth clearcoat
 
   // Rendering properties
   side: THREE.DoubleSide, // Render both sides
   depthWrite: false, // Allow transparency sorting
   depthTest: true,
 
-  // Environment interaction
-  envMapIntensity: 1.5, // Strong environment reflections
+  // Environment interaction for strong reflections
+  envMapIntensity: 2.0, // Very strong environment reflections
+
+  // Additional properties for distortion
+  reflectivity: 0.9, // High reflectivity
 });
 
 export const floorMaterial = new THREE.MeshStandardMaterial({
@@ -108,25 +115,32 @@ export const createGlassGhostMaterial = (
     transparent: true,
     opacity: options.opacity || 0.8,
 
-    // Glass properties
-    transmission: options.transmission || 0.9,
-    roughness: options.roughness || 0.1,
+    // Glass properties with strong distortion
+    transmission: options.transmission || 1.0,
+    roughness: options.roughness || 0.0,
     metalness: 0.0,
 
-    // Index of refraction
-    ior: options.ior || 1.5,
+    // Index of refraction for strong distortion
+    ior: options.ior || 2.33,
+
+    // Attenuation for realistic glass depth
+    attenuationDistance: 0.5,
+    attenuationColor: new THREE.Color(0xffffff),
 
     // Advanced glass effects
     clearcoat: 1.0,
-    clearcoatRoughness: 0.1,
+    clearcoatRoughness: 0.0,
 
     // Rendering properties
     side: THREE.DoubleSide,
     depthWrite: false,
     depthTest: true,
 
-    // Environment interaction
-    envMapIntensity: 1.5,
+    // Environment interaction for strong reflections
+    envMapIntensity: 2.0,
+
+    // Additional properties for distortion
+    reflectivity: 0.9,
   });
 };
 
