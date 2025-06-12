@@ -1340,6 +1340,15 @@ const povAnimationState: POVAnimationState = {
   lastTime: 0,
 };
 
+// ==========================================
+// 🎛️ SMOOTHING CONTROLS - ADJUST HERE FOR TESTING:
+// ==========================================
+// 1. Kamera-Rotation: 0.05 (stark) bis 0.2 (schwach)
+// 2. Scroll-Smoothing: Zeile ~2275 "lightSmoothingFactor" 0.9-0.98
+// 3. Visual-Smoothing: Zeile ~1620 "smoothingFactor" 0.6-0.9
+// 4. Tangenten-Smoothing: Zeile ~1745 "multiplyScalar" Werte
+// ==========================================
+
 // POV Camera Smoothing State - GENTLER SETTINGS
 let previousCameraRotation: THREE.Quaternion | null = null;
 const CAMERA_ROTATION_SMOOTHING = 0.08; // Stronger smoothing for less jittery movement (was 0.15)
@@ -1607,9 +1616,9 @@ function applyLightVisualSmoothing(targetProgress: number): number {
     0.001
   );
 
-  // Stronger smoothing for smoother visual experience
-  const smoothingFactor = 0.7; // More smoothing for better visual flow (was 0.85)
-  const maxVelocity = 2.0; // Slower max velocity for smoother movement (was 3.0)
+  // Moderate smoothing for visual experience - adjustable for testing
+  const smoothingFactor = 0.8; // Moderate smoothing (was 0.7, original 0.85)
+  const maxVelocity = 2.5; // Moderate max velocity (was 2.0, original 3.0)
 
   const diff =
     targetProgress - (applyLightVisualSmoothing as any).smoothedProgress;
@@ -1743,19 +1752,19 @@ function getSmoothCameraTangent(progress: number): THREE.Vector3 {
   const isModerateTurn = dotProduct < 0.7; // Moderate turn detection
 
   if (isSharpTurn) {
-    // For sharp turns, strongly favor straight movement with heavy smoothing
+    // For sharp turns (hin-und-her), EXTREMELY favor straight movement
     return new THREE.Vector3()
       .addVectors(
-        currentTangent.multiplyScalar(0.3), // Much less current direction
-        averageTangent.multiplyScalar(0.7) // Much more averaged direction
+        currentTangent.multiplyScalar(0.1), // VERY little current direction
+        averageTangent.multiplyScalar(0.9) // VERY strong averaged direction
       )
       .normalize();
   } else if (isModerateTurn) {
-    // For moderate turns, use strong smoothing
+    // For moderate turns, use very strong smoothing
     return new THREE.Vector3()
       .addVectors(
-        currentTangent.multiplyScalar(0.4),
-        averageTangent.multiplyScalar(0.6)
+        currentTangent.multiplyScalar(0.2), // Less current direction
+        averageTangent.multiplyScalar(0.8) // More averaged direction
       )
       .normalize();
   } else {
@@ -2234,8 +2243,8 @@ function handlePOVScroll() {
       (handlePOVScroll as any).lastProgress = rawProgress;
     }
 
-    // Stronger smoothing: 85% new value, 15% old value for smoother scrolling
-    const lightSmoothingFactor = 0.85;
+    // Moderate smoothing: 92% new value, 8% old value - adjustable for testing
+    const lightSmoothingFactor = 0.92;
     progress =
       (handlePOVScroll as any).lastProgress * (1 - lightSmoothingFactor) +
       rawProgress * lightSmoothingFactor;
