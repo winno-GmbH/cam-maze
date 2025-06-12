@@ -1483,6 +1483,13 @@ function onPOVAnimationStart() {
   // Switch to POV state
   currentAnimationState = "POV_ANIMATION";
 
+  // Reset auto-stop system for new POV session
+  povAnimationState.isPaused = false;
+  povAnimationState.pausedAtProgress = 0;
+  povAnimationState.pausedAtGhost = null;
+  povAnimationState.lastTriggeredGhost = null;
+  povAnimationState.canContinue = false;
+
   // Initialize previous camera position
   if (povAnimationState.cameraPOVPath) {
     povAnimationState.previousCameraPosition =
@@ -1613,6 +1620,11 @@ function updatePOVAnimation(rawProgress: number) {
 function handleAutoStopSystem(rawProgress: number): number {
   if (!povAnimationState.cameraPOVPath) return rawProgress;
 
+  // Don't apply auto-stop if already paused (handled in handlePOVScroll)
+  if (povAnimationState.isPaused) {
+    return povAnimationState.pausedAtProgress;
+  }
+
   const cameraPosition =
     povAnimationState.cameraPOVPath.getPointAt(rawProgress);
 
@@ -1627,54 +1639,36 @@ function handleAutoStopSystem(rawProgress: number): number {
       }
 
       const triggerProgress = trigger.triggerCameraProgress;
-      const threshold = 0.005; // Small threshold for trigger detection
+      const threshold = 0.01; // Slightly larger threshold for better detection
 
       // Check if we've reached a new ghost trigger
       if (
         rawProgress >= triggerProgress - threshold &&
         rawProgress <= triggerProgress + threshold &&
-        povAnimationState.lastTriggeredGhost !== ghostKey &&
-        !povAnimationState.isPaused
+        povAnimationState.lastTriggeredGhost !== ghostKey
       ) {
         // 🛑 PAUSE at this ghost!
+        console.log(`🎬 Auto-stopping at ${ghostKey.toUpperCase()}...`);
+
         povAnimationState.isPaused = true;
         povAnimationState.pausedAtProgress = triggerProgress;
         povAnimationState.pausedAtGhost = ghostKey;
         povAnimationState.lastTriggeredGhost = ghostKey;
         povAnimationState.canContinue = false;
 
-        // Show pause indicator
-        showGhostPauseIndicator(ghostKey);
-
-        // Set up continue mechanism after short delay
+        // Show pause indicator after a short delay to let ghost/text animations start
         setTimeout(() => {
+          showGhostPauseIndicator(ghostKey);
           povAnimationState.canContinue = true;
           console.log(
-            `🎬 PAUSED at ${ghostKey.toUpperCase()}! Press SPACE or scroll to continue...`
+            `🎬 PAUSED at ${ghostKey.toUpperCase()}! Scroll down or press SPACE to continue...`
           );
-        }, 500);
+        }, 1000); // Longer delay to let animations play
 
         return triggerProgress; // Stop exactly at trigger point
       }
     }
   );
-
-  // If paused, check for continue conditions
-  if (povAnimationState.isPaused) {
-    // Check if user wants to continue (scroll forward significantly)
-    const scrollForwardThreshold = 0.02; // User must scroll forward by 2%
-    if (
-      rawProgress >
-      povAnimationState.pausedAtProgress + scrollForwardThreshold
-    ) {
-      // User scrolled forward - continue!
-      resumePOVAnimation();
-      return rawProgress;
-    }
-
-    // Stay paused - return the paused progress
-    return povAnimationState.pausedAtProgress;
-  }
 
   return rawProgress;
 }
@@ -2388,9 +2382,29 @@ function handlePOVScroll() {
   ) {
     // Section is in view (including buffer zone) - calculate progress
     const scrolledIntoSection = Math.max(0, -sectionTop);
-    const progress = Math.min(1, scrolledIntoSection / totalAnimationHeight);
+    let progress = Math.min(1, scrolledIntoSection / totalAnimationHeight);
 
-    // Direct progress for triggers - smoothing happens internally in updatePOVAnimation
+    // CRITICAL: If paused, prevent scroll from advancing beyond pause point
+    if (povAnimationState.isPaused) {
+      // Allow user to scroll down to continue, but cap progress at pause point
+      const scrollForwardThreshold = 0.02; // User must scroll 2% forward to continue
+      if (
+        progress >
+        povAnimationState.pausedAtProgress + scrollForwardThreshold
+      ) {
+        // User wants to continue - resume and allow normal progress
+        resumePOVAnimation();
+      } else {
+        // Still paused - freeze progress at pause point
+        progress = povAnimationState.pausedAtProgress;
+
+        // Prevent page scroll when paused
+        window.scrollTo({
+          top: window.scrollY,
+          behavior: "instant",
+        });
+      }
+    }
 
     // Start POV animation if not already active and we're in SCROLL_ANIMATION or HOME state
     if (
