@@ -54,8 +54,8 @@ export const floorMaterial = new THREE.MeshStandardMaterial({
   color: 0xffffff,
   opacity: 0.8,
   transparent: true,
-  roughness: 0.5,
-  metalness: 0.1,
+  roughness: 0.9,
+  metalness: 0.9,
 });
 
 // Pacman materials with transparency for opacity changes
