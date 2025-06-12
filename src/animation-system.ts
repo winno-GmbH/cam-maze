@@ -1341,17 +1341,18 @@ const povAnimationState: POVAnimationState = {
 };
 
 // ==========================================
-// 🎛️ SMOOTHING CONTROLS - ADJUST HERE FOR TESTING:
+// 🎛️ SMOOTHING CONTROLS - UNIFIED SYSTEM:
 // ==========================================
-// 1. Kamera-Rotation: 0.05 (stark) bis 0.2 (schwach)
-// 2. Scroll-Smoothing: Zeile ~2275 "lightSmoothingFactor" 0.9-0.98
-// 3. Visual-Smoothing: Zeile ~1620 "smoothingFactor" 0.6-0.9
-// 4. Tangenten-Smoothing: Zeile ~1745 "multiplyScalar" Werte
+// Alle auf 0.2 (20% Smoothing) für gleichmäßiges Gefühl:
+// 1. Kamera-Rotation: Zeile ~1359 "CAMERA_ROTATION_SMOOTHING" = 0.2
+// 2. Kamera-Position: Zeile ~1619 "smoothingFactor" = 0.2
+// 3. Scroll-Input: Zeile ~2277 "lightSmoothingFactor" = 0.8 (=20%)
+// 4. Tangenten-Smoothing: Zeile ~1745 für Hin-und-Her-Reduzierung
 // ==========================================
 
 // POV Camera Smoothing State - GENTLER SETTINGS
 let previousCameraRotation: THREE.Quaternion | null = null;
-const CAMERA_ROTATION_SMOOTHING = 0.08; // Stronger smoothing for less jittery movement (was 0.15)
+const CAMERA_ROTATION_SMOOTHING = 0.2; // Light smoothing to match position smoothing (was 0.08)
 const MAX_ROTATION_SPEED = Math.PI / 12; // Slower max rotation (15° per frame, was 30°)
 const LOOK_AHEAD_DISTANCE = 0.01; // Smaller look-ahead for less jitter (was 0.02)
 
@@ -1616,19 +1617,14 @@ function applyLightVisualSmoothing(targetProgress: number): number {
     0.001
   );
 
-  // Moderate smoothing for visual experience - adjustable for testing
-  const smoothingFactor = 0.8; // Moderate smoothing (was 0.7, original 0.85)
-  const maxVelocity = 2.5; // Moderate max velocity (was 2.0, original 3.0)
+  // Light smoothing to match rotation smoothing (same feel)
+  const smoothingFactor = 0.2; // Match CAMERA_ROTATION_SMOOTHING for consistency
 
   const diff =
     targetProgress - (applyLightVisualSmoothing as any).smoothedProgress;
 
-  // Simple lerp with velocity limiting
-  let velocity = diff / deltaTime;
-  velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity));
-
-  (applyLightVisualSmoothing as any).smoothedProgress +=
-    velocity * deltaTime * smoothingFactor;
+  // Simple lerp - same approach as rotation smoothing (no velocity limiting)
+  (applyLightVisualSmoothing as any).smoothedProgress += diff * smoothingFactor;
   (applyLightVisualSmoothing as any).smoothedProgress = Math.max(
     0,
     Math.min(1, (applyLightVisualSmoothing as any).smoothedProgress)
@@ -1799,17 +1795,14 @@ function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
   // Calculate rotation difference
   const angleDifference = camera.quaternion.angleTo(targetQuaternion);
 
-  // DYNAMIC SMOOTHING: Much more smoothing for corners to reduce rotation
+  // LIGHT DYNAMIC SMOOTHING: Consistent with position smoothing
   let dynamicSmoothing = CAMERA_ROTATION_SMOOTHING;
   if (angleDifference > Math.PI / 8) {
-    // > 22.5° = sharp corner - MUCH stronger smoothing
-    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.3; // Very strong smoothing for corners
+    // > 22.5° = sharp corner - only slightly more smoothing
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.8; // Light additional smoothing
   } else if (angleDifference > Math.PI / 16) {
-    // > 11.25° = moderate corner - stronger smoothing
-    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.5; // Strong smoothing for moderate turns
-  } else if (angleDifference > Math.PI / 32) {
-    // > 5.6° = small turn - moderate smoothing
-    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.7; // Moderate smoothing for small turns
+    // > 11.25° = moderate corner - minimal additional smoothing
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.9; // Very light additional smoothing
   }
 
   // Always apply smoothing (no speed limiting - causes jumps)
@@ -2243,8 +2236,8 @@ function handlePOVScroll() {
       (handlePOVScroll as any).lastProgress = rawProgress;
     }
 
-    // Moderate smoothing: 92% new value, 8% old value - adjustable for testing
-    const lightSmoothingFactor = 0.92;
+    // Light smoothing consistent with camera: ~20% smoothing effect
+    const lightSmoothingFactor = 0.8; // 20% smoothing to match camera feel
     progress =
       (handlePOVScroll as any).lastProgress * (1 - lightSmoothingFactor) +
       rawProgress * lightSmoothingFactor;
