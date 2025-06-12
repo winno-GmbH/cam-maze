@@ -1318,12 +1318,6 @@ interface POVAnimationState {
   velocity: number;
   lastTargetProgress: number;
   lastTime: number;
-  // AUTO-STOP SYSTEM for Ghost Encounters
-  isPaused: boolean;
-  pausedAtProgress: number;
-  pausedAtGhost: string | null;
-  lastTriggeredGhost: string | null;
-  canContinue: boolean;
 }
 
 const povAnimationState: POVAnimationState = {
@@ -1344,12 +1338,6 @@ const povAnimationState: POVAnimationState = {
   velocity: 0,
   lastTargetProgress: 0,
   lastTime: 0,
-  // AUTO-STOP SYSTEM for Ghost Encounters
-  isPaused: false,
-  pausedAtProgress: 0,
-  pausedAtGhost: null,
-  lastTriggeredGhost: null,
-  canContinue: false,
 };
 
 // POV Camera Smoothing State - GENTLER SETTINGS
@@ -1426,9 +1414,6 @@ function initializePOVAnimation() {
     ghost5: createPOVPath(ghost5POVPathPoints),
   };
 
-  // Setup ghost encounter controls
-  setupGhostEncounterControls();
-
   // Initialize trigger positions
   povAnimationState.triggerPositions = {
     ghost1: {
@@ -1483,12 +1468,19 @@ function onPOVAnimationStart() {
   // Switch to POV state
   currentAnimationState = "POV_ANIMATION";
 
-  // Reset auto-stop system for new POV session
-  povAnimationState.isPaused = false;
-  povAnimationState.pausedAtProgress = 0;
-  povAnimationState.pausedAtGhost = null;
-  povAnimationState.lastTriggeredGhost = null;
-  povAnimationState.canContinue = false;
+  // Reset ghost pause system
+  ghostPauseState.isPaused = false;
+  ghostPauseState.pauseStartTime = 0;
+  ghostPauseState.pausedAtProgress = 0;
+  ghostPauseState.currentGhost = null;
+  ghostPauseState.userScrolledPast = false;
+
+  // Reset all trigger pause states
+  Object.entries(povAnimationState.triggerPositions).forEach(
+    ([key, trigger]) => {
+      trigger.hasBeenPausedAt = false;
+    }
+  );
 
   // Initialize previous camera position
   if (povAnimationState.cameraPOVPath) {
@@ -1596,191 +1588,140 @@ function applyMomentumScrubbing_DEPRECATED(targetProgress: number): number {
   return povAnimationState.smoothedProgress;
 }
 
-// Update POV Animation - Auto-Stop at Ghost Encounters
-function updatePOVAnimation(rawProgress: number) {
+// Update POV Animation - Separate progress for triggers vs visuals
+function updatePOVAnimation(progress: number) {
   if (!povAnimationState.cameraPOVPath || !povAnimationState.isActive) return;
 
-  // AUTO-STOP SYSTEM: Check if we should pause at a ghost encounter
-  let effectiveProgress = handleAutoStopSystem(rawProgress);
-
   // Apply light smoothing ONLY for visual camera movement (not triggers)
-  const visualProgress = applyLightVisualSmoothing(effectiveProgress);
+  const visualProgress = applyLightVisualSmoothing(progress);
 
   // Use smoothed progress for camera movement (visual smoothness)
   updatePOVCamera(visualProgress);
 
   // Use direct progress for ghost triggers (precise triggering)
-  updatePOVGhosts(effectiveProgress);
+  updatePOVGhosts(progress);
 
   // Use direct progress for text triggers (precise timing)
-  updatePOVTexts(effectiveProgress);
+  updatePOVTexts(progress);
 }
 
-// Auto-Stop System: Pause at each ghost encounter
-function handleAutoStopSystem(rawProgress: number): number {
-  if (!povAnimationState.cameraPOVPath) return rawProgress;
-
-  // If already paused, just return current progress (scroll can continue)
-  if (povAnimationState.isPaused) {
-    return rawProgress; // Allow natural progress, just keep indicator visible
-  }
-
-  const cameraPosition =
-    povAnimationState.cameraPOVPath.getPointAt(rawProgress);
-
-  // Check if we're encountering a new ghost
-  Object.entries(povAnimationState.triggerPositions).forEach(
-    ([ghostKey, trigger]) => {
-      if (!trigger.triggerCameraProgress) {
-        trigger.triggerCameraProgress = findClosestProgressOnPOVPath(
-          trigger.triggerPos,
-          4000
-        );
-      }
-
-      const triggerProgress = trigger.triggerCameraProgress;
-      const threshold = 0.008; // Smaller threshold for precise detection
-
-      // Check if we've reached a new ghost trigger
-      if (
-        rawProgress >= triggerProgress &&
-        rawProgress <= triggerProgress + threshold &&
-        povAnimationState.lastTriggeredGhost !== ghostKey
-      ) {
-        // 📍 MARK pause point but DON'T stop scroll!
-        console.log(
-          `🎬 Reached ${ghostKey.toUpperCase()} - showing pause option...`
-        );
-
-        povAnimationState.isPaused = true;
-        povAnimationState.pausedAtProgress = triggerProgress;
-        povAnimationState.pausedAtGhost = ghostKey;
-        povAnimationState.lastTriggeredGhost = ghostKey;
-        povAnimationState.canContinue = true; // Immediately allow continue
-
-        // Show pause indicator but don't stop the progress
-        setTimeout(() => {
-          showGhostPauseIndicator(ghostKey);
-          console.log(
-            `🎬 At ${ghostKey.toUpperCase()}! Keep scrolling or press SPACE to acknowledge...`
-          );
-
-          // Auto-hide indicator after 3 seconds if user doesn't interact
-          setTimeout(() => {
-            if (povAnimationState.pausedAtGhost === ghostKey) {
-              hideGhostPauseIndicator();
-              povAnimationState.isPaused = false;
-              povAnimationState.pausedAtGhost = null;
-              console.log(`🎬 Auto-resumed from ${ghostKey.toUpperCase()}`);
-            }
-          }, 3000); // Auto-hide after 3 seconds
-        }, 800); // Short delay to let animations start
-
-        // DON'T return triggerProgress - let scroll continue naturally
-      }
-    }
-  );
-
-  return rawProgress; // Always allow natural progress
+// Ghost pause system - stops at each ghost briefly
+interface GhostPauseState {
+  isPaused: boolean;
+  pauseStartTime: number;
+  pauseDuration: number; // in milliseconds
+  pausedAtProgress: number;
+  currentGhost: string | null;
+  resumeThreshold: number; // How much user needs to scroll to resume
+  userScrolledPast: boolean;
 }
 
-// Resume POV Animation
-function resumePOVAnimation() {
-  povAnimationState.isPaused = false;
-  povAnimationState.pausedAtGhost = null;
-  hideGhostPauseIndicator();
-  console.log(`🎬 Continuing POV animation...`);
-}
-
-// Setup keyboard controls for ghost encounters
-function setupGhostEncounterControls() {
-  document.addEventListener("keydown", (event) => {
-    if (povAnimationState.isPaused && povAnimationState.canContinue) {
-      if (event.code === "Space" || event.code === "Enter") {
-        event.preventDefault();
-        resumePOVAnimation();
-      }
-    }
-  });
-}
-
-// Show visual pause indicator
-function showGhostPauseIndicator(ghostKey: string) {
-  const indicator = createPauseIndicator(ghostKey);
-  document.body.appendChild(indicator);
-}
-
-// Hide pause indicator
-function hideGhostPauseIndicator() {
-  const indicator = document.querySelector(".pov-pause-indicator");
-  if (indicator) {
-    indicator.remove();
-  }
-}
-
-// Create pause indicator UI
-function createPauseIndicator(ghostKey: string): HTMLElement {
-  const indicator = document.createElement("div");
-  indicator.className = "pov-pause-indicator";
-  indicator.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 20px 30px;
-    border-radius: 10px;
-    font-family: Arial, sans-serif;
-    font-size: 18px;
-    text-align: center;
-    z-index: 10000;
-    pointer-events: none;
-    animation: pauseFadeIn 0.3s ease-out;
-  `;
-
-  indicator.innerHTML = `
-    <div style="margin-bottom: 10px; font-size: 24px;">👻</div>
-    <div style="font-weight: bold; margin-bottom: 8px;">${ghostKey.toUpperCase()} ENCOUNTER</div>
-    <div style="font-size: 14px; opacity: 0.8; margin-bottom: 5px;">Continue scrolling or acknowledge with SPACE</div>
-    <div style="font-size: 12px; opacity: 0.6;">🖱️ Keep scrolling | ⌨️ SPACE to acknowledge</div>
-  `;
-
-  // Add CSS animation
-  if (!document.querySelector("#pov-pause-styles")) {
-    const style = document.createElement("style");
-    style.id = "pov-pause-styles";
-    style.textContent = `
-      @keyframes pauseFadeIn {
-        from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-        to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  return indicator;
-}
+const ghostPauseState: GhostPauseState = {
+  isPaused: false,
+  pauseStartTime: 0,
+  pauseDuration: 1500, // 1.5 seconds pause
+  pausedAtProgress: 0,
+  currentGhost: null,
+  resumeThreshold: 0.02, // 2% scroll to resume
+  userScrolledPast: false,
+};
 
 // Light smoothing only for visual camera movement
 function applyLightVisualSmoothing(targetProgress: number): number {
+  // Check for ghost pauses first
+  const pauseAdjustedProgress = handleGhostPauses(targetProgress);
+
   // Store smoothing state on the function
   if (
     typeof (applyLightVisualSmoothing as any).smoothedProgress === "undefined"
   ) {
-    (applyLightVisualSmoothing as any).smoothedProgress = targetProgress;
-    return targetProgress;
+    (applyLightVisualSmoothing as any).smoothedProgress = pauseAdjustedProgress;
+    return pauseAdjustedProgress;
   }
 
   // Very light smoothing for visual comfort only
   const smoothingFactor = 0.15; // Light smoothing (higher = more responsive)
   const smoothedProgress =
     (applyLightVisualSmoothing as any).smoothedProgress +
-    (targetProgress - (applyLightVisualSmoothing as any).smoothedProgress) *
+    (pauseAdjustedProgress -
+      (applyLightVisualSmoothing as any).smoothedProgress) *
       smoothingFactor;
 
   (applyLightVisualSmoothing as any).smoothedProgress = smoothedProgress;
   return smoothedProgress;
+}
+
+// Handle ghost pauses - stops briefly at each ghost
+function handleGhostPauses(targetProgress: number): number {
+  const currentTime = performance.now();
+
+  // Check if we've hit a new ghost trigger
+  let hitNewGhost = false;
+  let newGhostKey = null;
+
+  // Check each ghost trigger position
+  Object.entries(povAnimationState.triggerPositions).forEach(
+    ([ghostKey, trigger]) => {
+      if (!trigger.triggerCameraProgress) return;
+
+      const triggerProgress = trigger.triggerCameraProgress;
+      const triggerWindow = 0.01; // 1% window around trigger
+
+      // Check if we're hitting this ghost trigger for the first time
+      if (Math.abs(targetProgress - triggerProgress) < triggerWindow) {
+        if (!trigger.hasBeenPausedAt) {
+          hitNewGhost = true;
+          newGhostKey = ghostKey;
+          trigger.hasBeenPausedAt = true;
+        }
+      }
+    }
+  );
+
+  // Start new pause if we hit a ghost
+  if (hitNewGhost && !ghostPauseState.isPaused) {
+    console.log(`🛑 Pausing at ghost: ${newGhostKey}`);
+    ghostPauseState.isPaused = true;
+    ghostPauseState.pauseStartTime = currentTime;
+    ghostPauseState.pausedAtProgress = targetProgress;
+    ghostPauseState.currentGhost = newGhostKey;
+    ghostPauseState.userScrolledPast = false;
+
+    // Show visual indicator for pause (optional)
+    // showGhostPauseIndicator(newGhostKey); // TODO: Implement visual indicator
+
+    return targetProgress; // Stay at current position
+  }
+
+  // Handle active pause
+  if (ghostPauseState.isPaused) {
+    const pauseElapsed = currentTime - ghostPauseState.pauseStartTime;
+    const userScrollDelta = Math.abs(
+      targetProgress - ghostPauseState.pausedAtProgress
+    );
+
+    // Check if user scrolled significantly past the pause point
+    if (userScrollDelta > ghostPauseState.resumeThreshold) {
+      ghostPauseState.userScrolledPast = true;
+    }
+
+    // Resume if timeout elapsed OR user scrolled past
+    if (
+      pauseElapsed > ghostPauseState.pauseDuration ||
+      ghostPauseState.userScrolledPast
+    ) {
+      console.log(`✅ Resuming from ghost: ${ghostPauseState.currentGhost}`);
+      ghostPauseState.isPaused = false;
+      ghostPauseState.currentGhost = null;
+      return targetProgress; // Resume with current scroll position
+    }
+
+    // Stay paused - return the paused progress
+    return ghostPauseState.pausedAtProgress;
+  }
+
+  // No pause active - return normal progress
+  return targetProgress;
 }
 
 // Update POV Camera
@@ -2393,28 +2334,9 @@ function handlePOVScroll() {
   ) {
     // Section is in view (including buffer zone) - calculate progress
     const scrolledIntoSection = Math.max(0, -sectionTop);
-    let progress = Math.min(1, scrolledIntoSection / totalAnimationHeight);
+    const progress = Math.min(1, scrolledIntoSection / totalAnimationHeight);
 
-    // SMART PAUSE: Show indicator but allow scrolling to continue
-    if (povAnimationState.isPaused) {
-      // Check if user scrolled significantly forward
-      const scrollForwardThreshold = 0.015; // User must scroll 1.5% forward to continue
-      if (
-        progress >
-        povAnimationState.pausedAtProgress + scrollForwardThreshold
-      ) {
-        // User wants to continue - resume and allow normal progress
-        console.log(
-          `🎬 User scrolled forward - continuing from ${povAnimationState.pausedAtGhost}...`
-        );
-        resumePOVAnimation();
-        // Don't modify progress - let it continue naturally
-      } else {
-        // Show pause indicator but DON'T freeze scroll
-        // This allows reading the cards while showing the pause option
-        // Progress continues naturally, just with the pause indicator visible
-      }
-    }
+    // Direct progress for triggers - smoothing happens internally in updatePOVAnimation
 
     // Start POV animation if not already active and we're in SCROLL_ANIMATION or HOME state
     if (
