@@ -1650,58 +1650,32 @@ function updatePOVCamera(progress: number) {
   }
 
   if (progress < rotationStartingPoint) {
-    // Before rotation phase - 3-phase camera transition based on actual path points
+    // Before rotation phase - 2-phase camera transition: 45° up to tangent look
 
-    // Calculate progress for specific camera path points
+    // Calculate progress for transition point - use first third of path for transition
     const totalPoints = cameraPOVPathPoints.length;
-    const point1Progress = 1 / (totalPoints - 1); // Progress to reach point 1
-    const point2Progress = 2 / (totalPoints - 1); // Progress to reach point 2
+    const transitionEndProgress = 2 / (totalPoints - 1); // Transition until point 2
 
-    if (progress < point1Progress) {
-      // Phase 1: Transition from 45° up to 45° down while moving from start to point 1
-      const transitionProgress = progress / point1Progress; // 0 to 1 from start to point 1
+    if (progress < transitionEndProgress) {
+      // Phase 1: Transition from 45° up to tangent direction
+      const transitionProgress = progress / transitionEndProgress; // 0 to 1 during transition
       const smoothTransition = smoothStep(transitionProgress);
 
       const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
       const upVector = new THREE.Vector3(0, 1, 0); // Up
-      const downVector = new THREE.Vector3(0, -1, 0); // Down
 
-      // 45° forward-up and 45° forward-down directions
+      // 45° forward-up direction
       const forwardUpDirection = new THREE.Vector3()
         .addVectors(forwardVector, upVector)
         .normalize();
-      const forwardDownDirection = new THREE.Vector3()
-        .addVectors(forwardVector, downVector)
-        .normalize();
 
-      // Interpolate from 45° up to 45° down
+      // Get tangent direction for target
+      const forwardTangent = getSmoothCameraTangent(progress);
+
+      // Interpolate from 45° up directly to tangent direction
       const lookAtDirection = new THREE.Vector3()
         .addVectors(
           forwardUpDirection.multiplyScalar(1.0 - smoothTransition),
-          forwardDownDirection.multiplyScalar(smoothTransition)
-        )
-        .normalize();
-
-      const lookAtPoint = camera.position.clone().add(lookAtDirection);
-      applySmoothCameraRotation(lookAtPoint);
-    } else if (progress < point2Progress) {
-      // Phase 2: Transition from 45° down to tangent look while moving from point 1 to point 2
-      const transitionProgress =
-        (progress - point1Progress) / (point2Progress - point1Progress); // 0 to 1
-      const smoothTransition = smoothStep(transitionProgress);
-
-      const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
-      const downVector = new THREE.Vector3(0, -1, 0); // Down
-      const forwardDownDirection = new THREE.Vector3()
-        .addVectors(forwardVector, downVector)
-        .normalize();
-
-      const forwardTangent = getSmoothCameraTangent(progress);
-
-      // Interpolate from 45° down to tangent direction
-      const lookAtDirection = new THREE.Vector3()
-        .addVectors(
-          forwardDownDirection.multiplyScalar(1.0 - smoothTransition),
           forwardTangent.multiplyScalar(smoothTransition)
         )
         .normalize();
@@ -1709,7 +1683,7 @@ function updatePOVCamera(progress: number) {
       const lookAtPoint = camera.position.clone().add(lookAtDirection);
       applySmoothCameraRotation(lookAtPoint);
     } else {
-      // Phase 3: Normal tangent-looking camera behavior (after point 2)
+      // Phase 2: Normal tangent-looking camera behavior (after transition)
       const smoothedTangent = getSmoothCameraTangent(progress);
       const lookAtPoint = camera.position.clone().add(smoothedTangent);
       applySmoothCameraRotation(lookAtPoint);
