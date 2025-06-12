@@ -24,20 +24,19 @@ export const ghostMaterial = new THREE.MeshPhysicalMaterial({
   // Base properties
   color: 0xffffff,
   transparent: true,
-  opacity: 1,
+  opacity: 0.8,
 
   // Glass properties
-  transmission: 1.0, // Full transmission for glass effect
-  thickness: 0.2, // Thickness for refraction
-  roughness: 0.0, // Smooth glass surface
+  transmission: 0.9, // High transmission for glass effect
+  roughness: 0.1, // Very smooth surface
   metalness: 0.0, // No metallic properties for pure glass
 
   // Index of refraction (glass-like)
-  ior: 1.2, // Similar to glass
+  ior: 1.5, // Glass-like refraction
 
   // Advanced glass effects
   clearcoat: 1.0, // Clear coating on surface
-  clearcoatRoughness: 0.0, // Smooth clear coat
+  clearcoatRoughness: 0.1, // Slightly rough clear coat
 
   // Rendering properties
   side: THREE.DoubleSide, // Render both sides
@@ -45,7 +44,7 @@ export const ghostMaterial = new THREE.MeshPhysicalMaterial({
   depthTest: true,
 
   // Environment interaction
-  envMapIntensity: 1.0, // Environment reflections
+  envMapIntensity: 1.5, // Strong environment reflections
 });
 
 export const floorMaterial = new THREE.MeshStandardMaterial({
@@ -98,29 +97,28 @@ export const createGlassGhostMaterial = (
   options: {
     color?: number;
     transmission?: number;
-    thickness?: number;
     roughness?: number;
     ior?: number;
+    opacity?: number;
   } = {}
 ) => {
   return new THREE.MeshPhysicalMaterial({
     // Base properties
     color: options.color || 0xffffff,
     transparent: true,
-    opacity: 1,
+    opacity: options.opacity || 0.8,
 
     // Glass properties
-    transmission: options.transmission || 1.0,
-    thickness: options.thickness || 0.2,
-    roughness: options.roughness || 0.0,
+    transmission: options.transmission || 0.9,
+    roughness: options.roughness || 0.1,
     metalness: 0.0,
 
     // Index of refraction
-    ior: options.ior || 1.2,
+    ior: options.ior || 1.5,
 
     // Advanced glass effects
     clearcoat: 1.0,
-    clearcoatRoughness: 0.0,
+    clearcoatRoughness: 0.1,
 
     // Rendering properties
     side: THREE.DoubleSide,
@@ -128,17 +126,17 @@ export const createGlassGhostMaterial = (
     depthTest: true,
 
     // Environment interaction
-    envMapIntensity: 1.0,
+    envMapIntensity: 1.5,
   });
 };
 
 // Different ghost material variations
 export const ghostMaterials = {
-  ghost1: createGlassGhostMaterial({ color: 0xffffff, thickness: 0.15 }), // Pure glass
-  ghost2: createGlassGhostMaterial({ color: 0xf0f8ff, thickness: 0.2 }), // Slight blue tint
-  ghost3: createGlassGhostMaterial({ color: 0xf8f8ff, thickness: 0.25 }), // Slight purple tint
-  ghost4: createGlassGhostMaterial({ color: 0xfffafa, thickness: 0.18 }), // Slight pink tint
-  ghost5: createGlassGhostMaterial({ color: 0xf5fffa, thickness: 0.22 }), // Slight green tint
+  ghost1: createGlassGhostMaterial({ color: 0xffffff, opacity: 0.85 }), // Pure glass
+  ghost2: createGlassGhostMaterial({ color: 0xf0f8ff, opacity: 0.8 }), // Slight blue tint
+  ghost3: createGlassGhostMaterial({ color: 0xf8f8ff, opacity: 0.75 }), // Slight purple tint
+  ghost4: createGlassGhostMaterial({ color: 0xfffafa, opacity: 0.82 }), // Slight pink tint
+  ghost5: createGlassGhostMaterial({ color: 0xf5fffa, opacity: 0.78 }), // Slight green tint
 };
 
 // Ghost Cover Materials - keep backwards compatibility
