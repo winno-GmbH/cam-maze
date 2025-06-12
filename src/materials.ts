@@ -24,7 +24,7 @@ export const ghostMaterial = new THREE.MeshPhysicalMaterial({
   // Base properties
   color: 0xffffff,
   transparent: true,
-  opacity: 0.8,
+  opacity: 0.3, // Much more transparent for stronger glass effect
 
   // Glass properties with strong distortion
   transmission: 1.0, // Full transmission for maximum glass effect
@@ -33,10 +33,6 @@ export const ghostMaterial = new THREE.MeshPhysicalMaterial({
 
   // Index of refraction for strong distortion
   ior: 2.33, // Higher IOR (like diamond) for more distortion
-
-  // Attenuation for realistic glass depth
-  attenuationDistance: 0.5, // Distance light travels through material
-  attenuationColor: new THREE.Color(0xffffff), // White attenuation
 
   // Advanced glass effects
   clearcoat: 1.0, // Clear coating on surface
@@ -123,10 +119,6 @@ export const createGlassGhostMaterial = (
     // Index of refraction for strong distortion
     ior: options.ior || 2.33,
 
-    // Attenuation for realistic glass depth
-    attenuationDistance: 0.5,
-    attenuationColor: new THREE.Color(0xffffff),
-
     // Advanced glass effects
     clearcoat: 1.0,
     clearcoatRoughness: 0.0,
@@ -144,13 +136,13 @@ export const createGlassGhostMaterial = (
   });
 };
 
-// Different ghost material variations
+// Different ghost material variations with low opacity for strong glass effect
 export const ghostMaterials = {
-  ghost1: createGlassGhostMaterial({ color: 0xffffff, opacity: 0.85 }), // Pure glass
-  ghost2: createGlassGhostMaterial({ color: 0xf0f8ff, opacity: 0.8 }), // Slight blue tint
-  ghost3: createGlassGhostMaterial({ color: 0xf8f8ff, opacity: 0.75 }), // Slight purple tint
-  ghost4: createGlassGhostMaterial({ color: 0xfffafa, opacity: 0.82 }), // Slight pink tint
-  ghost5: createGlassGhostMaterial({ color: 0xf5fffa, opacity: 0.78 }), // Slight green tint
+  ghost1: createGlassGhostMaterial({ color: 0xffffff, opacity: 0.3 }), // Pure glass
+  ghost2: createGlassGhostMaterial({ color: 0xf0f8ff, opacity: 0.25 }), // Slight blue tint
+  ghost3: createGlassGhostMaterial({ color: 0xf8f8ff, opacity: 0.2 }), // Slight purple tint
+  ghost4: createGlassGhostMaterial({ color: 0xfffafa, opacity: 0.28 }), // Slight pink tint
+  ghost5: createGlassGhostMaterial({ color: 0xf5fffa, opacity: 0.22 }), // Slight green tint
 };
 
 // Ghost Cover Materials - keep backwards compatibility
