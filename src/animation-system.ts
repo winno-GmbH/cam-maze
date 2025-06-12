@@ -1341,18 +1341,18 @@ const povAnimationState: POVAnimationState = {
 };
 
 // ==========================================
-// 🎛️ SMOOTHING CONTROLS - UNIFIED SYSTEM:
+// 🎛️ SMOOTHING CONTROLS - UNIFIED LIGHT DAMPING:
 // ==========================================
-// Alle auf 0.2 (20% Smoothing) für gleichmäßiges Gefühl:
-// 1. Kamera-Rotation: Zeile ~1359 "CAMERA_ROTATION_SMOOTHING" = 0.2
-// 2. Kamera-Position: Zeile ~1619 "smoothingFactor" = 0.2
-// 3. Scroll-Input: Zeile ~2277 "lightSmoothingFactor" = 0.8 (=20%)
-// 4. Tangenten-Smoothing: Zeile ~1745 für Hin-und-Her-Reduzierung
+// Alle Werte sind jetzt auf 0.2 für einheitliche leichte Abfederung:
+// 1. Kamera-Rotation: Zeile ~1365 "CAMERA_ROTATION_SMOOTHING"
+// 2. Scroll-Smoothing: Zeile ~2275 "scrollSmoothingFactor"
+// 3. Visual-Smoothing: Zeile ~1620 "smoothingFactor"
+// Empfohlen: 0.1 (stark) bis 0.3 (schwach) für leichte Abfederung
 // ==========================================
 
 // POV Camera Smoothing State - GENTLER SETTINGS
 let previousCameraRotation: THREE.Quaternion | null = null;
-const CAMERA_ROTATION_SMOOTHING = 0.2; // Light smoothing to match position smoothing (was 0.08)
+const CAMERA_ROTATION_SMOOTHING = 0.2; // Light damping effect for rotation (was 0.08)
 const MAX_ROTATION_SPEED = Math.PI / 12; // Slower max rotation (15° per frame, was 30°)
 const LOOK_AHEAD_DISTANCE = 0.01; // Smaller look-ahead for less jitter (was 0.02)
 
@@ -1617,13 +1617,14 @@ function applyLightVisualSmoothing(targetProgress: number): number {
     0.001
   );
 
-  // Light smoothing to match rotation smoothing (same feel)
-  const smoothingFactor = 0.2; // Match CAMERA_ROTATION_SMOOTHING for consistency
+  // Light consistent smoothing to match rotation smoothing
+  const smoothingFactor = 0.2; // Light damping effect (matches camera rotation)
 
+  // Direct interpolation instead of velocity-based approach
   const diff =
     targetProgress - (applyLightVisualSmoothing as any).smoothedProgress;
 
-  // Simple lerp - same approach as rotation smoothing (no velocity limiting)
+  // Simple consistent lerp - same approach as rotation
   (applyLightVisualSmoothing as any).smoothedProgress += diff * smoothingFactor;
   (applyLightVisualSmoothing as any).smoothedProgress = Math.max(
     0,
@@ -1795,14 +1796,14 @@ function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
   // Calculate rotation difference
   const angleDifference = camera.quaternion.angleTo(targetQuaternion);
 
-  // LIGHT DYNAMIC SMOOTHING: Consistent with position smoothing
+  // LIGHT DYNAMIC SMOOTHING: Consistent light damping for all rotations
   let dynamicSmoothing = CAMERA_ROTATION_SMOOTHING;
   if (angleDifference > Math.PI / 8) {
-    // > 22.5° = sharp corner - only slightly more smoothing
-    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.8; // Light additional smoothing
+    // > 22.5° = sharp corner - still light smoothing
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.8; // Light smoothing for corners
   } else if (angleDifference > Math.PI / 16) {
-    // > 11.25° = moderate corner - minimal additional smoothing
-    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.9; // Very light additional smoothing
+    // > 11.25° = moderate corner - very light smoothing
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.9; // Very light smoothing for moderate turns
   }
 
   // Always apply smoothing (no speed limiting - causes jumps)
@@ -2236,11 +2237,11 @@ function handlePOVScroll() {
       (handlePOVScroll as any).lastProgress = rawProgress;
     }
 
-    // Light smoothing consistent with camera: ~20% smoothing effect
-    const lightSmoothingFactor = 0.8; // 20% smoothing to match camera feel
+    // Light consistent smoothing - same approach as camera position/rotation
+    const scrollSmoothingFactor = 0.2; // Light damping effect (matches camera)
+    const diff = rawProgress - (handlePOVScroll as any).lastProgress;
     progress =
-      (handlePOVScroll as any).lastProgress * (1 - lightSmoothingFactor) +
-      rawProgress * lightSmoothingFactor;
+      (handlePOVScroll as any).lastProgress + diff * scrollSmoothingFactor;
     (handlePOVScroll as any).lastProgress = progress;
 
     // Start POV animation if not already active and we're in SCROLL_ANIMATION or HOME state

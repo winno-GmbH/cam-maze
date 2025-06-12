@@ -6,7 +6,6 @@ import {
   mazeMaterial,
   topMaterial,
   ghostMaterial,
-  ghostMaterials,
   floorMaterial,
   materialMap,
 } from "./materials";
@@ -24,23 +23,23 @@ export let pacmanMixer: THREE.AnimationMixer;
 export const pacman = new THREE.Group();
 scene.add(pacman);
 
-// Ghost Objects with individual glass materials
+// Ghost Objects
 export const ghosts: GhostContainer = {
   pacman: pacman,
-  ghost1: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterials.ghost1),
-  ghost2: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterials.ghost2),
-  ghost3: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterials.ghost3),
-  ghost4: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterials.ghost4),
-  ghost5: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterials.ghost5),
+  ghost1: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
+  ghost2: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
+  ghost3: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
+  ghost4: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
+  ghost5: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
 };
 
-// Ghost containers mapping with materials (like in backup.js)
+// Ghost containers mapping (like in backup.js)
 const ghostContainers = {
-  Ghost_EUR: { container: ghosts.ghost1, material: ghostMaterials.ghost1 },
-  Ghost_CHF: { container: ghosts.ghost2, material: ghostMaterials.ghost2 },
-  Ghost_YEN: { container: ghosts.ghost3, material: ghostMaterials.ghost3 },
-  Ghost_USD: { container: ghosts.ghost4, material: ghostMaterials.ghost4 },
-  Ghost_GBP: { container: ghosts.ghost5, material: ghostMaterials.ghost5 },
+  Ghost_EUR: ghosts.ghost1,
+  Ghost_CHF: ghosts.ghost2,
+  Ghost_YEN: ghosts.ghost3,
+  Ghost_USD: ghosts.ghost4,
+  Ghost_GBP: ghosts.ghost5,
 };
 
 // Add ghosts to scene
@@ -94,10 +93,8 @@ export async function loadModel(): Promise<void> {
             child.name &&
             ghostContainers[child.name as keyof typeof ghostContainers]
           ) {
-            const ghostData =
+            const ghostContainer =
               ghostContainers[child.name as keyof typeof ghostContainers];
-            const ghostContainer = ghostData.container;
-            const ghostMaterial = ghostData.material;
             const ghostGroup = new THREE.Group();
 
             child.rotation.z = Math.PI;
@@ -108,7 +105,6 @@ export async function loadModel(): Promise<void> {
             child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
                 if (subChild.name && subChild.name.startsWith("Ghost_Mesh")) {
-                  // Apply the specific glass material for this ghost
                   (subChild as THREE.Mesh).material = ghostMaterial;
                 } else if (
                   subChild.name &&
