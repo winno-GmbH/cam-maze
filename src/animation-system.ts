@@ -1342,7 +1342,7 @@ const povAnimationState: POVAnimationState = {
 
 // POV Camera Smoothing State - GENTLER SETTINGS
 let previousCameraRotation: THREE.Quaternion | null = null;
-const CAMERA_ROTATION_SMOOTHING = 0.15; // Balanced smoothing - responsive but smooth (was 0.08)
+const CAMERA_ROTATION_SMOOTHING = 0.08; // Stronger smoothing for less jittery movement (was 0.15)
 const MAX_ROTATION_SPEED = Math.PI / 12; // Slower max rotation (15° per frame, was 30°)
 const LOOK_AHEAD_DISTANCE = 0.01; // Smaller look-ahead for less jitter (was 0.02)
 
@@ -1607,9 +1607,9 @@ function applyLightVisualSmoothing(targetProgress: number): number {
     0.001
   );
 
-  // Very light smoothing - only for visual comfort
-  const smoothingFactor = 0.85; // High responsiveness with minimal smoothing
-  const maxVelocity = 3.0; // Allow fast movement
+  // Stronger smoothing for smoother visual experience
+  const smoothingFactor = 0.7; // More smoothing for better visual flow (was 0.85)
+  const maxVelocity = 2.0; // Slower max velocity for smoother movement (was 3.0)
 
   const diff =
     targetProgress - (applyLightVisualSmoothing as any).smoothedProgress;
@@ -1709,7 +1709,7 @@ function updatePOVCamera(progress: number) {
   }
 }
 
-// Get smoothed tangent for camera movement
+// Get smoothed tangent for camera movement - optimized for straight movement in corners
 function getSmoothCameraTangent(progress: number): THREE.Vector3 {
   if (!povAnimationState.cameraPOVPath) return new THREE.Vector3(0, 0, -1);
 
@@ -1737,24 +1737,33 @@ function getSmoothCameraTangent(progress: number): THREE.Vector3 {
     .divideScalar(3)
     .normalize();
 
-  // Detect S-curves: if current and look-ahead have very different directions
+  // Detect sharp turns: if current and look-ahead have very different directions
   const dotProduct = currentTangent.dot(lookAheadTangent);
-  const isSCurve = dotProduct < 0.5; // More lenient S-curve detection (was 0.3)
+  const isSharpTurn = dotProduct < 0.3; // Sharp turn detection
+  const isModerateTurn = dotProduct < 0.7; // Moderate turn detection
 
-  if (isSCurve) {
-    // For S-curves, use gentler smoothing (was 0.3/0.7)
+  if (isSharpTurn) {
+    // For sharp turns, strongly favor straight movement with heavy smoothing
     return new THREE.Vector3()
       .addVectors(
-        currentTangent.multiplyScalar(0.6),
-        averageTangent.multiplyScalar(0.4)
+        currentTangent.multiplyScalar(0.3), // Much less current direction
+        averageTangent.multiplyScalar(0.7) // Much more averaged direction
+      )
+      .normalize();
+  } else if (isModerateTurn) {
+    // For moderate turns, use strong smoothing
+    return new THREE.Vector3()
+      .addVectors(
+        currentTangent.multiplyScalar(0.4),
+        averageTangent.multiplyScalar(0.6)
       )
       .normalize();
   } else {
-    // For normal curves, use very light smoothing (was 0.7/0.3)
+    // For straight sections, use light smoothing
     return new THREE.Vector3()
       .addVectors(
-        currentTangent.multiplyScalar(0.85),
-        averageTangent.multiplyScalar(0.15)
+        currentTangent.multiplyScalar(0.8),
+        averageTangent.multiplyScalar(0.2)
       )
       .normalize();
   }
@@ -1781,14 +1790,17 @@ function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
   // Calculate rotation difference
   const angleDifference = camera.quaternion.angleTo(targetQuaternion);
 
-  // DYNAMIC SMOOTHING: More smoothing for larger angle changes (corners)
+  // DYNAMIC SMOOTHING: Much more smoothing for corners to reduce rotation
   let dynamicSmoothing = CAMERA_ROTATION_SMOOTHING;
   if (angleDifference > Math.PI / 8) {
-    // > 22.5° = sharp corner
-    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.7; // Less aggressive smoothing for corners (was 0.4)
+    // > 22.5° = sharp corner - MUCH stronger smoothing
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.3; // Very strong smoothing for corners
   } else if (angleDifference > Math.PI / 16) {
-    // > 11.25° = moderate corner
-    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.85; // Less smoothing for moderate turns (was 0.7)
+    // > 11.25° = moderate corner - stronger smoothing
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.5; // Strong smoothing for moderate turns
+  } else if (angleDifference > Math.PI / 32) {
+    // > 5.6° = small turn - moderate smoothing
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.7; // Moderate smoothing for small turns
   }
 
   // Always apply smoothing (no speed limiting - causes jumps)
@@ -2222,8 +2234,8 @@ function handlePOVScroll() {
       (handlePOVScroll as any).lastProgress = rawProgress;
     }
 
-    // Ultra-light smoothing: 95% new value, 5% old value
-    const lightSmoothingFactor = 0.95;
+    // Stronger smoothing: 85% new value, 15% old value for smoother scrolling
+    const lightSmoothingFactor = 0.85;
     progress =
       (handlePOVScroll as any).lastProgress * (1 - lightSmoothingFactor) +
       rawProgress * lightSmoothingFactor;
