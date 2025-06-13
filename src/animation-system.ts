@@ -3,6 +3,7 @@ import { ghosts, pacmanMixer, clock } from "./objects";
 import { pathsMap } from "./paths";
 import { renderer, scene } from "./scene";
 import { camera, startQuaternion, endQuaternion } from "./camera";
+import { CAMERA_CONFIG } from "./config";
 // Removed redundant smooth scroll system - using direct progress for precise control
 
 // 1. STATE MANAGEMENT
@@ -1138,7 +1139,7 @@ POV Animation System
 // POV Path Points (from backup.js)
 const cameraPOVPathPoints = [
   {
-    pos: new THREE.Vector3(0.55675, 0.8, 0.45175),
+    pos: new THREE.Vector3(0.55675, 0.5, 0.45175),
     type: "curve",
     curveType: "forwardDownArc",
   },
@@ -1305,6 +1306,10 @@ const POV_TEXT_FADE_OUT_SPEED = 0.1;
 const POV_TEXT_FADE_IN_DURATION = 0.07; // 7% of section length
 const POV_TEXT_STAY_VISIBLE_UNTIL = 0.85; // Stay visible until 85% of section
 const POV_TEXT_CAM_MAX_OPACITY = 0.8; // Max opacity for cam text
+
+// POV Start Points (from backup.js)
+const povStartPoint1 = new THREE.Vector3(0.55675, -5, 0.45175);
+const povStartPoint2 = new THREE.Vector3(0.55675, -2.5, 0.45175);
 
 // POV Animation State
 interface POVAnimationState {
@@ -1663,78 +1668,185 @@ function applyLightVisualSmoothing(targetProgress: number): number {
 function updatePOVCamera(progress: number) {
   if (!povAnimationState.cameraPOVPath || !camera) return;
 
-  const cameraPosition = povAnimationState.cameraPOVPath.getPointAt(progress);
-  camera.position.copy(cameraPosition);
+  const position = povAnimationState.cameraPOVPath.getPointAt(progress);
+  camera.position.copy(position);
+  camera.fov = CAMERA_CONFIG.wideFOV;
 
-  // Handle camera rotation based on progress
-  const rotationStartingPoint = 0.973;
-
-  if (progress >= rotationStartingPoint && !povAnimationState.rotationStarted) {
-    povAnimationState.rotationStarted = true;
-    const lookAtPoint = getCameraLookAtPoint();
-    povAnimationState.cachedStartYAngle = Math.atan2(
-      lookAtPoint.x - camera.position.x,
-      lookAtPoint.z - camera.position.z
-    );
+  // Hide pacman during POV animation
+  if (ghosts.pacman && ghosts.pacman.visible) {
+    ghosts.pacman.visible = false;
   }
 
-  if (progress < rotationStartingPoint) {
-    // Before rotation phase - 2-phase camera transition: 45° up to tangent look
+  const tangent = povAnimationState.cameraPOVPath
+    .getTangentAt(progress)
+    .normalize();
+  const defaultLookAt = position.clone().add(tangent);
 
-    // Calculate progress for transition point - use first third of path for transition
-    const totalPoints = cameraPOVPathPoints.length;
-    const transitionEndProgress = 2 / (totalPoints - 1); // Transition until point 2
+  // Initial camera orientation
+  if (progress === 0) {
+    camera.lookAt(new THREE.Vector3(camera.position.x, 2, camera.position.z));
+  } else if (progress < 0.1) {
+    const transitionProgress = progress / 0.1;
+    const upLookAt = new THREE.Vector3(camera.position.x, 1, camera.position.z);
+    const frontLookAt = new THREE.Vector3(
+      camera.position.x,
+      0.5,
+      camera.position.z + 1
+    );
 
-    if (progress < transitionEndProgress) {
-      // Phase 1: Transition from 45° up to tangent direction
-      const transitionProgress = progress / transitionEndProgress; // 0 to 1 during transition
-      const smoothTransition = smoothStep(transitionProgress);
+    const interpolatedLookAt = new THREE.Vector3();
+    interpolatedLookAt.lerpVectors(
+      upLookAt,
+      frontLookAt,
+      smoothStep(transitionProgress)
+    );
 
-      const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
-      const upVector = new THREE.Vector3(0, 1, 0); // Up
+    camera.lookAt(interpolatedLookAt);
+  }
 
-      // 45° forward-up direction
-      const forwardUpDirection = new THREE.Vector3()
-        .addVectors(forwardVector, upVector)
-        .normalize();
+  // Calculate progress points for different phases
+  const point1Progress = findClosestProgressOnPOVPath(povStartPoint1);
+  const point2Progress = findClosestProgressOnPOVPath(povStartPoint2);
+  const startRotationProgress = findClosestProgressOnPOVPath(
+    povAnimationState.startRotationPoint
+  );
+  const endRotationProgress = findClosestProgressOnPOVPath(
+    povAnimationState.endRotationPoint
+  );
 
-      // Get tangent direction for target
-      const forwardTangent = getSmoothCameraTangent(progress);
-
-      // Interpolate from 45° up directly to tangent direction
-      const lookAtDirection = new THREE.Vector3()
-        .addVectors(
-          forwardUpDirection.multiplyScalar(1.0 - smoothTransition),
-          forwardTangent.multiplyScalar(smoothTransition)
-        )
-        .normalize();
-
-      const lookAtPoint = camera.position.clone().add(lookAtDirection);
-      applySmoothCameraRotation(lookAtPoint);
-    } else {
-      // Phase 2: Normal tangent-looking camera behavior (after transition)
-      const smoothedTangent = getSmoothCameraTangent(progress);
-      const lookAtPoint = camera.position.clone().add(smoothedTangent);
-      applySmoothCameraRotation(lookAtPoint);
-    }
+  // Handle different camera phases
+  if (progress <= point2Progress) {
+    // Home transition phase
+    handlePOVHomeTransition(
+      progress,
+      position,
+      defaultLookAt,
+      point1Progress,
+      point2Progress
+    );
+  } else if (
+    progress >= startRotationProgress &&
+    progress <= endRotationProgress
+  ) {
+    // Rotation phase
+    handlePOVRotationPhase(
+      progress,
+      position,
+      defaultLookAt,
+      startRotationProgress,
+      endRotationProgress
+    );
   } else {
-    // Rotation phase - interpolate between start and end look-at
-    const rotationProgress =
-      (progress - rotationStartingPoint) / (1 - rotationStartingPoint);
-    const smoothProgress = smoothStep(rotationProgress);
-
-    const currentLookAt = new THREE.Vector3().lerpVectors(
-      povAnimationState.targetLookAt,
-      povAnimationState.finalLookAt,
-      smoothProgress
+    // Default orientation
+    handlePOVDefaultOrientation(
+      progress,
+      startRotationProgress,
+      endRotationProgress,
+      defaultLookAt
     );
-
-    applySmoothCameraRotation(currentLookAt);
   }
 
-  // Store previous position
-  if (povAnimationState.previousCameraPosition) {
-    povAnimationState.previousCameraPosition.copy(cameraPosition);
+  camera.updateProjectionMatrix();
+}
+
+// Handle POV Home Transition (from backup.js)
+function handlePOVHomeTransition(
+  progress: number,
+  position: THREE.Vector3,
+  defaultLookAt: THREE.Vector3,
+  point1Progress: number,
+  point2Progress: number
+) {
+  const transitionProgress =
+    (progress - point1Progress) / (point2Progress - point1Progress);
+
+  if (transitionProgress >= 0 && transitionProgress <= 1) {
+    const targetQuaternion = new THREE.Quaternion().setFromRotationMatrix(
+      new THREE.Matrix4().lookAt(position, defaultLookAt, camera!.up)
+    );
+
+    const easedProgress = smoothStep(transitionProgress);
+    const newQuaternion = new THREE.Quaternion()
+      .copy(new THREE.Quaternion()) // Use identity quaternion as fallback
+      .slerp(targetQuaternion, easedProgress);
+
+    camera!.quaternion.copy(newQuaternion);
+  } else if (transitionProgress > 1) {
+    camera!.lookAt(defaultLookAt);
+  }
+}
+
+// Handle POV Rotation Phase (from backup.js)
+function handlePOVRotationPhase(
+  progress: number,
+  position: THREE.Vector3,
+  defaultLookAt: THREE.Vector3,
+  startRotationProgress: number,
+  endRotationProgress: number
+) {
+  const sectionProgress =
+    (progress - startRotationProgress) /
+    (endRotationProgress - startRotationProgress);
+
+  if (povAnimationState.cachedStartYAngle === null) {
+    const startDir = new THREE.Vector2(
+      defaultLookAt.x - position.x,
+      defaultLookAt.z - position.z
+    ).normalize();
+    povAnimationState.cachedStartYAngle = Math.atan2(startDir.y, startDir.x);
+    povAnimationState.cachedStartYAngle =
+      povAnimationState.cachedStartYAngle > 3
+        ? povAnimationState.cachedStartYAngle / 2
+        : povAnimationState.cachedStartYAngle;
+  }
+
+  const targetDir = new THREE.Vector2(
+    povAnimationState.targetLookAt.x - position.x,
+    povAnimationState.targetLookAt.z - position.z
+  ).normalize();
+  let targetYAngle = Math.atan2(targetDir.y, targetDir.x);
+
+  let angleDiff = targetYAngle - povAnimationState.cachedStartYAngle;
+  if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+  else if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+  angleDiff = -angleDiff * 1.75;
+  targetYAngle = povAnimationState.cachedStartYAngle + angleDiff;
+
+  const easedProgress = smoothStep(sectionProgress);
+  const newYAngle =
+    povAnimationState.cachedStartYAngle * (1 - easedProgress) +
+    targetYAngle * easedProgress;
+
+  const radius = 1.0;
+  const newLookAt = new THREE.Vector3(
+    position.x + Math.cos(newYAngle) * radius,
+    position.y,
+    position.z + Math.sin(newYAngle) * radius
+  );
+
+  camera!.lookAt(newLookAt);
+
+  if (progress >= endRotationProgress) {
+    povAnimationState.cachedStartYAngle = null;
+  }
+  povAnimationState.rotationStarted = true;
+}
+
+// Handle POV Default Orientation (from backup.js)
+function handlePOVDefaultOrientation(
+  progress: number,
+  startRotationProgress: number,
+  endRotationProgress: number,
+  defaultLookAt: THREE.Vector3
+) {
+  if (progress < startRotationProgress || progress > endRotationProgress) {
+    povAnimationState.cachedStartYAngle = null;
+    povAnimationState.rotationStarted = false;
+  }
+
+  if (!povAnimationState.rotationStarted) {
+    camera!.lookAt(defaultLookAt);
   }
 }
 
