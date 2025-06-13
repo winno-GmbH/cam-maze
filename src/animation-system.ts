@@ -1361,11 +1361,11 @@ const povAnimationState: POVAnimationState = {
 // Empfohlen: 0.1 (stark) bis 0.3 (schwach) für leichte Abfederung
 // ==========================================
 
-// POV Camera Smoothing State - GENTLER SETTINGS
+// POV Camera Smoothing State - BALANCED SETTINGS
 let previousCameraRotation: THREE.Quaternion | null = null;
-const CAMERA_ROTATION_SMOOTHING = 0.15; // Reduced from 0.2 for less aggressive rotation
-const MAX_ROTATION_SPEED = Math.PI / 16; // Slower max rotation (11.25° per frame, was 15°)
-const LOOK_AHEAD_DISTANCE = 0.015; // Increased look-ahead for smoother curves (was 0.01)
+const CAMERA_ROTATION_SMOOTHING = 0.25; // Balanced smoothing (was 0.15)
+const MAX_ROTATION_SPEED = Math.PI / 14; // Balanced max rotation (12.8° per frame)
+const LOOK_AHEAD_DISTANCE = 0.012; // Balanced look-ahead (was 0.015)
 
 // POV Text Animation Constants - Faster fade in/out, more time at full opacity
 const GHOST_TEXT_START = 0.1; // Faster fade in (was 0.2)
@@ -1809,7 +1809,7 @@ function getSmoothCameraTangent(progress: number): THREE.Vector3 {
   }
 }
 
-// Apply smooth camera rotation with dynamic smoothing based on scroll speed
+// Apply smooth camera rotation with balanced dynamic smoothing
 function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
   if (!camera) return;
 
@@ -1830,21 +1830,21 @@ function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
   // Calculate rotation difference
   const angleDifference = camera.quaternion.angleTo(targetQuaternion);
 
-  // ENHANCED SMOOTHING: Extra smooth for all rotations to prevent jerky movement
+  // BALANCED SMOOTHING: Responsive but smooth
   let dynamicSmoothing = CAMERA_ROTATION_SMOOTHING;
 
   // Check if we're in the end sequence (camera near maze exit)
   const isNearExit = camera.position.z > 1.8; // Near the end of the path
 
   if (isNearExit) {
-    // Extra smooth rotation for end sequence
-    dynamicSmoothing = 0.08; // Much smoother for the final turn
+    // Smooth rotation for end sequence
+    dynamicSmoothing = 0.15; // Smooth for the final turn
   } else if (angleDifference > Math.PI / 8) {
-    // > 22.5° = sharp corner - very light smoothing
-    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.6; // Very light smoothing for corners
+    // > 22.5° = sharp corner - balanced smoothing
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.7; // Balanced smoothing for corners
   } else if (angleDifference > Math.PI / 16) {
     // > 11.25° = moderate corner - light smoothing
-    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.8; // Light smoothing for moderate turns
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.85; // Light smoothing for moderate turns
   } else {
     // Small rotations - use normal smoothing
     dynamicSmoothing = CAMERA_ROTATION_SMOOTHING;
@@ -2648,11 +2648,11 @@ function applySmoothGhostPosition(
   return smoothedPosition;
 }
 
-// Get flexible camera direction with weighted influence system
+// Get balanced camera direction - sweet spot between tangent following and smoothing
 function getFlexibleCameraDirection(progress: number): THREE.Vector3 {
   if (!povAnimationState.cameraPOVPath) return new THREE.Vector3(0, 0, -1);
 
-  // Get multiple reference points for weighted influence
+  // Get current tangent (primary direction)
   const currentTangent = povAnimationState.cameraPOVPath
     .getTangentAt(progress)
     .normalize();
@@ -2667,77 +2667,16 @@ function getFlexibleCameraDirection(progress: number): THREE.Vector3 {
     .getTangentAt(lookBehindProgress)
     .normalize();
 
-  // Get even more context points for better influence
-  const farAheadProgress = Math.min(progress + LOOK_AHEAD_DISTANCE * 2, 1);
-  const farAheadTangent = povAnimationState.cameraPOVPath
-    .getTangentAt(farAheadProgress)
-    .normalize();
-
-  const farBehindProgress = Math.max(progress - LOOK_AHEAD_DISTANCE * 2, 0);
-  const farBehindTangent = povAnimationState.cameraPOVPath
-    .getTangentAt(farBehindProgress)
-    .normalize();
-
-  // Calculate weighted influence based on path curvature
+  // Calculate path curvature
   const dotProduct = currentTangent.dot(lookAheadTangent);
   const isSharpTurn = dotProduct < 0.3;
   const isModerateTurn = dotProduct < 0.7;
 
-  // SPECIAL HANDLING: Detect double curve pattern at the start (first 30% of path)
-  const isDoubleCurveSection = progress < 0.3;
-
+  // BALANCED APPROACH: Stronger current tangent influence with light smoothing
   let finalDirection: THREE.Vector3;
 
-  if (isDoubleCurveSection) {
-    // Double curve section: Use very broad context to smooth out the left-right-left pattern
-    // Get even more distant points for ultra-smooth movement
-    const ultraAheadProgress = Math.min(progress + LOOK_AHEAD_DISTANCE * 3, 1);
-    const ultraAheadTangent = povAnimationState.cameraPOVPath
-      .getTangentAt(ultraAheadProgress)
-      .normalize();
-
-    const ultraBehindProgress = Math.max(progress - LOOK_AHEAD_DISTANCE * 3, 0);
-    const ultraBehindTangent = povAnimationState.cameraPOVPath
-      .getTangentAt(ultraBehindProgress)
-      .normalize();
-
-    // Ultra-smooth weighting for double curve: slight left → center → slight right → center
-    // Weight: ultra behind (5%) + far behind (10%) + behind (20%) + current (30%) + ahead (20%) + far ahead (10%) + ultra ahead (5%)
-    finalDirection = new THREE.Vector3()
-      .addVectors(
-        ultraBehindTangent.multiplyScalar(0.05),
-        farBehindTangent.multiplyScalar(0.1)
-      )
-      .add(lookBehindTangent.multiplyScalar(0.2))
-      .add(currentTangent.multiplyScalar(0.3))
-      .add(lookAheadTangent.multiplyScalar(0.2))
-      .add(farAheadTangent.multiplyScalar(0.1))
-      .add(ultraAheadTangent.multiplyScalar(0.05))
-      .normalize();
-  } else if (isSharpTurn) {
-    // Sharp turns: Use broader context to smooth out the turn
-    // Weight: far behind (10%) + behind (20%) + current (30%) + ahead (25%) + far ahead (15%)
-    finalDirection = new THREE.Vector3()
-      .addVectors(
-        farBehindTangent.multiplyScalar(0.1),
-        lookBehindTangent.multiplyScalar(0.2)
-      )
-      .add(currentTangent.multiplyScalar(0.3))
-      .add(lookAheadTangent.multiplyScalar(0.25))
-      .add(farAheadTangent.multiplyScalar(0.15))
-      .normalize();
-  } else if (isModerateTurn) {
-    // Moderate turns: Use closer context with some smoothing
-    // Weight: behind (25%) + current (40%) + ahead (35%)
-    finalDirection = new THREE.Vector3()
-      .addVectors(
-        lookBehindTangent.multiplyScalar(0.25),
-        currentTangent.multiplyScalar(0.4)
-      )
-      .add(lookAheadTangent.multiplyScalar(0.35))
-      .normalize();
-  } else {
-    // Straight sections: Use current direction with light smoothing
+  if (isSharpTurn) {
+    // Sharp turns: Current tangent still dominant, light smoothing
     // Weight: behind (15%) + current (60%) + ahead (25%)
     finalDirection = new THREE.Vector3()
       .addVectors(
@@ -2745,6 +2684,26 @@ function getFlexibleCameraDirection(progress: number): THREE.Vector3 {
         currentTangent.multiplyScalar(0.6)
       )
       .add(lookAheadTangent.multiplyScalar(0.25))
+      .normalize();
+  } else if (isModerateTurn) {
+    // Moderate turns: Current tangent very dominant, minimal smoothing
+    // Weight: behind (10%) + current (70%) + ahead (20%)
+    finalDirection = new THREE.Vector3()
+      .addVectors(
+        lookBehindTangent.multiplyScalar(0.1),
+        currentTangent.multiplyScalar(0.7)
+      )
+      .add(lookAheadTangent.multiplyScalar(0.2))
+      .normalize();
+  } else {
+    // Straight sections: Current tangent dominant, very light smoothing
+    // Weight: behind (5%) + current (80%) + ahead (15%)
+    finalDirection = new THREE.Vector3()
+      .addVectors(
+        lookBehindTangent.multiplyScalar(0.05),
+        currentTangent.multiplyScalar(0.8)
+      )
+      .add(lookAheadTangent.multiplyScalar(0.15))
       .normalize();
   }
 
