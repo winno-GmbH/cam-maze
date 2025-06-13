@@ -1703,9 +1703,19 @@ function updatePOVCamera(progress: number) {
     }
 
     const lookAtPoint = camera.position.clone().add(lookAtDirection);
-    applySmoothCameraRotation(lookAtPoint);
+
+    // DIRECT ROTATION during entry phase - no smoothing to match scroll progress
+    const tempMatrix = new THREE.Matrix4();
+    tempMatrix.lookAt(camera.position, lookAtPoint, camera.up);
+    const targetQuaternion = new THREE.Quaternion().setFromRotationMatrix(
+      tempMatrix
+    );
+    camera.quaternion.copy(targetQuaternion);
+
+    // Reset smoothing state for next phase
+    previousCameraRotation = targetQuaternion.clone();
   } else {
-    // Normal tangent-looking camera behavior (after transition)
+    // Normal tangent-looking camera behavior (after transition) - with smoothing
     const smoothedTangent = getSmoothCameraTangent(progress);
     const lookAtPoint = camera.position.clone().add(smoothedTangent);
     applySmoothCameraRotation(lookAtPoint);
@@ -2355,27 +2365,27 @@ function updateGhostInPOV(
       }
     }
 
-    // Get current camera progress on POV path (HIGH SAMPLES for smooth animation)
+    // Get current camera progress on POV path (ULTRA HIGH SAMPLES for smooth animation)
     const currentCameraProgress = findClosestProgressOnPOVPath(
       cameraPosition,
-      4000 // MUCH higher samples for smoother interpolation
+      8000 // ULTRA high samples for maximum smoothness
     );
 
-    // Calculate path positions if not done already (HIGH SAMPLES for precision)
+    // Calculate path positions if not done already (ULTRA HIGH SAMPLES for precision)
     if (trigger.triggerCameraProgress === null) {
       trigger.triggerCameraProgress = findClosestProgressOnPOVPath(
         triggerPos,
-        4000
+        8000
       );
       trigger.ghostTextCameraProgress = ghostTextPos
-        ? findClosestProgressOnPOVPath(ghostTextPos, 4000)
+        ? findClosestProgressOnPOVPath(ghostTextPos, 8000)
         : trigger.triggerCameraProgress;
       trigger.camTextCameraProgress = camTextPos
-        ? findClosestProgressOnPOVPath(camTextPos, 4000)
+        ? findClosestProgressOnPOVPath(camTextPos, 8000)
         : trigger.ghostTextCameraProgress;
       trigger.endCameraProgress = findClosestProgressOnPOVPath(
         endPosition,
-        4000
+        8000
       );
     }
 
@@ -2401,20 +2411,32 @@ function updateGhostInPOV(
         (endProgress - triggerProgress);
       let ghostProgress = Math.max(0, Math.min(1, normalizedProgress));
 
-      // SIMPLE: Use ghost progress directly (already globally smoothed)
+      // ULTRA SMOOTH: Apply additional smoothing to ghost progress
+      const smoothGhostProgress = smoothStep(smoothStep(ghostProgress)); // Double smoothing for ultra-smooth movement
 
-      // Update ghost position
-      const pathPoint = path.getPointAt(ghostProgress);
+      // Update ghost position with ultra-high precision
+      const pathPoint = path.getPointAt(smoothGhostProgress);
       ghost.position.copy(pathPoint);
 
-      // Simple ghost orientation
-      const tangent = path.getTangentAt(ghostProgress).normalize();
-      const lookAtPoint = ghost.position.clone().add(tangent);
+      // Ultra-smooth ghost orientation with look-ahead
+      const currentTangent = path.getTangentAt(smoothGhostProgress).normalize();
+      const lookAheadProgress = Math.min(smoothGhostProgress + 0.05, 1);
+      const lookAheadTangent = path.getTangentAt(lookAheadProgress).normalize();
+
+      // Blend current and look-ahead tangents for smoother rotation
+      const blendedTangent = new THREE.Vector3()
+        .addVectors(
+          currentTangent.multiplyScalar(0.7),
+          lookAheadTangent.multiplyScalar(0.3)
+        )
+        .normalize();
+
+      const lookAtPoint = ghost.position.clone().add(blendedTangent);
       ghost.lookAt(lookAtPoint);
 
-      // Simple fade: Use ghostProgress directly for fade
-      if (ghostProgress > 0.9) {
-        const fadeOpacity = 1 - (ghostProgress - 0.9) / 0.1;
+      // Smooth fade: Use smoothGhostProgress for fade
+      if (smoothGhostProgress > 0.9) {
+        const fadeOpacity = 1 - (smoothGhostProgress - 0.9) / 0.1;
         (ghost as any).material.opacity = Math.max(0, Math.min(1, fadeOpacity));
       } else {
         (ghost as any).material.opacity = 1;
