@@ -1159,9 +1159,9 @@ POV Animation System
 // POV Path Points (from backup.js)
 const cameraPOVPathPoints = [
   {
-    pos: new THREE.Vector3(0.55675, 0.8, 0.45175),
+    pos: new THREE.Vector3(0.55675, -0.5, 0.45175),
     type: "curve",
-    curveType: "forwardDownArc",
+    curveType: "forwardUpArc",
   },
   {
     pos: new THREE.Vector3(0.55675, 0.55, 0.6025),
@@ -1301,6 +1301,8 @@ function createPOVPath(pathPoints: any[]): THREE.CurvePath<THREE.Vector3> {
       } else if (current.curveType === "lowerArc") {
         midPoint = new THREE.Vector3(next.pos.x, current.pos.y, current.pos.z);
       } else if (current.curveType === "forwardDownArc") {
+        midPoint = new THREE.Vector3(current.pos.x, next.pos.y, current.pos.z);
+      } else if (current.curveType === "forwardUpArc") {
         midPoint = new THREE.Vector3(current.pos.x, next.pos.y, current.pos.z);
       } else {
         midPoint = new THREE.Vector3(
@@ -1512,19 +1514,19 @@ function onPOVAnimationStart() {
   // Reset smooth camera rotation state
   previousCameraRotation = null;
 
-  // CRITICAL: Set camera to look straight up at POV start
+  // CRITICAL: Set camera to look upward and forward at POV start (from below)
   if (povAnimationState.cameraPOVPath && camera) {
     const startPosition = povAnimationState.cameraPOVPath.getPointAt(0);
     camera.position.copy(startPosition);
 
-    // Create 45° forward-up look direction (sanfter als direkt nach oben)
+    // Create upward-forward look direction (from below, looking up and forward)
     const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
     const upVector = new THREE.Vector3(0, 1, 0); // Up
-    const forwardUpDirection = new THREE.Vector3()
+    const upwardForwardDirection = new THREE.Vector3()
       .addVectors(forwardVector, upVector)
       .normalize();
 
-    const lookAtPoint = startPosition.clone().add(forwardUpDirection);
+    const lookAtPoint = startPosition.clone().add(upwardForwardDirection);
     camera.lookAt(lookAtPoint);
   }
 
