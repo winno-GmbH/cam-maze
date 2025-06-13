@@ -27,6 +27,16 @@ const MAZE_CENTER = new THREE.Vector3(0.55675, 0.5, 0.45175);
 const GHOSTS_END_AT = 0.8; // Ghosts finish their animation at 80% scroll
 const GHOST_OPACITY_FADE_START = 0.9; // Last 10% of GHOST animation (ghostProgress 0.9-1.0) - DELAYED FADE
 
+// Speed multipliers for different ghosts (lower = slower)
+const GHOST_SPEED_MULTIPLIERS = {
+  ghost1: 1.0, // Normal speed
+  ghost2: 0.9, // Slightly slower
+  ghost3: 0.8, // Slower
+  ghost4: 0.7, // Even slower
+  ghost5: 0.6, // Slowest ghost
+  pacman: 0.5, // Slowest - enters last
+};
+
 // Staggered animation timing constants
 const GHOST_STAGGER_DELAY = 0.15; // Delay between each ghost (15% of scroll progress)
 const PACMAN_DELAY = 0.3; // Pacman starts 30% later than the first ghost
@@ -491,31 +501,17 @@ function handleScroll() {
 
       // BACK TO ORIGINAL: No smoothing in home section (it was working fine)
 
-      // Animate ghosts along bezier curves with staggered timing
+      // Animate ghosts along bezier curves with different speeds
       const ghostKeys = Object.keys(ghosts);
-      ghostKeys.forEach((ghostKey, index) => {
+      ghostKeys.forEach((ghostKey) => {
         if (bezierCurves[ghostKey]) {
-          let ghostProgress = 0;
-
-          if (ghostKey === "pacman") {
-            // Pacman starts later and chases the ghosts
-            const pacmanStartProgress = PACMAN_DELAY;
-            if (scrollProgress >= pacmanStartProgress) {
-              const pacmanScrollProgress =
-                (scrollProgress - pacmanStartProgress) /
-                (GHOSTS_END_AT - pacmanStartProgress);
-              ghostProgress = Math.min(pacmanScrollProgress, 1);
-            }
-          } else {
-            // Regular ghosts enter one by one
-            const ghostStartProgress = index * GHOST_STAGGER_DELAY;
-            if (scrollProgress >= ghostStartProgress) {
-              const ghostScrollProgress =
-                (scrollProgress - ghostStartProgress) /
-                (GHOSTS_END_AT - ghostStartProgress);
-              ghostProgress = Math.min(ghostScrollProgress, 1);
-            }
-          }
+          // All ghosts start at the same time, but move at different speeds
+          const speedMultiplier =
+            GHOST_SPEED_MULTIPLIERS[
+              ghostKey as keyof typeof GHOST_SPEED_MULTIPLIERS
+            ] || 1.0;
+          const adjustedProgress = scrollProgress * speedMultiplier;
+          const ghostProgress = Math.min(adjustedProgress / GHOSTS_END_AT, 1);
 
           moveGhostOnCurve(ghostKey, ghostProgress);
         }
