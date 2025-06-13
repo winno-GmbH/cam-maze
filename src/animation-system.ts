@@ -27,14 +27,14 @@ const MAZE_CENTER = new THREE.Vector3(0.55675, 0.5, 0.45175);
 const GHOSTS_END_AT = 0.8; // Ghosts finish their animation at 80% scroll
 const GHOST_OPACITY_FADE_START = 0.9; // Last 10% of GHOST animation (ghostProgress 0.9-1.0) - DELAYED FADE
 
-// Speed multipliers for different ghosts (lower = slower)
+// Speed multipliers for different ghosts (higher = faster, reaches center earlier)
 const GHOST_SPEED_MULTIPLIERS = {
-  ghost1: 1.0, // Normal speed
-  ghost2: 0.9, // Slightly slower
-  ghost3: 0.8, // Slower
-  ghost4: 0.7, // Even slower
-  ghost5: 0.6, // Slowest ghost
-  pacman: 0.5, // Slowest - enters last
+  ghost1: 1.25, // Fastest - reaches center at 64% scroll (0.8/1.25 = 0.64)
+  ghost2: 1.14, // Reaches center at 70% scroll (0.8/1.14 = 0.70)
+  ghost3: 1.05, // Reaches center at 76% scroll (0.8/1.05 = 0.76)
+  ghost4: 0.97, // Reaches center at 82% scroll (0.8/0.97 = 0.82)
+  ghost5: 0.89, // Reaches center at 90% scroll (0.8/0.89 = 0.90)
+  pacman: 0.8, // Reaches center at 100% scroll (0.8/0.8 = 1.0) - exactly with camera
 };
 
 // Staggered animation timing constants
