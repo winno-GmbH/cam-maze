@@ -2014,51 +2014,51 @@ function updatePOVTexts(progress: number) {
   );
 }
 
-// Update POV Text DOM Elements
+// Update POV Text DOM Elements - NEW: Direct paragraph animation
 function updatePOVTextElements(trigger: any) {
   if (!trigger.parent) return;
 
-  const ghostText = trigger.parent.querySelector(".cmp--pov-ghost");
-  const camText = trigger.parent.querySelector(".cmp--pov-cam");
+  // Find the paragraph elements with .pov and .cam classes
+  const povParagraphs = trigger.parent.querySelectorAll("p.pov");
+  const camParagraphs = trigger.parent.querySelectorAll("p.cam");
 
-  if (ghostText) {
-    // BACKUP.JS EXACT ROUNDING: Opazitätswerte abrunden
-    const ghostOpacity = Math.max(
+  // Animate .pov paragraphs (fade out from opacity 1 to 0, then set visibility none)
+  povParagraphs.forEach((povParagraph: HTMLElement) => {
+    const povOpacity = Math.max(
       0,
       Math.min(1, Math.round(trigger.ghostTextOpacity * 1000) / 1000)
     );
 
-    if (ghostOpacity > 0.01) {
-      if (ghostText.classList.contains("hidden")) {
-        ghostText.classList.remove("hidden");
-      }
-      ghostText.style.opacity = ghostOpacity.toString();
-    } else if (
-      ghostOpacity <= 0.01 &&
-      !ghostText.classList.contains("hidden")
-    ) {
-      ghostText.classList.add("hidden");
-      ghostText.style.opacity = "0";
+    if (povOpacity > 0.01) {
+      // Fade out animation: opacity 1 to 0
+      const fadeOutOpacity = 1 - povOpacity; // Invert the opacity for fade out
+      povParagraph.style.opacity = fadeOutOpacity.toString();
+      povParagraph.style.visibility = "visible";
+    } else {
+      // Set visibility none when fully faded out
+      povParagraph.style.opacity = "0";
+      povParagraph.style.visibility = "hidden";
     }
-  }
+  });
 
-  if (camText) {
-    // BACKUP.JS EXACT ROUNDING: Opazitätswerte abrunden
+  // Animate .cam paragraphs (fade in from opacity 0 to 1, set display block)
+  camParagraphs.forEach((camParagraph: HTMLElement) => {
     const camOpacity = Math.max(
       0,
       Math.min(1, Math.round(trigger.camTextOpacity * 1000) / 1000)
     );
 
     if (camOpacity > 0.01) {
-      if (camText.classList.contains("hidden")) {
-        camText.classList.remove("hidden");
-      }
-      camText.style.opacity = camOpacity.toString();
-    } else if (camOpacity <= 0.01 && !camText.classList.contains("hidden")) {
-      camText.classList.add("hidden");
-      camText.style.opacity = "0";
+      // Fade in animation: opacity 0 to 1
+      camParagraph.style.display = "block";
+      camParagraph.style.opacity = camOpacity.toString();
+      camParagraph.style.visibility = "visible";
+    } else {
+      // Hide when opacity is 0
+      camParagraph.style.opacity = "0";
+      camParagraph.style.visibility = "hidden";
     }
-  }
+  });
 }
 
 // Find closest progress on POV path
@@ -2097,18 +2097,21 @@ function onPOVAnimationEnd() {
       trigger.parent.classList.add("hidden");
       trigger.parent.style.opacity = "0";
 
-      const ghostText = trigger.parent.querySelector(".cmp--pov-ghost");
-      const camText = trigger.parent.querySelector(".cmp--pov-cam");
+      // Reset paragraph elements directly instead of .cmp--pov-cam
+      const povParagraphs = trigger.parent.querySelectorAll("p.pov");
+      const camParagraphs = trigger.parent.querySelectorAll("p.cam");
 
-      if (ghostText) {
-        ghostText.classList.add("hidden");
-        ghostText.style.opacity = "0";
-      }
+      // Reset .pov paragraphs
+      povParagraphs.forEach((povParagraph: HTMLElement) => {
+        povParagraph.style.opacity = "1"; // Reset to full opacity
+        povParagraph.style.visibility = "visible";
+      });
 
-      if (camText) {
-        camText.classList.add("hidden");
-        camText.style.opacity = "0";
-      }
+      // Reset .cam paragraphs
+      camParagraphs.forEach((camParagraph: HTMLElement) => {
+        camParagraph.style.opacity = "0"; // Reset to hidden
+        camParagraph.style.visibility = "hidden";
+      });
     }
 
     // Reset trigger state
@@ -2361,7 +2364,7 @@ function updateGhostInPOV(
     if (!triggerPos || !endPosition) return;
 
     const ghostText = parent as HTMLElement; // In backup.js, parent IS the ghost text
-    const camText = parent?.querySelector(".cmp--pov-cam") as HTMLElement;
+    // Removed .cmp--pov-cam reference - now animating paragraph elements directly
 
     ghost.scale.set(0.5, 0.5, 0.5);
 
@@ -2384,10 +2387,7 @@ function updateGhostInPOV(
         ghostText.classList.add("hidden");
         ghostText.style.opacity = "0";
       }
-      if (camText) {
-        camText.classList.add("hidden");
-        camText.style.opacity = "0";
-      }
+      // Removed .cmp--pov-cam initialization - now handled by paragraph animation
     }
 
     // Get current camera progress on POV path (ULTRA HIGH SAMPLES for smooth animation)
@@ -2558,50 +2558,9 @@ function updateGhostInPOV(
         (targetCamOpacity - trigger.camTextOpacity) * fadeOutSpeed;
     }
 
-    // 4. DOM UPDATES
-    const ghostTextOpacity = Math.max(
-      0,
-      Math.min(1, Math.round(trigger.ghostTextOpacity * 1000) / 1000)
-    );
-    const camTextOpacity = Math.max(
-      0,
-      Math.min(1, Math.round(trigger.camTextOpacity * 1000) / 1000)
-    );
-
-    // Debug text opacity calculations
-    if (ghostTextOpacity > 0 || camTextOpacity > 0) {
-    }
-
-    // Update DOM only when necessary
-    if (ghostText) {
-      if (ghostTextOpacity > 0.01) {
-        if (ghostText.classList.contains("hidden")) {
-          ghostText.classList.remove("hidden");
-        }
-        ghostText.style.opacity = ghostTextOpacity.toString();
-      } else if (
-        ghostTextOpacity <= 0.01 &&
-        !ghostText.classList.contains("hidden")
-      ) {
-        ghostText.classList.add("hidden");
-        ghostText.style.opacity = "0";
-      }
-    }
-
-    if (camText) {
-      if (camTextOpacity > 0.01) {
-        if (camText.classList.contains("hidden")) {
-          camText.classList.remove("hidden");
-        }
-        camText.style.opacity = camTextOpacity.toString();
-      } else if (
-        camTextOpacity <= 0.01 &&
-        !camText.classList.contains("hidden")
-      ) {
-        camText.classList.add("hidden");
-        camText.style.opacity = "0";
-      }
-    }
+    // 4. DOM UPDATES - REMOVED: Now handled in updatePOVTextElements function
+    // The opacity values are stored in trigger.ghostTextOpacity and trigger.camTextOpacity
+    // and will be applied to the paragraph elements in updatePOVTextElements
 
     // Store position for next iteration
     trigger.lastProgress = currentCameraProgress;
