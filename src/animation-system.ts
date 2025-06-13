@@ -1828,9 +1828,16 @@ function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
   // Calculate rotation difference
   const angleDifference = camera.quaternion.angleTo(targetQuaternion);
 
-  // LIGHT DYNAMIC SMOOTHING: Consistent light damping for all rotations
+  // ENHANCED SMOOTHING: Extra smooth for end sequence
   let dynamicSmoothing = CAMERA_ROTATION_SMOOTHING;
-  if (angleDifference > Math.PI / 8) {
+
+  // Check if we're in the end sequence (camera near maze exit)
+  const isNearExit = camera.position.z > 1.8; // Near the end of the path
+
+  if (isNearExit) {
+    // Extra smooth rotation for end sequence
+    dynamicSmoothing = 0.1; // Much smoother for the final turn
+  } else if (angleDifference > Math.PI / 8) {
     // > 22.5° = sharp corner - still light smoothing
     dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.8; // Light smoothing for corners
   } else if (angleDifference > Math.PI / 16) {
