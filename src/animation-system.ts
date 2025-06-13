@@ -2014,40 +2014,57 @@ function updatePOVTexts(progress: number) {
   );
 }
 
-// Update POV Text DOM Elements - NEW: Direct paragraph animation
+// Update POV Text DOM Elements - TWO-STAGE ANIMATION
 function updatePOVTextElements(trigger: any) {
   if (!trigger.parent) return;
 
   // Find the paragraph elements with .pov and .cam classes
   const povParagraphs = trigger.parent.querySelectorAll("p.pov");
   const camParagraphs = trigger.parent.querySelectorAll("p.cam");
+  const cmpPovElement = trigger.parent; // The .cmp--pov element itself
+
+  // STAGE 1: Fade in .cmp--pov element (first trigger)
+  const cmpPovOpacity = Math.max(
+    0,
+    Math.min(1, Math.round(trigger.ghostTextOpacity * 1000) / 1000)
+  );
+
+  if (cmpPovOpacity > 0.01) {
+    // Fade in the .cmp--pov element
+    cmpPovElement.style.opacity = cmpPovOpacity.toString();
+    cmpPovElement.style.visibility = "visible";
+    if (cmpPovElement.classList.contains("hidden")) {
+      cmpPovElement.classList.remove("hidden");
+    }
+  } else {
+    // Hide the .cmp--pov element
+    cmpPovElement.style.opacity = "0";
+    cmpPovElement.style.visibility = "hidden";
+    cmpPovElement.classList.add("hidden");
+  }
+
+  // STAGE 2: Fade out .pov paragraphs and fade in .cam paragraphs (second trigger)
+  const camOpacity = Math.max(
+    0,
+    Math.min(1, Math.round(trigger.camTextOpacity * 1000) / 1000)
+  );
 
   // Animate .pov paragraphs (fade out from opacity 1 to 0, then set visibility none)
   povParagraphs.forEach((povParagraph: HTMLElement) => {
-    const povOpacity = Math.max(
-      0,
-      Math.min(1, Math.round(trigger.ghostTextOpacity * 1000) / 1000)
-    );
-
-    if (povOpacity > 0.01) {
+    if (camOpacity > 0.01) {
       // Fade out animation: opacity 1 to 0
-      const fadeOutOpacity = 1 - povOpacity; // Invert the opacity for fade out
+      const fadeOutOpacity = 1 - camOpacity; // Invert the opacity for fade out
       povParagraph.style.opacity = fadeOutOpacity.toString();
       povParagraph.style.visibility = "visible";
     } else {
       // Set visibility none when fully faded out
-      povParagraph.style.opacity = "0";
-      povParagraph.style.visibility = "hidden";
+      povParagraph.style.opacity = "1"; // Keep full opacity when not transitioning
+      povParagraph.style.visibility = "visible";
     }
   });
 
   // Animate .cam paragraphs (fade in from opacity 0 to 1, set display block)
   camParagraphs.forEach((camParagraph: HTMLElement) => {
-    const camOpacity = Math.max(
-      0,
-      Math.min(1, Math.round(trigger.camTextOpacity * 1000) / 1000)
-    );
-
     if (camOpacity > 0.01) {
       // Fade in animation: opacity 0 to 1
       camParagraph.style.display = "block";
@@ -2094,8 +2111,10 @@ function onPOVAnimationEnd() {
   // Reset all POV text elements
   Object.values(povAnimationState.triggerPositions).forEach((trigger: any) => {
     if (trigger.parent) {
+      // Reset .cmp--pov element
       trigger.parent.classList.add("hidden");
       trigger.parent.style.opacity = "0";
+      trigger.parent.style.visibility = "hidden";
 
       // Reset paragraph elements directly instead of .cmp--pov-cam
       const povParagraphs = trigger.parent.querySelectorAll("p.pov");
