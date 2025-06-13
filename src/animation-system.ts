@@ -1664,8 +1664,8 @@ function updatePOVCamera(progress: number) {
   const cameraPosition = povAnimationState.cameraPOVPath.getPointAt(progress);
   camera.position.copy(cameraPosition);
 
-  // Handle camera rotation based on progress
-  const rotationStartingPoint = 0.973;
+  // Handle camera rotation based on progress - improved end sequence
+  const rotationStartingPoint = 0.95; // Start rotation earlier for smoother transition
 
   if (progress >= rotationStartingPoint && !povAnimationState.rotationStarted) {
     povAnimationState.rotationStarted = true;
@@ -1716,18 +1716,29 @@ function updatePOVCamera(progress: number) {
       applySmoothCameraRotation(lookAtPoint);
     }
   } else {
-    // Rotation phase - interpolate between start and end look-at
+    // End sequence rotation - smoother transition to look at maze exit
     const rotationProgress =
       (progress - rotationStartingPoint) / (1 - rotationStartingPoint);
-    const smoothProgress = smoothStep(rotationProgress);
 
-    const currentLookAt = new THREE.Vector3().lerpVectors(
-      povAnimationState.targetLookAt,
-      povAnimationState.finalLookAt,
+    // Use a smoother easing function for the end rotation
+    const smoothProgress = easeInOutCubic(rotationProgress);
+
+    // Calculate the maze exit point (where the camera path ends)
+    const mazeExitPoint = new THREE.Vector3(-0.44825, 0.5, 2.0095); // Slightly lower Y for better framing
+
+    // Interpolate between current tangent direction and maze exit
+    const currentTangent = getSmoothCameraTangent(rotationStartingPoint);
+    const currentLookAt = camera.position.clone().add(currentTangent);
+
+    const finalLookAt = mazeExitPoint;
+
+    const interpolatedLookAt = new THREE.Vector3().lerpVectors(
+      currentLookAt,
+      finalLookAt,
       smoothProgress
     );
 
-    applySmoothCameraRotation(currentLookAt);
+    applySmoothCameraRotation(interpolatedLookAt);
   }
 
   // Store previous position
