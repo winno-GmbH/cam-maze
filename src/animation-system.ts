@@ -1159,7 +1159,7 @@ POV Animation System
 // POV Path Points (from backup.js)
 const cameraPOVPathPoints = [
   {
-    pos: new THREE.Vector3(0.55675, -0.5, 0.45175),
+    pos: new THREE.Vector3(0.55675, 0.25, 0.45175),
     type: "curve",
     curveType: "forwardUpArc",
   },
@@ -1514,19 +1514,19 @@ function onPOVAnimationStart() {
   // Reset smooth camera rotation state
   previousCameraRotation = null;
 
-  // CRITICAL: Set camera to look upward and forward at POV start (from below)
+  // CRITICAL: Set camera to look downward and forward at POV start (from below)
   if (povAnimationState.cameraPOVPath && camera) {
     const startPosition = povAnimationState.cameraPOVPath.getPointAt(0);
     camera.position.copy(startPosition);
 
-    // Create upward-forward look direction (from below, looking up and forward)
+    // Create downward-forward look direction (45° down and forward)
     const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
-    const upVector = new THREE.Vector3(0, 1, 0); // Up
-    const upwardForwardDirection = new THREE.Vector3()
-      .addVectors(forwardVector, upVector)
+    const downVector = new THREE.Vector3(0, -1, 0); // Down
+    const downwardForwardDirection = new THREE.Vector3()
+      .addVectors(forwardVector, downVector)
       .normalize();
 
-    const lookAtPoint = startPosition.clone().add(upwardForwardDirection);
+    const lookAtPoint = startPosition.clone().add(downwardForwardDirection);
     camera.lookAt(lookAtPoint);
   }
 
@@ -1679,33 +1679,33 @@ function updatePOVCamera(progress: number) {
   }
 
   if (progress < rotationStartingPoint) {
-    // Before rotation phase - 2-phase camera transition: 45° up to tangent look
+    // Before rotation phase - 2-phase camera transition: 45° down to straight ahead
 
     // Calculate progress for transition point - use first third of path for transition
     const totalPoints = cameraPOVPathPoints.length;
     const transitionEndProgress = 2 / (totalPoints - 1); // Transition until point 2
 
     if (progress < transitionEndProgress) {
-      // Phase 1: Transition from 45° up to tangent direction
+      // Phase 1: Transition from 45° down to straight ahead
       const transitionProgress = progress / transitionEndProgress; // 0 to 1 during transition
       const smoothTransition = smoothStep(transitionProgress);
 
       const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
-      const upVector = new THREE.Vector3(0, 1, 0); // Up
+      const downVector = new THREE.Vector3(0, -1, 0); // Down
 
-      // 45° forward-up direction
-      const forwardUpDirection = new THREE.Vector3()
-        .addVectors(forwardVector, upVector)
+      // 45° forward-down direction (initial look)
+      const forwardDownDirection = new THREE.Vector3()
+        .addVectors(forwardVector, downVector)
         .normalize();
 
-      // Get tangent direction for target
-      const forwardTangent = getSmoothCameraTangent(progress);
+      // Straight ahead direction (target look)
+      const straightAheadDirection = new THREE.Vector3(0, 0, 1); // Pure forward
 
-      // Interpolate from 45° up directly to tangent direction
+      // Interpolate from 45° down to straight ahead
       const lookAtDirection = new THREE.Vector3()
         .addVectors(
-          forwardUpDirection.multiplyScalar(1.0 - smoothTransition),
-          forwardTangent.multiplyScalar(smoothTransition)
+          forwardDownDirection.multiplyScalar(1.0 - smoothTransition),
+          straightAheadDirection.multiplyScalar(smoothTransition)
         )
         .normalize();
 
