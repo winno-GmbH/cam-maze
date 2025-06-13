@@ -2056,9 +2056,15 @@ function updatePOVTextElements(trigger: any) {
       const fadeOutOpacity = 1 - camOpacity; // Invert the opacity for fade out
       povParagraph.style.opacity = fadeOutOpacity.toString();
       povParagraph.style.visibility = "visible";
+
+      // Ensure full fade out when cam text is fully visible
+      if (camOpacity >= 0.99) {
+        povParagraph.style.opacity = "0";
+        povParagraph.style.visibility = "hidden";
+      }
     } else {
-      // Set visibility none when fully faded out
-      povParagraph.style.opacity = "1"; // Keep full opacity when not transitioning
+      // Keep full opacity when not transitioning
+      povParagraph.style.opacity = "1";
       povParagraph.style.visibility = "visible";
     }
   });
