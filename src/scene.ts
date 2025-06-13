@@ -55,7 +55,13 @@ export function initRenderer(): void {
   }
 
   // ADD these event listeners to match backup.js:
-  window.addEventListener("load", setPixelRatio);
+  // Use DOMContentLoaded instead of load to prevent Slater warnings
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setPixelRatio);
+  } else {
+    // DOMContentLoaded has already fired, execute immediately
+    setPixelRatio();
+  }
   window.addEventListener("resize", setPixelRatio);
 }
 
