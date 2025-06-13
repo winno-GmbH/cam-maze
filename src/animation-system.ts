@@ -1299,6 +1299,13 @@ function createPOVPath(pathPoints: any[]): THREE.CurvePath<THREE.Vector3> {
   return path;
 }
 
+// POV Text Animation Constants - Faster fade in/out, more time at full opacity
+const POV_TEXT_FADE_IN_SPEED = 0.2;
+const POV_TEXT_FADE_OUT_SPEED = 0.1;
+const POV_TEXT_FADE_IN_DURATION = 0.07; // 7% of section length
+const POV_TEXT_STAY_VISIBLE_UNTIL = 0.85; // Stay visible until 85% of section
+const POV_TEXT_CAM_MAX_OPACITY = 0.8; // Max opacity for cam text
+
 // POV Animation State
 interface POVAnimationState {
   isActive: boolean;
@@ -1424,6 +1431,10 @@ function initializePOVAnimation() {
     ghost5: createPOVPath(ghost5POVPathPoints),
   };
 
+  // Get parent elements at runtime to ensure DOM is ready
+  const parentElements = document.querySelectorAll(".cmp--pov.cmp");
+  console.log("POV Parent Elements found:", parentElements.length);
+
   // Initialize trigger positions
   povAnimationState.triggerPositions = {
     ghost1: {
@@ -1431,7 +1442,7 @@ function initializePOVAnimation() {
       ghostTextPos: new THREE.Vector3(0.7075, 0.55, 0.8035),
       camTextPos: new THREE.Vector3(0.75775, 0.55, 0.8035),
       endPosition: new THREE.Vector3(0.85825, 0.55, 0.8035),
-      parent: parentElements[0],
+      parent: parentElements[0] || null,
       active: false,
       // BACKUP.JS EXACT INITIALIZATION
       ghostTextOpacity: 0,
@@ -1442,7 +1453,7 @@ function initializePOVAnimation() {
       ghostTextPos: new THREE.Vector3(0.95875, 0.55, 0.85375),
       camTextPos: new THREE.Vector3(0.95875, 0.55, 0.904),
       endPosition: new THREE.Vector3(0.95875, 0.55, 1.0045),
-      parent: parentElements[1],
+      parent: parentElements[1] || null,
       active: false,
       // BACKUP.JS EXACT INITIALIZATION
       ghostTextOpacity: 0,
@@ -1453,7 +1464,7 @@ function initializePOVAnimation() {
       ghostTextPos: new THREE.Vector3(0.7075, 0.55, 1.0045),
       camTextPos: new THREE.Vector3(0.65725, 0.55, 1.0045),
       endPosition: new THREE.Vector3(0.55675, 0.55, 1.0045),
-      parent: parentElements[2],
+      parent: parentElements[2] || null,
       active: false,
       // BACKUP.JS EXACT INITIALIZATION
       ghostTextOpacity: 0,
@@ -1464,7 +1475,7 @@ function initializePOVAnimation() {
       ghostTextPos: new THREE.Vector3(0.5065, 0.55, 1.0045),
       camTextPos: new THREE.Vector3(0.45625, 0.55, 1.0045),
       endPosition: new THREE.Vector3(0.35575, 0.55, 1.0045),
-      parent: parentElements[3],
+      parent: parentElements[3] || null,
       active: false,
       // BACKUP.JS EXACT INITIALIZATION
       ghostTextOpacity: 0,
@@ -1475,7 +1486,7 @@ function initializePOVAnimation() {
       ghostTextPos: new THREE.Vector3(0.205, 0.55, 1.2055),
       camTextPos: new THREE.Vector3(0.25525, 0.55, 1.2055),
       endPosition: new THREE.Vector3(0.35575, 0.55, 1.2055),
-      parent: parentElements[4],
+      parent: parentElements[4] || null,
       active: false,
       // BACKUP.JS EXACT INITIALIZATION
       ghostTextOpacity: 0,
@@ -1609,11 +1620,8 @@ function updatePOVAnimation(progress: number) {
   // Update camera with smoothed progress for fluid movement
   updatePOVCamera(visualProgress);
 
-  // Update ghosts with DIRECT progress for precise triggering
-  updatePOVGhosts(progress); // Direct for triggers
-
-  // Update texts with DIRECT progress for precise timing
-  updatePOVTexts(progress); // Direct for text timing
+  // Update ghosts with DIRECT progress for precise triggering (includes text animation)
+  updatePOVGhosts(progress); // Direct for triggers - text animation is now integrated here
 }
 
 // Light visual smoothing - only for camera movement smoothness
@@ -2549,6 +2557,16 @@ function updateGhostInPOV(
 
     // Debug text opacity calculations
     if (ghostTextOpacity > 0 || camTextOpacity > 0) {
+      console.log(`POV Text Debug - ${ghostKey}:`, {
+        ghostTextOpacity,
+        camTextOpacity,
+        currentCameraProgress,
+        triggerProgress,
+        endProgress,
+        ghostText: !!ghostText,
+        camText: !!camText,
+        parent: !!parent,
+      });
     }
 
     // Update DOM only when necessary
