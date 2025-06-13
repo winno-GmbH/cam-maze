@@ -1966,13 +1966,13 @@ function updatePOVTexts(progress: number) {
             const fadeProgress =
               (currentCameraProgress - camFadeInStart) /
               (camFadeInEnd - camFadeInStart);
-            targetCamOpacity = fadeProgress * 0.8; // Maximale Opazität 0.8
+            targetCamOpacity = fadeProgress; // Full opacity 1.0 (removed 0.8 limit)
           } else if (
             currentCameraProgress >= camFadeInEnd &&
             currentCameraProgress < camStayVisibleUntil
           ) {
             // Voll sichtbare Phase
-            targetCamOpacity = 0.8;
+            targetCamOpacity = 1.0; // Full opacity 1.0 (was 0.8)
           } else if (
             currentCameraProgress >= camStayVisibleUntil &&
             currentCameraProgress <= fadeOutEnd
@@ -1981,7 +1981,7 @@ function updatePOVTexts(progress: number) {
             const fadeProgress =
               (currentCameraProgress - camStayVisibleUntil) /
               (fadeOutEnd - camStayVisibleUntil);
-            targetCamOpacity = 0.8 * (1.0 - fadeProgress);
+            targetCamOpacity = 1.0 * (1.0 - fadeProgress); // Full opacity range (was 0.8)
           }
         }
       }
@@ -2072,10 +2072,16 @@ function updatePOVTextElements(trigger: any) {
   // Animate .cam paragraphs (fade in from opacity 0 to 1, set display block)
   camParagraphs.forEach((camParagraph: HTMLElement) => {
     if (camOpacity > 0.01) {
-      // Fade in animation: opacity 0 to 1
+      // Fade in animation: opacity 0 to 1 (full range)
       camParagraph.style.display = "block";
       camParagraph.style.opacity = camOpacity.toString();
       camParagraph.style.visibility = "visible";
+
+      // Ensure full fade in when cam text is fully visible
+      if (camOpacity >= 0.99) {
+        camParagraph.style.opacity = "1";
+        camParagraph.style.visibility = "visible";
+      }
     } else {
       // Hide when opacity is 0
       camParagraph.style.opacity = "0";
@@ -2545,12 +2551,12 @@ function updateGhostInPOV(
     ) {
       const fadeProgress =
         (currentCameraProgress - camFadeIn) / (camFadeInEnd - camFadeIn);
-      targetCamOpacity = fadeProgress * 0.8; // Max opacity 0.8
+      targetCamOpacity = fadeProgress; // Full opacity 1.0 (removed 0.8 limit)
     } else if (
       currentCameraProgress >= camFadeInEnd &&
       currentCameraProgress < stayVisibleUntil
     ) {
-      targetCamOpacity = 0.8;
+      targetCamOpacity = 1.0; // Full opacity 1.0 (was 0.8)
     } else if (
       currentCameraProgress >= stayVisibleUntil &&
       currentCameraProgress <= fadeOutEnd
@@ -2558,7 +2564,7 @@ function updateGhostInPOV(
       const fadeProgress =
         (currentCameraProgress - stayVisibleUntil) /
         (fadeOutEnd - stayVisibleUntil);
-      targetCamOpacity = 0.8 * (1.0 - fadeProgress);
+      targetCamOpacity = 1.0 * (1.0 - fadeProgress); // Full opacity range (was 0.8)
     }
 
     // 3. OPACITY UPDATES
