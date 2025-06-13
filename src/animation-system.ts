@@ -1363,9 +1363,9 @@ const povAnimationState: POVAnimationState = {
 
 // POV Camera Smoothing State - GENTLER SETTINGS
 let previousCameraRotation: THREE.Quaternion | null = null;
-const CAMERA_ROTATION_SMOOTHING = 0.2; // Light damping effect for rotation (was 0.08)
-const MAX_ROTATION_SPEED = Math.PI / 12; // Slower max rotation (15° per frame, was 30°)
-const LOOK_AHEAD_DISTANCE = 0.01; // Smaller look-ahead for less jitter (was 0.02)
+const CAMERA_ROTATION_SMOOTHING = 0.15; // Reduced from 0.2 for less aggressive rotation
+const MAX_ROTATION_SPEED = Math.PI / 16; // Slower max rotation (11.25° per frame, was 15°)
+const LOOK_AHEAD_DISTANCE = 0.015; // Increased look-ahead for smoother curves (was 0.01)
 
 // POV Text Animation Constants - Faster fade in/out, more time at full opacity
 const GHOST_TEXT_START = 0.1; // Faster fade in (was 0.2)
@@ -1498,6 +1498,9 @@ function onPOVAnimationStart() {
   // Reset smooth camera rotation state
   previousCameraRotation = null;
 
+  // Reset ghost position smoothing state
+  previousGhostPositions = {};
+
   // CRITICAL: Set camera to look downward and forward at POV start (from below)
   if (povAnimationState.cameraPOVPath && camera) {
     const startPosition = povAnimationState.cameraPOVPath.getPointAt(0);
@@ -1601,8 +1604,8 @@ function updatePOVAnimation(progress: number) {
   // Update camera with smoothed progress for fluid movement
   updatePOVCamera(visualProgress);
 
-  // Update ghosts with DIRECT progress for precise triggering
-  updatePOVGhosts(progress); // Direct for triggers
+  // Update ghosts with SMOOTHED progress for fluid movement (same as camera)
+  updatePOVGhosts(visualProgress); // Now smoothed for fluid movement
 
   // Update texts with DIRECT progress for precise timing
   updatePOVTexts(progress); // Direct for text timing
@@ -1780,27 +1783,27 @@ function getSmoothCameraTangent(progress: number): THREE.Vector3 {
   const isModerateTurn = dotProduct < 0.7; // Moderate turn detection
 
   if (isSharpTurn) {
-    // For sharp turns (hin-und-her), EXTREMELY favor straight movement
+    // For sharp turns, use VERY strong smoothing to prevent jerky movement
     return new THREE.Vector3()
       .addVectors(
-        currentTangent.multiplyScalar(0.1), // VERY little current direction
-        averageTangent.multiplyScalar(0.9) // VERY strong averaged direction
+        currentTangent.multiplyScalar(0.05), // VERY little current direction
+        averageTangent.multiplyScalar(0.95) // VERY strong averaged direction
       )
       .normalize();
   } else if (isModerateTurn) {
-    // For moderate turns, use very strong smoothing
+    // For moderate turns, use strong smoothing
     return new THREE.Vector3()
       .addVectors(
-        currentTangent.multiplyScalar(0.2), // Less current direction
-        averageTangent.multiplyScalar(0.8) // More averaged direction
+        currentTangent.multiplyScalar(0.15), // Less current direction
+        averageTangent.multiplyScalar(0.85) // More averaged direction
       )
       .normalize();
   } else {
-    // For straight sections, use light smoothing
+    // For straight sections, use moderate smoothing (reduced from 0.8/0.2)
     return new THREE.Vector3()
       .addVectors(
-        currentTangent.multiplyScalar(0.8),
-        averageTangent.multiplyScalar(0.2)
+        currentTangent.multiplyScalar(0.6), // Less current direction
+        averageTangent.multiplyScalar(0.4) // More averaged direction
       )
       .normalize();
   }
@@ -1827,7 +1830,7 @@ function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
   // Calculate rotation difference
   const angleDifference = camera.quaternion.angleTo(targetQuaternion);
 
-  // ENHANCED SMOOTHING: Extra smooth for end sequence
+  // ENHANCED SMOOTHING: Extra smooth for all rotations to prevent jerky movement
   let dynamicSmoothing = CAMERA_ROTATION_SMOOTHING;
 
   // Check if we're in the end sequence (camera near maze exit)
@@ -1835,13 +1838,16 @@ function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
 
   if (isNearExit) {
     // Extra smooth rotation for end sequence
-    dynamicSmoothing = 0.1; // Much smoother for the final turn
+    dynamicSmoothing = 0.08; // Much smoother for the final turn
   } else if (angleDifference > Math.PI / 8) {
-    // > 22.5° = sharp corner - still light smoothing
-    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.8; // Light smoothing for corners
+    // > 22.5° = sharp corner - very light smoothing
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.6; // Very light smoothing for corners
   } else if (angleDifference > Math.PI / 16) {
-    // > 11.25° = moderate corner - very light smoothing
-    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.9; // Very light smoothing for moderate turns
+    // > 11.25° = moderate corner - light smoothing
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING * 0.8; // Light smoothing for moderate turns
+  } else {
+    // Small rotations - use normal smoothing
+    dynamicSmoothing = CAMERA_ROTATION_SMOOTHING;
   }
 
   // Always apply smoothing (no speed limiting - causes jumps)
@@ -2210,8 +2216,8 @@ function restoreGhostsToHomePositions() {
             ghost.material.forEach((mat) => {
               if ("opacity" in mat) mat.opacity = 1;
             });
-          } else if ("opacity" in ghost.material) {
-            ghost.material.opacity = 1;
+          } else {
+            if ("opacity" in ghost.material) ghost.material.opacity = 1;
           }
         } else if (ghost instanceof THREE.Group) {
           ghost.traverse((child) => {
@@ -2220,8 +2226,8 @@ function restoreGhostsToHomePositions() {
                 child.material.forEach((mat) => {
                   if ("opacity" in mat) mat.opacity = 1;
                 });
-              } else if ("opacity" in child.material) {
-                child.material.opacity = 1;
+              } else {
+                if ("opacity" in child.material) child.material.opacity = 1;
               }
             }
           });
@@ -2433,9 +2439,10 @@ function updateGhostInPOV(
       // ULTRA SMOOTH: Apply additional smoothing to ghost progress
       const smoothGhostProgress = smoothStep(smoothStep(ghostProgress)); // Double smoothing for ultra-smooth movement
 
-      // Update ghost position with ultra-high precision
+      // Update ghost position with ultra-high precision and smoothing
       const pathPoint = path.getPointAt(smoothGhostProgress);
-      ghost.position.copy(pathPoint);
+      const smoothedPosition = applySmoothGhostPosition(ghostKey, pathPoint);
+      ghost.position.copy(smoothedPosition);
 
       // Ultra-smooth ghost orientation with look-ahead
       const currentTangent = path.getTangentAt(smoothGhostProgress).normalize();
@@ -2613,3 +2620,30 @@ function updateGhostInPOV(
 }
 
 // Old updateGhostTextTrigger function is now integrated into updateGhostInPOV
+
+// Ghost position smoothing state - same as camera rotation
+let previousGhostPositions: { [key: string]: THREE.Vector3 } = {};
+const GHOST_POSITION_SMOOTHING = 0.2; // Same as camera rotation smoothing
+
+// Apply smooth ghost position movement
+function applySmoothGhostPosition(
+  ghostKey: string,
+  targetPosition: THREE.Vector3
+) {
+  if (!previousGhostPositions[ghostKey]) {
+    // First frame - set position directly
+    previousGhostPositions[ghostKey] = targetPosition.clone();
+    return targetPosition;
+  }
+
+  // Apply smoothing (same approach as camera rotation)
+  const smoothedPosition = new THREE.Vector3().lerpVectors(
+    previousGhostPositions[ghostKey],
+    targetPosition,
+    GHOST_POSITION_SMOOTHING
+  );
+
+  // Store for next frame
+  previousGhostPositions[ghostKey] = smoothedPosition.clone();
+  return smoothedPosition;
+}
