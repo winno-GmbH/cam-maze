@@ -2460,9 +2460,9 @@ function updateGhostInPOV(
       const lookAtPoint = ghost.position.clone().add(blendedTangent);
       ghost.lookAt(lookAtPoint);
 
-      // Smooth fade: Use smoothGhostProgress for fade
-      if (smoothGhostProgress > 0.9) {
-        const fadeOpacity = 1 - (smoothGhostProgress - 0.9) / 0.1;
+      // Smooth fade: Use smoothGhostProgress for fade - LATER FADE OUT
+      if (smoothGhostProgress > 0.95) {
+        const fadeOpacity = 1 - (smoothGhostProgress - 0.95) / 0.05;
         (ghost as any).material.opacity = Math.max(0, Math.min(1, fadeOpacity));
       } else {
         (ghost as any).material.opacity = 1;
@@ -2683,9 +2683,38 @@ function getFlexibleCameraDirection(progress: number): THREE.Vector3 {
   const isSharpTurn = dotProduct < 0.3;
   const isModerateTurn = dotProduct < 0.7;
 
+  // SPECIAL HANDLING: Detect double curve pattern at the start (first 30% of path)
+  const isDoubleCurveSection = progress < 0.3;
+
   let finalDirection: THREE.Vector3;
 
-  if (isSharpTurn) {
+  if (isDoubleCurveSection) {
+    // Double curve section: Use very broad context to smooth out the left-right-left pattern
+    // Get even more distant points for ultra-smooth movement
+    const ultraAheadProgress = Math.min(progress + LOOK_AHEAD_DISTANCE * 3, 1);
+    const ultraAheadTangent = povAnimationState.cameraPOVPath
+      .getTangentAt(ultraAheadProgress)
+      .normalize();
+
+    const ultraBehindProgress = Math.max(progress - LOOK_AHEAD_DISTANCE * 3, 0);
+    const ultraBehindTangent = povAnimationState.cameraPOVPath
+      .getTangentAt(ultraBehindProgress)
+      .normalize();
+
+    // Ultra-smooth weighting for double curve: slight left → center → slight right → center
+    // Weight: ultra behind (5%) + far behind (10%) + behind (20%) + current (30%) + ahead (20%) + far ahead (10%) + ultra ahead (5%)
+    finalDirection = new THREE.Vector3()
+      .addVectors(
+        ultraBehindTangent.multiplyScalar(0.05),
+        farBehindTangent.multiplyScalar(0.1)
+      )
+      .add(lookBehindTangent.multiplyScalar(0.2))
+      .add(currentTangent.multiplyScalar(0.3))
+      .add(lookAheadTangent.multiplyScalar(0.2))
+      .add(farAheadTangent.multiplyScalar(0.1))
+      .add(ultraAheadTangent.multiplyScalar(0.05))
+      .normalize();
+  } else if (isSharpTurn) {
     // Sharp turns: Use broader context to smooth out the turn
     // Weight: far behind (10%) + behind (20%) + current (30%) + ahead (25%) + far ahead (15%)
     finalDirection = new THREE.Vector3()
