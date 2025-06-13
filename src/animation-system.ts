@@ -1329,12 +1329,6 @@ interface POVAnimationState {
   ghostPOVPaths: { [key: string]: THREE.CurvePath<THREE.Vector3> };
   triggerPositions: { [key: string]: any };
   previousCameraPosition: THREE.Vector3 | null;
-  startRotationPoint: THREE.Vector3;
-  endRotationPoint: THREE.Vector3;
-  targetLookAt: THREE.Vector3;
-  finalLookAt: THREE.Vector3;
-  rotationStarted: boolean;
-  cachedStartYAngle: number | null;
   // MOMENTUM-BASED SCRUBBING
   smoothedProgress: number;
   targetProgress: number;
@@ -1349,12 +1343,6 @@ const povAnimationState: POVAnimationState = {
   ghostPOVPaths: {},
   triggerPositions: {},
   previousCameraPosition: null,
-  startRotationPoint: new THREE.Vector3(0.55675, 0.55, 1.306),
-  endRotationPoint: new THREE.Vector3(-0.14675, 1, 1.8085),
-  targetLookAt: new THREE.Vector3(0.55675, 1, 1.306), // Look straight up
-  finalLookAt: new THREE.Vector3(-0.14675, 0, 1.8085),
-  rotationStarted: false,
-  cachedStartYAngle: null,
   // MOMENTUM-BASED SCRUBBING
   smoothedProgress: 0,
   targetProgress: 0,
@@ -1506,10 +1494,6 @@ function onPOVAnimationStart() {
     povAnimationState.previousCameraPosition =
       povAnimationState.cameraPOVPath.getPointAt(0);
   }
-
-  // Reset rotation state
-  povAnimationState.rotationStarted = false;
-  povAnimationState.cachedStartYAngle = null;
 
   // Reset smooth camera rotation state
   previousCameraRotation = null;
@@ -1666,105 +1650,65 @@ function updatePOVCamera(progress: number) {
   const cameraPosition = povAnimationState.cameraPOVPath.getPointAt(progress);
   camera.position.copy(cameraPosition);
 
-  // Handle camera rotation based on progress - improved end sequence
-  const rotationStartingPoint = 0.95; // Start rotation earlier for smoother transition
+  // Calculate progress for transition point - use first third of path for transition
+  const totalPoints = cameraPOVPathPoints.length;
+  const transitionEndProgress = 2 / (totalPoints - 1); // Transition until point 2
 
-  if (progress >= rotationStartingPoint && !povAnimationState.rotationStarted) {
-    povAnimationState.rotationStarted = true;
-    const lookAtPoint = getCameraLookAtPoint();
-    povAnimationState.cachedStartYAngle = Math.atan2(
-      lookAtPoint.x - camera.position.x,
-      lookAtPoint.z - camera.position.z
-    );
-  }
+  if (progress < transitionEndProgress) {
+    // Phase 1: Transition from 45° down to 45° up to straight ahead
+    const transitionProgress = progress / transitionEndProgress; // 0 to 1 during transition
+    const smoothTransition = smoothStep(transitionProgress);
 
-  if (progress < rotationStartingPoint) {
-    // Before rotation phase - 3-phase camera transition: 45° down → 45° up → straight ahead
+    const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
+    const downVector = new THREE.Vector3(0, -1, 0); // Down
+    const upVector = new THREE.Vector3(0, 1, 0); // Up
 
-    // Calculate progress for transition point - use first third of path for transition
-    const totalPoints = cameraPOVPathPoints.length;
-    const transitionEndProgress = 2 / (totalPoints - 1); // Transition until point 2
+    // 45° forward-down direction (initial look)
+    const forwardDownDirection = new THREE.Vector3()
+      .addVectors(forwardVector, downVector)
+      .normalize();
 
-    if (progress < transitionEndProgress) {
-      // Phase 1: Transition from 45° down to 45° up to straight ahead
-      const transitionProgress = progress / transitionEndProgress; // 0 to 1 during transition
-      const smoothTransition = smoothStep(transitionProgress);
+    // 45° forward-up direction (middle look)
+    const forwardUpDirection = new THREE.Vector3()
+      .addVectors(forwardVector, upVector)
+      .normalize();
 
-      const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
-      const downVector = new THREE.Vector3(0, -1, 0); // Down
-      const upVector = new THREE.Vector3(0, 1, 0); // Up
+    // Straight ahead direction (final look)
+    const straightAheadDirection = new THREE.Vector3(0, 0, 1); // Pure forward
 
-      // 45° forward-down direction (initial look)
-      const forwardDownDirection = new THREE.Vector3()
-        .addVectors(forwardVector, downVector)
+    let lookAtDirection;
+
+    if (transitionProgress < 0.5) {
+      // First half: 45° down → 45° up
+      const firstHalfProgress = transitionProgress * 2; // 0 to 1 for first half
+      const smoothFirstHalf = smoothStep(firstHalfProgress);
+
+      lookAtDirection = new THREE.Vector3()
+        .addVectors(
+          forwardDownDirection.multiplyScalar(1.0 - smoothFirstHalf),
+          forwardUpDirection.multiplyScalar(smoothFirstHalf)
+        )
         .normalize();
-
-      // 45° forward-up direction (middle look)
-      const forwardUpDirection = new THREE.Vector3()
-        .addVectors(forwardVector, upVector)
-        .normalize();
-
-      // Straight ahead direction (final look)
-      const straightAheadDirection = new THREE.Vector3(0, 0, 1); // Pure forward
-
-      let lookAtDirection;
-
-      if (transitionProgress < 0.5) {
-        // First half: 45° down → 45° up
-        const firstHalfProgress = transitionProgress * 2; // 0 to 1 for first half
-        const smoothFirstHalf = smoothStep(firstHalfProgress);
-
-        lookAtDirection = new THREE.Vector3()
-          .addVectors(
-            forwardDownDirection.multiplyScalar(1.0 - smoothFirstHalf),
-            forwardUpDirection.multiplyScalar(smoothFirstHalf)
-          )
-          .normalize();
-      } else {
-        // Second half: 45° up → straight ahead
-        const secondHalfProgress = (transitionProgress - 0.5) * 2; // 0 to 1 for second half
-        const smoothSecondHalf = smoothStep(secondHalfProgress);
-
-        lookAtDirection = new THREE.Vector3()
-          .addVectors(
-            forwardUpDirection.multiplyScalar(1.0 - smoothSecondHalf),
-            straightAheadDirection.multiplyScalar(smoothSecondHalf)
-          )
-          .normalize();
-      }
-
-      const lookAtPoint = camera.position.clone().add(lookAtDirection);
-      applySmoothCameraRotation(lookAtPoint);
     } else {
-      // Phase 2: Normal tangent-looking camera behavior (after transition)
-      const smoothedTangent = getSmoothCameraTangent(progress);
-      const lookAtPoint = camera.position.clone().add(smoothedTangent);
-      applySmoothCameraRotation(lookAtPoint);
+      // Second half: 45° up → straight ahead
+      const secondHalfProgress = (transitionProgress - 0.5) * 2; // 0 to 1 for second half
+      const smoothSecondHalf = smoothStep(secondHalfProgress);
+
+      lookAtDirection = new THREE.Vector3()
+        .addVectors(
+          forwardUpDirection.multiplyScalar(1.0 - smoothSecondHalf),
+          straightAheadDirection.multiplyScalar(smoothSecondHalf)
+        )
+        .normalize();
     }
+
+    const lookAtPoint = camera.position.clone().add(lookAtDirection);
+    applySmoothCameraRotation(lookAtPoint);
   } else {
-    // End sequence rotation - smoother transition to look at maze exit
-    const rotationProgress =
-      (progress - rotationStartingPoint) / (1 - rotationStartingPoint);
-
-    // Use a smoother easing function for the end rotation
-    const smoothProgress = easeInOutCubic(rotationProgress);
-
-    // Calculate the maze exit point (where the camera path ends)
-    const mazeExitPoint = new THREE.Vector3(-0.44825, 0.5, 2.0095); // Slightly lower Y for better framing
-
-    // Interpolate between current tangent direction and maze exit
-    const currentTangent = getSmoothCameraTangent(rotationStartingPoint);
-    const currentLookAt = camera.position.clone().add(currentTangent);
-
-    const finalLookAt = mazeExitPoint;
-
-    const interpolatedLookAt = new THREE.Vector3().lerpVectors(
-      currentLookAt,
-      finalLookAt,
-      smoothProgress
-    );
-
-    applySmoothCameraRotation(interpolatedLookAt);
+    // Normal tangent-looking camera behavior (after transition)
+    const smoothedTangent = getSmoothCameraTangent(progress);
+    const lookAtPoint = camera.position.clone().add(smoothedTangent);
+    applySmoothCameraRotation(lookAtPoint);
   }
 
   // Store previous position
