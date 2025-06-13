@@ -1712,15 +1712,15 @@ function updatePOVCamera(progress: number) {
     }
 
     // BLEND: Mix path-following with entry rotation for smoother transition
-    const pathTangent = getSmoothCameraTangent(progress);
+    const flexibleDirection = getFlexibleCameraDirection(progress);
     const entryDirection = lookAtDirection;
 
-    // Gradually blend from entry rotation to path following
+    // Gradually blend from entry rotation to flexible path following
     const blendFactor = smoothStep(transitionProgress);
     const blendedDirection = new THREE.Vector3()
       .addVectors(
         entryDirection.multiplyScalar(1.0 - blendFactor),
-        pathTangent.multiplyScalar(blendFactor)
+        flexibleDirection.multiplyScalar(blendFactor)
       )
       .normalize();
 
@@ -1737,9 +1737,9 @@ function updatePOVCamera(progress: number) {
     // Reset smoothing state for next phase
     previousCameraRotation = targetQuaternion.clone();
   } else {
-    // Normal tangent-looking camera behavior (after transition) - with smoothing
-    const smoothedTangent = getSmoothCameraTangent(progress);
-    const lookAtPoint = camera.position.clone().add(smoothedTangent);
+    // Normal flexible camera behavior (after transition) - with weighted influence
+    const flexibleDirection = getFlexibleCameraDirection(progress);
+    const lookAtPoint = camera.position.clone().add(flexibleDirection);
     applySmoothCameraRotation(lookAtPoint);
   }
 
@@ -2646,4 +2646,78 @@ function applySmoothGhostPosition(
   // Store for next frame
   previousGhostPositions[ghostKey] = smoothedPosition.clone();
   return smoothedPosition;
+}
+
+// Get flexible camera direction with weighted influence system
+function getFlexibleCameraDirection(progress: number): THREE.Vector3 {
+  if (!povAnimationState.cameraPOVPath) return new THREE.Vector3(0, 0, -1);
+
+  // Get multiple reference points for weighted influence
+  const currentTangent = povAnimationState.cameraPOVPath
+    .getTangentAt(progress)
+    .normalize();
+
+  const lookAheadProgress = Math.min(progress + LOOK_AHEAD_DISTANCE, 1);
+  const lookAheadTangent = povAnimationState.cameraPOVPath
+    .getTangentAt(lookAheadProgress)
+    .normalize();
+
+  const lookBehindProgress = Math.max(progress - LOOK_AHEAD_DISTANCE, 0);
+  const lookBehindTangent = povAnimationState.cameraPOVPath
+    .getTangentAt(lookBehindProgress)
+    .normalize();
+
+  // Get even more context points for better influence
+  const farAheadProgress = Math.min(progress + LOOK_AHEAD_DISTANCE * 2, 1);
+  const farAheadTangent = povAnimationState.cameraPOVPath
+    .getTangentAt(farAheadProgress)
+    .normalize();
+
+  const farBehindProgress = Math.max(progress - LOOK_AHEAD_DISTANCE * 2, 0);
+  const farBehindTangent = povAnimationState.cameraPOVPath
+    .getTangentAt(farBehindProgress)
+    .normalize();
+
+  // Calculate weighted influence based on path curvature
+  const dotProduct = currentTangent.dot(lookAheadTangent);
+  const isSharpTurn = dotProduct < 0.3;
+  const isModerateTurn = dotProduct < 0.7;
+
+  let finalDirection: THREE.Vector3;
+
+  if (isSharpTurn) {
+    // Sharp turns: Use broader context to smooth out the turn
+    // Weight: far behind (10%) + behind (20%) + current (30%) + ahead (25%) + far ahead (15%)
+    finalDirection = new THREE.Vector3()
+      .addVectors(
+        farBehindTangent.multiplyScalar(0.1),
+        lookBehindTangent.multiplyScalar(0.2)
+      )
+      .add(currentTangent.multiplyScalar(0.3))
+      .add(lookAheadTangent.multiplyScalar(0.25))
+      .add(farAheadTangent.multiplyScalar(0.15))
+      .normalize();
+  } else if (isModerateTurn) {
+    // Moderate turns: Use closer context with some smoothing
+    // Weight: behind (25%) + current (40%) + ahead (35%)
+    finalDirection = new THREE.Vector3()
+      .addVectors(
+        lookBehindTangent.multiplyScalar(0.25),
+        currentTangent.multiplyScalar(0.4)
+      )
+      .add(lookAheadTangent.multiplyScalar(0.35))
+      .normalize();
+  } else {
+    // Straight sections: Use current direction with light smoothing
+    // Weight: behind (15%) + current (60%) + ahead (25%)
+    finalDirection = new THREE.Vector3()
+      .addVectors(
+        lookBehindTangent.multiplyScalar(0.15),
+        currentTangent.multiplyScalar(0.6)
+      )
+      .add(lookAheadTangent.multiplyScalar(0.25))
+      .normalize();
+  }
+
+  return finalDirection;
 }
