@@ -1679,35 +1679,59 @@ function updatePOVCamera(progress: number) {
   }
 
   if (progress < rotationStartingPoint) {
-    // Before rotation phase - 2-phase camera transition: 45° down to straight ahead
+    // Before rotation phase - 3-phase camera transition: 45° down → 45° up → straight ahead
 
     // Calculate progress for transition point - use first third of path for transition
     const totalPoints = cameraPOVPathPoints.length;
     const transitionEndProgress = 2 / (totalPoints - 1); // Transition until point 2
 
     if (progress < transitionEndProgress) {
-      // Phase 1: Transition from 45° down to straight ahead
+      // Phase 1: Transition from 45° down to 45° up to straight ahead
       const transitionProgress = progress / transitionEndProgress; // 0 to 1 during transition
       const smoothTransition = smoothStep(transitionProgress);
 
       const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
       const downVector = new THREE.Vector3(0, -1, 0); // Down
+      const upVector = new THREE.Vector3(0, 1, 0); // Up
 
       // 45° forward-down direction (initial look)
       const forwardDownDirection = new THREE.Vector3()
         .addVectors(forwardVector, downVector)
         .normalize();
 
-      // Straight ahead direction (target look)
+      // 45° forward-up direction (middle look)
+      const forwardUpDirection = new THREE.Vector3()
+        .addVectors(forwardVector, upVector)
+        .normalize();
+
+      // Straight ahead direction (final look)
       const straightAheadDirection = new THREE.Vector3(0, 0, 1); // Pure forward
 
-      // Interpolate from 45° down to straight ahead
-      const lookAtDirection = new THREE.Vector3()
-        .addVectors(
-          forwardDownDirection.multiplyScalar(1.0 - smoothTransition),
-          straightAheadDirection.multiplyScalar(smoothTransition)
-        )
-        .normalize();
+      let lookAtDirection;
+
+      if (transitionProgress < 0.5) {
+        // First half: 45° down → 45° up
+        const firstHalfProgress = transitionProgress * 2; // 0 to 1 for first half
+        const smoothFirstHalf = smoothStep(firstHalfProgress);
+
+        lookAtDirection = new THREE.Vector3()
+          .addVectors(
+            forwardDownDirection.multiplyScalar(1.0 - smoothFirstHalf),
+            forwardUpDirection.multiplyScalar(smoothFirstHalf)
+          )
+          .normalize();
+      } else {
+        // Second half: 45° up → straight ahead
+        const secondHalfProgress = (transitionProgress - 0.5) * 2; // 0 to 1 for second half
+        const smoothSecondHalf = smoothStep(secondHalfProgress);
+
+        lookAtDirection = new THREE.Vector3()
+          .addVectors(
+            forwardUpDirection.multiplyScalar(1.0 - smoothSecondHalf),
+            straightAheadDirection.multiplyScalar(smoothSecondHalf)
+          )
+          .normalize();
+      }
 
       const lookAtPoint = camera.position.clone().add(lookAtDirection);
       applySmoothCameraRotation(lookAtPoint);
