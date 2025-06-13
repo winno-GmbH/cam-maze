@@ -1433,6 +1433,9 @@ function initializePOVAnimation() {
       endPosition: new THREE.Vector3(0.85825, 0.55, 0.8035),
       parent: parentElements[0],
       active: false,
+      // BACKUP.JS EXACT INITIALIZATION
+      ghostTextOpacity: 0,
+      camTextOpacity: 0,
     },
     ghost2: {
       triggerPos: new THREE.Vector3(0.9085, 0.55, 0.8035),
@@ -1441,6 +1444,9 @@ function initializePOVAnimation() {
       endPosition: new THREE.Vector3(0.95875, 0.55, 1.0045),
       parent: parentElements[1],
       active: false,
+      // BACKUP.JS EXACT INITIALIZATION
+      ghostTextOpacity: 0,
+      camTextOpacity: 0,
     },
     ghost3: {
       triggerPos: new THREE.Vector3(0.75775, 0.55, 1.05475),
@@ -1449,6 +1455,9 @@ function initializePOVAnimation() {
       endPosition: new THREE.Vector3(0.55675, 0.55, 1.0045),
       parent: parentElements[2],
       active: false,
+      // BACKUP.JS EXACT INITIALIZATION
+      ghostTextOpacity: 0,
+      camTextOpacity: 0,
     },
     ghost4: {
       triggerPos: new THREE.Vector3(0.65725, 0.55, 1.0045),
@@ -1457,6 +1466,9 @@ function initializePOVAnimation() {
       endPosition: new THREE.Vector3(0.35575, 0.55, 1.0045),
       parent: parentElements[3],
       active: false,
+      // BACKUP.JS EXACT INITIALIZATION
+      ghostTextOpacity: 0,
+      camTextOpacity: 0,
     },
     ghost5: {
       triggerPos: new THREE.Vector3(0.15475, 0.55, 1.15525),
@@ -1465,6 +1477,9 @@ function initializePOVAnimation() {
       endPosition: new THREE.Vector3(0.35575, 0.55, 1.2055),
       parent: parentElements[4],
       active: false,
+      // BACKUP.JS EXACT INITIALIZATION
+      ghostTextOpacity: 0,
+      camTextOpacity: 0,
     },
   };
 
@@ -1851,6 +1866,31 @@ function updatePOVTexts(progress: number) {
       const currentCameraProgress =
         findClosestProgressOnPOVPath(cameraPosition);
 
+      // BACKUP.JS EXACT INITIALIZATION: Grundlegende Initialisierung
+      if (trigger.hasBeenTriggered === undefined) {
+        trigger.hasBeenTriggered = false;
+        trigger.hasBeenDeactivated = false;
+        trigger.triggerCameraProgress = null;
+        trigger.ghostTextCameraProgress = null;
+        trigger.camTextCameraProgress = null;
+        trigger.endCameraProgress = null;
+        trigger.currentPathT = 0;
+        trigger.ghostTextOpacity = 0;
+        trigger.camTextOpacity = 0;
+        trigger.lastProgress = 0;
+
+        // Ghost und Text unsichtbar machen (backup.js style)
+        if (trigger.parent) {
+          trigger.parent.classList.add("hidden");
+          trigger.parent.style.opacity = "0";
+          const camText = trigger.parent.querySelector(".cmp--pov-cam");
+          if (camText) {
+            camText.classList.add("hidden");
+            camText.style.opacity = "0";
+          }
+        }
+      }
+
       // Calculate trigger positions on camera path
       if (!trigger.triggerCameraProgress) {
         trigger.triggerCameraProgress = findClosestProgressOnPOVPath(
@@ -1974,7 +2014,8 @@ function updatePOVTexts(progress: number) {
 function updatePOVTextElements(trigger: any) {
   if (!trigger.parent) return;
 
-  const ghostText = trigger.parent.querySelector(".cmp--pov-ghost");
+  // BACKUP.JS EXACT SELECTORS: ghostText is the parent itself, camText is the child
+  const ghostText = trigger.parent; // Parent element is the ghost text
   const camText = trigger.parent.querySelector(".cmp--pov-cam");
 
   if (ghostText) {
@@ -2050,16 +2091,11 @@ function onPOVAnimationEnd() {
   // Reset all POV text elements
   Object.values(povAnimationState.triggerPositions).forEach((trigger: any) => {
     if (trigger.parent) {
+      // BACKUP.JS EXACT HANDLING: Parent is ghost text, camText is child
       trigger.parent.classList.add("hidden");
       trigger.parent.style.opacity = "0";
 
-      const ghostText = trigger.parent.querySelector(".cmp--pov-ghost");
       const camText = trigger.parent.querySelector(".cmp--pov-cam");
-
-      if (ghostText) {
-        ghostText.classList.add("hidden");
-        ghostText.style.opacity = "0";
-      }
 
       if (camText) {
         camText.classList.add("hidden");
@@ -2172,8 +2208,8 @@ function restoreGhostsToHomePositions() {
             ghost.material.forEach((mat) => {
               if ("opacity" in mat) mat.opacity = 1;
             });
-          } else if ("opacity" in ghost.material) {
-            ghost.material.opacity = 1;
+          } else {
+            if ("opacity" in ghost.material) ghost.material.opacity = 1;
           }
         } else if (ghost instanceof THREE.Group) {
           ghost.traverse((child) => {
@@ -2182,8 +2218,8 @@ function restoreGhostsToHomePositions() {
                 child.material.forEach((mat) => {
                   if ("opacity" in mat) mat.opacity = 1;
                 });
-              } else if ("opacity" in child.material) {
-                child.material.opacity = 1;
+              } else {
+                if ("opacity" in child.material) child.material.opacity = 1;
               }
             }
           });
