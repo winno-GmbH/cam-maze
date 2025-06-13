@@ -1663,14 +1663,20 @@ function updatePOVCamera(progress: number) {
     const downVector = new THREE.Vector3(0, -1, 0); // Down
     const upVector = new THREE.Vector3(0, 1, 0); // Up
 
-    // 45° forward-down direction (initial look)
+    // 45° forward-down direction (initial look) - REDUCED intensity
     const forwardDownDirection = new THREE.Vector3()
-      .addVectors(forwardVector, downVector)
+      .addVectors(
+        forwardVector.multiplyScalar(0.8), // Reduced forward component
+        downVector.multiplyScalar(0.2) // Reduced down component
+      )
       .normalize();
 
-    // 45° forward-up direction (middle look)
+    // 45° forward-up direction (middle look) - REDUCED intensity
     const forwardUpDirection = new THREE.Vector3()
-      .addVectors(forwardVector, upVector)
+      .addVectors(
+        forwardVector.multiplyScalar(0.8), // Reduced forward component
+        upVector.multiplyScalar(0.2) // Reduced up component
+      )
       .normalize();
 
     // Straight ahead direction (final look)
@@ -1702,7 +1708,20 @@ function updatePOVCamera(progress: number) {
         .normalize();
     }
 
-    const lookAtPoint = camera.position.clone().add(lookAtDirection);
+    // BLEND: Mix path-following with entry rotation for smoother transition
+    const pathTangent = getSmoothCameraTangent(progress);
+    const entryDirection = lookAtDirection;
+
+    // Gradually blend from entry rotation to path following
+    const blendFactor = smoothStep(transitionProgress);
+    const blendedDirection = new THREE.Vector3()
+      .addVectors(
+        entryDirection.multiplyScalar(1.0 - blendFactor),
+        pathTangent.multiplyScalar(blendFactor)
+      )
+      .normalize();
+
+    const lookAtPoint = camera.position.clone().add(blendedDirection);
 
     // DIRECT ROTATION during entry phase - no smoothing to match scroll progress
     const tempMatrix = new THREE.Matrix4();
