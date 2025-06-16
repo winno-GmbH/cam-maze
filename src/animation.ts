@@ -18,37 +18,23 @@ class AnimationSystem {
 
   // Path data for each object
   private homePaths: {
-    [key: string]: string | undefined;
+    [key: string]: THREE.CurvePath<THREE.Vector3> | undefined;
   } = {};
 
   constructor() {
-    console.log("AnimationSystem: Initializing...");
-    console.log("AnimationSystem: MAZE_CENTER:", MAZE_CENTER);
-
     // Get home paths for all objects
     const homePathData = getPathsForSection("home");
     this.homePaths = homePathData;
-
-    console.log(
-      "AnimationSystem: Home paths loaded:",
-      Object.keys(this.homePaths)
-    );
   }
 
   // Start the home animation
   public startHomeAnimation(): void {
     if (this.isAnimating) return;
 
-    console.log("AnimationSystem: Starting home animation...");
-    console.log("AnimationSystem: Pacman position:", pacman.position);
-    console.log("AnimationSystem: Ghosts:", ghosts);
-
     this.state = "HOME_ANIMATION";
     this.isAnimating = true;
     this.animationTime = 0;
     this.timeOffset = Date.now();
-
-    console.log("AnimationSystem: Home animation started");
   }
 
   // Update animation
@@ -69,17 +55,9 @@ class AnimationSystem {
 
     // Use the same timing logic as backup.js
     const t = ((adjustedTime / this.animationDuration) % 6) / 6;
-    const pathMapping = getPathsForSection("home") as { [key: string]: string };
-
-    // Debug logging
-    if (Math.floor(t * 100) % 10 === 0) {
-      // Log every 10% progress
-      console.log("AnimationSystem: Animation progress:", t.toFixed(2));
-      console.log(
-        "AnimationSystem: Path mapping keys:",
-        Object.keys(pathMapping)
-      );
-    }
+    const pathMapping = getPathsForSection("home") as {
+      [key: string]: THREE.CurvePath<THREE.Vector3>;
+    };
 
     if (!pacman.visible) {
       pacman.visible = true;
@@ -93,52 +71,40 @@ class AnimationSystem {
 
     // Animate all objects along their paths (same logic as backup.js)
     Object.entries(ghosts).forEach(([key, ghost]) => {
-      const pathKey = pathMapping[key];
-      console.log(`AnimationSystem: Animating ${key}, pathKey: ${pathKey}`);
+      const path = pathMapping[key];
 
-      if (pathKey && paths[pathKey as keyof typeof paths]) {
-        const path = paths[pathKey as keyof typeof paths];
-        if (path) {
-          const position = path.getPointAt(t);
-          console.log(`AnimationSystem: ${key} position:`, position);
+      if (path) {
+        const position = path.getPointAt(t);
+        ghost.position.copy(position);
+        const tangent = path.getTangentAt(t).normalize();
+        ghost.lookAt(position.clone().add(tangent));
 
-          ghost.position.copy(position);
-          const tangent = path.getTangentAt(t).normalize();
-          ghost.lookAt(position.clone().add(tangent));
+        if (key === "pacman") {
+          const zRotation = Math.atan2(tangent.x, tangent.z);
 
-          if (key === "pacman") {
-            const zRotation = Math.atan2(tangent.x, tangent.z);
-
-            if ((ghost as any).previousZRotation === undefined) {
-              (ghost as any).previousZRotation = zRotation;
-            }
-
-            let rotationDiff = zRotation - (ghost as any).previousZRotation;
-
-            if (rotationDiff > Math.PI) {
-              rotationDiff -= 2 * Math.PI;
-            } else if (rotationDiff < -Math.PI) {
-              rotationDiff += 2 * Math.PI;
-            }
-
-            const smoothFactor = 0.1;
-            const smoothedRotation =
-              (ghost as any).previousZRotation + rotationDiff * smoothFactor;
-
-            (ghost as any).previousZRotation = smoothedRotation;
-            ghost.rotation.set(
-              Math.PI / 2,
-              Math.PI,
-              smoothedRotation + Math.PI / 2
-            );
+          if ((ghost as any).previousZRotation === undefined) {
+            (ghost as any).previousZRotation = zRotation;
           }
-        } else {
-          console.log(`AnimationSystem: Path ${pathKey} is null/undefined`);
+
+          let rotationDiff = zRotation - (ghost as any).previousZRotation;
+
+          if (rotationDiff > Math.PI) {
+            rotationDiff -= 2 * Math.PI;
+          } else if (rotationDiff < -Math.PI) {
+            rotationDiff += 2 * Math.PI;
+          }
+
+          const smoothFactor = 0.1;
+          const smoothedRotation =
+            (ghost as any).previousZRotation + rotationDiff * smoothFactor;
+
+          (ghost as any).previousZRotation = smoothedRotation;
+          ghost.rotation.set(
+            Math.PI / 2,
+            Math.PI,
+            smoothedRotation + Math.PI / 2
+          );
         }
-      } else {
-        console.log(
-          `AnimationSystem: No path found for ${key} with key ${pathKey}`
-        );
       }
     });
   }
@@ -174,14 +140,11 @@ function animate(): void {
 
 // Start the animation loop
 export function startAnimationLoop(): void {
-  console.log("AnimationSystem: Starting animation loop...");
   animate();
 }
 
 // Initialize animation system
 export function initAnimationSystem(): void {
-  console.log("AnimationSystem: Initializing animation system...");
-
   // Initialize camera
   initCamera();
 
@@ -190,7 +153,6 @@ export function initAnimationSystem(): void {
 
   // Auto-start home animation after a short delay
   setTimeout(() => {
-    console.log("AnimationSystem: Auto-starting home animation...");
     animationSystem.startHomeAnimation();
   }, 1000);
 }
