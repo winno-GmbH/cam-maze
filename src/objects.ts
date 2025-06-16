@@ -42,7 +42,7 @@ const ghostContainers = {
   Ghost_GBP: ghosts.ghost5,
 };
 
-// Add ghosts to scene
+// Add ghosts to scene.
 Object.values(ghosts).forEach((ghost) => scene.add(ghost));
 
 // Model Loading Function
