@@ -10,15 +10,20 @@ import {
   materialMap,
 } from "./materials";
 
+// Export clock for animation system
 export { clock };
 
+// GLB Loader - use directly like in backup.js
 const loader = new THREE.GLTFLoader();
 
+// Animation Mixer
 export let pacmanMixer: THREE.AnimationMixer;
 
+// Pacman Group
 export const pacman = new THREE.Group();
 scene.add(pacman);
 
+// Ghost Objects
 export const ghosts: GhostContainer = {
   pacman: pacman,
   ghost1: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
@@ -28,6 +33,7 @@ export const ghosts: GhostContainer = {
   ghost5: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
 };
 
+// Ghost containers mapping (like in backup.js)
 const ghostContainers = {
   Ghost_EUR: ghosts.ghost1,
   Ghost_CHF: ghosts.ghost2,
@@ -36,8 +42,10 @@ const ghostContainers = {
   Ghost_GBP: ghosts.ghost5,
 };
 
+// Add ghosts to scene.
 Object.values(ghosts).forEach((ghost) => scene.add(ghost));
 
+// Model Loading Function
 export async function loadModel(): Promise<void> {
   return new Promise((resolve, reject) => {
     loader.load(
@@ -71,6 +79,7 @@ export async function loadModel(): Promise<void> {
             ghosts.pacman.scale.set(0.05, 0.05, 0.05);
             ghosts.pacman.rotation.set(Math.PI / 2, Math.PI / 2, Math.PI / 4);
 
+            // Setup Pacman mixer
             pacmanMixer = new THREE.AnimationMixer(ghosts.pacman);
             const pacmanActions: { [key: string]: THREE.AnimationAction } = {};
 
@@ -156,6 +165,7 @@ export async function loadModel(): Promise<void> {
           }
         });
 
+        // Add shadows to all meshes
         model.traverse(function (node: THREE.Object3D) {
           if ((node as any).isMesh) {
             node.castShadow = true;
@@ -163,13 +173,14 @@ export async function loadModel(): Promise<void> {
           }
         });
 
+        // Add model to scene and position it like in backup.js
         scene.add(model);
         model.position.set(0.5, 0.5, 0.5);
 
         resolve();
       },
-      function (progress: any) {},
-      function (error: any) {
+      function (progress) {},
+      function (error) {
         reject(error);
       }
     );

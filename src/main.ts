@@ -1,31 +1,23 @@
-import { initRenderer, setupLighting, renderer, scene } from "./scene";
-import { initCamera, setupCameraResize, camera } from "./camera";
+import { initRenderer, setupLighting } from "./scene";
+import { initCamera, setupCameraResize } from "./camera";
 import { loadModel } from "./objects";
-import { initAnimationSystem } from "./animation-system";
+import { initAnimationSystem } from "./animation";
+import { animate } from "./animation";
 
-// Initialize everything
 async function init() {
   try {
     initRenderer();
-
     setupLighting();
-
     initCamera();
-
     setupCameraResize();
 
     await loadModel();
 
-    // Initialize animation system (handles rendering and animations)
     initAnimationSystem();
+    animate();
   } catch (error) {
     console.error("Initialization error:", error);
   }
 }
 
-// Start when DOM is ready
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init);
-} else {
-  init();
-}
+init();
