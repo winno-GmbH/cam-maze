@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ghosts, pacmanMixer, clock } from "./objects";
-import { pathsMap } from "./paths";
+import { getPathsForSection } from "./paths";
 import { renderer, scene } from "./scene";
 import { camera, startQuaternion, endQuaternion } from "./camera";
 // Removed redundant smooth scroll system - using direct progress for precise control
@@ -295,17 +295,20 @@ function animationLoop() {
   const t = (savedAnimationProgress + elapsedTime * HOME_ANIMATION_SPEED) % 1; // Use consistent speed
 
   // Animate ghosts on their home paths only during HOME state
+  const homePaths = getPathsForSection("home") as {
+    [key: string]: THREE.CurvePath<THREE.Vector3>;
+  };
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    if (!pathsMap[key]) {
+    if (!homePaths[key]) {
       // Don't spam warnings, just return
       return;
     }
 
     if (key === "pacman") {
       // Pacman animation
-      const position = pathsMap[key].getPointAt(t);
+      const position = homePaths[key].getPointAt(t);
       ghost.position.copy(position);
-      const tangent = pathsMap[key].getTangentAt(t).normalize();
+      const tangent = homePaths[key].getTangentAt(t).normalize();
       ghost.lookAt(position.clone().add(tangent));
 
       // Handle pacman rotation smoothing
@@ -326,9 +329,9 @@ function animationLoop() {
       ghost.rotation.set(Math.PI / 2, Math.PI, smoothedRotation + Math.PI / 2);
     } else {
       // Ghost animation
-      const position = pathsMap[key].getPointAt(t);
+      const position = homePaths[key].getPointAt(t);
       ghost.position.copy(position);
-      const tangent = pathsMap[key].getTangentAt(t).normalize();
+      const tangent = homePaths[key].getTangentAt(t).normalize();
       ghost.lookAt(position.clone().add(tangent));
 
       // Ensure full opacity
