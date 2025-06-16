@@ -19,10 +19,5 @@ module.exports = {
       }
     ]
   },
-  externals: {
-    'three': 'THREE',
-    'gsap': 'gsap',
-    'gsap/ScrollTrigger': 'ScrollTrigger'
-  },
   devtool: 'source-map'
 };

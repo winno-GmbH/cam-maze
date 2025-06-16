@@ -178,33 +178,6 @@ export async function loadModel(): Promise<void> {
         scene.add(model);
         model.position.set(0.5, 0.5, 0.5);
 
-        // Debug: Log final object states
-        console.log("Objects: Model loading complete");
-        console.log(
-          "Objects: Pacman children count:",
-          ghosts.pacman.children.length
-        );
-        console.log(
-          "Objects: Ghost1 children count:",
-          ghosts.ghost1.children.length
-        );
-        console.log(
-          "Objects: Ghost2 children count:",
-          ghosts.ghost2.children.length
-        );
-        console.log(
-          "Objects: Ghost3 children count:",
-          ghosts.ghost3.children.length
-        );
-        console.log(
-          "Objects: Ghost4 children count:",
-          ghosts.ghost4.children.length
-        );
-        console.log(
-          "Objects: Ghost5 children count:",
-          ghosts.ghost5.children.length
-        );
-
         resolve();
       },
       function (progress: any) {},
