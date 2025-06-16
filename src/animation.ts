@@ -11,11 +11,10 @@ export type AnimationState = "IDLE" | "HOME_ANIMATION" | "SCROLL_ANIMATION";
 class AnimationSystem {
   private state: AnimationState = "IDLE";
   private animationTime: number = 0;
-  private animationDuration: number = 5; // 5 seconds for home animation
+  private animationDuration: number = 6000; // 6 seconds like in backup.js
   private isAnimating: boolean = false;
-
-  // Object start positions (will be set when animation starts)
-  private objectStartPositions: { [key: string]: THREE.Vector3 } = {};
+  private timeOffset: number = 0;
+  private animationRunning: boolean = true;
 
   // Path data for each object
   private homePaths: {
@@ -47,16 +46,7 @@ class AnimationSystem {
     this.state = "HOME_ANIMATION";
     this.isAnimating = true;
     this.animationTime = 0;
-
-    // Store current positions of all objects
-    this.objectStartPositions = {
-      pacman: pacman.position.clone(),
-      ghost1: ghosts.ghost1.position.clone(),
-      ghost2: ghosts.ghost2.position.clone(),
-      ghost3: ghosts.ghost3.position.clone(),
-      ghost4: ghosts.ghost4.position.clone(),
-      ghost5: ghosts.ghost5.position.clone(),
-    };
+    this.timeOffset = Date.now();
 
     console.log("AnimationSystem: Home animation started");
   }
@@ -74,52 +64,63 @@ class AnimationSystem {
   }
 
   private updateHomeAnimation(): void {
-    const progress = Math.min(this.animationTime / this.animationDuration, 1);
+    const currentTime = Date.now();
+    const adjustedTime = currentTime - this.timeOffset;
 
-    // Use easing function for smooth animation
-    const easedProgress = this.easeInOutCubic(progress);
+    // Use the same timing logic as backup.js
+    const t = ((adjustedTime / this.animationDuration) % 6) / 6;
+    const pathMapping = getPathsForSection("home") as { [key: string]: string };
 
-    // Animate objects along their paths
-    this.animateObjectsAlongPaths(easedProgress);
-
-    // Check if animation is complete
-    if (progress >= 1) {
-      this.completeHomeAnimation();
-    }
-  }
-
-  private animateObjectsAlongPaths(progress: number): void {
-    // Animate Pacman along its home path
-    if (this.homePaths.pacman) {
-      const pacmanPath = this.homePaths.pacman;
-      const pacmanPoint = pacmanPath.getPointAt(progress);
-      pacman.position.copy(pacmanPoint);
+    if (!pacman.visible) {
+      pacman.visible = true;
     }
 
-    // Animate ghosts along their home paths
-    Object.keys(ghosts).forEach((ghostKey, index) => {
-      if (ghostKey === "pacman") return; // Skip pacman, already animated
+    // Update Pacman mixer if available
+    // Note: You'll need to import pacmanMixer from objects.ts if you want this
+    // if (pacmanMixer) {
+    //   pacmanMixer.update(deltaTime);
+    // }
 
-      const ghost = ghosts[ghostKey];
-      const pathKey = `ghost${index + 1}`;
+    // Animate all objects along their paths (same logic as backup.js)
+    Object.entries(ghosts).forEach(([key, ghost]) => {
+      const pathKey = pathMapping[key];
+      if (pathKey && paths[pathKey as keyof typeof paths]) {
+        const path = paths[pathKey as keyof typeof paths];
+        if (path) {
+          const position = path.getPointAt(t);
+          ghost.position.copy(position);
+          const tangent = path.getTangentAt(t).normalize();
+          ghost.lookAt(position.clone().add(tangent));
 
-      if (this.homePaths[pathKey]) {
-        const ghostPath = this.homePaths[pathKey];
-        const ghostPoint = ghostPath.getPointAt(progress);
-        ghost.position.copy(ghostPoint);
+          if (key === "pacman") {
+            const zRotation = Math.atan2(tangent.x, tangent.z);
+
+            if ((ghost as any).previousZRotation === undefined) {
+              (ghost as any).previousZRotation = zRotation;
+            }
+
+            let rotationDiff = zRotation - (ghost as any).previousZRotation;
+
+            if (rotationDiff > Math.PI) {
+              rotationDiff -= 2 * Math.PI;
+            } else if (rotationDiff < -Math.PI) {
+              rotationDiff += 2 * Math.PI;
+            }
+
+            const smoothFactor = 0.1;
+            const smoothedRotation =
+              (ghost as any).previousZRotation + rotationDiff * smoothFactor;
+
+            (ghost as any).previousZRotation = smoothedRotation;
+            ghost.rotation.set(
+              Math.PI / 2,
+              Math.PI,
+              smoothedRotation + Math.PI / 2
+            );
+          }
+        }
       }
     });
-  }
-
-  private completeHomeAnimation(): void {
-    this.isAnimating = false;
-    this.state = "IDLE";
-    console.log("AnimationSystem: Home animation completed");
-  }
-
-  // Easing function for smooth animation
-  private easeInOutCubic(t: number): number {
-    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   }
 
   // Public getters
@@ -140,8 +141,8 @@ class AnimationSystem {
 // Create and export the animation system
 export const animationSystem = new AnimationSystem();
 
-// Animation loop
-export function animate(): void {
+// Animation loop (same as backup.js)
+function animate(): void {
   requestAnimationFrame(animate);
 
   // Update animation system
