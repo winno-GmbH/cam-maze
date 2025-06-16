@@ -69,7 +69,19 @@ class AnimationSystem {
 
     // Use the same timing logic as backup.js
     const t = ((adjustedTime / this.animationDuration) % 6) / 6;
-    const pathMapping = getPathsForSection("home") as { [key: string]: string };
+    const pathMapping = getPathsForSection("home") as {
+      [key: string]: THREE.CurvePath<THREE.Vector3>;
+    };
+
+    // Debug logging
+    if (Math.floor(t * 100) % 10 === 0) {
+      // Log every 10% progress
+      console.log("AnimationSystem: Animation progress:", t.toFixed(2));
+      console.log(
+        "AnimationSystem: Path mapping keys:",
+        Object.keys(pathMapping)
+      );
+    }
 
     if (!pacman.visible) {
       pacman.visible = true;
@@ -83,42 +95,45 @@ class AnimationSystem {
 
     // Animate all objects along their paths (same logic as backup.js)
     Object.entries(ghosts).forEach(([key, ghost]) => {
-      const pathKey = pathMapping[key];
-      if (pathKey && paths[pathKey as keyof typeof paths]) {
-        const path = paths[pathKey as keyof typeof paths];
-        if (path) {
-          const position = path.getPointAt(t);
-          ghost.position.copy(position);
-          const tangent = path.getTangentAt(t).normalize();
-          ghost.lookAt(position.clone().add(tangent));
+      const path = pathMapping[key];
+      console.log(`AnimationSystem: Animating ${key}, path exists:`, !!path);
 
-          if (key === "pacman") {
-            const zRotation = Math.atan2(tangent.x, tangent.z);
+      if (path) {
+        const position = path.getPointAt(t);
+        console.log(`AnimationSystem: ${key} position:`, position);
 
-            if ((ghost as any).previousZRotation === undefined) {
-              (ghost as any).previousZRotation = zRotation;
-            }
+        ghost.position.copy(position);
+        const tangent = path.getTangentAt(t).normalize();
+        ghost.lookAt(position.clone().add(tangent));
 
-            let rotationDiff = zRotation - (ghost as any).previousZRotation;
+        if (key === "pacman") {
+          const zRotation = Math.atan2(tangent.x, tangent.z);
 
-            if (rotationDiff > Math.PI) {
-              rotationDiff -= 2 * Math.PI;
-            } else if (rotationDiff < -Math.PI) {
-              rotationDiff += 2 * Math.PI;
-            }
-
-            const smoothFactor = 0.1;
-            const smoothedRotation =
-              (ghost as any).previousZRotation + rotationDiff * smoothFactor;
-
-            (ghost as any).previousZRotation = smoothedRotation;
-            ghost.rotation.set(
-              Math.PI / 2,
-              Math.PI,
-              smoothedRotation + Math.PI / 2
-            );
+          if ((ghost as any).previousZRotation === undefined) {
+            (ghost as any).previousZRotation = zRotation;
           }
+
+          let rotationDiff = zRotation - (ghost as any).previousZRotation;
+
+          if (rotationDiff > Math.PI) {
+            rotationDiff -= 2 * Math.PI;
+          } else if (rotationDiff < -Math.PI) {
+            rotationDiff += 2 * Math.PI;
+          }
+
+          const smoothFactor = 0.1;
+          const smoothedRotation =
+            (ghost as any).previousZRotation + rotationDiff * smoothFactor;
+
+          (ghost as any).previousZRotation = smoothedRotation;
+          ghost.rotation.set(
+            Math.PI / 2,
+            Math.PI,
+            smoothedRotation + Math.PI / 2
+          );
         }
+      } else {
+        console.log(`AnimationSystem: No path found for ${key}`);
       }
     });
   }

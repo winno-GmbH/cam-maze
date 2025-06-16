@@ -28,6 +28,11 @@ export const ghosts: GhostContainer = {
   ghost5: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
 };
 
+// Debug: Log ghost creation
+console.log("Objects: Created ghosts:", Object.keys(ghosts));
+console.log("Objects: Pacman object:", pacman);
+console.log("Objects: Ghost1 object:", ghosts.ghost1);
+
 const ghostContainers = {
   Ghost_EUR: ghosts.ghost1,
   Ghost_CHF: ghosts.ghost2,
@@ -70,6 +75,7 @@ export async function loadModel(): Promise<void> {
             children.forEach((item) => ghosts.pacman.add(item));
             ghosts.pacman.scale.set(0.05, 0.05, 0.05);
             ghosts.pacman.rotation.set(Math.PI / 2, Math.PI / 2, Math.PI / 4);
+            console.log("Objects: Pacman loaded and configured");
 
             pacmanMixer = new THREE.AnimationMixer(ghosts.pacman);
             const pacmanActions: { [key: string]: THREE.AnimationAction } = {};
@@ -87,6 +93,12 @@ export async function loadModel(): Promise<void> {
             const ghostContainer =
               ghostContainers[child.name as keyof typeof ghostContainers];
             const ghostGroup = new THREE.Group();
+            console.log(
+              "Objects: Loading ghost:",
+              child.name,
+              "into container:",
+              ghostContainer
+            );
 
             child.rotation.z = Math.PI;
             child.rotation.x = Math.PI / 2;
@@ -165,6 +177,33 @@ export async function loadModel(): Promise<void> {
 
         scene.add(model);
         model.position.set(0.5, 0.5, 0.5);
+
+        // Debug: Log final object states
+        console.log("Objects: Model loading complete");
+        console.log(
+          "Objects: Pacman children count:",
+          ghosts.pacman.children.length
+        );
+        console.log(
+          "Objects: Ghost1 children count:",
+          ghosts.ghost1.children.length
+        );
+        console.log(
+          "Objects: Ghost2 children count:",
+          ghosts.ghost2.children.length
+        );
+        console.log(
+          "Objects: Ghost3 children count:",
+          ghosts.ghost3.children.length
+        );
+        console.log(
+          "Objects: Ghost4 children count:",
+          ghosts.ghost4.children.length
+        );
+        console.log(
+          "Objects: Ghost5 children count:",
+          ghosts.ghost5.children.length
+        );
 
         resolve();
       },
