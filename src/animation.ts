@@ -6,15 +6,23 @@ import { paths, getPathsForSection } from "./paths";
 import { MAZE_CENTER } from "./config";
 
 // Animation state
-export type AnimationState = "IDLE" | "HOME_ANIMATION" | "SCROLL_ANIMATION";
+export type AnimationState =
+  | "IDLE"
+  | "HOME_ANIMATION"
+  | "TORN_TO_CENTER"
+  | "SCROLL_ANIMATION";
 
 class AnimationSystem {
   private state: AnimationState = "IDLE";
   private animationTime: number = 0;
-  private animationDuration: number = 6; // 6 seconds for home animation (like backup)
+  private animationDuration: number = 6; // 6 seconds for home animation
   private isAnimating: boolean = false;
   private animationRunning: boolean = true;
   private timeOffset: number = 0;
+  private loopCount: number = 0;
+  private tornStartTime: number = 0;
+  private tornDuration: number = 0.7; // seconds
+  private startPositions: { [key: string]: THREE.Vector3 } = {};
 
   // Object start positions (will be set when animation starts)
   private objectStartPositions: { [key: string]: THREE.Vector3 } = {};
@@ -51,6 +59,7 @@ class AnimationSystem {
     this.animationTime = 0;
     this.animationRunning = true;
     this.timeOffset = Date.now();
+    this.loopCount = 0;
 
     // Store current positions of all objects
     this.objectStartPositions = {
@@ -69,26 +78,45 @@ class AnimationSystem {
   public update(): void {
     if (!this.animationRunning) return;
 
+    const delta = clock.getDelta();
     const currentTime = Date.now();
-    const adjustedTime = currentTime - this.timeOffset;
 
-    // Calculate time-based progress (6 second loop like in backup)
-    const t = ((adjustedTime / 6000) % 6) / 6;
+    if (this.state === "HOME_ANIMATION") {
+      // Use a seamless modulo for t
+      const elapsed = (currentTime - this.timeOffset) / 1000;
+      let t = elapsed / this.animationDuration;
+      if (t >= 1) {
+        t = 1;
+      }
+      // For seamless loop, blend last 5% back to start
+      let tPath = t;
+      if (t > 0.95) {
+        const blend = (t - 0.95) / 0.05;
+        tPath = (1 - blend) * t + blend * 0; // blend to 0
+      }
+      this.animateHomePaths(tPath);
+      // When t reaches 1, trigger torn-to-center
+      if (t >= 1) {
+        this.saveCurrentPositions();
+        this.startTornToCenter();
+      }
+    } else if (this.state === "TORN_TO_CENTER") {
+      const elapsed = (currentTime - this.tornStartTime) / 1000;
+      const t = Math.min(elapsed / this.tornDuration, 1);
+      this.animateTornToCenter(t);
+      if (t >= 1) {
+        this.state = "IDLE";
+        this.isAnimating = false;
+        this.animationRunning = false;
+      }
+    }
+  }
 
-    // Get home path mapping
+  private animateHomePaths(t: number): void {
     const pathMapping = getPathsForSection("home");
-
-    // Make sure pacman is visible
     if (!pacman.visible) {
       pacman.visible = true;
     }
-
-    // Update pacman mixer if available
-    const delta = clock.getDelta();
-    // Note: pacmanMixer would be imported from objects.ts if needed
-    // if (pacmanMixer) {
-    //   pacmanMixer.update(delta);
-    // }
 
     // Animate all objects along their paths
     Object.entries(ghosts).forEach(([key, ghost]) => {
@@ -126,6 +154,39 @@ class AnimationSystem {
             smoothedRotation + Math.PI / 2
           );
         }
+      }
+    });
+  }
+
+  private saveCurrentPositions() {
+    this.startPositions = {};
+    Object.entries(ghosts).forEach(([key, ghost]) => {
+      this.startPositions[key] = ghost.position.clone();
+    });
+  }
+
+  private startTornToCenter() {
+    this.state = "TORN_TO_CENTER";
+    this.tornStartTime = Date.now();
+  }
+
+  private animateTornToCenter(t: number) {
+    // Ease in for drama
+    const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    Object.entries(ghosts).forEach(([key, ghost]) => {
+      const start = this.startPositions[key];
+      if (!start) return;
+      ghost.position.lerpVectors(start, MAZE_CENTER, ease);
+      // Optionally scale down/fade out
+      const scale = 1 - 0.7 * ease;
+      ghost.scale.set(scale, scale, scale);
+      // Only apply opacity to Meshes (ghosts), not Groups (Pacman)
+      if (
+        ghost instanceof THREE.Mesh &&
+        ghost.material &&
+        "opacity" in ghost.material
+      ) {
+        (ghost.material as any).opacity = 1 - ease;
       }
     });
   }
