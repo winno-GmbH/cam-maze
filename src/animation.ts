@@ -6,100 +6,104 @@ import { paths, getPathsForSection } from "./paths";
 import { MAZE_CENTER } from "./config";
 
 // Animation state
-export type AnimationState =
-  | "IDLE"
-  | "HOME_ANIMATION"
-  | "TORN_TO_CENTER"
-  | "SCROLL_ANIMATION";
+export type AnimationState = "IDLE" | "HOME_ANIMATION" | "SCROLL_TO_CENTER";
+
+const GHOST_SPEED_MULTIPLIERS: Record<string, number> = {
+  ghost1: 1.25,
+  ghost2: 1.14,
+  ghost3: 1.05,
+  ghost4: 0.97,
+  ghost5: 0.89,
+  pacman: 0.8,
+};
+const GHOSTS_END_AT = 0.8;
+const GHOST_OPACITY_FADE_START = 0.9;
+const GHOST_STAGGER_DELAY = 0.15;
+const PACMAN_DELAY = 0.3;
 
 class AnimationSystem {
   private state: AnimationState = "IDLE";
   private animationTime: number = 0;
   private animationDuration: number = 6; // 6 seconds for home animation
-  private isAnimating: boolean = false;
   private animationRunning: boolean = true;
   private timeOffset: number = 0;
-  private loopCount: number = 0;
-  private tornStartTime: number = 0;
-  private tornDuration: number = 0.7; // seconds
-  private startPositions: { [key: string]: THREE.Vector3 } = {};
-
-  // Object start positions (will be set when animation starts)
-  private objectStartPositions: { [key: string]: THREE.Vector3 } = {};
-
-  // Path data for each object
-  private homePaths: {
-    [key: string]: THREE.CurvePath<THREE.Vector3> | undefined;
-  } = {};
+  private bezierCurves: Record<string, THREE.QuadraticBezierCurve3> = {};
+  private capturedPositions: Record<string, THREE.Vector3> = {};
+  private capturedRotations: Record<string, THREE.Euler> = {};
+  private scrollProgress = 0;
 
   constructor() {
     console.log("AnimationSystem: Initializing...");
     console.log("AnimationSystem: MAZE_CENTER:", MAZE_CENTER);
-
-    // Get home paths for all objects
-    const homePathData = getPathsForSection("home");
-    this.homePaths = homePathData;
-
-    console.log(
-      "AnimationSystem: Home paths loaded:",
-      Object.keys(this.homePaths)
-    );
   }
 
   // Start the home animation
   public startHomeAnimation(): void {
-    if (this.isAnimating) return;
-
-    console.log("AnimationSystem: Starting home animation...");
-    console.log("AnimationSystem: Pacman position:", pacman.position);
-    console.log("AnimationSystem: Ghosts:", ghosts);
-
     this.state = "HOME_ANIMATION";
-    this.isAnimating = true;
     this.animationTime = 0;
     this.animationRunning = true;
     this.timeOffset = Date.now();
-    this.loopCount = 0;
+  }
 
-    // Store current positions of all objects
-    this.objectStartPositions = {
-      pacman: pacman.position.clone(),
-      ghost1: ghosts.ghost1.position.clone(),
-      ghost2: ghosts.ghost2.position.clone(),
-      ghost3: ghosts.ghost3.position.clone(),
-      ghost4: ghosts.ghost4.position.clone(),
-      ghost5: ghosts.ghost5.position.clone(),
-    };
+  public pauseHomeAnimation(): void {
+    this.animationRunning = false;
+  }
 
-    console.log("AnimationSystem: Home animation started");
+  public resumeHomeAnimation(): void {
+    this.state = "HOME_ANIMATION";
+    this.animationRunning = true;
+    this.timeOffset = Date.now();
+  }
+
+  public captureGhostPositions(): void {
+    Object.entries(ghosts).forEach(([key, ghost]) => {
+      this.capturedPositions[key] = ghost.position.clone();
+      this.capturedRotations[key] = ghost.rotation.clone();
+    });
+  }
+
+  public createBezierCurves(): void {
+    this.bezierCurves = {};
+    Object.entries(this.capturedPositions).forEach(([key, startPos]) => {
+      const endPos = MAZE_CENTER.clone();
+      const controlPoint = new THREE.Vector3(
+        (startPos.x + endPos.x) / 2,
+        2,
+        (startPos.z + endPos.z) / 2
+      );
+      this.bezierCurves[key] = new THREE.QuadraticBezierCurve3(
+        startPos,
+        controlPoint,
+        endPos
+      );
+    });
+  }
+
+  public startScrollToCenter(): void {
+    this.pauseHomeAnimation();
+    this.captureGhostPositions();
+    this.createBezierCurves();
+    this.state = "SCROLL_TO_CENTER";
+  }
+
+  public setScrollProgress(progress: number): void {
+    this.scrollProgress = Math.max(0, Math.min(1, progress));
   }
 
   // Update animation (adapted from backup.js animate function)
   public update(): void {
-    if (!this.animationRunning) return;
-    const delta = clock.getDelta();
-    const currentTime = Date.now();
-
-    if (this.state === "HOME_ANIMATION") {
-      // Use a seamless modulo for t
+    if (this.state === "HOME_ANIMATION" && this.animationRunning) {
+      const currentTime = Date.now();
       const elapsed = (currentTime - this.timeOffset) / 1000;
       let t = (elapsed / this.animationDuration) % 1;
-      // For seamless loop, blend last 5% back to start
       let tPath = t;
       if (t > 0.95) {
         const blend = (t - 0.95) / 0.05;
-        tPath = (1 - blend) * t + blend * 0; // blend to 0
+        tPath = (1 - blend) * t + blend * 0;
       }
       this.animateHomePaths(tPath);
-    } else if (this.state === "TORN_TO_CENTER") {
-      const elapsed = (currentTime - this.tornStartTime) / 1000;
-      const t = Math.min(elapsed / this.tornDuration, 1);
-      this.animateTornToCenter(t);
-      if (t >= 1) {
-        this.state = "IDLE";
-        this.isAnimating = false;
-        this.animationRunning = false;
-      }
+    } else if (this.state === "SCROLL_TO_CENTER") {
+      this.animateScrollToCenter(this.scrollProgress);
     }
   }
 
@@ -149,37 +153,77 @@ class AnimationSystem {
     });
   }
 
-  private saveCurrentPositions() {
-    this.startPositions = {};
+  private animateScrollToCenter(scrollProgress: number): void {
     Object.entries(ghosts).forEach(([key, ghost]) => {
-      this.startPositions[key] = ghost.position.clone();
-    });
-  }
-
-  private startTornToCenter() {
-    this.state = "TORN_TO_CENTER";
-    this.tornStartTime = Date.now();
-  }
-
-  private animateTornToCenter(t: number) {
-    // Ease in for drama
-    const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-    Object.entries(ghosts).forEach(([key, ghost]) => {
-      const start = this.startPositions[key];
-      if (!start) return;
-      ghost.position.lerpVectors(start, MAZE_CENTER, ease);
-      // Optionally scale down/fade out
-      const scale = 1 - 0.7 * ease;
-      ghost.scale.set(scale, scale, scale);
-      // Only apply opacity to Meshes (ghosts), not Groups (Pacman)
+      const speed = GHOST_SPEED_MULTIPLIERS[key] || 1.0;
+      let ghostProgress = Math.min((scrollProgress * speed) / GHOSTS_END_AT, 1);
+      // Stagger for ghosts and pacman
+      if (key !== "pacman") {
+        ghostProgress = Math.max(
+          0,
+          Math.min(
+            1,
+            ((scrollProgress -
+              GHOST_STAGGER_DELAY * (parseInt(key.replace("ghost", "")) - 1)) *
+              speed) /
+              GHOSTS_END_AT
+          )
+        );
+      } else {
+        ghostProgress = Math.max(
+          0,
+          Math.min(1, ((scrollProgress - PACMAN_DELAY) * speed) / GHOSTS_END_AT)
+        );
+      }
+      const curve = this.bezierCurves[key];
+      if (!curve) return;
+      const position = curve.getPoint(ghostProgress);
+      ghost.position.copy(position);
+      // Rotation interpolation
+      const originalRotation = this.capturedRotations[key];
+      const targetRotation = new THREE.Euler(Math.PI / -2, 0, 0);
+      const currentRotation = new THREE.Euler(
+        originalRotation.x +
+          (targetRotation.x - originalRotation.x) * ghostProgress,
+        originalRotation.y +
+          (targetRotation.y - originalRotation.y) * ghostProgress,
+        originalRotation.z +
+          (targetRotation.z - originalRotation.z) * ghostProgress
+      );
+      ghost.rotation.copy(currentRotation);
+      // Opacity fade out in last 10%
+      let opacity = 1;
+      if (ghostProgress >= GHOST_OPACITY_FADE_START) {
+        const fadeProgress =
+          (ghostProgress - GHOST_OPACITY_FADE_START) /
+          (1 - GHOST_OPACITY_FADE_START);
+        opacity = 1 - fadeProgress;
+        opacity = Math.max(0, opacity);
+      }
       if (
         ghost instanceof THREE.Mesh &&
         ghost.material &&
         "opacity" in ghost.material
       ) {
-        (ghost.material as any).opacity = 1 - ease;
+        (ghost.material as any).opacity = opacity;
+      } else if (ghost instanceof THREE.Group) {
+        ghost.traverse((child) => {
+          if (
+            child instanceof THREE.Mesh &&
+            child.material &&
+            "opacity" in child.material
+          ) {
+            (child.material as any).opacity = opacity;
+          }
+        });
       }
     });
+  }
+
+  public resetToHome(): void {
+    this.state = "HOME_ANIMATION";
+    this.animationRunning = true;
+    this.timeOffset = Date.now();
   }
 
   // Public getters
@@ -187,31 +231,9 @@ class AnimationSystem {
     return this.state;
   }
 
-  public isAnimationActive(): boolean {
-    return this.isAnimating;
-  }
-
   // Render function
   public render(): void {
     renderer.render(scene, camera);
-  }
-
-  // Stop animation (for future use)
-  public stopAnimation(): void {
-    this.animationRunning = false;
-    this.isAnimating = false;
-  }
-
-  // Resume animation (for future use)
-  public resumeAnimation(): void {
-    this.animationRunning = true;
-    this.isAnimating = true;
-  }
-
-  public triggerTornToCenter(): void {
-    if (this.state !== "HOME_ANIMATION") return;
-    this.saveCurrentPositions();
-    this.startTornToCenter();
   }
 }
 
