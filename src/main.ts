@@ -2,6 +2,7 @@ import { initRenderer, setupLighting } from "./scene";
 import { initCamera, setupCameraResize } from "./camera";
 import { loadModel } from "./objects";
 import { initAnimationSystem } from "./animation";
+import { animate } from "./animation";
 
 async function init() {
   try {
@@ -13,6 +14,7 @@ async function init() {
     await loadModel();
 
     initAnimationSystem();
+    animate();
   } catch (error) {
     console.error("Initialization error:", error);
   }
