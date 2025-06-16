@@ -77,17 +77,13 @@ class AnimationSystem {
   // Update animation (adapted from backup.js animate function)
   public update(): void {
     if (!this.animationRunning) return;
-
     const delta = clock.getDelta();
     const currentTime = Date.now();
 
     if (this.state === "HOME_ANIMATION") {
       // Use a seamless modulo for t
       const elapsed = (currentTime - this.timeOffset) / 1000;
-      let t = elapsed / this.animationDuration;
-      if (t >= 1) {
-        t = 1;
-      }
+      let t = (elapsed / this.animationDuration) % 1;
       // For seamless loop, blend last 5% back to start
       let tPath = t;
       if (t > 0.95) {
@@ -95,11 +91,6 @@ class AnimationSystem {
         tPath = (1 - blend) * t + blend * 0; // blend to 0
       }
       this.animateHomePaths(tPath);
-      // When t reaches 1, trigger torn-to-center
-      if (t >= 1) {
-        this.saveCurrentPositions();
-        this.startTornToCenter();
-      }
     } else if (this.state === "TORN_TO_CENTER") {
       const elapsed = (currentTime - this.tornStartTime) / 1000;
       const t = Math.min(elapsed / this.tornDuration, 1);
@@ -215,6 +206,12 @@ class AnimationSystem {
   public resumeAnimation(): void {
     this.animationRunning = true;
     this.isAnimating = true;
+  }
+
+  public triggerTornToCenter(): void {
+    if (this.state !== "HOME_ANIMATION") return;
+    this.saveCurrentPositions();
+    this.startTornToCenter();
   }
 }
 
