@@ -117,6 +117,13 @@ export function testPOVAnimation(progress: number = 0.5) {
 }
 
 export function updatePOVAnimation(progress: number) {
+  // Debug: Log when POV animation is called
+  console.log(
+    `POV update called: progress=${progress.toFixed(
+      3
+    )}, isPOVActive=${isPOVAnimationActive}`
+  );
+
   isPOVAnimationActive = true;
 
   const currentProgress = progress;
@@ -203,8 +210,13 @@ export function updatePOVAnimation(progress: number) {
         // Smooth fade out at the end
         if (smoothGhostProgress > 0.95) {
           const fadeOpacity = 1 - (smoothGhostProgress - 0.95) / 0.05;
-          // Apply opacity to ghost materials
-          if (ghost instanceof THREE.Group) {
+          // Apply opacity to ghost materials ONLY if POV animation is active
+          if (isPOVAnimationActive && ghost instanceof THREE.Group) {
+            console.log(
+              `POV Fade: ghost=${key}, progress=${smoothGhostProgress.toFixed(
+                3
+              )}, fadeOpacity=${fadeOpacity.toFixed(3)}`
+            );
             ghost.traverse((child) => {
               if ((child as any).material) {
                 const mats = Array.isArray((child as any).material)
@@ -221,8 +233,24 @@ export function updatePOVAnimation(progress: number) {
             });
           }
         } else {
-          // Reset opacity to full
-          if (ghost instanceof THREE.Group) {
+          // Reset opacity to full ONLY if POV animation is active AND we're not in home section
+          // Check if we're in home section by looking for home section in viewport
+          const homeSection = document.querySelector(
+            ".sc--home"
+          ) as HTMLElement;
+          const isInHomeSection =
+            homeSection && homeSection.getBoundingClientRect().bottom > 0;
+
+          if (
+            isPOVAnimationActive &&
+            !isInHomeSection &&
+            ghost instanceof THREE.Group
+          ) {
+            console.log(
+              `POV Reset: ghost=${key}, progress=${smoothGhostProgress.toFixed(
+                3
+              )}, setting opacity=1, isInHomeSection=${isInHomeSection}`
+            );
             ghost.traverse((child) => {
               if ((child as any).material) {
                 const mats = Array.isArray((child as any).material)
@@ -504,10 +532,17 @@ export async function initPOVAnimationSystem() {
     onUpdate: (self) => {
       // Progress von 0 (top top) bis 1 (bottom bottom)
       const progress = self.progress;
-      console.log(
-        `POV ScrollTrigger onUpdate: progress=${progress.toFixed(3)}`
-      );
-      updatePOVAnimation(progress);
+
+      // Only update POV animation if the POV section is actually in view
+      // This prevents interference with home section fade-out
+      if (self.isActive) {
+        console.log(
+          `POV ScrollTrigger onUpdate: progress=${progress.toFixed(
+            3
+          )}, isActive=${self.isActive}`
+        );
+        updatePOVAnimation(progress);
+      }
     },
     onEnter: () => {
       console.log("POV section entered!");
