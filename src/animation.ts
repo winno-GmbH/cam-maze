@@ -1,454 +1,187 @@
 import * as THREE from "three";
-import { camera, initCamera, endQuaternion } from "./camera";
+import { camera, endQuaternion } from "./camera";
 import { scene, renderer, clock } from "./scene";
 import { ghosts, pacman, pacmanMixer } from "./objects";
-import { paths, getPathsForSection } from "./paths";
-import { MAZE_CENTER } from "./config";
+import { getPathsForSection, cameraHomePath } from "./paths";
+import { MAZE_CENTER, DOM_ELEMENTS } from "./config";
 
 // Animation state
-export type AnimationState = "IDLE" | "HOME_ANIMATION" | "SCROLL_TO_CENTER";
+export type AnimationState = "HOME" | "SCROLL_ANIMATION";
 
-const GHOST_SPEED_MULTIPLIERS: Record<string, number> = {
-  ghost1: 1.25,
-  ghost2: 1.14,
-  ghost3: 1.05,
-  ghost4: 0.97,
-  ghost5: 0.89,
-  pacman: 0.8,
-};
-const GHOSTS_END_AT = 0.8;
-const GHOST_OPACITY_FADE_START = 0.9;
-const GHOST_STAGGER_DELAY = 0.15;
-const PACMAN_DELAY = 0.3;
-const HOME_ANIMATION_SPEED = 0.03; // matches animation-system.ts
-const ORIGINAL_FOV = 50;
+const HOME_ANIMATION_SPEED = 0.03; // loop speed
+const CAMERA_FOV = 50;
 
-// Camera home path setup (matches animation-system.ts)
-const isMobile = window.innerWidth < 768;
-const cameraStartPosition = isMobile
-  ? new THREE.Vector3(0.5, 2.5, 2.5)
-  : new THREE.Vector3(-2, 2.5, 2);
-const cameraSecondPosition = isMobile
-  ? new THREE.Vector3(0.5, 2.5, 2)
-  : new THREE.Vector3(-1.5, 3, 2);
-const cameraHomePath = new THREE.CubicBezierCurve3(
-  cameraStartPosition,
-  cameraSecondPosition,
-  new THREE.Vector3(0.55675, 3, 0.45175),
-  new THREE.Vector3(0.55675, 0.5, 0.45175)
-);
+let animationState: AnimationState = "HOME";
+let homeProgress = 0;
+let animationPaused = false;
+let bezierCurves: Record<string, THREE.QuadraticBezierCurve3> = {};
+let capturedPositions: Record<string, THREE.Vector3> = {};
+let capturedRotations: Record<string, THREE.Euler> = {};
+let scrollProgress = 0;
+let cameraScrollCurve: THREE.CubicBezierCurve3 | null = null;
+let cameraScrollStartQuat: THREE.Quaternion | null = null;
 
-let initialCameraPosition = camera.position.clone();
-let initialCameraQuaternion = camera.quaternion.clone();
+const homePathKeys = [
+  "pacman",
+  "ghost1",
+  "ghost2",
+  "ghost3",
+  "ghost4",
+  "ghost5",
+] as const;
+type HomePathKey = (typeof homePathKeys)[number];
+const homePaths = getPathsForSection("home") as Record<
+  HomePathKey,
+  THREE.CurvePath<THREE.Vector3>
+>;
 
-// Camera scroll-to-center path
-let scrollCameraCurve: THREE.CubicBezierCurve3 | null = null;
-let scrollCameraStartQuaternion: THREE.Quaternion | null = null;
-
-class AnimationSystem {
-  private state: AnimationState = "IDLE";
-  private animationTime: number = 0;
-  public animationDuration: number = 33; // 1/0.03 ≈ 33s for a full loop
-  private animationRunning: boolean = true;
-  private timeOffset: number = 0;
-  private bezierCurves: Record<string, THREE.QuadraticBezierCurve3> = {};
-  private capturedPositions: Record<string, THREE.Vector3> = {};
-  private capturedRotations: Record<string, THREE.Euler> = {};
-  private scrollProgress = 0;
-  private savedHomeProgress = 0;
-
-  // CRITICAL: Store original home positions (like animation-system.ts)
-  private originalHomePositions: Record<string, THREE.Vector3> = {};
-  private originalHomeRotations: Record<string, THREE.Euler> = {};
-  private originalHomeScales: Record<string, THREE.Vector3> = {};
-  private homePositionsCaptured = false;
-
-  constructor() {
-    console.log("AnimationSystem: Initializing...");
-    console.log("AnimationSystem: MAZE_CENTER:", MAZE_CENTER);
-    this.captureOriginalHomePositions();
-  }
-
-  // Capture ORIGINAL home positions (called only once at start)
-  private captureOriginalHomePositions(): void {
-    if (this.homePositionsCaptured) return;
-
-    Object.entries(ghosts).forEach(([key, ghost]) => {
-      this.originalHomePositions[key] = ghost.position.clone();
-      this.originalHomeRotations[key] = ghost.rotation.clone();
-      this.originalHomeScales[key] = ghost.scale.clone();
-    });
-    this.homePositionsCaptured = true;
-    console.log("AnimationSystem: Original home positions captured");
-  }
-
-  // Start the home animation
-  public startHomeAnimation(): void {
-    this.state = "HOME_ANIMATION";
-    this.animationTime = 0;
-    this.animationRunning = true;
-    this.timeOffset = Date.now();
-    // Store initial camera state for slerp
-    initialCameraPosition = camera.position.clone();
-    initialCameraQuaternion = camera.quaternion.clone();
-  }
-
-  public pauseHomeAnimation(): void {
-    // Save current progress so we can resume from here
-    const currentTime = Date.now();
-    const elapsed = (currentTime - this.timeOffset) / 1000;
-    this.savedHomeProgress = (elapsed / this.animationDuration) % 1;
-    this.animationRunning = false;
-    console.log(
-      "AnimationSystem: Home animation paused at progress:",
-      this.savedHomeProgress
-    );
-  }
-
-  public resumeHomeAnimation(): void {
-    this.state = "HOME_ANIMATION";
-    this.animationRunning = true;
-    this.timeOffset =
-      Date.now() - this.savedHomeProgress * this.animationDuration * 1000;
-    console.log(
-      "AnimationSystem: Home animation resumed from progress:",
-      this.savedHomeProgress
-    );
-  }
-
-  public captureGhostPositions(): void {
-    Object.entries(ghosts).forEach(([key, ghost]) => {
-      this.capturedPositions[key] = ghost.position.clone();
-      this.capturedRotations[key] = ghost.rotation.clone();
-    });
-    console.log(
-      "AnimationSystem: Ghost positions captured for scroll animation"
-    );
-  }
-
-  public createBezierCurves(): void {
-    this.bezierCurves = {};
-    Object.entries(this.capturedPositions).forEach(([key, startPos]) => {
-      const endPos = MAZE_CENTER.clone();
-      const controlPoint = new THREE.Vector3(
-        (startPos.x + endPos.x) / 2,
-        2,
-        (startPos.z + endPos.z) / 2
-      );
-      this.bezierCurves[key] = new THREE.QuadraticBezierCurve3(
-        startPos,
-        controlPoint,
-        endPos
-      );
-    });
-    console.log("AnimationSystem: Bezier curves created");
-  }
-
-  public startScrollToCenter(): void {
-    if (this.state === "SCROLL_TO_CENTER") return;
-    this.pauseHomeAnimation();
-    this.captureGhostPositions();
-    this.createBezierCurves();
-    // Capture camera position/quaternion and create scroll-to-center path
-    scrollCameraCurve = new THREE.CubicBezierCurve3(
-      camera.position.clone(),
-      new THREE.Vector3(
-        (camera.position.x + MAZE_CENTER.x) / 2,
-        2,
-        (camera.position.z + MAZE_CENTER.z) / 2
-      ),
-      new THREE.Vector3(0.55675, 3, 0.45175),
-      MAZE_CENTER.clone()
-    );
-    scrollCameraStartQuaternion = camera.quaternion.clone();
-    this.state = "SCROLL_TO_CENTER";
-    console.log("AnimationSystem: Started scroll-to-center animation");
-  }
-
-  public setScrollProgress(progress: number): void {
-    this.scrollProgress = Math.max(0, Math.min(1, progress));
-  }
-
-  // Update animation (adapted from backup.js animate function)
-  public update(): void {
-    if (this.state === "HOME_ANIMATION" && this.animationRunning) {
-      const currentTime = Date.now();
-      const elapsed = (currentTime - this.timeOffset) / 1000;
-      let t = (this.savedHomeProgress + elapsed * HOME_ANIMATION_SPEED) % 1;
-      let tPath = t;
-      if (t > 0.95) {
-        const blend = (t - 0.95) / 0.05;
-        tPath = (1 - blend) * t + blend * 0;
-      }
-      this.animateHomePaths(tPath);
-      // Camera should NOT animate here
-      // this.animateCameraHome(tPath);
-    } else if (this.state === "SCROLL_TO_CENTER") {
-      this.animateScrollToCenter(this.scrollProgress);
-      this.animateCameraScrollToCenter(this.scrollProgress);
-    }
-  }
-
-  private animateHomePaths(t: number): void {
-    const pathMapping = getPathsForSection("home");
-    if (!pacman.visible) {
-      pacman.visible = true;
-    }
-
-    // Animate all objects along their paths
-    Object.entries(ghosts).forEach(([key, ghost]) => {
-      const path = pathMapping[key as keyof typeof pathMapping];
+function animateHomeLoop(dt: number) {
+  if (animationPaused) return;
+  homeProgress = (homeProgress + dt * HOME_ANIMATION_SPEED) % 1;
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    if ((homePathKeys as readonly string[]).includes(key)) {
+      const path = homePaths[key as HomePathKey];
       if (path) {
-        const position = path.getPointAt(t);
-        ghost.position.copy(position);
+        const t = homeProgress;
+        const pos = path.getPointAt(t);
+        ghost.position.copy(pos);
         const tangent = path.getTangentAt(t).normalize();
-        ghost.lookAt(position.clone().add(tangent));
-
-        // Special handling for pacman rotation (from backup.js)
+        ghost.lookAt(pos.clone().add(tangent));
+        // Pacman rotation smoothing
         if (key === "pacman") {
-          const zRotation = Math.atan2(tangent.x, tangent.z);
-
-          if ((ghost as any).previousZRotation === undefined) {
-            (ghost as any).previousZRotation = zRotation;
-          }
-
-          let rotationDiff = zRotation - (ghost as any).previousZRotation;
-
-          if (rotationDiff > Math.PI) {
-            rotationDiff -= 2 * Math.PI;
-          } else if (rotationDiff < -Math.PI) {
-            rotationDiff += 2 * Math.PI;
-          }
-
-          const smoothFactor = 0.1;
-          const smoothedRotation =
-            (ghost as any).previousZRotation + rotationDiff * smoothFactor;
-
-          (ghost as any).previousZRotation = smoothedRotation;
-          ghost.rotation.set(
-            Math.PI / 2,
-            Math.PI,
-            smoothedRotation + Math.PI / 2
-          );
+          const zRot = Math.atan2(tangent.x, tangent.z);
+          ghost.rotation.set(Math.PI / 2, Math.PI, zRot + Math.PI / 2);
         }
-
-        // Ensure full opacity during home animation
-        this.setGhostOpacity(ghost, 1);
+        setGhostOpacity(ghost, 1);
       }
-    });
-  }
-
-  private animateCameraHome(t: number): void {
-    // Animate camera position along the cubic bezier path
-    const position = cameraHomePath.getPointAt(t);
-    camera.position.copy(position);
-    // Animate camera FOV
-    camera.fov = ORIGINAL_FOV;
-    camera.updateProjectionMatrix();
-    // Animate camera rotation (slerp from initial to endQuaternion)
-    if (t === 0) {
-      camera.quaternion.copy(initialCameraQuaternion);
-    } else {
-      const currentQuaternion = new THREE.Quaternion();
-      currentQuaternion.slerpQuaternions(
-        initialCameraQuaternion,
-        endQuaternion,
-        t
-      );
-      camera.quaternion.copy(currentQuaternion);
     }
-  }
+  });
+}
 
-  private animateScrollToCenter(scrollProgress: number): void {
-    Object.entries(ghosts).forEach(([key, ghost]) => {
-      const speed = GHOST_SPEED_MULTIPLIERS[key] || 1.0;
-      let ghostProgress = Math.min((scrollProgress * speed) / GHOSTS_END_AT, 1);
-      // Stagger for ghosts and pacman
-      if (key !== "pacman") {
-        ghostProgress = Math.max(
-          0,
-          Math.min(
-            1,
-            ((scrollProgress -
-              GHOST_STAGGER_DELAY * (parseInt(key.replace("ghost", "")) - 1)) *
-              speed) /
-              GHOSTS_END_AT
-          )
-        );
-      } else {
-        ghostProgress = Math.max(
-          0,
-          Math.min(1, ((scrollProgress - PACMAN_DELAY) * speed) / GHOSTS_END_AT)
-        );
+function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
+  if (
+    ghost instanceof THREE.Mesh &&
+    ghost.material &&
+    "opacity" in ghost.material
+  ) {
+    (ghost.material as any).opacity = opacity;
+  } else if (ghost instanceof THREE.Group) {
+    ghost.traverse((child) => {
+      if (
+        child instanceof THREE.Mesh &&
+        child.material &&
+        "opacity" in child.material
+      ) {
+        (child.material as any).opacity = opacity;
       }
-      const curve = this.bezierCurves[key];
-      if (!curve) return;
-      const position = curve.getPoint(ghostProgress);
-      ghost.position.copy(position);
-      // Rotation interpolation
-      const originalRotation = this.capturedRotations[key];
-      const targetRotation = new THREE.Euler(Math.PI / -2, 0, 0);
-      const currentRotation = new THREE.Euler(
-        originalRotation.x +
-          (targetRotation.x - originalRotation.x) * ghostProgress,
-        originalRotation.y +
-          (targetRotation.y - originalRotation.y) * ghostProgress,
-        originalRotation.z +
-          (targetRotation.z - originalRotation.z) * ghostProgress
-      );
-      ghost.rotation.copy(currentRotation);
-      // Opacity fade out in last 10%
-      let opacity = 1;
-      if (ghostProgress >= GHOST_OPACITY_FADE_START) {
-        const fadeProgress =
-          (ghostProgress - GHOST_OPACITY_FADE_START) /
-          (1 - GHOST_OPACITY_FADE_START);
-        opacity = 1 - fadeProgress;
-        opacity = Math.max(0, opacity);
-      }
-      this.setGhostOpacity(ghost, opacity);
     });
   }
+}
 
-  private animateCameraScrollToCenter(scrollProgress: number): void {
-    if (!scrollCameraCurve || !scrollCameraStartQuaternion) return;
-    // Camera position
-    const position = scrollCameraCurve.getPoint(Math.min(scrollProgress, 1));
-    camera.position.copy(position);
-    // Camera FOV
-    camera.fov = ORIGINAL_FOV;
-    camera.updateProjectionMatrix();
-    // Camera rotation: slerp from start to endQuaternion
-    const q = new THREE.Quaternion();
-    q.slerpQuaternions(
-      scrollCameraStartQuaternion,
-      endQuaternion,
-      Math.min(scrollProgress, 1)
+function captureGhostPositions() {
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    capturedPositions[key] = ghost.position.clone();
+    capturedRotations[key] = ghost.rotation.clone();
+  });
+}
+
+function createBezierCurves() {
+  bezierCurves = {};
+  Object.entries(capturedPositions).forEach(([key, startPos]) => {
+    const endPos = MAZE_CENTER.clone();
+    const control = new THREE.Vector3(
+      (startPos.x + endPos.x) / 2,
+      2,
+      (startPos.z + endPos.z) / 2
     );
-    camera.quaternion.copy(q);
+    bezierCurves[key] = new THREE.QuadraticBezierCurve3(
+      startPos,
+      control,
+      endPos
+    );
+  });
+}
+
+function animateScrollToCenter(progress: number) {
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    const curve = bezierCurves[key];
+    if (!curve) return;
+    const pos = curve.getPoint(progress);
+    ghost.position.copy(pos);
+    // Interpolate rotation
+    const origRot = capturedRotations[key];
+    const targetRot = new THREE.Euler(-Math.PI / 2, 0, 0);
+    ghost.rotation.set(
+      origRot.x + (targetRot.x - origRot.x) * progress,
+      origRot.y + (targetRot.y - origRot.y) * progress,
+      origRot.z + (targetRot.z - origRot.z) * progress
+    );
+    // Fade out in last 10%
+    let opacity = 1;
+    if (progress > 0.9) opacity = 1 - (progress - 0.9) / 0.1;
+    setGhostOpacity(ghost, opacity);
+  });
+}
+
+function animateCameraScroll(progress: number) {
+  if (!cameraScrollCurve || !cameraScrollStartQuat) return;
+  const pos = cameraScrollCurve.getPoint(progress);
+  camera.position.copy(pos);
+  camera.fov = CAMERA_FOV;
+  camera.updateProjectionMatrix();
+  // Slerp rotation
+  const q = new THREE.Quaternion();
+  q.slerpQuaternions(cameraScrollStartQuat, endQuaternion, progress);
+  camera.quaternion.copy(q);
+}
+
+function render() {
+  renderer.render(scene, camera);
+}
+
+function animationLoop() {
+  requestAnimationFrame(animationLoop);
+  const dt = clock.getDelta();
+  if (pacmanMixer) pacmanMixer.update(dt);
+  if (animationState === "HOME") {
+    animateHomeLoop(dt);
+  } else if (animationState === "SCROLL_ANIMATION") {
+    animateScrollToCenter(scrollProgress);
+    animateCameraScroll(scrollProgress);
   }
+  render();
+}
 
-  // Helper method to set ghost opacity (handles both Mesh and Group)
-  private setGhostOpacity(ghost: THREE.Object3D, opacity: number): void {
-    if (
-      ghost instanceof THREE.Mesh &&
-      ghost.material &&
-      "opacity" in ghost.material
-    ) {
-      (ghost.material as any).opacity = opacity;
-    } else if (ghost instanceof THREE.Group) {
-      ghost.traverse((child) => {
-        if (
-          child instanceof THREE.Mesh &&
-          child.material &&
-          "opacity" in child.material
-        ) {
-          (child.material as any).opacity = opacity;
-        }
-      });
-    }
-  }
+export function setScrollProgress(progress: number) {
+  scrollProgress = Math.max(0, Math.min(1, progress));
+}
 
-  // Reset to home state - now properly handles resume vs full reset
-  public resetToHome(fullReset: boolean = false): void {
-    this.state = "HOME_ANIMATION";
-    this.animationRunning = true;
-    this.timeOffset = Date.now();
+export function initAnimationSystem() {
+  // Start home animation loop
+  animationState = "HOME";
+  animationPaused = false;
+  homeProgress = 0;
+  animationLoop();
 
-    if (fullReset) {
-      // Full reset: go back to initial state
-      this.savedHomeProgress = 0;
-      camera.position.copy(initialCameraPosition);
-      camera.quaternion.copy(initialCameraQuaternion);
-
-      // Reset all ghosts to their ORIGINAL home positions
-      Object.entries(this.originalHomePositions).forEach(
-        ([key, originalPosition]) => {
-          const ghost = ghosts[key];
-          const originalRotation = this.originalHomeRotations[key];
-          const originalScale = this.originalHomeScales[key];
-
-          if (ghost && originalPosition && originalRotation && originalScale) {
-            ghost.position.copy(originalPosition);
-            ghost.rotation.copy(originalRotation);
-            ghost.scale.copy(originalScale);
-            ghost.visible = true;
-            this.setGhostOpacity(ghost, 1);
-          }
-        }
+  // Listen for scroll to pause and trigger scroll animation
+  window.addEventListener("scroll", () => {
+    if (animationState === "HOME" && !animationPaused) {
+      animationPaused = true;
+      captureGhostPositions();
+      createBezierCurves();
+      // Camera bezier
+      cameraScrollCurve = new THREE.CubicBezierCurve3(
+        camera.position.clone(),
+        new THREE.Vector3(
+          (camera.position.x + MAZE_CENTER.x) / 2,
+          2,
+          (camera.position.z + MAZE_CENTER.z) / 2
+        ),
+        new THREE.Vector3(0.55675, 3, 0.45175),
+        MAZE_CENTER.clone()
       );
-
-      console.log("AnimationSystem: Full reset to initial state");
-    } else {
-      // Resume: continue from saved progress (positions will be set by home animation)
-      console.log(
-        "AnimationSystem: Resuming from saved progress:",
-        this.savedHomeProgress
-      );
+      cameraScrollStartQuat = camera.quaternion.clone();
+      animationState = "SCROLL_ANIMATION";
     }
-
-    // Clear scroll camera path/quaternion so camera only animates on scroll when in SCROLL_TO_CENTER
-    scrollCameraCurve = null;
-    scrollCameraStartQuaternion = null;
-
-    camera.fov = ORIGINAL_FOV;
-    camera.updateProjectionMatrix();
-  }
-
-  // Public getters
-  public getState(): AnimationState {
-    return this.state;
-  }
-
-  public getHomeProgress(): number {
-    return this.savedHomeProgress;
-  }
-
-  // Render function
-  public render(): void {
-    renderer.render(scene, camera);
-  }
-}
-
-// Create and export the animation system
-export const animationSystem = new AnimationSystem();
-
-// Animation loop (adapted from backup.js)
-function animate(): void {
-  requestAnimationFrame(animate);
-
-  // Update pacman mixer
-  if (pacmanMixer) {
-    const delta = clock.getDelta();
-    pacmanMixer.update(delta);
-  }
-
-  // Update animation system
-  animationSystem.update();
-
-  // Render the scene
-  animationSystem.render();
-}
-
-// Start the animation loop
-export function startAnimationLoop(): void {
-  console.log("AnimationSystem: Starting animation loop...");
-  animate();
-}
-
-// Initialize animation system
-export function initAnimationSystem(): void {
-  console.log("AnimationSystem: Initializing animation system...");
-
-  // Initialize camera
-  initCamera();
-
-  // Start animation loop
-  startAnimationLoop();
-
-  // Auto-start home animation after a short delay
-  setTimeout(() => {
-    console.log("AnimationSystem: Auto-starting home animation...");
-    animationSystem.startHomeAnimation();
-  }, 1000);
+  });
 }

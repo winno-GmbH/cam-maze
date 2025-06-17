@@ -1,7 +1,3 @@
-// TypeScript declarations for global GSAP/ScrollTrigger (CDN approach)
-declare const gsap: any;
-declare const ScrollTrigger: any;
-
 import { initRenderer, setupLighting } from "./scene";
 import { initCamera, setupCameraResize } from "./camera";
 import { loadModel } from "./objects";
