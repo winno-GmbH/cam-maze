@@ -88,6 +88,29 @@ export function isPOVActive(): boolean {
   return isPOVAnimationActive;
 }
 
+// Find closest progress on camera POV path
+function findClosestProgressOnPOVPath(
+  targetPoint: THREE.Vector3,
+  samples: number = 2000
+): number {
+  if (!povPaths.pacman) return 0;
+
+  let minDist = Infinity;
+  let minT = 0;
+
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    const p = povPaths.pacman.getPointAt(t);
+    const d = p.distanceTo(targetPoint);
+    if (d < minDist) {
+      minDist = d;
+      minT = t;
+    }
+  }
+
+  return minT;
+}
+
 // Test function to manually trigger POV animation
 export function testPOVAnimation(progress: number = 0.5) {
   console.log("=== TESTING POV ANIMATION ===");
@@ -176,116 +199,180 @@ export function updatePOVAnimation(progress: number) {
     camera.updateMatrixWorld();
   }
 
-  // 2. Move all ghosts along their respective POV paths and ensure visibility/material
+  // 2. Move all ghosts along their respective POV paths
   ghostKeys.forEach((key) => {
     const ghost = ghosts[key];
     const path = povPaths[key];
     if (ghost && path) {
-      // Adjust progress for shorter ghost paths - make them move slower
-      // Ghost paths are shorter than camera path, so we need to scale the progress
-      const ghostProgress = Math.min(progress * 0.6, 1); // Ghosts move slower and stop earlier
-      const pos = path.getPointAt(ghostProgress);
+      // Ghosts move along their POV paths at normal speed
+      const pos = path.getPointAt(progress);
       ghost.position.copy(pos);
 
       // Look ahead for orientation
-      const lookAheadProgress = Math.min(ghostProgress + 0.03, 1);
+      const lookAheadProgress = Math.min(progress + 0.03, 1);
       const lookAheadPos = path.getPointAt(lookAheadProgress);
       ghost.lookAt(lookAheadPos);
 
-      // Ensure visible - but don't change materials
+      // Ensure visible and set opacity
       ghost.visible = true;
 
-      // Debug ghost movement (less verbose)
-      if (progress % 0.2 < 0.01) {
-        // Log every 20% progress instead of 10%
-        console.log(
-          `${key} at progress ${progress.toFixed(
-            2
-          )}: ghostProgress=${ghostProgress.toFixed(
-            2
-          )}, position=${pos.x.toFixed(3)}, ${pos.y.toFixed(
-            3
-          )}, ${pos.z.toFixed(3)}`
-        );
+      // Set ghost opacity based on progress - fade in over first 10%
+      let ghostOpacity = 1;
+      if (progress < 0.1) {
+        ghostOpacity = progress / 0.1; // Fade in from 0 to 1 over first 10%
       }
+
+      // Apply opacity to ghost materials
+      function setGhostOpacity(obj: THREE.Object3D, opacity: number) {
+        if ((obj as any).material) {
+          const mats = Array.isArray((obj as any).material)
+            ? (obj as any).material
+            : [(obj as any).material];
+          mats.forEach((mat: any) => {
+            if (mat) {
+              mat.opacity = opacity;
+              mat.transparent = opacity < 1;
+              mat.depthWrite = opacity === 1;
+              mat.needsUpdate = true;
+            }
+          });
+        }
+      }
+      setGhostOpacity(ghost, ghostOpacity);
+      if (ghost instanceof THREE.Group)
+        ghost.traverse((child) => setGhostOpacity(child, ghostOpacity));
     }
   });
 
-  // 3. Card (DOM) trigger logic: fade in/out .cmp--pov.cmp cards based on camera progress
-  Object.entries(TriggerPositions).forEach(([key, trigger], idx) => {
-    if (!trigger.parent) {
-      console.warn(`Trigger ${key} has no parent element`);
-      return;
+  // 3. Update POV text animations
+  updatePOVTexts(progress);
+}
+
+// Update POV Texts with proper animation logic
+function updatePOVTexts(progress: number) {
+  if (!povPaths.pacman) return;
+
+  const cameraPosition = povPaths.pacman.getPointAt(progress);
+
+  Object.entries(TriggerPositions).forEach(([key, trigger]) => {
+    const triggerState = povTriggerStates[key];
+    const currentCameraProgress = findClosestProgressOnPOVPath(cameraPosition);
+
+    // Calculate trigger positions on camera path (only once)
+    if (triggerState.triggerCameraProgress === undefined) {
+      triggerState.triggerCameraProgress = findClosestProgressOnPOVPath(
+        trigger.triggerPos
+      );
+      triggerState.ghostTextCameraProgress = findClosestProgressOnPOVPath(
+        trigger.ghostTextPos
+      );
+      triggerState.camTextCameraProgress = findClosestProgressOnPOVPath(
+        trigger.camTextPos
+      );
+      triggerState.endCameraProgress = findClosestProgressOnPOVPath(
+        trigger.endPosition
+      );
     }
 
-    // Find progress along the camera path for the trigger position
-    const path = povPaths.pacman;
-    if (!path) {
-      console.warn("Camera POV path not found for trigger logic");
-      return;
-    }
+    // Calculate text opacities
+    let targetGhostOpacity = 0;
+    let targetCamOpacity = 0;
 
-    // Find closest progress for triggerPos and endPosition
-    function findClosestProgress(target: THREE.Vector3, samples = 1000) {
-      let minDist = Infinity;
-      let minT = 0;
-      for (let i = 0; i <= samples; i++) {
-        const t = i / samples;
-        const p = path.getPointAt(t);
-        const d = p.distanceTo(target);
-        if (d < minDist) {
-          minDist = d;
-          minT = t;
+    if (currentCameraProgress >= triggerState.triggerCameraProgress!) {
+      // Use actual section length for calculations
+      const sectionLength =
+        triggerState.endCameraProgress! - triggerState.triggerCameraProgress!;
+
+      // Ghost Text Animation
+      const fadeInStart = triggerState.ghostTextCameraProgress!;
+      const fadeInEnd = fadeInStart + sectionLength * 0.07; // 7% for fade in
+      const stayVisibleUntil =
+        triggerState.endCameraProgress! - sectionLength * 0.15; // Stay visible until 85%
+      const fadeOutEnd = triggerState.endCameraProgress!;
+
+      if (
+        currentCameraProgress >= fadeInStart &&
+        currentCameraProgress < fadeInEnd
+      ) {
+        // Einblendphase
+        const fadeProgress =
+          (currentCameraProgress - fadeInStart) / (fadeInEnd - fadeInStart);
+        targetGhostOpacity = fadeProgress;
+      } else if (
+        currentCameraProgress >= fadeInEnd &&
+        currentCameraProgress < stayVisibleUntil
+      ) {
+        // Voll sichtbare Phase
+        targetGhostOpacity = 1.0;
+      } else if (
+        currentCameraProgress >= stayVisibleUntil &&
+        currentCameraProgress <= fadeOutEnd
+      ) {
+        // Ausblendphase
+        const fadeProgress =
+          (currentCameraProgress - stayVisibleUntil) /
+          (fadeOutEnd - stayVisibleUntil);
+        targetGhostOpacity = 1.0 - fadeProgress;
+      }
+
+      // Cam Text Animation
+      if (currentCameraProgress >= triggerState.camTextCameraProgress!) {
+        const camFadeInStart = triggerState.camTextCameraProgress!;
+        const camFadeInEnd = camFadeInStart + sectionLength * 0.07;
+        const camStayVisibleUntil = stayVisibleUntil; // Same as ghost
+
+        if (
+          currentCameraProgress >= camFadeInStart &&
+          currentCameraProgress < camFadeInEnd
+        ) {
+          // Einblendphase
+          const fadeProgress =
+            (currentCameraProgress - camFadeInStart) /
+            (camFadeInEnd - camFadeInStart);
+          targetCamOpacity = fadeProgress;
+        } else if (
+          currentCameraProgress >= camFadeInEnd &&
+          currentCameraProgress < camStayVisibleUntil
+        ) {
+          // Voll sichtbare Phase
+          targetCamOpacity = 1.0;
+        } else if (
+          currentCameraProgress >= camStayVisibleUntil &&
+          currentCameraProgress <= fadeOutEnd
+        ) {
+          // Ausblendphase
+          const fadeProgress =
+            (currentCameraProgress - camStayVisibleUntil) /
+            (fadeOutEnd - camStayVisibleUntil);
+          targetCamOpacity = 1.0 * (1.0 - fadeProgress);
         }
       }
-      return minT;
     }
 
-    const triggerT = findClosestProgress(trigger.triggerPos);
-    const endT = findClosestProgress(trigger.endPosition);
+    // Smooth interpolation
+    const fadeInSpeed = 0.2; // Schnelleres Einblenden
+    const fadeOutSpeed = 0.1; // Langsameres Ausblenden
 
-    console.log(
-      `Trigger ${key}: triggerT=${triggerT.toFixed(3)}, endT=${endT.toFixed(
-        3
-      )}, current=${progress.toFixed(3)}`
-    );
-
-    // Fade in at triggerT, fade out at endT
-    let opacity = 0;
-    if (progress >= triggerT && progress <= endT) {
-      // Fade in over 10% of the section, fade out over last 10%
-      const fadeInT = triggerT + 0.1 * (endT - triggerT);
-      const fadeOutT = endT - 0.1 * (endT - triggerT);
-
-      if (progress < fadeInT) {
-        opacity = (progress - triggerT) / (fadeInT - triggerT);
-      } else if (progress > fadeOutT) {
-        opacity = 1 - (progress - fadeOutT) / (endT - fadeOutT);
-      } else {
-        opacity = 1;
-      }
+    // Update Ghost-Text Opazität
+    if (targetGhostOpacity > triggerState.ghostTextOpacity) {
+      triggerState.ghostTextOpacity +=
+        (targetGhostOpacity - triggerState.ghostTextOpacity) * fadeInSpeed;
+    } else {
+      triggerState.ghostTextOpacity +=
+        (targetGhostOpacity - triggerState.ghostTextOpacity) * fadeOutSpeed;
     }
 
-    // Apply to DOM
-    const el = trigger.parent as HTMLElement;
-    if (el) {
-      el.style.opacity = String(opacity);
-      el.style.visibility = opacity > 0.01 ? "visible" : "hidden";
-      el.style.pointerEvents = opacity > 0.01 ? "auto" : "none";
-
-      // Debug: log when elements become visible (less verbose)
-      if (opacity > 0.01 && !trigger.active) {
-        console.log(
-          `Trigger ${key} became visible at progress ${progress.toFixed(3)}`
-        );
-        trigger.active = true;
-      } else if (opacity <= 0.01 && trigger.active) {
-        console.log(
-          `Trigger ${key} became hidden at progress ${progress.toFixed(3)}`
-        );
-        trigger.active = false;
-      }
+    // Update CAM-Text Opazität
+    if (targetCamOpacity > triggerState.camTextOpacity) {
+      triggerState.camTextOpacity +=
+        (targetCamOpacity - triggerState.camTextOpacity) * fadeInSpeed;
+    } else {
+      triggerState.camTextOpacity +=
+        (targetCamOpacity - triggerState.camTextOpacity) * fadeOutSpeed;
     }
+
+    // Update DOM elements
+    updatePOVTextElements(trigger, triggerState);
   });
 }
 
@@ -418,4 +505,87 @@ export async function initPOVAnimationSystem() {
 
   console.log("POV Animation System initialized successfully!");
   console.log("ScrollTrigger created:", povScrollTrigger);
+}
+
+// Update POV Text DOM Elements - TWO-STAGE ANIMATION
+function updatePOVTextElements(trigger: any, triggerState: POVTriggerState) {
+  if (!trigger.parent) return;
+
+  // Find ALL elements with .pov and .cam classes
+  const povElements = trigger.parent.querySelectorAll(".pov");
+  const camElements = trigger.parent.querySelectorAll(".cam");
+  const cmpPovElement = trigger.parent; // The .cmp--pov element itself
+
+  // STAGE 1: Fade in .cmp--pov element (first trigger) - SMOOTHER
+  const cmpPovOpacity = Math.max(
+    0,
+    Math.min(1, Math.round(triggerState.ghostTextOpacity * 1000) / 1000)
+  );
+
+  if (cmpPovOpacity > 0.01) {
+    // Fade in the .cmp--pov element with smooth transition
+    cmpPovElement.style.opacity = cmpPovOpacity.toString();
+    cmpPovElement.style.visibility = "visible";
+    cmpPovElement.style.pointerEvents = "auto";
+    cmpPovElement.style.transition = "opacity 0.3s ease-in-out";
+  } else {
+    // Hide the .cmp--pov element
+    cmpPovElement.style.opacity = "0";
+    cmpPovElement.style.visibility = "hidden";
+    cmpPovElement.style.pointerEvents = "none";
+    cmpPovElement.style.transition = "opacity 0.3s ease-in-out";
+  }
+
+  // STAGE 2: Animate .pov and .cam elements properly
+  const camOpacity = Math.max(
+    0,
+    Math.min(1, Math.round(triggerState.camTextOpacity * 1000) / 1000)
+  );
+
+  // Animate .pov elements (fade out from opacity 1 to 0)
+  povElements.forEach((povElement: Element) => {
+    const element = povElement as HTMLElement;
+    if (camOpacity > 0.01) {
+      // Fade out animation: opacity 1 to 0
+      const fadeOutOpacity = 1 - camOpacity; // Invert the opacity for fade out
+      element.style.opacity = fadeOutOpacity.toString();
+      element.style.visibility = "visible";
+      element.style.transition = "opacity 0.4s ease-in-out";
+
+      // Ensure full fade out when cam text is fully visible
+      if (camOpacity >= 0.99) {
+        element.style.opacity = "0";
+        element.style.visibility = "hidden";
+      }
+    } else {
+      // Keep full opacity when not transitioning
+      element.style.opacity = "1";
+      element.style.visibility = "visible";
+      element.style.transition = "opacity 0.4s ease-in-out";
+    }
+  });
+
+  // Animate .cam elements (fade in from opacity 0 to 1)
+  camElements.forEach((camElement: Element) => {
+    const element = camElement as HTMLElement;
+    if (camOpacity > 0.01) {
+      // Fade in animation: opacity 0 to 1
+      element.style.display = "block";
+      element.style.opacity = camOpacity.toString();
+      element.style.visibility = "visible";
+      element.style.transition = "opacity 0.4s ease-in-out";
+
+      // Ensure full fade in when cam text is fully visible
+      if (camOpacity >= 0.99) {
+        element.style.opacity = "1";
+        element.style.visibility = "visible";
+      }
+    } else {
+      // Hide when opacity is 0
+      element.style.opacity = "0";
+      element.style.visibility = "hidden";
+      element.style.display = "none";
+      element.style.transition = "opacity 0.4s ease-in-out";
+    }
+  });
 }
