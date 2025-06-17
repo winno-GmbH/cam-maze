@@ -160,41 +160,50 @@ export function updatePOVAnimation(progress: number) {
     const ghost = ghosts[key];
     const path = povPaths[key];
     if (ghost && path) {
-      const pos = path.getPointAt(progress);
+      // Adjust progress for shorter ghost paths - make them move slower
+      // Ghost paths are shorter than camera path, so we need to scale the progress
+      const ghostProgress = Math.min(progress * 0.6, 1); // Ghosts move slower and stop earlier
+      const pos = path.getPointAt(ghostProgress);
       ghost.position.copy(pos);
+
       // Look ahead for orientation
-      const lookAheadProgress = Math.min(progress + 0.03, 1);
+      const lookAheadProgress = Math.min(ghostProgress + 0.03, 1);
       const lookAheadPos = path.getPointAt(lookAheadProgress);
       ghost.lookAt(lookAheadPos);
-      // Ensure visible
+
+      // Ensure visible - but don't change materials
       ghost.visible = true;
-      // Ensure material is visible
-      function setMaterialVisible(obj: THREE.Object3D) {
-        if ((obj as any).material) {
-          const mats = Array.isArray((obj as any).material)
-            ? (obj as any).material
-            : [(obj as any).material];
-          mats.forEach((mat: any) => {
-            if (mat) {
-              mat.opacity = 1;
-              mat.transparent = false;
-              mat.depthWrite = true;
-              mat.needsUpdate = true;
-            }
-          });
-        }
+
+      // Debug ghost movement (less verbose)
+      if (progress % 0.2 < 0.01) {
+        // Log every 20% progress instead of 10%
+        console.log(
+          `${key} at progress ${progress.toFixed(
+            2
+          )}: ghostProgress=${ghostProgress.toFixed(
+            2
+          )}, position=${pos.x.toFixed(3)}, ${pos.y.toFixed(
+            3
+          )}, ${pos.z.toFixed(3)}`
+        );
       }
-      setMaterialVisible(ghost);
-      if (ghost instanceof THREE.Group) ghost.traverse(setMaterialVisible);
     }
   });
 
   // 3. Card (DOM) trigger logic: fade in/out .cmp--pov.cmp cards based on camera progress
   Object.entries(TriggerPositions).forEach(([key, trigger], idx) => {
-    if (!trigger.parent) return;
+    if (!trigger.parent) {
+      console.warn(`Trigger ${key} has no parent element`);
+      return;
+    }
+
     // Find progress along the camera path for the trigger position
     const path = povPaths.pacman;
-    if (!path) return;
+    if (!path) {
+      console.warn("Camera POV path not found for trigger logic");
+      return;
+    }
+
     // Find closest progress for triggerPos and endPosition
     function findClosestProgress(target: THREE.Vector3, samples = 1000) {
       let minDist = Infinity;
@@ -210,14 +219,23 @@ export function updatePOVAnimation(progress: number) {
       }
       return minT;
     }
+
     const triggerT = findClosestProgress(trigger.triggerPos);
     const endT = findClosestProgress(trigger.endPosition);
+
+    console.log(
+      `Trigger ${key}: triggerT=${triggerT.toFixed(3)}, endT=${endT.toFixed(
+        3
+      )}, current=${progress.toFixed(3)}`
+    );
+
     // Fade in at triggerT, fade out at endT
     let opacity = 0;
     if (progress >= triggerT && progress <= endT) {
-      // Fade in over 5% of the section, fade out over last 5%
-      const fadeInT = triggerT + 0.05 * (endT - triggerT);
-      const fadeOutT = endT - 0.05 * (endT - triggerT);
+      // Fade in over 10% of the section, fade out over last 10%
+      const fadeInT = triggerT + 0.1 * (endT - triggerT);
+      const fadeOutT = endT - 0.1 * (endT - triggerT);
+
       if (progress < fadeInT) {
         opacity = (progress - triggerT) / (fadeInT - triggerT);
       } else if (progress > fadeOutT) {
@@ -226,11 +244,27 @@ export function updatePOVAnimation(progress: number) {
         opacity = 1;
       }
     }
+
     // Apply to DOM
     const el = trigger.parent as HTMLElement;
-    el.style.opacity = String(opacity);
-    el.style.visibility = opacity > 0.01 ? "visible" : "hidden";
-    el.style.pointerEvents = opacity > 0.01 ? "auto" : "none";
+    if (el) {
+      el.style.opacity = String(opacity);
+      el.style.visibility = opacity > 0.01 ? "visible" : "hidden";
+      el.style.pointerEvents = opacity > 0.01 ? "auto" : "none";
+
+      // Debug: log when elements become visible (less verbose)
+      if (opacity > 0.01 && !trigger.active) {
+        console.log(
+          `Trigger ${key} became visible at progress ${progress.toFixed(3)}`
+        );
+        trigger.active = true;
+      } else if (opacity <= 0.01 && trigger.active) {
+        console.log(
+          `Trigger ${key} became hidden at progress ${progress.toFixed(3)}`
+        );
+        trigger.active = false;
+      }
+    }
   });
 }
 
