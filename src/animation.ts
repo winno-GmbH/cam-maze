@@ -5,6 +5,7 @@ import { ghosts, pacman, pacmanMixer } from "./objects";
 import { getPathsForSection, cameraHomePath } from "./paths";
 import { MAZE_CENTER, DOM_ELEMENTS, SELECTORS } from "./config";
 import { isPOVActive } from "./pov-animation";
+import { setScrollProgress as setPOVScrollProgress } from "./pov-animation";
 
 // Animation state
 export type AnimationState =
@@ -353,6 +354,9 @@ export function setScrollProgress(progress: number) {
 
   scrollProgress = Math.max(0, Math.min(1, progress));
   lastScrollProgress = progress;
+
+  // Update POV module with current scroll progress
+  setPOVScrollProgress(progress);
 }
 
 function animateScrollToCenter(progress: number) {

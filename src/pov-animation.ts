@@ -6,6 +6,12 @@ import { getPathsForSection } from "./paths";
 import { MAZE_CENTER } from "./config";
 import { TriggerPositions } from "./triggers";
 
+// Import scrollProgress from animation module
+let scrollProgress = 0;
+export function setScrollProgress(progress: number) {
+  scrollProgress = progress;
+}
+
 // Flag to track POV animation state
 let isPOVAnimationActive = false;
 
@@ -241,15 +247,19 @@ export function updatePOVAnimation(progress: number) {
           const isInHomeSection =
             homeSection && homeSection.getBoundingClientRect().bottom > 0;
 
+          // Also check if we're in scroll animation (home section fade-out)
+          const isInScrollAnimation = scrollProgress > 0.01;
+
           if (
             isPOVAnimationActive &&
             !isInHomeSection &&
+            !isInScrollAnimation &&
             ghost instanceof THREE.Group
           ) {
             console.log(
               `POV Reset: ghost=${key}, progress=${smoothGhostProgress.toFixed(
                 3
-              )}, setting opacity=1, isInHomeSection=${isInHomeSection}`
+              )}, setting opacity=1, isInHomeSection=${isInHomeSection}, isInScrollAnimation=${isInScrollAnimation}`
             );
             ghost.traverse((child) => {
               if ((child as any).material) {
@@ -265,6 +275,12 @@ export function updatePOVAnimation(progress: number) {
                 });
               }
             });
+          } else if (isInScrollAnimation) {
+            console.log(
+              `POV Reset BLOCKED: ghost=${key}, scrollProgress=${scrollProgress.toFixed(
+                3
+              )}, isInScrollAnimation=${isInScrollAnimation}`
+            );
           }
         }
       } else {
