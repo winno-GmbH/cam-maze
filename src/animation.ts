@@ -104,6 +104,14 @@ function animateHomeLoop(dt: number) {
 function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
   let opacitySet = false;
 
+  // Debug: Log which object we're setting opacity on
+  const timestamp = new Date().toISOString().split("T")[1].split(".")[0];
+  console.log(
+    `[${timestamp}] setGhostOpacity called on: ${ghost.type} "${
+      ghost.name || "unnamed"
+    }", target opacity: ${opacity.toFixed(3)}`
+  );
+
   function applyOpacity(mesh: THREE.Mesh) {
     if (mesh.material) {
       const materials = Array.isArray(mesh.material)
@@ -128,18 +136,16 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
 
             // Debug: Log when opacity is set with more details
             if (opacity < 1 || oldOpacity !== opacity) {
-              const timestamp = new Date()
-                .toISOString()
-                .split("T")[1]
-                .split(".")[0];
-              const caller =
-                new Error().stack?.split("\n")[2]?.trim() || "unknown";
               console.log(
                 `[${timestamp}] Set opacity ${opacity.toFixed(
                   3
                 )} on material: ${
                   material.type || material.constructor.name
-                }, oldOpacity: ${oldOpacity.toFixed(3)}, caller: ${caller}`
+                }, oldOpacity: ${oldOpacity.toFixed(3)}, mesh: "${
+                  mesh.name || "unnamed"
+                }", caller: ${
+                  new Error().stack?.split("\n")[2]?.trim() || "unknown"
+                }`
               );
             }
           } else if (material.isShaderMaterial) {
@@ -161,18 +167,14 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
 
               // Debug: Log when opacity is set with more details
               if (opacity < 1 || oldOpacity !== opacity) {
-                const timestamp = new Date()
-                  .toISOString()
-                  .split("T")[1]
-                  .split(".")[0];
-                const caller =
-                  new Error().stack?.split("\n")[2]?.trim() || "unknown";
                 console.log(
                   `[${timestamp}] Set opacity ${opacity.toFixed(
                     3
                   )} on fallback material, oldOpacity: ${oldOpacity.toFixed(
                     3
-                  )}, caller: ${caller}`
+                  )}, mesh: "${mesh.name || "unnamed"}", caller: ${
+                    new Error().stack?.split("\n")[2]?.trim() || "unknown"
+                  }`
                 );
               }
             }
