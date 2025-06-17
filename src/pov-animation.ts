@@ -44,12 +44,12 @@ const ghostKeys = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
 
 // Store previous camera quaternion for slerp
 let prevCameraQuat: THREE.Quaternion | null = null;
-const CAMERA_SLERP_ALPHA = 0.18; // Slerp factor for smoothness
+const CAMERA_SLERP_ALPHA = 0.12; // Reduced slerp factor for more responsive scrub
 
 // Scrub smoothing for camera movement
 let smoothedProgress = 0;
 let targetProgress = 0;
-const SCRUB_SMOOTHING = 0.08; // Very light smoothing for responsive feel
+const SCRUB_SMOOTHING = 0.05; // Very light smoothing for responsive scrub
 
 // POV Animation State for text transitions
 interface POVTriggerState {
@@ -582,27 +582,12 @@ export async function initPOVAnimationSystem() {
     scrollTriggerModule.ScrollTrigger || scrollTriggerModule.default;
   gsap.registerPlugin(ScrollTrigger);
 
-  // Setup ScrollTrigger for .sc--pov
+  // Setup ScrollTrigger for .sc--pov with proper GSAP timeline and scrub
   const povScrollTrigger = ScrollTrigger.create({
     trigger: ".sc--pov",
     start: "top top",
     end: "bottom bottom",
-    scrub: 1.2, // Increased scrub for better smoothing
-    onUpdate: (self) => {
-      // Progress von 0 (top top) bis 1 (bottom bottom)
-      const progress = self.progress;
-
-      // Only update POV animation if the POV section is actually in view
-      // This prevents interference with home section fade-out
-      if (self.isActive) {
-        console.log(
-          `POV ScrollTrigger onUpdate: progress=${progress.toFixed(
-            3
-          )}, isActive=${self.isActive}`
-        );
-        updatePOVAnimation(progress);
-      }
-    },
+    scrub: 0.8, // Reduced scrub for more responsive feel
     onEnter: () => {
       console.log("POV section entered!");
       isPOVAnimationActive = true;
@@ -620,6 +605,33 @@ export async function initPOVAnimationSystem() {
       stopPOVAnimation();
     },
   });
+
+  // Create a timeline for smooth POV animation with scrub
+  const povTimeline = gsap.timeline({
+    scrollTrigger: povScrollTrigger,
+  });
+
+  // Add POV animation to timeline with proper scrub
+  povTimeline.to(
+    {},
+    {
+      duration: 1,
+      ease: "none", // Linear easing for smooth scrub
+      onUpdate: function () {
+        const progress = this.progress();
+
+        // Only update POV animation if the POV section is actually in view
+        if (povScrollTrigger.isActive) {
+          console.log(
+            `POV Timeline onUpdate: progress=${progress.toFixed(3)}, isActive=${
+              povScrollTrigger.isActive
+            }`
+          );
+          updatePOVAnimation(progress);
+        }
+      },
+    }
+  );
 
   console.log("POV Animation System initialized successfully!");
   console.log("ScrollTrigger created:", povScrollTrigger);
@@ -825,8 +837,8 @@ function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
     return;
   }
 
-  // Much lighter smoothing - more responsive like the working versions
-  const smoothingFactor = 0.3; // Reduced from previous values
+  // Very light smoothing for responsive scrub - almost direct following
+  const smoothingFactor = 0.15; // Very light smoothing for smooth scrub
 
   camera.quaternion.slerpQuaternions(
     prevCameraQuat,
