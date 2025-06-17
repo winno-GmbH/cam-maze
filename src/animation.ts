@@ -6,7 +6,7 @@ import { getPathsForSection, cameraHomePath } from "./paths";
 import { MAZE_CENTER, DOM_ELEMENTS, SELECTORS } from "./config";
 
 // Animation state
-export type AnimationState = "HOME" | "SCROLL_ANIMATION" | "WAITING_FOR_SCRUB";
+export type AnimationState = "HOME" | "SCROLL_ANIMATION";
 
 const HOME_ANIMATION_SPEED = 0.03; // loop speed
 const CAMERA_FOV = 50;
@@ -34,9 +34,7 @@ let capturedRotations: Record<string, THREE.Euler> = {};
 let cameraScrollCurve: THREE.CubicBezierCurve3 | null = null;
 let cameraScrollStartQuat: THREE.Quaternion | null = null;
 let scrollTriggerInitialized = false;
-let homePositionsCaptured = false;
 let pausedHomeProgress = 0;
-let scrubCatchUpThreshold = 0.02; // How close to 0 the scrub needs to be to resume home
 
 const homePathKeys = [
   "pacman",
@@ -94,31 +92,27 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
   }
 }
 
-function captureGhostPositions() {
-  if (homePositionsCaptured) return;
-
+function updateBezierCurves() {
+  // Always recalculate curves based on current positions
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    capturedPositions[key] = ghost.position.clone();
-    capturedRotations[key] = ghost.rotation.clone();
-  });
-
-  // Create bezier curves once
-  bezierCurves = {};
-  Object.entries(capturedPositions).forEach(([key, startPos]) => {
+    const currentPos = ghost.position.clone();
     const endPos = MAZE_CENTER.clone();
     const control = new THREE.Vector3(
-      (startPos.x + endPos.x) / 2,
+      (currentPos.x + endPos.x) / 2,
       2,
-      (startPos.z + endPos.z) / 2
+      (currentPos.z + endPos.z) / 2
     );
     bezierCurves[key] = new THREE.QuadraticBezierCurve3(
-      startPos,
+      currentPos,
       control,
       endPos
     );
+
+    // Store current rotation for interpolation
+    capturedRotations[key] = ghost.rotation.clone();
   });
 
-  // Create camera curve once
+  // Update camera curve based on current camera position
   cameraScrollCurve = new THREE.CubicBezierCurve3(
     camera.position.clone(),
     new THREE.Vector3(
@@ -130,8 +124,6 @@ function captureGhostPositions() {
     MAZE_CENTER.clone()
   );
   cameraScrollStartQuat = camera.quaternion.clone();
-
-  homePositionsCaptured = true;
 }
 
 function animateScrollToCenter(progress: number) {
@@ -195,27 +187,10 @@ function animationLoop() {
   if (animationState === "HOME") {
     animateHomeLoop(dt);
   } else if (animationState === "SCROLL_ANIMATION") {
-    if (!homePositionsCaptured) {
-      captureGhostPositions();
-      pausedHomeProgress = homeProgress;
-    }
+    // Update curves every frame to ensure they're based on current positions
+    updateBezierCurves();
     animateScrollToCenter(scrollProgress);
     animateCameraScroll(scrollProgress);
-  } else if (animationState === "WAITING_FOR_SCRUB") {
-    // Keep objects in their current scroll positions while waiting
-    if (scrollProgress <= scrubCatchUpThreshold) {
-      // Scrub has caught up, resume home animation
-      animationState = "HOME";
-      homeProgress = pausedHomeProgress;
-      console.log(
-        "Scrub caught up, resuming home animation from:",
-        pausedHomeProgress
-      );
-    } else {
-      // Keep showing scroll animation while waiting
-      animateScrollToCenter(scrollProgress);
-      animateCameraScroll(scrollProgress);
-    }
   }
 
   render();
@@ -227,9 +202,10 @@ export function setScrollProgress(progress: number) {
   // Handle state transitions
   if (animationState === "HOME" && progress > 0.01) {
     animationState = "SCROLL_ANIMATION";
+    pausedHomeProgress = homeProgress;
   } else if (animationState === "SCROLL_ANIMATION" && progress <= 0.01) {
-    // Switch to waiting state when scroll reaches top
-    animationState = "WAITING_FOR_SCRUB";
+    animationState = "HOME";
+    homeProgress = pausedHomeProgress;
   }
 }
 
@@ -269,16 +245,30 @@ async function setupScrollTrigger() {
       return;
     }
 
-    // Create ScrollTrigger with scrub
-    ScrollTrigger.create({
-      trigger: homeSection,
-      start: "top top",
-      end: "bottom top",
-      scrub: 1, // 1 second scrub delay
-      onUpdate: (self) => {
-        setScrollProgress(self.progress);
+    // Create a timeline for proper scrub functionality
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: homeSection,
+        start: "top top",
+        end: "bottom top",
+        scrub: 1, // 1 second scrub delay
+        onUpdate: (self) => {
+          setScrollProgress(self.progress);
+        },
       },
     });
+
+    // Add a dummy animation to the timeline (required for scrub to work)
+    tl.to(
+      {},
+      {
+        duration: 1,
+        onUpdate: function () {
+          const progress = this.progress();
+          setScrollProgress(progress);
+        },
+      }
+    );
 
     scrollTriggerInitialized = true;
     console.log("✅ GSAP ScrollTrigger with scrub setup complete");
