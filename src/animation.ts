@@ -259,18 +259,46 @@ async function setupScrollTrigger() {
       return;
     }
 
-    // Create ScrollTrigger with scrub for smooth animation
-    ScrollTrigger.create({
-      trigger: homeSection,
-      start: "top top", // Start when top of home section hits top of viewport
-      end: "bottom top", // End when bottom of home section hits top of viewport
-      scrub: 1, // Smooth scrubbing with 1 second delay
-      onUpdate: (self) => {
-        setScrollProgress(self.progress);
+    // Create a timeline for smooth scrubbing
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: homeSection,
+        start: "top top",
+        end: "bottom top",
+        scrub: 1, // Smooth scrubbing with 1 second delay
+        onUpdate: (self) => {
+          setScrollProgress(self.progress);
+        },
+        onEnter: () => {
+          console.log("ScrollTrigger: Entered home section");
+        },
+        onLeave: () => {
+          console.log("ScrollTrigger: Left home section");
+        },
+        onEnterBack: () => {
+          console.log("ScrollTrigger: Entered back home section");
+        },
+        onLeaveBack: () => {
+          console.log("ScrollTrigger: Left back home section");
+        },
       },
     });
 
+    // Add a dummy animation to the timeline (required for scrub to work)
+    tl.to(
+      {},
+      {
+        duration: 1,
+        onUpdate: function () {
+          // This will be called with smooth interpolation
+          const progress = this.progress();
+          setScrollProgress(progress);
+        },
+      }
+    );
+
     scrollTriggerInitialized = true;
+    console.log("✅ GSAP ScrollTrigger with scrub setup complete");
   } catch (error) {
     console.error("❌ GSAP ScrollTrigger setup failed:", error);
     setupManualScrollListener();
