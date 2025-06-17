@@ -107,13 +107,6 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
       }
     });
   }
-
-  // Debug logging for opacity changes
-  if (opacity < 1 && opacitySet) {
-    console.log(
-      `🎭 Setting opacity to ${opacity.toFixed(3)} for ${ghost.name || "ghost"}`
-    );
-  }
 }
 
 function captureGhostPositions() {
@@ -278,15 +271,6 @@ function animateScrollToCenter(progress: number) {
       const fadeProgress = (ghostProgress - 0.95) / 0.05; // 0 to 1 over last 5%
       opacity = 1 - fadeProgress;
       opacity = Math.max(0, opacity);
-
-      // Debug logging for fade-out
-      if (key === "pacman" && ghostProgress % 0.01 < 0.001) {
-        console.log(
-          `🎭 ${key} fade: progress=${ghostProgress.toFixed(
-            3
-          )}, opacity=${opacity.toFixed(3)}`
-        );
-      }
     }
 
     setGhostOpacity(ghost, opacity);
@@ -387,7 +371,6 @@ async function setupScrollTrigger() {
     );
 
     scrollTriggerInitialized = true;
-    console.log("✅ GSAP ScrollTrigger with scrub setup complete");
   } catch (error) {
     console.error("❌ GSAP ScrollTrigger setup failed:", error);
     setupManualScrollListener();
@@ -395,7 +378,6 @@ async function setupScrollTrigger() {
 }
 
 function setupManualScrollListener() {
-  console.log("Using manual scroll listener as fallback");
   window.addEventListener("scroll", () => {
     const homeSection = document.querySelector(
       SELECTORS.homeSection
