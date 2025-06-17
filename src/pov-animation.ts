@@ -123,44 +123,130 @@ export function updatePOVAnimation(progress: number) {
 
   updatePOVCamera(currentProgress);
 
+  // 2. Move all ghosts along their respective POV paths with proper triggering
   ghostKeys.forEach((key) => {
     const ghost = ghosts[key];
     const path = povPaths[key];
     if (ghost && path) {
-      // Each ghost moves at a different speed and timing
-      // This creates staggered movement like in the backup.js
-      let ghostProgress;
+      // Get camera position to determine if ghost should be triggered
+      const cameraPosition = povPaths.pacman.getPointAt(currentProgress);
+      const currentCameraProgress =
+        findClosestProgressOnPOVPath(cameraPosition);
 
-      switch (key) {
-        case "ghost1":
-          ghostProgress = (currentProgress * 2) % 1; // 2x speed
-          break;
-        case "ghost2":
-          ghostProgress = (currentProgress * 1.5) % 1; // 1.5x speed
-          break;
-        case "ghost3":
-          ghostProgress = (currentProgress * 1.2) % 1; // 1.2x speed
-          break;
-        case "ghost4":
-          ghostProgress = (currentProgress * 0.8) % 1; // 0.8x speed
-          break;
-        case "ghost5":
-          ghostProgress = (currentProgress * 0.6) % 1; // 0.6x speed
-          break;
-        default:
-          ghostProgress = currentProgress % 1;
+      // Check if this ghost has a trigger position
+      const trigger = TriggerPositions[key as keyof typeof TriggerPositions];
+      if (trigger) {
+        // Calculate trigger positions on camera path (only once)
+        const triggerWithProgress = trigger as any;
+        if (triggerWithProgress.triggerCameraProgress === undefined) {
+          triggerWithProgress.triggerCameraProgress =
+            findClosestProgressOnPOVPath(trigger.triggerPos);
+          triggerWithProgress.endCameraProgress = findClosestProgressOnPOVPath(
+            trigger.endPosition
+          );
+        }
+
+        const triggerProgress = triggerWithProgress.triggerCameraProgress;
+        const endProgress = triggerWithProgress.endCameraProgress;
+
+        // Ghost visibility and movement based on camera position
+        if (
+          currentCameraProgress >= triggerProgress &&
+          currentCameraProgress <= endProgress
+        ) {
+          // Make ghost visible and move along its path
+          ghost.visible = true;
+
+          // Calculate ghost progress based on camera progress within the trigger range
+          const normalizedProgress =
+            (currentCameraProgress - triggerProgress) /
+            (endProgress - triggerProgress);
+          const ghostProgress = Math.max(0, Math.min(1, normalizedProgress));
+
+          // Apply smoothing to ghost progress for ultra-smooth movement
+          const smoothGhostProgress = smoothStep(smoothStep(ghostProgress)); // Double smoothing
+
+          // Update ghost position
+          const pos = path.getPointAt(smoothGhostProgress);
+          ghost.position.copy(pos);
+
+          // Make ghost smaller during POV animation
+          ghost.scale.set(0.5, 0.5, 0.5);
+
+          // Ultra-smooth ghost orientation with look-ahead
+          const currentTangent = path
+            .getTangentAt(smoothGhostProgress)
+            .normalize();
+          const lookAheadProgress = Math.min(smoothGhostProgress + 0.05, 1);
+          const lookAheadTangent = path
+            .getTangentAt(lookAheadProgress)
+            .normalize();
+
+          // Blend current and look-ahead tangents for smoother rotation
+          const blendedTangent = new THREE.Vector3()
+            .addVectors(
+              currentTangent.clone().multiplyScalar(0.7),
+              lookAheadTangent.clone().multiplyScalar(0.3)
+            )
+            .normalize();
+
+          const lookAtPoint = ghost.position.clone().add(blendedTangent);
+          ghost.lookAt(lookAtPoint);
+
+          // Smooth fade out at the end
+          if (smoothGhostProgress > 0.95) {
+            const fadeOpacity = 1 - (smoothGhostProgress - 0.95) / 0.05;
+            // Apply fade to ghost materials
+            if (ghost instanceof THREE.Mesh && (ghost as any).material) {
+              (ghost as any).material.opacity = Math.max(
+                0,
+                Math.min(1, fadeOpacity)
+              );
+              (ghost as any).material.transparent = fadeOpacity < 1;
+            } else if (ghost instanceof THREE.Group) {
+              ghost.traverse((child) => {
+                if (child instanceof THREE.Mesh && (child as any).material) {
+                  (child as any).material.opacity = Math.max(
+                    0,
+                    Math.min(1, fadeOpacity)
+                  );
+                  (child as any).material.transparent = fadeOpacity < 1;
+                  (child as any).material.needsUpdate = true;
+                }
+              });
+            }
+          } else {
+            // Full opacity
+            if (ghost instanceof THREE.Mesh && (ghost as any).material) {
+              (ghost as any).material.opacity = 1;
+              (ghost as any).material.transparent = false;
+            } else if (ghost instanceof THREE.Group) {
+              ghost.traverse((child) => {
+                if (child instanceof THREE.Mesh && (child as any).material) {
+                  (child as any).material.opacity = 1;
+                  (child as any).material.transparent = false;
+                  (child as any).material.needsUpdate = true;
+                }
+              });
+            }
+          }
+        } else {
+          // Ghost invisible when outside trigger range
+          ghost.visible = false;
+        }
+      } else {
+        // No trigger position - use continuous movement (fallback)
+        const ghostProgress = currentProgress % 1;
+        const pos = path.getPointAt(ghostProgress);
+        ghost.position.copy(pos);
+        ghost.scale.set(0.5, 0.5, 0.5);
+
+        const tangent = path.getTangentAt(ghostProgress).normalize();
+        const lookAtPoint = pos.clone().add(tangent);
+        ghost.lookAt(lookAtPoint);
+
+        ghost.visible = true;
       }
-
-      const pos = path.getPointAt(ghostProgress);
-      ghost.position.copy(pos);
-
-      ghost.scale.set(0.5, 0.5, 0.5);
-
-      const tangent = path.getTangentAt(ghostProgress).normalize();
-      const lookAtPoint = pos.clone().add(tangent);
-      ghost.lookAt(lookAtPoint);
-
-      ghost.visible = true;
     }
   });
 
