@@ -131,6 +131,24 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
             material.opacity = opacity;
             material.transparent = opacity < 1;
             material.depthWrite = opacity === 1;
+
+            // Special handling for ghost material (MeshPhysicalMaterial with transmission)
+            if (
+              material.isMeshPhysicalMaterial &&
+              material.transmission !== undefined
+            ) {
+              // Reduce transmission when fading out to prevent border visibility
+              if (opacity < 1) {
+                material.transmission = Math.max(
+                  0,
+                  material.transmission * opacity
+                );
+              } else {
+                // Restore original transmission when fully opaque
+                material.transmission = 0.5;
+              }
+            }
+
             material.needsUpdate = true;
             opacitySet = true;
 
@@ -143,9 +161,7 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
                   material.type || material.constructor.name
                 }, oldOpacity: ${oldOpacity.toFixed(3)}, mesh: "${
                   mesh.name || "unnamed"
-                }", caller: ${
-                  new Error().stack?.split("\n")[2]?.trim() || "unknown"
-                }`
+                }", transmission: ${material.transmission || "N/A"}`
               );
             }
           } else if (material.isShaderMaterial) {
@@ -172,9 +188,7 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
                     3
                   )} on fallback material, oldOpacity: ${oldOpacity.toFixed(
                     3
-                  )}, mesh: "${mesh.name || "unnamed"}", caller: ${
-                    new Error().stack?.split("\n")[2]?.trim() || "unknown"
-                  }`
+                  )}, mesh: "${mesh.name || "unnamed"}"`
                 );
               }
             }
@@ -187,6 +201,7 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
   if (ghost instanceof THREE.Mesh) {
     applyOpacity(ghost);
   } else if (ghost instanceof THREE.Group) {
+    // For groups (like Pacman), traverse ALL children including nested groups
     ghost.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         applyOpacity(child);
@@ -502,16 +517,16 @@ async function setupScrollTrigger() {
           setScrollProgress(progress);
 
           // Fade out all ghosts and Pacman from opacity 1 to 0
-          // Start fade at 50% progress and complete at 100%
+          // Start fade at 90% progress and complete at 100%
           let fadeOpacity = 1;
-          if (progress >= 0.5) {
-            const fadeProgress = (progress - 0.5) / 0.5; // 0 to 1 over last 50% (50% to 100%)
+          if (progress >= 0.9) {
+            const fadeProgress = (progress - 0.9) / 0.1; // 0 to 1 over last 10% (90% to 100%)
             fadeOpacity = 1 - fadeProgress;
             fadeOpacity = Math.max(0, fadeOpacity);
           }
 
           // Debug: Log fade opacity values with more details
-          if (progress >= 0.45) {
+          if (progress >= 0.85) {
             const timestamp = new Date()
               .toISOString()
               .split("T")[1]
