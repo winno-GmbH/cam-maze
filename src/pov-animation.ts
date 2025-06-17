@@ -168,6 +168,23 @@ export function updatePOVAnimation(progress: number) {
     return;
   }
 
+  // Additional check: if we're in a scroll animation (home section), don't run POV
+  // This prevents conflicts between the two animation systems
+  const homeSection = document.querySelector(".sc--home.sc") as HTMLElement;
+  if (homeSection) {
+    const rect = homeSection.getBoundingClientRect();
+    const homeProgress = Math.max(
+      0,
+      Math.min(1, 1 - rect.bottom / window.innerHeight)
+    );
+
+    // If home section is still in view (progress > 0), don't run POV animation
+    if (homeProgress > 0.01) {
+      isPOVAnimationActive = false;
+      return;
+    }
+  }
+
   isPOVAnimationActive = true;
 
   // Use progress directly - GSAP ScrollTrigger already handles smoothing
@@ -195,29 +212,44 @@ export function updatePOVAnimation(progress: number) {
       // Make ghosts visible during POV animation - ensure they're visible
       ghost.visible = true;
 
-      // Only set materials to full opacity if they're not already transparent
-      // This prevents overriding fade-out animations from other systems
-      function ensureGhostVisible(obj: THREE.Object3D) {
-        if ((obj as any).material) {
-          const mats = Array.isArray((obj as any).material)
-            ? (obj as any).material
-            : [(obj as any).material];
-          mats.forEach((mat: any) => {
-            if (mat) {
-              // Only set to full opacity if the material is currently transparent
-              // This prevents overriding fade-out animations
-              if (mat.transparent && mat.opacity < 1) {
-                mat.opacity = 1;
-                mat.transparent = false;
-                mat.depthWrite = true;
-                mat.needsUpdate = true;
+      // IMPORTANT: Don't override opacity during POV animation if we're in scroll animation
+      // This prevents conflicts with the fade-out animation
+      const homeSection = document.querySelector(".sc--home.sc") as HTMLElement;
+      const isInScrollAnimation =
+        homeSection &&
+        (() => {
+          const rect = homeSection.getBoundingClientRect();
+          const homeProgress = Math.max(
+            0,
+            Math.min(1, 1 - rect.bottom / window.innerHeight)
+          );
+          return homeProgress > 0.01;
+        })();
+
+      // Only set materials to full opacity if we're not in scroll animation
+      if (!isInScrollAnimation) {
+        function ensureGhostVisible(obj: THREE.Object3D) {
+          if ((obj as any).material) {
+            const mats = Array.isArray((obj as any).material)
+              ? (obj as any).material
+              : [(obj as any).material];
+            mats.forEach((mat: any) => {
+              if (mat) {
+                // Only set to full opacity if the material is currently transparent
+                // This prevents overriding fade-out animations
+                if (mat.transparent && mat.opacity < 1) {
+                  mat.opacity = 1;
+                  mat.transparent = false;
+                  mat.depthWrite = true;
+                  mat.needsUpdate = true;
+                }
               }
-            }
-          });
+            });
+          }
         }
+        ensureGhostVisible(ghost);
+        if (ghost instanceof THREE.Group) ghost.traverse(ensureGhostVisible);
       }
-      ensureGhostVisible(ghost);
-      if (ghost instanceof THREE.Group) ghost.traverse(ensureGhostVisible);
 
       // Debug: log ghost movement to verify they're following paths
       if (currentProgress % 0.1 < 0.01) {
