@@ -6,10 +6,14 @@ import { getPathsForSection, cameraHomePath } from "./paths";
 import { MAZE_CENTER, DOM_ELEMENTS, SELECTORS } from "./config";
 
 // Animation state
-export type AnimationState = "HOME" | "SCROLL_ANIMATION";
+export type AnimationState =
+  | "HOME"
+  | "SCROLL_ANIMATION"
+  | "TRANSITIONING_TO_HOME";
 
 const HOME_ANIMATION_SPEED = 0.03; // loop speed
 const CAMERA_FOV = 50;
+const TRANSITION_DURATION = 0.8; // seconds for smooth transition back to home
 
 // Speed multipliers for scroll animation - higher = faster
 const GHOST_SPEED_MULTIPLIERS: Record<string, number> = {
@@ -37,6 +41,14 @@ let scrollTriggerInitialized = false;
 let homePositionsCaptured = false;
 let pausedHomeProgress = 0;
 
+// Smooth transition variables
+let transitionProgress = 0;
+let transitionStartTime = 0;
+let transitionStartPositions: Record<string, THREE.Vector3> = {};
+let transitionStartRotations: Record<string, THREE.Euler> = {};
+let transitionStartCameraPos: THREE.Vector3 | null = null;
+let transitionStartCameraQuat: THREE.Quaternion | null = null;
+
 const homePathKeys = [
   "pacman",
   "ghost1",
@@ -50,6 +62,10 @@ const homePaths = getPathsForSection("home") as Record<
   HomePathKey,
   THREE.CurvePath<THREE.Vector3>
 >;
+
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
 
 function animateHomeLoop(dt: number) {
   homeProgress = (homeProgress + dt * HOME_ANIMATION_SPEED) % 1;
@@ -133,6 +149,111 @@ function captureGhostPositions() {
   homePositionsCaptured = true;
 }
 
+function startTransitionToHome() {
+  animationState = "TRANSITIONING_TO_HOME";
+  transitionProgress = 0;
+  transitionStartTime = clock.getElapsedTime();
+
+  // Capture current positions as transition start points
+  transitionStartPositions = {};
+  transitionStartRotations = {};
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    transitionStartPositions[key] = ghost.position.clone();
+    transitionStartRotations[key] = ghost.rotation.clone();
+  });
+
+  // Capture current camera state
+  transitionStartCameraPos = camera.position.clone();
+  transitionStartCameraQuat = camera.quaternion.clone();
+
+  console.log("🔄 Starting smooth transition to home animation");
+}
+
+function animateTransitionToHome(dt: number) {
+  const elapsed = clock.getElapsedTime() - transitionStartTime;
+  transitionProgress = Math.min(elapsed / TRANSITION_DURATION, 1);
+
+  const easedProgress = easeInOutCubic(transitionProgress);
+
+  // Interpolate ghosts from their current positions to home path positions
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    if ((homePathKeys as readonly string[]).includes(key)) {
+      const path = homePaths[key as HomePathKey];
+      if (path) {
+        // Calculate target position on home path
+        const targetPos = path.getPointAt(homeProgress);
+        const startPos = transitionStartPositions[key];
+
+        // Interpolate position
+        ghost.position.lerpVectors(startPos, targetPos, easedProgress);
+
+        // Interpolate rotation
+        const startRot = transitionStartRotations[key];
+        const tangent = path.getTangentAt(homeProgress).normalize();
+        const targetRot = new THREE.Euler();
+
+        if (key === "pacman") {
+          const zRot = Math.atan2(tangent.x, tangent.z);
+          targetRot.set(Math.PI / 2, Math.PI, zRot + Math.PI / 2);
+        } else {
+          // For ghosts, look at the tangent direction
+          const lookAtPos = targetPos.clone().add(tangent);
+          const tempObj = new THREE.Object3D();
+          tempObj.position.copy(targetPos);
+          tempObj.lookAt(lookAtPos);
+          targetRot.copy(tempObj.rotation);
+        }
+
+        // Interpolate rotation
+        ghost.rotation.set(
+          startRot.x + (targetRot.x - startRot.x) * easedProgress,
+          startRot.y + (targetRot.y - startRot.y) * easedProgress,
+          startRot.z + (targetRot.z - startRot.z) * easedProgress
+        );
+
+        // Fade opacity back to 1
+        const opacity = 0.3 + 0.7 * easedProgress;
+        setGhostOpacity(ghost, opacity);
+      }
+    }
+  });
+
+  // Interpolate camera back to home position
+  if (transitionStartCameraPos && transitionStartCameraQuat) {
+    const homeCameraPos = cameraHomePath.getPointAt(homeProgress);
+    camera.position.lerpVectors(
+      transitionStartCameraPos,
+      homeCameraPos,
+      easedProgress
+    );
+
+    // Interpolate camera rotation
+    const homeCameraQuat = new THREE.Quaternion();
+    const homeCameraLookAt = cameraHomePath.getPointAt(
+      (homeProgress + 0.01) % 1
+    );
+    const tempCamera = new THREE.Object3D();
+    tempCamera.position.copy(homeCameraPos);
+    tempCamera.lookAt(homeCameraLookAt);
+    homeCameraQuat.copy(tempCamera.quaternion);
+
+    camera.quaternion.slerpQuaternions(
+      transitionStartCameraQuat,
+      homeCameraQuat,
+      easedProgress
+    );
+    camera.fov = 50 + easedProgress * 10; // Gradually adjust FOV
+    camera.updateProjectionMatrix();
+  }
+
+  // Check if transition is complete
+  if (transitionProgress >= 1) {
+    animationState = "HOME";
+    homePositionsCaptured = false;
+    console.log("✅ Transition to home animation complete");
+  }
+}
+
 function animateScrollToCenter(progress: number) {
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const speed = GHOST_SPEED_MULTIPLIERS[key] || 1.0;
@@ -190,8 +311,10 @@ function animationLoop() {
 
   if (pacmanMixer) pacmanMixer.update(dt);
 
-  // Single animation function that handles both states
-  if (scrollProgress > 0.01) {
+  // Handle different animation states
+  if (animationState === "TRANSITIONING_TO_HOME") {
+    animateTransitionToHome(dt);
+  } else if (scrollProgress > 0.01) {
     // Scroll animation
     if (!homePositionsCaptured) {
       captureGhostPositions();
@@ -200,11 +323,12 @@ function animationLoop() {
     animateScrollToCenter(scrollProgress);
     animateCameraScroll(scrollProgress);
   } else {
-    // Home animation - reset curve calculation flag when back to home
-    if (homePositionsCaptured) {
-      homePositionsCaptured = false;
+    // Home animation - start transition if we were in scroll animation
+    if (animationState === "SCROLL_ANIMATION") {
+      startTransitionToHome();
+    } else {
+      animateHomeLoop(dt);
     }
-    animateHomeLoop(dt);
   }
 
   render();
@@ -221,6 +345,11 @@ export function setScrollProgress(progress: number) {
 
   scrollProgress = Math.max(0, Math.min(1, progress));
   lastScrollProgress = progress;
+
+  // Update animation state based on scroll progress
+  if (scrollProgress > 0.01) {
+    animationState = "SCROLL_ANIMATION";
+  }
 }
 
 async function setupScrollTrigger() {
