@@ -141,7 +141,6 @@ class AnimationSystem {
     if (this.state === "HOME_ANIMATION" && this.animationRunning) {
       const currentTime = Date.now();
       const elapsed = (currentTime - this.timeOffset) / 1000;
-      // Use savedHomeProgress if paused/resumed
       let t = (this.savedHomeProgress + elapsed * HOME_ANIMATION_SPEED) % 1;
       let tPath = t;
       if (t > 0.95) {
@@ -149,7 +148,8 @@ class AnimationSystem {
         tPath = (1 - blend) * t + blend * 0;
       }
       this.animateHomePaths(tPath);
-      this.animateCameraHome(tPath);
+      // Camera should NOT animate here
+      // this.animateCameraHome(tPath);
     } else if (this.state === "SCROLL_TO_CENTER") {
       this.animateScrollToCenter(this.scrollProgress);
       this.animateCameraScrollToCenter(this.scrollProgress);
@@ -316,6 +316,11 @@ class AnimationSystem {
     // Clear scroll camera path/quaternion so camera only animates on scroll when in SCROLL_TO_CENTER
     scrollCameraCurve = null;
     scrollCameraStartQuaternion = null;
+    // Set camera to initial home position/quaternion
+    camera.position.copy(initialCameraPosition);
+    camera.quaternion.copy(initialCameraQuaternion);
+    camera.fov = ORIGINAL_FOV;
+    camera.updateProjectionMatrix();
   }
 
   // Public getters
