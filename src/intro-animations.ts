@@ -138,7 +138,7 @@ async function setupGSAPIntroAnimations() {
         scale: 1.5,
         opacity: 0,
         scrollTrigger: {
-          trigger: DOM_ELEMENTS.introSection,
+          trigger: DOM_ELEMENTS.introHeader,
           start: "top top",
           end: "center center",
           scrub: 0.3,
@@ -160,7 +160,7 @@ async function setupGSAPIntroAnimations() {
     gsap
       .timeline({
         scrollTrigger: {
-          trigger: DOM_ELEMENTS.introSection,
+          trigger: DOM_ELEMENTS.introBody,
           start: "center center",
           end: "bottom bottom",
           scrub: 0.3,
