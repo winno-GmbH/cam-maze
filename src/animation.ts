@@ -3,7 +3,7 @@ import { camera, endQuaternion } from "./camera";
 import { scene, renderer, clock } from "./scene";
 import { ghosts, pacman, pacmanMixer } from "./objects";
 import { getPathsForSection, cameraHomePath } from "./paths";
-import { MAZE_CENTER, DOM_ELEMENTS } from "./config";
+import { MAZE_CENTER, DOM_ELEMENTS, SELECTORS } from "./config";
 
 // Animation state
 export type AnimationState = "HOME" | "SCROLL_ANIMATION";
@@ -20,6 +20,7 @@ let capturedRotations: Record<string, THREE.Euler> = {};
 let scrollProgress = 0;
 let cameraScrollCurve: THREE.CubicBezierCurve3 | null = null;
 let cameraScrollStartQuat: THREE.Quaternion | null = null;
+let scrollTriggerInitialized = false;
 
 const homePathKeys = [
   "pacman",
@@ -154,6 +155,103 @@ function animationLoop() {
 
 export function setScrollProgress(progress: number) {
   scrollProgress = Math.max(0, Math.min(1, progress));
+
+  // Trigger scroll animation when progress starts
+  if (animationState === "HOME" && progress > 0 && !animationPaused) {
+    animationPaused = true;
+    captureGhostPositions();
+    createBezierCurves();
+    // Camera bezier
+    cameraScrollCurve = new THREE.CubicBezierCurve3(
+      camera.position.clone(),
+      new THREE.Vector3(
+        (camera.position.x + MAZE_CENTER.x) / 2,
+        2,
+        (camera.position.z + MAZE_CENTER.z) / 2
+      ),
+      new THREE.Vector3(0.55675, 3, 0.45175),
+      MAZE_CENTER.clone()
+    );
+    cameraScrollStartQuat = camera.quaternion.clone();
+    animationState = "SCROLL_ANIMATION";
+  }
+}
+
+async function setupScrollTrigger() {
+  try {
+    // Dynamic import GSAP and ScrollTrigger
+    const gsapModule = await import("gsap");
+    const scrollTriggerModule = await import("gsap/ScrollTrigger");
+
+    const gsap = gsapModule.gsap || gsapModule.default;
+    const ScrollTrigger =
+      scrollTriggerModule.ScrollTrigger || scrollTriggerModule.default;
+
+    if (!gsap || !ScrollTrigger) {
+      throw new Error("GSAP modules not loaded properly");
+    }
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Get home section element
+    const homeSection = document.querySelector(
+      SELECTORS.homeSection
+    ) as HTMLElement;
+    if (!homeSection) {
+      console.warn("Home section not found, scroll animation disabled");
+      return;
+    }
+
+    // Create ScrollTrigger for home section bottom to top animation
+    ScrollTrigger.create({
+      trigger: homeSection,
+      start: "bottom bottom", // Start when bottom of home section hits bottom of viewport
+      end: "bottom top", // End when bottom of home section hits top of viewport
+      onUpdate: (self) => {
+        setScrollProgress(self.progress);
+      },
+      onEnter: () => {
+        console.log("ScrollTrigger: Entered home section animation");
+      },
+      onLeave: () => {
+        console.log("ScrollTrigger: Left home section animation");
+      },
+      onEnterBack: () => {
+        console.log("ScrollTrigger: Entered back home section animation");
+      },
+      onLeaveBack: () => {
+        console.log("ScrollTrigger: Left back home section animation");
+      },
+    });
+
+    scrollTriggerInitialized = true;
+    console.log("✅ GSAP ScrollTrigger setup complete");
+  } catch (error) {
+    console.error("❌ GSAP ScrollTrigger setup failed:", error);
+    // Fallback to manual scroll listener
+    setupManualScrollListener();
+  }
+}
+
+function setupManualScrollListener() {
+  console.log("Using manual scroll listener as fallback");
+  window.addEventListener("scroll", () => {
+    if (animationState === "HOME" && !animationPaused) {
+      // Simple scroll detection - you can refine this
+      const scrollY = window.scrollY;
+      const homeSection = document.querySelector(
+        SELECTORS.homeSection
+      ) as HTMLElement;
+      if (homeSection) {
+        const rect = homeSection.getBoundingClientRect();
+        const progress = Math.max(
+          0,
+          Math.min(1, 1 - rect.bottom / window.innerHeight)
+        );
+        setScrollProgress(progress);
+      }
+    }
+  });
 }
 
 export function initAnimationSystem() {
@@ -163,25 +261,6 @@ export function initAnimationSystem() {
   homeProgress = 0;
   animationLoop();
 
-  // Listen for scroll to pause and trigger scroll animation
-  window.addEventListener("scroll", () => {
-    if (animationState === "HOME" && !animationPaused) {
-      animationPaused = true;
-      captureGhostPositions();
-      createBezierCurves();
-      // Camera bezier
-      cameraScrollCurve = new THREE.CubicBezierCurve3(
-        camera.position.clone(),
-        new THREE.Vector3(
-          (camera.position.x + MAZE_CENTER.x) / 2,
-          2,
-          (camera.position.z + MAZE_CENTER.z) / 2
-        ),
-        new THREE.Vector3(0.55675, 3, 0.45175),
-        MAZE_CENTER.clone()
-      );
-      cameraScrollStartQuat = camera.quaternion.clone();
-      animationState = "SCROLL_ANIMATION";
-    }
-  });
+  // Setup GSAP ScrollTrigger
+  setupScrollTrigger();
 }
