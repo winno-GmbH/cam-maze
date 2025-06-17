@@ -1,49 +1,32 @@
 import * as THREE from "three";
 import { camera } from "./camera";
+import { scene, renderer } from "./scene";
 import { ghosts } from "./objects";
-import { DOM_ELEMENTS } from "./selectors";
 import { getPathsForSection } from "./paths";
-import { MAZE_CENTER } from "./config";
 import { TriggerPositions } from "./triggers";
+import { DOM_ELEMENTS } from "./selectors";
+import { restoreGhostsToHome } from "./animation";
 
-// Flag to track POV animation state
+// POV Animation state
 let isPOVAnimationActive = false;
+let manualCameraRotation: THREE.Quaternion | null = null;
 
-// Camera FOV settings
-const POV_FOV = 80; // Wider FOV for POV animation
-const DEFAULT_FOV = 50; // Default FOV
+// Camera quaternion smoothing
+let prevCameraQuat: THREE.Quaternion | null = null;
+const CAMERA_SLERP_ALPHA = 0.18; // Slerp factor for smoothness
 
-// Camera manual rotation override
-let cameraManualRotation: THREE.Quaternion | null = null;
-export function setCameraManualRotation(q: THREE.Quaternion | null) {
-  cameraManualRotation = q;
-}
+// Camera constants
+const DEFAULT_FOV = 75;
+const POV_FOV = 60;
+
+// Ghost keys for iteration
+const ghostKeys = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5"] as const;
 
 // Get all POV paths for camera and ghosts
 const povPaths = getPathsForSection("pov") as Record<
   string,
   THREE.CurvePath<THREE.Vector3>
 >;
-
-Object.entries(povPaths).forEach(([key, path]) => {
-  // Test a few points along the path to see the Y values
-  for (let i = 0; i <= 10; i++) {
-    const progress = i / 10;
-    const point = path.getPointAt(progress);
-  }
-});
-
-// List of ghost keys to animate
-const ghostKeys = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
-
-// Store previous camera quaternion for slerp
-let prevCameraQuat: THREE.Quaternion | null = null;
-const CAMERA_SLERP_ALPHA = 0.18; // Slerp factor for smoothness
-
-// Scrub smoothing for camera movement
-let smoothedProgress = 0;
-let targetProgress = 0;
-const SCRUB_SMOOTHING = 0.08; // Very light smoothing for responsive feel
 
 // POV Animation State for text transitions
 interface POVTriggerState {
@@ -101,8 +84,8 @@ const originalGhostScales: Record<string, THREE.Vector3> = {};
 
 // Capture original home positions when POV starts
 function captureHomePositions() {
-  // Use the homePositionsCaptured from animation.ts
-  if ((window as any).homePositionsCaptured) return;
+  // Check if positions are already captured
+  if (Object.keys(originalGhostPositions).length > 0) return;
 
   ghostKeys.forEach((key) => {
     const ghost = ghosts[key];
@@ -112,9 +95,6 @@ function captureHomePositions() {
       originalGhostScales[key] = ghost.scale.clone();
     }
   });
-
-  // Set the flag in animation.ts
-  (window as any).homePositionsCaptured = true;
 }
 
 // Restore ghosts to their home positions
@@ -444,14 +424,8 @@ export function stopPOVAnimation() {
   camera.fov = DEFAULT_FOV;
   camera.updateProjectionMatrix();
 
-  // Restore ghosts to their home positions
-  restoreGhostsToHomePositions();
-
-  // Reset home positions capture flag so animation system can capture again
-  // This is crucial for proper transition back to home animation
-  if (typeof window !== "undefined") {
-    (window as any).homePositionsCaptured = false;
-  }
+  // Use the centralized animation controller to restore ghosts
+  restoreGhostsToHome();
 
   // Hide all POV elements
   Object.entries(TriggerPositions).forEach(([key, trigger]) => {

@@ -1,420 +1,445 @@
 import * as THREE from "three";
-import { camera, endQuaternion } from "./camera";
-import { scene, renderer, clock } from "./scene";
-import { ghosts, pacman, pacmanMixer } from "./objects";
-import { getPathsForSection, cameraHomePath } from "./paths";
-import { MAZE_CENTER, DOM_ELEMENTS, SELECTORS } from "./config";
-import { isPOVActive } from "./pov-animation";
+import { camera } from "./camera";
+import { scene, renderer } from "./scene";
+import { ghosts, pacman } from "./objects";
+import { getPathsForSection } from "./paths";
+import { DOM_ELEMENTS } from "./selectors";
+import { isPOVActive, updatePOVAnimation } from "./pov-animation";
 
-// Animation state
-export type AnimationState = "HOME" | "SCROLL_ANIMATION" | "POV_ANIMATION";
+// Animation state management
+export type AnimationState =
+  | "HOME"
+  | "SCROLL_ANIMATION"
+  | "POV_ANIMATION"
+  | "TRANSITIONING";
 
-const HOME_ANIMATION_SPEED = 0.03; // loop speed - doubled for smoother movement
-const CAMERA_FOV = 50;
-const TRANSITION_DURATION = 0.5; // seconds for smooth transition back to home
+// Centralized animation controller
+class AnimationController {
+  private state: AnimationState = "HOME";
+  private homeProgress = 0;
+  private scrollProgress = 0;
+  private transitionProgress = 0;
+  private isTransitioning = false;
 
-// Speed multipliers for scroll animation - higher = faster
-const GHOST_SPEED_MULTIPLIERS: Record<string, number> = {
-  ghost1: 1.4, // Fastest - arrives first
-  ghost2: 1.3,
-  ghost3: 1.2,
-  ghost4: 1.1,
-  ghost5: 1,
-  pacman: 0.9, // Slowest - arrives last, synchronized with camera
-};
+  // Home positions for restoration
+  private homePositions: Record<string, THREE.Vector3> = {};
+  private homeRotations: Record<string, THREE.Euler> = {};
+  private homeScales: Record<string, THREE.Vector3> = {};
+  private homePositionsCaptured = false;
 
-// When ghosts should finish their animation (0.8 = 80% of scroll progress)
-const GHOSTS_END_AT = 0.8;
-const GHOST_OPACITY_FADE_START = 0.9;
+  // Scroll animation curves
+  private bezierCurves: Record<string, THREE.QuadraticBezierCurve3> = {};
+  private cameraScrollCurve: THREE.CubicBezierCurve3 | null = null;
+  private cameraScrollStartQuat: THREE.Quaternion | null = null;
 
-let animationState: AnimationState = "HOME";
-let homeProgress = 0;
-let scrollProgress = 0;
-let bezierCurves: Record<string, THREE.QuadraticBezierCurve3> = {};
-let capturedPositions: Record<string, THREE.Vector3> = {};
-let capturedRotations: Record<string, THREE.Euler> = {};
-let cameraScrollCurve: THREE.CubicBezierCurve3 | null = null;
-let cameraScrollStartQuat: THREE.Quaternion | null = null;
-let scrollTriggerInitialized = false;
-let homePositionsCaptured = false;
-let pausedHomeProgress = 0;
+  // Transition start positions
+  private transitionStartPositions: Record<string, THREE.Vector3> = {};
+  private transitionStartRotations: Record<string, THREE.Euler> = {};
 
-// Expose homePositionsCaptured globally for POV animation access
-if (typeof window !== "undefined") {
-  (window as any).homePositionsCaptured = homePositionsCaptured;
-}
+  // Animation speeds and constants
+  private readonly HOME_ANIMATION_SPEED = 0.3;
+  private readonly TRANSITION_DURATION = 0.5;
+  private readonly CAMERA_FOV = 75;
+  private readonly MAZE_CENTER = new THREE.Vector3(0.55675, 0.45, 0.45175);
 
-// Simple transition variables
-let isTransitioningToHome = false;
-let transitionProgress = 0;
-let transitionStartPositions: Record<string, THREE.Vector3> = {};
-let transitionStartRotations: Record<string, THREE.Euler> = {};
+  // Ghost speed multipliers for scroll animation
+  private readonly GHOST_SPEED_MULTIPLIERS: Record<string, number> = {
+    ghost1: 1.2,
+    ghost2: 1.0,
+    ghost3: 0.8,
+    ghost4: 0.6,
+    ghost5: 0.4,
+    pacman: 0.3, // Pacman arrives last
+  };
 
-const homePathKeys = [
-  "pacman",
-  "ghost1",
-  "ghost2",
-  "ghost3",
-  "ghost4",
-  "ghost5",
-] as const;
-type HomePathKey = (typeof homePathKeys)[number];
-const homePaths = getPathsForSection("home") as Record<
-  HomePathKey,
-  THREE.CurvePath<THREE.Vector3>
->;
+  constructor() {
+    this.setupHomePaths();
+  }
 
-function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
+  private setupHomePaths() {
+    const homePathKeys = [
+      "pacman",
+      "ghost1",
+      "ghost2",
+      "ghost3",
+      "ghost4",
+      "ghost5",
+    ] as const;
+    const homePaths = getPathsForSection("home") as Record<
+      string,
+      THREE.CurvePath<THREE.Vector3>
+    >;
 
-function animateHomeLoop(dt: number) {
-  homeProgress = (homeProgress + dt * HOME_ANIMATION_SPEED) % 1;
-  Object.entries(ghosts).forEach(([key, ghost]) => {
-    if ((homePathKeys as readonly string[]).includes(key)) {
-      const path = homePaths[key as HomePathKey];
-      if (path) {
-        const t = homeProgress;
-        const pos = path.getPointAt(t);
-        ghost.position.copy(pos);
-        const tangent = path.getTangentAt(t).normalize();
-        ghost.lookAt(pos.clone().add(tangent));
-        // Pacman rotation smoothing
-        if (key === "pacman") {
-          const zRot = Math.atan2(tangent.x, tangent.z);
-          ghost.rotation.set(Math.PI / 2, Math.PI, zRot + Math.PI / 2);
-        }
-        setGhostOpacity(ghost, 1);
+    // Store home paths for later use
+    this.homePaths = homePaths;
+    this.homePathKeys = homePathKeys;
+  }
+
+  private homePaths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
+  private homePathKeys: readonly string[] = [];
+
+  public getState(): AnimationState {
+    return this.state;
+  }
+
+  public update(dt: number) {
+    // Check POV state first
+    if (isPOVActive()) {
+      this.handlePOVState();
+      return;
+    }
+
+    // Handle different states
+    switch (this.state) {
+      case "HOME":
+        this.animateHome(dt);
+        break;
+      case "SCROLL_ANIMATION":
+        this.animateScrollToCenter();
+        break;
+      case "TRANSITIONING":
+        this.animateTransition(dt);
+        break;
+    }
+
+    this.render();
+  }
+
+  private handlePOVState() {
+    this.state = "POV_ANIMATION";
+
+    // Capture home positions when POV starts
+    if (!this.homePositionsCaptured) {
+      this.captureHomePositions();
+    }
+
+    // Make sure ghosts are visible during POV
+    Object.values(ghosts).forEach((ghost) => {
+      ghost.visible = true;
+    });
+
+    this.render();
+  }
+
+  public setScrollProgress(progress: number) {
+    const newProgress = Math.max(0, Math.min(1, progress));
+
+    if (Math.abs(newProgress - this.scrollProgress) < 0.001) return;
+
+    this.scrollProgress = newProgress;
+
+    if (newProgress > 0.01) {
+      // Start scroll animation
+      if (this.state === "HOME") {
+        this.startScrollAnimation();
+      }
+    } else {
+      // Return to home
+      if (this.state === "SCROLL_ANIMATION") {
+        this.startTransitionToHome();
       }
     }
-  });
-}
+  }
 
-function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
-  let opacitySet = false;
+  private startScrollAnimation() {
+    this.state = "SCROLL_ANIMATION";
 
-  function applyOpacity(mesh: THREE.Mesh) {
-    if (mesh.material) {
-      const materials = Array.isArray(mesh.material)
-        ? mesh.material
-        : [mesh.material];
+    if (!this.homePositionsCaptured) {
+      this.captureHomePositions();
+      this.createScrollCurves();
+    }
+  }
 
-      materials.forEach((material: any) => {
-        if (material) {
-          // Handle different material types
-          if (
-            material.isMeshBasicMaterial ||
-            material.isMeshStandardMaterial ||
-            material.isMeshPhysicalMaterial ||
-            material.isMeshMatcapMaterial
-          ) {
-            material.opacity = opacity;
-            material.transparent = opacity < 1;
-            material.depthWrite = opacity === 1;
-            material.needsUpdate = true;
-            opacitySet = true;
-          } else if (material.isShaderMaterial) {
-            // For shader materials, try to set opacity uniform if it exists
-            if (material.uniforms && material.uniforms.opacity) {
-              material.uniforms.opacity.value = opacity;
-              material.needsUpdate = true;
-              opacitySet = true;
-            }
+  private startTransitionToHome() {
+    this.state = "TRANSITIONING";
+    this.isTransitioning = true;
+    this.transitionProgress = 0;
+
+    // Capture current positions as transition start points
+    this.transitionStartPositions = {};
+    this.transitionStartRotations = {};
+
+    Object.entries(ghosts).forEach(([key, ghost]) => {
+      this.transitionStartPositions[key] = ghost.position.clone();
+      this.transitionStartRotations[key] = ghost.rotation.clone();
+    });
+  }
+
+  private captureHomePositions() {
+    if (this.homePositionsCaptured) return;
+
+    Object.entries(ghosts).forEach(([key, ghost]) => {
+      this.homePositions[key] = ghost.position.clone();
+      this.homeRotations[key] = ghost.rotation.clone();
+      this.homeScales[key] = ghost.scale.clone();
+    });
+
+    this.homePositionsCaptured = true;
+  }
+
+  private createScrollCurves() {
+    // Create bezier curves for each ghost
+    this.bezierCurves = {};
+    Object.entries(this.homePositions).forEach(([key, startPos]) => {
+      const endPos = this.MAZE_CENTER.clone();
+      const midPoint = new THREE.Vector3(
+        (startPos.x + endPos.x) / 2,
+        (startPos.y + endPos.y) / 2,
+        (startPos.z + endPos.z) / 2
+      );
+
+      const control = new THREE.Vector3(
+        midPoint.x + (midPoint.x - (startPos.x + endPos.x) / 2) * 0.3,
+        midPoint.y + 1.5,
+        midPoint.z + (midPoint.z - (startPos.z + endPos.z) / 2) * 0.3
+      );
+
+      this.bezierCurves[key] = new THREE.QuadraticBezierCurve3(
+        startPos,
+        control,
+        endPos
+      );
+    });
+
+    // Create camera curve
+    this.cameraScrollCurve = new THREE.CubicBezierCurve3(
+      camera.position.clone(),
+      new THREE.Vector3(
+        (camera.position.x + this.MAZE_CENTER.x) / 2,
+        2,
+        (camera.position.z + this.MAZE_CENTER.z) / 2
+      ),
+      new THREE.Vector3(0.55675, 3, 0.45175),
+      this.MAZE_CENTER.clone()
+    );
+    this.cameraScrollStartQuat = camera.quaternion.clone();
+  }
+
+  private animateHome(dt: number) {
+    this.homeProgress =
+      (this.homeProgress + dt * this.HOME_ANIMATION_SPEED) % 1;
+
+    Object.entries(ghosts).forEach(([key, ghost]) => {
+      if (this.homePathKeys.includes(key)) {
+        const path = this.homePaths[key];
+        if (path) {
+          const t = this.homeProgress;
+          const pos = path.getPointAt(t);
+          ghost.position.copy(pos);
+
+          const tangent = path.getTangentAt(t).normalize();
+          ghost.lookAt(pos.clone().add(tangent));
+
+          // Pacman rotation smoothing
+          if (key === "pacman") {
+            const zRot = Math.atan2(tangent.x, tangent.z);
+            ghost.rotation.set(Math.PI / 2, Math.PI, zRot + Math.PI / 2);
+          }
+
+          this.setGhostOpacity(ghost, 1);
+        }
+      }
+    });
+  }
+
+  private animateScrollToCenter() {
+    Object.entries(ghosts).forEach(([key, ghost]) => {
+      const speed = this.GHOST_SPEED_MULTIPLIERS[key] || 1.0;
+      let ghostProgress = Math.min(this.scrollProgress * speed, 1);
+
+      const curve = this.bezierCurves[key];
+      if (!curve) return;
+
+      const pos = curve.getPointAt(ghostProgress);
+      ghost.position.copy(pos);
+
+      // Interpolate rotation
+      const origRot = this.homeRotations[key];
+      const targetRot = new THREE.Euler(-Math.PI / 2, 0, 0);
+
+      const startQuat = new THREE.Quaternion().setFromEuler(origRot);
+      const endQuat = new THREE.Quaternion().setFromEuler(targetRot);
+      const interpolatedQuat = new THREE.Quaternion();
+
+      const easedProgress = this.easeInOutCubic(ghostProgress);
+      interpolatedQuat.slerpQuaternions(startQuat, endQuat, easedProgress);
+      ghost.quaternion.copy(interpolatedQuat);
+
+      // Fade out starting at 90% of overall scroll progress
+      let opacity = 1;
+      if (this.scrollProgress >= 0.9) {
+        const fadeProgress = (this.scrollProgress - 0.9) / 0.1;
+        opacity = 1 - fadeProgress;
+        opacity = Math.max(0, opacity);
+      }
+
+      this.setGhostOpacity(ghost, opacity);
+    });
+
+    // Animate camera
+    this.animateCameraScroll();
+  }
+
+  private animateCameraScroll() {
+    if (!this.cameraScrollCurve || !this.cameraScrollStartQuat) return;
+
+    const pos = this.cameraScrollCurve.getPoint(this.scrollProgress);
+    camera.position.copy(pos);
+    camera.fov = this.CAMERA_FOV;
+    camera.updateProjectionMatrix();
+
+    const endQuaternion = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(-Math.PI / 2, 0, 0)
+    );
+    const q = new THREE.Quaternion();
+    q.slerpQuaternions(
+      this.cameraScrollStartQuat,
+      endQuaternion,
+      this.scrollProgress
+    );
+    camera.quaternion.copy(q);
+  }
+
+  private animateTransition(dt: number) {
+    this.transitionProgress += dt / this.TRANSITION_DURATION;
+    const easedProgress = this.easeInOutCubic(
+      Math.min(this.transitionProgress, 1)
+    );
+
+    Object.entries(ghosts).forEach(([key, ghost]) => {
+      if (this.homePathKeys.includes(key)) {
+        const path = this.homePaths[key];
+        if (path) {
+          const targetPos = path.getPointAt(this.homeProgress);
+          const startPos = this.transitionStartPositions[key];
+
+          ghost.position.lerpVectors(startPos, targetPos, easedProgress);
+
+          const startRot = this.transitionStartRotations[key];
+          const tangent = path.getTangentAt(this.homeProgress).normalize();
+          const targetRot = new THREE.Euler();
+
+          if (key === "pacman") {
+            const zRot = Math.atan2(tangent.x, tangent.z);
+            targetRot.set(Math.PI / 2, Math.PI, zRot + Math.PI / 2);
           } else {
-            // Fallback for any material with opacity property
-            if ("opacity" in material) {
+            targetRot.setFromQuaternion(
+              new THREE.Quaternion().setFromUnitVectors(
+                new THREE.Vector3(0, 0, 1),
+                tangent
+              )
+            );
+          }
+
+          const startQuat = new THREE.Quaternion().setFromEuler(startRot);
+          const endQuat = new THREE.Quaternion().setFromEuler(targetRot);
+          const interpolatedQuat = new THREE.Quaternion();
+          interpolatedQuat.slerpQuaternions(startQuat, endQuat, easedProgress);
+          ghost.quaternion.copy(interpolatedQuat);
+
+          this.setGhostOpacity(ghost, 1);
+        }
+      }
+    });
+
+    if (this.transitionProgress >= 1) {
+      this.state = "HOME";
+      this.isTransitioning = false;
+      this.homePositionsCaptured = false;
+    }
+  }
+
+  public restoreGhostsToHome() {
+    Object.entries(ghosts).forEach(([key, ghost]) => {
+      if (this.homePositions[key]) {
+        ghost.position.copy(this.homePositions[key]);
+        ghost.rotation.copy(this.homeRotations[key]);
+        ghost.scale.copy(this.homeScales[key]);
+        ghost.visible = true;
+        this.setGhostOpacity(ghost, 1);
+      }
+    });
+
+    this.state = "HOME";
+    this.homePositionsCaptured = false;
+  }
+
+  private setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
+    function applyOpacity(mesh: THREE.Mesh) {
+      if (mesh.material) {
+        const materials = Array.isArray(mesh.material)
+          ? mesh.material
+          : [mesh.material];
+
+        materials.forEach((material: any) => {
+          if (material) {
+            if (
+              material.isMeshBasicMaterial ||
+              material.isMeshStandardMaterial ||
+              material.isMeshPhysicalMaterial ||
+              material.isMeshMatcapMaterial
+            ) {
               material.opacity = opacity;
               material.transparent = opacity < 1;
               material.depthWrite = opacity === 1;
               material.needsUpdate = true;
-              opacitySet = true;
+            } else if (
+              material.isShaderMaterial &&
+              material.uniforms &&
+              material.uniforms.opacity
+            ) {
+              material.uniforms.opacity.value = opacity;
+              material.needsUpdate = true;
+            } else if ("opacity" in material) {
+              material.opacity = opacity;
+              material.transparent = opacity < 1;
+              material.depthWrite = opacity === 1;
+              material.needsUpdate = true;
             }
           }
+        });
+      }
+    }
+
+    if (ghost instanceof THREE.Mesh) {
+      applyOpacity(ghost);
+    } else if (ghost instanceof THREE.Group) {
+      ghost.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          applyOpacity(child);
         }
       });
     }
   }
 
-  if (ghost instanceof THREE.Mesh) {
-    applyOpacity(ghost);
-  } else if (ghost instanceof THREE.Group) {
-    ghost.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        applyOpacity(child);
-      }
-    });
+  private easeInOutCubic(t: number): number {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  private render() {
+    renderer.render(scene, camera);
   }
 }
 
-function captureGhostPositions() {
-  if (homePositionsCaptured) return;
+// Create global animation controller instance
+const animationController = new AnimationController();
 
-  Object.entries(ghosts).forEach(([key, ghost]) => {
-    capturedPositions[key] = ghost.position.clone();
-    capturedRotations[key] = ghost.rotation.clone();
-  });
-
-  // Create bezier curves once with more linear paths
-  bezierCurves = {};
-  Object.entries(capturedPositions).forEach(([key, startPos]) => {
-    const endPos = MAZE_CENTER.clone();
-
-    // Create a more linear path by placing control points closer to the line
-    // This reduces the extreme acceleration/deceleration at the ends
-    const midPoint = new THREE.Vector3(
-      (startPos.x + endPos.x) / 2,
-      (startPos.y + endPos.y) / 2,
-      (startPos.z + endPos.z) / 2
-    );
-
-    // Move control point closer to the midpoint for more linear movement
-    const control = new THREE.Vector3(
-      midPoint.x + (midPoint.x - (startPos.x + endPos.x) / 2) * 0.3,
-      midPoint.y + 1.5, // Higher elevation for more dramatic arc
-      midPoint.z + (midPoint.z - (startPos.z + endPos.z) / 2) * 0.3
-    );
-
-    bezierCurves[key] = new THREE.QuadraticBezierCurve3(
-      startPos,
-      control,
-      endPos
-    );
-  });
-
-  // Create camera curve once
-  cameraScrollCurve = new THREE.CubicBezierCurve3(
-    camera.position.clone(),
-    new THREE.Vector3(
-      (camera.position.x + MAZE_CENTER.x) / 2,
-      2,
-      (camera.position.z + MAZE_CENTER.z) / 2
-    ),
-    new THREE.Vector3(0.55675, 3, 0.45175),
-    MAZE_CENTER.clone()
-  );
-  cameraScrollStartQuat = camera.quaternion.clone();
-
-  homePositionsCaptured = true;
-
-  // Update global version for POV animation access
-  if (typeof window !== "undefined") {
-    (window as any).homePositionsCaptured = true;
-  }
-}
-
-function startSmoothTransitionToHome() {
-  isTransitioningToHome = true;
-  transitionProgress = 0;
-
-  // Capture current positions as transition start points
-  transitionStartPositions = {};
-  transitionStartRotations = {};
-  Object.entries(ghosts).forEach(([key, ghost]) => {
-    transitionStartPositions[key] = ghost.position.clone();
-    transitionStartRotations[key] = ghost.rotation.clone();
-  });
-}
-
-function animateTransitionToHome(dt: number) {
-  transitionProgress += dt / TRANSITION_DURATION;
-  const easedProgress = easeInOutCubic(Math.min(transitionProgress, 1));
-
-  // Interpolate ghosts from their current positions to home path positions
-  Object.entries(ghosts).forEach(([key, ghost]) => {
-    if ((homePathKeys as readonly string[]).includes(key)) {
-      const path = homePaths[key as HomePathKey];
-      if (path) {
-        // Calculate target position on home path
-        const targetPos = path.getPointAt(homeProgress);
-        const startPos = transitionStartPositions[key];
-
-        // Interpolate position
-        ghost.position.lerpVectors(startPos, targetPos, easedProgress);
-
-        // Interpolate rotation using quaternions for shortest path
-        const startRot = transitionStartRotations[key];
-        const tangent = path.getTangentAt(homeProgress).normalize();
-        const targetRot = new THREE.Euler();
-
-        if (key === "pacman") {
-          const zRot = Math.atan2(tangent.x, tangent.z);
-          targetRot.set(Math.PI / 2, Math.PI, zRot + Math.PI / 2);
-        } else {
-          targetRot.setFromQuaternion(
-            new THREE.Quaternion().setFromUnitVectors(
-              new THREE.Vector3(0, 0, 1),
-              tangent
-            )
-          );
-        }
-
-        // Convert to quaternions for smooth shortest-path interpolation
-        const startQuat = new THREE.Quaternion().setFromEuler(startRot);
-        const targetQuat = new THREE.Quaternion().setFromEuler(targetRot);
-        const interpolatedQuat = new THREE.Quaternion();
-
-        // Slerp for shortest path rotation
-        interpolatedQuat.slerpQuaternions(startQuat, targetQuat, easedProgress);
-
-        // Apply the interpolated rotation
-        ghost.quaternion.copy(interpolatedQuat);
-
-        // Keep opacity at 1 during transition
-        setGhostOpacity(ghost, 1);
-      }
-    }
-  });
-
-  // Check if transition is complete
-  if (transitionProgress >= 1) {
-    isTransitioningToHome = false;
-    homePositionsCaptured = false;
-
-    // Update global version for POV animation access
-    if (typeof window !== "undefined") {
-      (window as any).homePositionsCaptured = false;
-    }
-  }
-}
-
-// Add a small threshold to prevent rapid state switching
-let lastScrollProgress = 0;
-const PROGRESS_THRESHOLD = 0.001; // Reduced for smoother movement
-
-export function setScrollProgress(progress: number) {
-  // Prevent rapid progress changes that cause flickering
-  const progressChange = Math.abs(progress - lastScrollProgress);
-  if (progressChange < PROGRESS_THRESHOLD) return;
-
-  scrollProgress = Math.max(0, Math.min(1, progress));
-  lastScrollProgress = progress;
-}
-
-function animateScrollToCenter(progress: number) {
-  Object.entries(ghosts).forEach(([key, ghost]) => {
-    const speed = GHOST_SPEED_MULTIPLIERS[key] || 1.0;
-
-    // All ghosts start immediately, but travel at different speeds
-    let ghostProgress = Math.min(progress * speed, 1);
-
-    const curve = bezierCurves[key];
-    if (!curve) return;
-
-    // Use getPointAt for smoother interpolation along the curve
-    const pos = curve.getPointAt(ghostProgress);
-    ghost.position.copy(pos);
-
-    // Interpolate rotation more smoothly using quaternions
-    const origRot = capturedRotations[key];
-    const targetRot = new THREE.Euler(-Math.PI / 2, 0, 0);
-
-    // Use quaternions for shortest path rotation
-    const startQuat = new THREE.Quaternion().setFromEuler(origRot);
-    const endQuat = new THREE.Quaternion().setFromEuler(targetRot);
-    const interpolatedQuat = new THREE.Quaternion();
-
-    // Use easing for smoother rotation transition
-    const easedProgress = easeInOutCubic(ghostProgress);
-    interpolatedQuat.slerpQuaternions(startQuat, endQuat, easedProgress);
-
-    // Apply the interpolated rotation
-    ghost.quaternion.copy(interpolatedQuat);
-
-    // Fade out starting at 90% of the overall scroll progress (not individual ghost progress)
-    // This ensures all ghosts fade out together regardless of their speed
-    let opacity = 1;
-    if (progress >= 0.9) {
-      const fadeProgress = (progress - 0.9) / 0.1; // 0 to 1 over last 10% (90% to 100%)
-      opacity = 1 - fadeProgress;
-      opacity = Math.max(0, opacity);
-    }
-
-    setGhostOpacity(ghost, opacity);
-  });
-
-  // Also fade out Pacman during the same period
-  if (pacman) {
-    let pacmanOpacity = 1;
-    if (progress >= 0.9) {
-      const fadeProgress = (progress - 0.9) / 0.1;
-      pacmanOpacity = 1 - fadeProgress;
-      pacmanOpacity = Math.max(0, pacmanOpacity);
-    }
-    setGhostOpacity(pacman, pacmanOpacity);
-  }
-}
-
-function animateCameraScroll(progress: number) {
-  if (!cameraScrollCurve || !cameraScrollStartQuat) return;
-  const pos = cameraScrollCurve.getPoint(progress);
-  camera.position.copy(pos);
-  camera.fov = CAMERA_FOV;
-  camera.updateProjectionMatrix();
-  // Slerp rotation
-  const q = new THREE.Quaternion();
-  q.slerpQuaternions(cameraScrollStartQuat, endQuaternion, progress);
-  camera.quaternion.copy(q);
-}
-
-function render() {
-  renderer.render(scene, camera);
-}
-
+// Animation loop
 function animationLoop() {
   requestAnimationFrame(animationLoop);
   const dt = clock.getDelta();
 
   if (pacmanMixer) pacmanMixer.update(dt);
-
-  // Check if POV animation is active - if so, handle POV state
-  if (isPOVActive()) {
-    animationState = "POV_ANIMATION";
-    // POV animation is controlling camera and ghosts, just render
-    // Make sure ghosts are visible during POV animation
-    Object.values(ghosts).forEach((ghost) => {
-      ghost.visible = true;
-    });
-    render();
-    return;
-  }
-
-  // Handle different animation states
-  if (isTransitioningToHome) {
-    animateTransitionToHome(dt);
-  } else if (scrollProgress > 0.01) {
-    // Scroll animation
-    animationState = "SCROLL_ANIMATION";
-    if (!homePositionsCaptured) {
-      captureGhostPositions();
-      pausedHomeProgress = homeProgress;
-    }
-    animateScrollToCenter(scrollProgress);
-    animateCameraScroll(scrollProgress);
-  } else {
-    // Home animation - start transition if we were in scroll animation
-    animationState = "HOME";
-
-    // If we just came from POV animation, ensure ghosts are visible and in home positions
-    if (homePositionsCaptured && !isTransitioningToHome) {
-      // Make sure all ghosts are visible for home animation
-      Object.values(ghosts).forEach((ghost) => {
-        ghost.visible = true;
-        // Reset opacity to full
-        setGhostOpacity(ghost, 1);
-      });
-      startSmoothTransitionToHome();
-    } else if (!isTransitioningToHome) {
-      // Normal home animation
-      animateHomeLoop(dt);
-    }
-  }
-
-  render();
+  animationController.update(dt);
 }
 
+// Clock for animation timing
+const clock = new THREE.Clock();
+let pacmanMixer: THREE.AnimationMixer | null = null;
+
+// GSAP ScrollTrigger setup
 async function setupScrollTrigger() {
   try {
-    // Dynamic import GSAP and ScrollTrigger
     const gsapModule = await import("gsap");
     const scrollTriggerModule = await import("gsap/ScrollTrigger");
 
@@ -428,39 +453,31 @@ async function setupScrollTrigger() {
 
     gsap.registerPlugin(ScrollTrigger);
 
-    // Get home section element
-    const homeSection = document.querySelector(
-      SELECTORS.homeSection
-    ) as HTMLElement;
+    const homeSection = document.querySelector(".sc--home.sc") as HTMLElement;
     if (!homeSection) {
       console.warn("Home section not found, scroll animation disabled");
       return;
     }
 
-    // Create a timeline for proper scrub functionality
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: homeSection,
         start: "top top",
         end: "bottom top",
-        scrub: 1, // 1 second scrub delay
-        // Remove onUpdate from ScrollTrigger to prevent dual updates
+        scrub: 1,
       },
     });
 
-    // Add a dummy animation to the timeline (required for scrub to work)
     tl.to(
       {},
       {
         duration: 1,
         onUpdate: function () {
           const progress = this.progress();
-          setScrollProgress(progress);
+          animationController.setScrollProgress(progress);
         },
       }
     );
-
-    scrollTriggerInitialized = true;
   } catch (error) {
     console.error("❌ GSAP ScrollTrigger setup failed:", error);
     setupManualScrollListener();
@@ -469,27 +486,29 @@ async function setupScrollTrigger() {
 
 function setupManualScrollListener() {
   window.addEventListener("scroll", () => {
-    const homeSection = document.querySelector(
-      SELECTORS.homeSection
-    ) as HTMLElement;
+    const homeSection = document.querySelector(".sc--home.sc") as HTMLElement;
     if (homeSection) {
       const rect = homeSection.getBoundingClientRect();
       const progress = Math.max(
         0,
         Math.min(1, 1 - rect.bottom / window.innerHeight)
       );
-      setScrollProgress(progress);
+      animationController.setScrollProgress(progress);
     }
   });
 }
 
 export function initAnimationSystem() {
-  // Start home animation loop
-  animationState = "HOME";
-  homeProgress = 0;
-  scrollProgress = 0;
+  animationController.restoreGhostsToHome();
   animationLoop();
-
-  // Setup GSAP ScrollTrigger
   setupScrollTrigger();
+}
+
+// Export controller methods for POV animation
+export function restoreGhostsToHome() {
+  animationController.restoreGhostsToHome();
+}
+
+export function getAnimationState(): AnimationState {
+  return animationController.getState();
 }
