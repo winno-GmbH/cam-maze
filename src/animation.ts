@@ -57,9 +57,29 @@ class AnimationSystem {
   private scrollProgress = 0;
   private savedHomeProgress = 0;
 
+  // CRITICAL: Store original home positions (like animation-system.ts)
+  private originalHomePositions: Record<string, THREE.Vector3> = {};
+  private originalHomeRotations: Record<string, THREE.Euler> = {};
+  private originalHomeScales: Record<string, THREE.Vector3> = {};
+  private homePositionsCaptured = false;
+
   constructor() {
     console.log("AnimationSystem: Initializing...");
     console.log("AnimationSystem: MAZE_CENTER:", MAZE_CENTER);
+    this.captureOriginalHomePositions();
+  }
+
+  // Capture ORIGINAL home positions (called only once at start)
+  private captureOriginalHomePositions(): void {
+    if (this.homePositionsCaptured) return;
+
+    Object.entries(ghosts).forEach(([key, ghost]) => {
+      this.originalHomePositions[key] = ghost.position.clone();
+      this.originalHomeRotations[key] = ghost.rotation.clone();
+      this.originalHomeScales[key] = ghost.scale.clone();
+    });
+    this.homePositionsCaptured = true;
+    console.log("AnimationSystem: Original home positions captured");
   }
 
   // Start the home animation
@@ -79,6 +99,10 @@ class AnimationSystem {
     const elapsed = (currentTime - this.timeOffset) / 1000;
     this.savedHomeProgress = (elapsed / this.animationDuration) % 1;
     this.animationRunning = false;
+    console.log(
+      "AnimationSystem: Home animation paused at progress:",
+      this.savedHomeProgress
+    );
   }
 
   public resumeHomeAnimation(): void {
@@ -86,6 +110,10 @@ class AnimationSystem {
     this.animationRunning = true;
     this.timeOffset =
       Date.now() - this.savedHomeProgress * this.animationDuration * 1000;
+    console.log(
+      "AnimationSystem: Home animation resumed from progress:",
+      this.savedHomeProgress
+    );
   }
 
   public captureGhostPositions(): void {
@@ -93,6 +121,9 @@ class AnimationSystem {
       this.capturedPositions[key] = ghost.position.clone();
       this.capturedRotations[key] = ghost.rotation.clone();
     });
+    console.log(
+      "AnimationSystem: Ghost positions captured for scroll animation"
+    );
   }
 
   public createBezierCurves(): void {
@@ -110,6 +141,7 @@ class AnimationSystem {
         endPos
       );
     });
+    console.log("AnimationSystem: Bezier curves created");
   }
 
   public startScrollToCenter(): void {
@@ -130,6 +162,7 @@ class AnimationSystem {
     );
     scrollCameraStartQuaternion = camera.quaternion.clone();
     this.state = "SCROLL_TO_CENTER";
+    console.log("AnimationSystem: Started scroll-to-center animation");
   }
 
   public setScrollProgress(progress: number): void {
@@ -198,6 +231,9 @@ class AnimationSystem {
             smoothedRotation + Math.PI / 2
           );
         }
+
+        // Ensure full opacity during home animation
+        this.setGhostOpacity(ghost, 1);
       }
     });
   }
@@ -270,23 +306,7 @@ class AnimationSystem {
         opacity = 1 - fadeProgress;
         opacity = Math.max(0, opacity);
       }
-      if (
-        ghost instanceof THREE.Mesh &&
-        ghost.material &&
-        "opacity" in ghost.material
-      ) {
-        (ghost.material as any).opacity = opacity;
-      } else if (ghost instanceof THREE.Group) {
-        ghost.traverse((child) => {
-          if (
-            child instanceof THREE.Mesh &&
-            child.material &&
-            "opacity" in child.material
-          ) {
-            (child.material as any).opacity = opacity;
-          }
-        });
-      }
+      this.setGhostOpacity(ghost, opacity);
     });
   }
 
@@ -308,17 +328,69 @@ class AnimationSystem {
     camera.quaternion.copy(q);
   }
 
-  public resetToHome(): void {
+  // Helper method to set ghost opacity (handles both Mesh and Group)
+  private setGhostOpacity(ghost: THREE.Object3D, opacity: number): void {
+    if (
+      ghost instanceof THREE.Mesh &&
+      ghost.material &&
+      "opacity" in ghost.material
+    ) {
+      (ghost.material as any).opacity = opacity;
+    } else if (ghost instanceof THREE.Group) {
+      ghost.traverse((child) => {
+        if (
+          child instanceof THREE.Mesh &&
+          child.material &&
+          "opacity" in child.material
+        ) {
+          (child.material as any).opacity = opacity;
+        }
+      });
+    }
+  }
+
+  // Reset to home state - now properly handles resume vs full reset
+  public resetToHome(fullReset: boolean = false): void {
     this.state = "HOME_ANIMATION";
     this.animationRunning = true;
     this.timeOffset = Date.now();
-    this.savedHomeProgress = 0;
+
+    if (fullReset) {
+      // Full reset: go back to initial state
+      this.savedHomeProgress = 0;
+      camera.position.copy(initialCameraPosition);
+      camera.quaternion.copy(initialCameraQuaternion);
+
+      // Reset all ghosts to their ORIGINAL home positions
+      Object.entries(this.originalHomePositions).forEach(
+        ([key, originalPosition]) => {
+          const ghost = ghosts[key];
+          const originalRotation = this.originalHomeRotations[key];
+          const originalScale = this.originalHomeScales[key];
+
+          if (ghost && originalPosition && originalRotation && originalScale) {
+            ghost.position.copy(originalPosition);
+            ghost.rotation.copy(originalRotation);
+            ghost.scale.copy(originalScale);
+            ghost.visible = true;
+            this.setGhostOpacity(ghost, 1);
+          }
+        }
+      );
+
+      console.log("AnimationSystem: Full reset to initial state");
+    } else {
+      // Resume: continue from saved progress (positions will be set by home animation)
+      console.log(
+        "AnimationSystem: Resuming from saved progress:",
+        this.savedHomeProgress
+      );
+    }
+
     // Clear scroll camera path/quaternion so camera only animates on scroll when in SCROLL_TO_CENTER
     scrollCameraCurve = null;
     scrollCameraStartQuaternion = null;
-    // Set camera to initial home position/quaternion
-    camera.position.copy(initialCameraPosition);
-    camera.quaternion.copy(initialCameraQuaternion);
+
     camera.fov = ORIGINAL_FOV;
     camera.updateProjectionMatrix();
   }
@@ -326,6 +398,10 @@ class AnimationSystem {
   // Public getters
   public getState(): AnimationState {
     return this.state;
+  }
+
+  public getHomeProgress(): number {
+    return this.savedHomeProgress;
   }
 
   // Render function

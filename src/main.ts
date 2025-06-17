@@ -31,12 +31,26 @@ async function init() {
         animationSystem.setScrollProgress(self.progress);
       },
       onLeaveBack: () => {
-        animationSystem.resetToHome();
+        // Check if we're at the very top of the page for a full reset
+        const isAtTop = window.scrollY <= 10;
+        animationSystem.resetToHome(isAtTop);
       },
     });
+
+    // Additional scroll listener for full reset when at very top (like legacy system)
+    window.addEventListener("scroll", () => {
+      // Check if we're at the very top of the page (above home section)
+      if (window.scrollY <= 10) {
+        animationSystem.resetToHome(true);
+      }
+    });
+
+    // Expose animation system globally for debugging
+    (window as any).animationSystem = animationSystem;
   } catch (error) {
     console.error("Initialization error:", error);
   }
 }
 
+// Start the application
 init();
