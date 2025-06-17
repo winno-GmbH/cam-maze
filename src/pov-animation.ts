@@ -161,6 +161,13 @@ export function testPOVAnimation(progress: number = 0.5) {
 
 // --- Main update function (to be called in animation loop) ---
 export function updatePOVAnimation(progress: number) {
+  // Don't run POV animation if we're in the middle of a scroll animation
+  // This prevents conflicts with the home section scroll animation
+  if (progress < 0.01) {
+    isPOVAnimationActive = false;
+    return;
+  }
+
   isPOVAnimationActive = true;
 
   // Use progress directly - GSAP ScrollTrigger already handles smoothing
@@ -238,7 +245,8 @@ export function updatePOVAnimation(progress: number) {
       // Make ghosts visible during POV animation - ensure they're visible
       ghost.visible = true;
 
-      // Also ensure ghost materials are visible
+      // Only set materials to full opacity if they're not already transparent
+      // This prevents overriding fade-out animations from other systems
       function ensureGhostVisible(obj: THREE.Object3D) {
         if ((obj as any).material) {
           const mats = Array.isArray((obj as any).material)
@@ -246,10 +254,14 @@ export function updatePOVAnimation(progress: number) {
             : [(obj as any).material];
           mats.forEach((mat: any) => {
             if (mat) {
-              mat.opacity = 1;
-              mat.transparent = false;
-              mat.depthWrite = true;
-              mat.needsUpdate = true;
+              // Only set to full opacity if the material is currently transparent
+              // This prevents overriding fade-out animations
+              if (mat.transparent && mat.opacity < 1) {
+                mat.opacity = 1;
+                mat.transparent = false;
+                mat.depthWrite = true;
+                mat.needsUpdate = true;
+              }
             }
           });
         }

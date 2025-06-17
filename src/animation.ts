@@ -91,8 +91,7 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
   function applyOpacity(mesh: THREE.Mesh) {
     if (mesh.material && "opacity" in mesh.material) {
       (mesh.material as any).opacity = opacity;
-      (mesh.material as any).transparent =
-        opacity < 1 || (mesh.material as any).transparent;
+      (mesh.material as any).transparent = opacity < 1;
       (mesh.material as any).depthWrite = opacity === 1; // Only write depth when fully opaque
       (mesh.material as any).needsUpdate = true;
       opacitySet = true;
@@ -274,10 +273,10 @@ function animateScrollToCenter(progress: number) {
     // Apply the interpolated rotation
     ghost.quaternion.copy(interpolatedQuat);
 
-    // Fade out in last 5% of the curve (95% to 100%)
+    // Fade out starting at 90% of the overall scroll progress (not individual ghost progress)
     let opacity = 1;
-    if (ghostProgress >= 0.95) {
-      const fadeProgress = (ghostProgress - 0.95) / 0.05; // 0 to 1 over last 5%
+    if (progress >= 0.9) {
+      const fadeProgress = (progress - 0.9) / 0.1; // 0 to 1 over last 10% (90% to 100%)
       opacity = 1 - fadeProgress;
       opacity = Math.max(0, opacity);
     }
