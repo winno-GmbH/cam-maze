@@ -200,7 +200,10 @@ function animationLoop() {
     animateScrollToCenter(scrollProgress);
     animateCameraScroll(scrollProgress);
   } else {
-    // Home animation
+    // Home animation - reset curve calculation flag when back to home
+    if (homePositionsCaptured) {
+      homePositionsCaptured = false;
+    }
     animateHomeLoop(dt);
   }
 
