@@ -348,7 +348,7 @@ async function setupScrollTrigger() {
       scrollTrigger: {
         trigger: homeSection,
         start: "top top",
-        end: "bottom center",
+        end: "bottom top",
         scrub: 1, // 1 second scrub delay
         // Remove onUpdate from ScrollTrigger to prevent dual updates
       },
