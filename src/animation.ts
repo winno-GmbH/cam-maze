@@ -87,24 +87,23 @@ function animateHomeLoop(dt: number) {
 function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
   let opacitySet = false;
 
-  if (
-    ghost instanceof THREE.Mesh &&
-    ghost.material &&
-    "opacity" in ghost.material
-  ) {
-    (ghost.material as any).opacity = opacity;
-    (ghost.material as any).transparent = opacity < 1;
-    opacitySet = true;
+  function applyOpacity(mesh: THREE.Mesh) {
+    if (mesh.material && "opacity" in mesh.material) {
+      (mesh.material as any).opacity = opacity;
+      (mesh.material as any).transparent =
+        opacity < 1 || (mesh.material as any).transparent;
+      (mesh.material as any).depthWrite = opacity === 1; // Only write depth when fully opaque
+      (mesh.material as any).needsUpdate = true;
+      opacitySet = true;
+    }
+  }
+
+  if (ghost instanceof THREE.Mesh) {
+    applyOpacity(ghost);
   } else if (ghost instanceof THREE.Group) {
     ghost.traverse((child) => {
-      if (
-        child instanceof THREE.Mesh &&
-        child.material &&
-        "opacity" in child.material
-      ) {
-        (child.material as any).opacity = opacity;
-        (child.material as any).transparent = opacity < 1;
-        opacitySet = true;
+      if (child instanceof THREE.Mesh) {
+        applyOpacity(child);
       }
     });
   }
