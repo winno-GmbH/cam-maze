@@ -62,6 +62,27 @@ console.log("Camera FOV:", camera.fov);
 let prevCameraQuat: THREE.Quaternion | null = null;
 const CAMERA_SLERP_ALPHA = 0.18; // Slerp factor for smoothness
 
+// POV Animation State for text transitions
+interface POVTriggerState {
+  triggerCameraProgress?: number;
+  ghostTextCameraProgress?: number;
+  camTextCameraProgress?: number;
+  endCameraProgress?: number;
+  ghostTextOpacity: number;
+  camTextOpacity: number;
+  active: boolean;
+}
+
+// Initialize trigger states
+const povTriggerStates: { [key: string]: POVTriggerState } = {};
+Object.keys(TriggerPositions).forEach((key) => {
+  povTriggerStates[key] = {
+    ghostTextOpacity: 0,
+    camTextOpacity: 0,
+    active: false,
+  };
+});
+
 // Export function to check if POV is active (for animation system)
 export function isPOVActive(): boolean {
   return isPOVAnimationActive;
@@ -275,6 +296,41 @@ export function stopPOVAnimation() {
   camera.updateProjectionMatrix();
   cameraManualRotation = null;
   prevCameraQuat = null;
+
+  // Reset all trigger states
+  Object.values(povTriggerStates).forEach((state) => {
+    state.ghostTextOpacity = 0;
+    state.camTextOpacity = 0;
+    state.active = false;
+  });
+
+  // Hide all POV elements
+  Object.entries(TriggerPositions).forEach(([key, trigger]) => {
+    if (trigger.parent) {
+      const el = trigger.parent as HTMLElement;
+      el.style.opacity = "0";
+      el.style.visibility = "hidden";
+      el.style.pointerEvents = "none";
+
+      // Hide .pov and .cam elements
+      const povElements = el.querySelectorAll(".pov");
+      const camElements = el.querySelectorAll(".cam");
+
+      povElements.forEach((povElement: Element) => {
+        const element = povElement as HTMLElement;
+        element.style.opacity = "0";
+        element.style.visibility = "hidden";
+      });
+
+      camElements.forEach((camElement: Element) => {
+        const element = camElement as HTMLElement;
+        element.style.opacity = "0";
+        element.style.visibility = "hidden";
+        element.style.display = "none";
+      });
+    }
+  });
+
   console.log("POV Animation stopped");
 }
 
@@ -348,7 +404,6 @@ export async function initPOVAnimationSystem() {
     onUpdate: (self) => {
       // Progress von 0 (top top) bis 1 (bottom bottom)
       const progress = self.progress;
-      console.log("ScrollTrigger progress:", progress);
       updatePOVAnimation(progress);
     },
     onEnter: () => {
@@ -357,10 +412,7 @@ export async function initPOVAnimationSystem() {
     },
     onLeave: () => {
       console.log("POV section left!");
-      isPOVAnimationActive = false;
-      // Reset camera FOV when leaving POV section
-      camera.fov = DEFAULT_FOV;
-      camera.updateProjectionMatrix();
+      stopPOVAnimation();
     },
   });
 
