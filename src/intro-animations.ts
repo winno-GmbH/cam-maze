@@ -174,8 +174,6 @@ async function setupGSAPIntroAnimations() {
         scale: 0,
         opacity: 0,
         className: "+=intro-text-fixed",
-        x: "-50%",
-        y: "-50%",
       },
       {
         scale: 1.5,
@@ -219,8 +217,6 @@ async function setupGSAPIntroAnimations() {
           scale: 0.5,
           opacity: 0,
           className: "+=intro-text-fixed",
-          x: "-50%",
-          y: "-50%",
         },
         {
           keyframes: [
