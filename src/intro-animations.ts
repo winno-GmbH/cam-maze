@@ -127,39 +127,63 @@ async function setupGSAPIntroAnimations() {
 
     console.log("🎬 Setting up GSAP intro animations");
 
-    // Create a single timeline for both animations to ensure smooth sequencing
-    const introTimeline = gsap.timeline({
-      scrollTrigger: {
-        trigger: DOM_ELEMENTS.introSection,
-        start: "top top",
-        end: "bottom bottom",
-        scrub: 0.3,
-        pin: true,
-        pinSpacing: false,
-        invalidateOnRefresh: true,
-        fastScrollEnd: true, // Better handling of fast scrolling
-        onUpdate: function (self: any) {
-          const progress = self.progress();
-
-          // Header animation: 0% to 50% of scroll
-          if (progress <= 0.5) {
-            const headerProgress = progress / 0.5;
-            animateIntroHeaderDirect(headerProgress);
-            animateIntroBodyDirect(0);
-          } else {
-            // Body animation: 50% to 100% of scroll
-            const bodyProgress = (progress - 0.5) / 0.5;
-            animateIntroHeaderDirect(1);
-            animateIntroBodyDirect(bodyProgress);
-          }
-        },
+    // Header animation with pin: top top to center center
+    gsap.fromTo(
+      DOM_ELEMENTS.introHeader,
+      {
+        scale: 0,
+        opacity: 0,
       },
-    });
+      {
+        scale: 1.5,
+        opacity: 0,
+        scrollTrigger: {
+          trigger: DOM_ELEMENTS.introHeader,
+          start: "top top",
+          end: "center center",
+          scrub: 0.3,
+          pin: true,
+          pinSpacing: false,
+          invalidateOnRefresh: true,
+        },
+        ease: "none",
+        keyframes: [
+          { scale: 0, opacity: 0, duration: 0 },
+          { scale: 0.8, opacity: 1, duration: 0.3 },
+          { scale: 1.2, opacity: 1, duration: 0.4 },
+          { scale: 1.5, opacity: 0, duration: 0.3 },
+        ],
+      }
+    );
 
-    // Add dummy animations to the timeline for proper scrub functionality
-    introTimeline
-      .to(DOM_ELEMENTS.introHeader, { duration: 0.5, ease: "none" })
-      .to(DOM_ELEMENTS.introBody, { duration: 0.5, ease: "none" });
+    // Body animation with pin: center center to bottom bottom
+    gsap
+      .timeline({
+        scrollTrigger: {
+          trigger: DOM_ELEMENTS.introBody,
+          start: "center center",
+          end: "bottom bottom",
+          scrub: 0.3,
+          pin: true,
+          pinSpacing: false,
+          invalidateOnRefresh: true,
+        },
+      })
+      .fromTo(
+        DOM_ELEMENTS.introBody,
+        {
+          scale: 0.5,
+          opacity: 0,
+        },
+        {
+          keyframes: [
+            { scale: 0.5, opacity: 0, duration: 0 },
+            { scale: 0.8, opacity: 1, duration: 0.3 },
+            { scale: 1.2, opacity: 1, duration: 0.4 },
+            { scale: 1.5, opacity: 0, duration: 0.3 },
+          ],
+        }
+      );
 
     console.log("✅ GSAP intro animations successfully setup");
   } catch (error) {
