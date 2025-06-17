@@ -137,6 +137,8 @@ async function setupGSAPIntroAnimations() {
         pin: true,
         pinSpacing: false,
         invalidateOnRefresh: true,
+        preventOverlaps: true, // Prevent conflicts with other ScrollTriggers
+        fastScrollEnd: true, // Better handling of fast scrolling
         onUpdate: function (self: any) {
           const progress = self.progress();
 

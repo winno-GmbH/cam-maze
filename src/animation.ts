@@ -350,6 +350,8 @@ async function setupScrollTrigger() {
         start: "top top",
         end: "bottom top",
         scrub: 1, // 1 second scrub delay
+        preventOverlaps: true, // Prevent conflicts with other ScrollTriggers
+        fastScrollEnd: true, // Better handling of fast scrolling
         // Remove onUpdate from ScrollTrigger to prevent dual updates
       },
     });
