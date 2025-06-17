@@ -229,18 +229,6 @@ async function setupScrollTrigger() {
       onUpdate: (self) => {
         setScrollProgress(self.progress);
       },
-      onEnter: () => {
-        console.log("ScrollTrigger: Entered home section animation");
-      },
-      onLeave: () => {
-        console.log("ScrollTrigger: Left home section animation");
-      },
-      onEnterBack: () => {
-        console.log("ScrollTrigger: Entered back home section animation");
-      },
-      onLeaveBack: () => {
-        console.log("ScrollTrigger: Left back home section animation");
-      },
     });
 
     scrollTriggerInitialized = true;
