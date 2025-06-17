@@ -11,6 +11,22 @@ export type AnimationState = "HOME" | "SCROLL_ANIMATION";
 const HOME_ANIMATION_SPEED = 0.03; // loop speed
 const CAMERA_FOV = 50;
 
+// Speed multipliers for scroll animation - higher = faster
+const GHOST_SPEED_MULTIPLIERS: Record<string, number> = {
+  ghost1: 1.25, // Fastest
+  ghost2: 1.14,
+  ghost3: 1.05,
+  ghost4: 0.97,
+  ghost5: 0.89,
+  pacman: 0.8, // Slowest - enters last
+};
+
+// When ghosts should finish their animation (0.8 = 80% of scroll progress)
+const GHOSTS_END_AT = 0.8;
+const GHOST_OPACITY_FADE_START = 0.9;
+const GHOST_STAGGER_DELAY = 0.15; // Delay between each ghost
+const PACMAN_DELAY = 0.3; // Additional delay for pacman
+
 let animationState: AnimationState = "HOME";
 let homeProgress = 0;
 let animationPaused = false;
@@ -106,21 +122,52 @@ function createBezierCurves() {
 
 function animateScrollToCenter(progress: number) {
   Object.entries(ghosts).forEach(([key, ghost]) => {
+    const speed = GHOST_SPEED_MULTIPLIERS[key] || 1.0;
+    let ghostProgress = Math.min((progress * speed) / GHOSTS_END_AT, 1);
+
+    // Add stagger delay for ghosts and pacman
+    if (key !== "pacman") {
+      ghostProgress = Math.max(
+        0,
+        Math.min(
+          1,
+          ((progress -
+            GHOST_STAGGER_DELAY * (parseInt(key.replace("ghost", "")) - 1)) *
+            speed) /
+            GHOSTS_END_AT
+        )
+      );
+    } else {
+      ghostProgress = Math.max(
+        0,
+        Math.min(1, ((progress - PACMAN_DELAY) * speed) / GHOSTS_END_AT)
+      );
+    }
+
     const curve = bezierCurves[key];
     if (!curve) return;
-    const pos = curve.getPoint(progress);
+
+    const pos = curve.getPoint(ghostProgress);
     ghost.position.copy(pos);
+
     // Interpolate rotation
     const origRot = capturedRotations[key];
     const targetRot = new THREE.Euler(-Math.PI / 2, 0, 0);
     ghost.rotation.set(
-      origRot.x + (targetRot.x - origRot.x) * progress,
-      origRot.y + (targetRot.y - origRot.y) * progress,
-      origRot.z + (targetRot.z - origRot.z) * progress
+      origRot.x + (targetRot.x - origRot.x) * ghostProgress,
+      origRot.y + (targetRot.y - origRot.y) * ghostProgress,
+      origRot.z + (targetRot.z - origRot.z) * ghostProgress
     );
+
     // Fade out in last 10%
     let opacity = 1;
-    if (progress > 0.9) opacity = 1 - (progress - 0.9) / 0.1;
+    if (ghostProgress >= GHOST_OPACITY_FADE_START) {
+      const fadeProgress =
+        (ghostProgress - GHOST_OPACITY_FADE_START) /
+        (1 - GHOST_OPACITY_FADE_START);
+      opacity = 1 - fadeProgress;
+      opacity = Math.max(0, opacity);
+    }
     setGhostOpacity(ghost, opacity);
   });
 }
