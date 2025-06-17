@@ -38,6 +38,8 @@ let scrollProgress = 0;
 let cameraScrollCurve: THREE.CubicBezierCurve3 | null = null;
 let cameraScrollStartQuat: THREE.Quaternion | null = null;
 let scrollTriggerInitialized = false;
+let lastScrollProgress = 0; // Track last progress to prevent rapid switching
+let stateTransitionThreshold = 0.01; // Minimum progress change to trigger state switch
 
 const homePathKeys = [
   "pacman",
@@ -179,17 +181,32 @@ function animationLoop() {
   if (animationState === "HOME") {
     animateHomeLoop(dt);
   } else if (animationState === "SCROLL_ANIMATION") {
-    animateScrollToCenter(scrollProgress);
-    animateCameraScroll(scrollProgress);
+    // Only animate if we have valid curves and positions
+    if (
+      Object.keys(bezierCurves).length > 0 &&
+      Object.keys(capturedPositions).length > 0
+    ) {
+      animateScrollToCenter(scrollProgress);
+      animateCameraScroll(scrollProgress);
+    }
   }
   render();
 }
 
 export function setScrollProgress(progress: number) {
-  scrollProgress = Math.max(0, Math.min(1, progress));
+  // Prevent rapid progress changes that cause flickering
+  const progressChange = Math.abs(progress - lastScrollProgress);
+  if (progressChange < 0.001) return; // Ignore tiny changes
 
-  // Trigger scroll animation when progress starts
-  if (animationState === "HOME" && progress > 0 && !animationPaused) {
+  scrollProgress = Math.max(0, Math.min(1, progress));
+  lastScrollProgress = progress;
+
+  // Trigger scroll animation when progress starts (with threshold)
+  if (
+    animationState === "HOME" &&
+    progress > stateTransitionThreshold &&
+    !animationPaused
+  ) {
     animationPaused = true;
     pausedHomeProgress = homeProgress; // Store current progress
     captureGhostPositions();
@@ -207,19 +224,28 @@ export function setScrollProgress(progress: number) {
     );
     cameraScrollStartQuat = camera.quaternion.clone();
     animationState = "SCROLL_ANIMATION";
+    console.log("Switched to SCROLL_ANIMATION at progress:", progress);
   }
 
-  if (animationState === "SCROLL_ANIMATION" && progress === 0) {
+  // Resume home animation when scrolling back to top (with threshold)
+  if (
+    animationState === "SCROLL_ANIMATION" &&
+    progress <= stateTransitionThreshold
+  ) {
     animationState = "HOME";
     animationPaused = false;
-    homeProgress = pausedHomeProgress;
+    homeProgress = pausedHomeProgress; // Resume from where we paused
     scrollProgress = 0;
+    lastScrollProgress = 0;
 
+    // Reset scroll animation state
     bezierCurves = {};
     capturedPositions = {};
     capturedRotations = {};
     cameraScrollCurve = null;
     cameraScrollStartQuat = null;
+
+    console.log("Resuming home animation from progress:", pausedHomeProgress);
   }
 }
 
@@ -267,7 +293,10 @@ async function setupScrollTrigger() {
         end: "bottom top",
         scrub: 1, // Smooth scrubbing with 1 second delay
         onUpdate: (self) => {
-          setScrollProgress(self.progress);
+          // Throttle updates to prevent flickering
+          requestAnimationFrame(() => {
+            setScrollProgress(self.progress);
+          });
         },
         onEnter: () => {
           console.log("ScrollTrigger: Entered home section");
@@ -292,7 +321,9 @@ async function setupScrollTrigger() {
         onUpdate: function () {
           // This will be called with smooth interpolation
           const progress = this.progress();
-          setScrollProgress(progress);
+          requestAnimationFrame(() => {
+            setScrollProgress(progress);
+          });
         },
       }
     );
