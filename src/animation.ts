@@ -6,7 +6,7 @@ import { getPathsForSection, cameraHomePath } from "./paths";
 import { MAZE_CENTER, DOM_ELEMENTS, SELECTORS } from "./config";
 
 // Animation state
-export type AnimationState = "HOME" | "SCROLL_ANIMATION";
+export type AnimationState = "HOME" | "SCROLL_ANIMATION" | "WAITING_FOR_SCRUB";
 
 const HOME_ANIMATION_SPEED = 0.03; // loop speed
 const CAMERA_FOV = 50;
@@ -35,6 +35,8 @@ let cameraScrollCurve: THREE.CubicBezierCurve3 | null = null;
 let cameraScrollStartQuat: THREE.Quaternion | null = null;
 let scrollTriggerInitialized = false;
 let homePositionsCaptured = false;
+let pausedHomeProgress = 0;
+let scrubCatchUpThreshold = 0.02; // How close to 0 the scrub needs to be to resume home
 
 const homePathKeys = [
   "pacman",
@@ -189,17 +191,31 @@ function animationLoop() {
 
   if (pacmanMixer) pacmanMixer.update(dt);
 
-  // Single animation function that handles both states
-  if (scrollProgress > 0.01) {
-    // Scroll animation
+  // Handle different animation states
+  if (animationState === "HOME") {
+    animateHomeLoop(dt);
+  } else if (animationState === "SCROLL_ANIMATION") {
     if (!homePositionsCaptured) {
       captureGhostPositions();
+      pausedHomeProgress = homeProgress;
     }
     animateScrollToCenter(scrollProgress);
     animateCameraScroll(scrollProgress);
-  } else {
-    // Home animation
-    animateHomeLoop(dt);
+  } else if (animationState === "WAITING_FOR_SCRUB") {
+    // Keep objects in their current scroll positions while waiting
+    if (scrollProgress <= scrubCatchUpThreshold) {
+      // Scrub has caught up, resume home animation
+      animationState = "HOME";
+      homeProgress = pausedHomeProgress;
+      console.log(
+        "Scrub caught up, resuming home animation from:",
+        pausedHomeProgress
+      );
+    } else {
+      // Keep showing scroll animation while waiting
+      animateScrollToCenter(scrollProgress);
+      animateCameraScroll(scrollProgress);
+    }
   }
 
   render();
@@ -207,6 +223,14 @@ function animationLoop() {
 
 export function setScrollProgress(progress: number) {
   scrollProgress = Math.max(0, Math.min(1, progress));
+
+  // Handle state transitions
+  if (animationState === "HOME" && progress > 0.01) {
+    animationState = "SCROLL_ANIMATION";
+  } else if (animationState === "SCROLL_ANIMATION" && progress <= 0.01) {
+    // Switch to waiting state when scroll reaches top
+    animationState = "WAITING_FOR_SCRUB";
+  }
 }
 
 async function setupScrollTrigger() {
@@ -225,6 +249,17 @@ async function setupScrollTrigger() {
 
     gsap.registerPlugin(ScrollTrigger);
 
+    // Configure GSAP for smooth performance
+    gsap.config({
+      nullTargetWarn: false,
+    });
+
+    // Optimize ScrollTrigger for smooth performance
+    ScrollTrigger.config({
+      ignoreMobileResize: true,
+      syncInterval: 60,
+    });
+
     // Get home section element
     const homeSection = document.querySelector(
       SELECTORS.homeSection
@@ -234,18 +269,19 @@ async function setupScrollTrigger() {
       return;
     }
 
-    // Simple ScrollTrigger without scrub to avoid conflicts
+    // Create ScrollTrigger with scrub
     ScrollTrigger.create({
       trigger: homeSection,
       start: "top top",
       end: "bottom top",
+      scrub: 1, // 1 second scrub delay
       onUpdate: (self) => {
         setScrollProgress(self.progress);
       },
     });
 
     scrollTriggerInitialized = true;
-    console.log("✅ GSAP ScrollTrigger setup complete");
+    console.log("✅ GSAP ScrollTrigger with scrub setup complete");
   } catch (error) {
     console.error("❌ GSAP ScrollTrigger setup failed:", error);
     setupManualScrollListener();
