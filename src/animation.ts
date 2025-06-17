@@ -4,6 +4,7 @@ import { scene, renderer, clock } from "./scene";
 import { ghosts, pacman, pacmanMixer } from "./objects";
 import { getPathsForSection, cameraHomePath } from "./paths";
 import { MAZE_CENTER, DOM_ELEMENTS, SELECTORS } from "./config";
+import { isPOVActive } from "./pov-animation";
 
 // Animation state
 export type AnimationState = "HOME" | "SCROLL_ANIMATION";
@@ -198,12 +199,12 @@ function animateTransitionToHome(dt: number) {
           const zRot = Math.atan2(tangent.x, tangent.z);
           targetRot.set(Math.PI / 2, Math.PI, zRot + Math.PI / 2);
         } else {
-          // For ghosts, look at the tangent direction
-          const lookAtPos = targetPos.clone().add(tangent);
-          const tempObj = new THREE.Object3D();
-          tempObj.position.copy(targetPos);
-          tempObj.lookAt(lookAtPos);
-          targetRot.copy(tempObj.rotation);
+          targetRot.setFromQuaternion(
+            new THREE.Quaternion().setFromUnitVectors(
+              new THREE.Vector3(0, 0, 1),
+              tangent
+            )
+          );
         }
 
         // Interpolate rotation
@@ -298,6 +299,13 @@ function animationLoop() {
   const dt = clock.getDelta();
 
   if (pacmanMixer) pacmanMixer.update(dt);
+
+  // Check if POV animation is active - if so, skip home/scroll animations
+  if (isPOVActive()) {
+    // POV animation is controlling camera and ghosts, just render
+    render();
+    return;
+  }
 
   // Handle different animation states
   if (isTransitioningToHome) {
