@@ -190,7 +190,7 @@ function animateTransitionToHome(dt: number) {
         // Interpolate position
         ghost.position.lerpVectors(startPos, targetPos, easedProgress);
 
-        // Interpolate rotation
+        // Interpolate rotation using quaternions for shortest path
         const startRot = transitionStartRotations[key];
         const tangent = path.getTangentAt(homeProgress).normalize();
         const targetRot = new THREE.Euler();
@@ -207,12 +207,16 @@ function animateTransitionToHome(dt: number) {
           );
         }
 
-        // Interpolate rotation
-        ghost.rotation.set(
-          startRot.x + (targetRot.x - startRot.x) * easedProgress,
-          startRot.y + (targetRot.y - startRot.y) * easedProgress,
-          startRot.z + (targetRot.z - startRot.z) * easedProgress
-        );
+        // Convert to quaternions for smooth shortest-path interpolation
+        const startQuat = new THREE.Quaternion().setFromEuler(startRot);
+        const targetQuat = new THREE.Quaternion().setFromEuler(targetRot);
+        const interpolatedQuat = new THREE.Quaternion();
+
+        // Slerp for shortest path rotation
+        interpolatedQuat.slerpQuaternions(startQuat, targetQuat, easedProgress);
+
+        // Apply the interpolated rotation
+        ghost.quaternion.copy(interpolatedQuat);
 
         // Keep opacity at 1 during transition
         setGhostOpacity(ghost, 1);
@@ -254,17 +258,21 @@ function animateScrollToCenter(progress: number) {
     const pos = curve.getPointAt(ghostProgress);
     ghost.position.copy(pos);
 
-    // Interpolate rotation more smoothly
+    // Interpolate rotation more smoothly using quaternions
     const origRot = capturedRotations[key];
     const targetRot = new THREE.Euler(-Math.PI / 2, 0, 0);
 
+    // Use quaternions for shortest path rotation
+    const startQuat = new THREE.Quaternion().setFromEuler(origRot);
+    const endQuat = new THREE.Quaternion().setFromEuler(targetRot);
+    const interpolatedQuat = new THREE.Quaternion();
+
     // Use easing for smoother rotation transition
     const easedProgress = easeInOutCubic(ghostProgress);
-    ghost.rotation.set(
-      origRot.x + (targetRot.x - origRot.x) * easedProgress,
-      origRot.y + (targetRot.y - origRot.y) * easedProgress,
-      origRot.z + (targetRot.z - origRot.z) * easedProgress
-    );
+    interpolatedQuat.slerpQuaternions(startQuat, endQuat, easedProgress);
+
+    // Apply the interpolated rotation
+    ghost.quaternion.copy(interpolatedQuat);
 
     // Fade out in last 5% of the curve (95% to 100%)
     let opacity = 1;
