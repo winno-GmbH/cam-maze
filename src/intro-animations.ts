@@ -127,12 +127,18 @@ async function setupGSAPIntroAnimations() {
 
     console.log("🎬 Setting up GSAP intro animations");
 
-    // Header animation with pin: top top to center center
+    // Header animation with pin to center: top top to center center
     gsap.fromTo(
       DOM_ELEMENTS.introHeader,
       {
         scale: 0,
         opacity: 0,
+        position: "fixed",
+        top: "50%",
+        left: "50%",
+        xPercent: -50,
+        yPercent: -50,
+        zIndex: 1000,
       },
       {
         scale: 1.5,
@@ -156,7 +162,7 @@ async function setupGSAPIntroAnimations() {
       }
     );
 
-    // Body animation with pin: center center to bottom bottom
+    // Body animation with pin to center: center center to bottom bottom
     gsap
       .timeline({
         scrollTrigger: {
@@ -174,6 +180,12 @@ async function setupGSAPIntroAnimations() {
         {
           scale: 0.5,
           opacity: 0,
+          position: "fixed",
+          top: "50%",
+          left: "50%",
+          xPercent: -50,
+          yPercent: -50,
+          zIndex: 1000,
         },
         {
           keyframes: [
