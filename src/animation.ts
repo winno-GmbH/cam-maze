@@ -14,12 +14,12 @@ const TRANSITION_DURATION = 0.5; // seconds for smooth transition back to home
 
 // Speed multipliers for scroll animation - higher = faster
 const GHOST_SPEED_MULTIPLIERS: Record<string, number> = {
-  ghost1: 1.5, // Fastest - arrives first
-  ghost2: 1.4,
-  ghost3: 1.3,
-  ghost4: 1.2,
-  ghost5: 1.1,
-  pacman: 1, // Slowest - arrives last, synchronized with camera
+  ghost1: 1.4, // Fastest - arrives first
+  ghost2: 1.3,
+  ghost3: 1.2,
+  ghost4: 1.1,
+  ghost5: 1,
+  pacman: 0.9, // Slowest - arrives last, synchronized with camera
 };
 
 // When ghosts should finish their animation (0.8 = 80% of scroll progress)
