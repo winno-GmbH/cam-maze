@@ -221,9 +221,9 @@ export function updatePOVAnimation(progress: number) {
     const ghost = ghosts[key];
     const path = povPaths[key];
     if (ghost && path) {
-      // Ghosts have shorter paths than camera, so we need to scale their progress
-      // Make them move slower and stop earlier to stay visible longer
-      const ghostProgress = Math.min(currentProgress * 0.4, 1); // Ghosts move at 40% speed and stop at 40% of camera progress
+      // Ghosts should move along their paths for the full duration
+      // Since their paths are short, we'll make them move continuously
+      const ghostProgress = currentProgress; // Use full progress - ghosts will loop through their short paths
       const pos = path.getPointAt(ghostProgress);
       ghost.position.copy(pos);
 
@@ -236,8 +236,8 @@ export function updatePOVAnimation(progress: number) {
       ghost.visible = true;
 
       // Debug: log ghost movement to verify they're following paths
-      if (currentProgress % 0.2 < 0.01) {
-        // Log every 20% progress
+      if (currentProgress % 0.1 < 0.01) {
+        // Log every 10% progress for more detail
         console.log(
           `${key} at progress ${currentProgress.toFixed(
             2
