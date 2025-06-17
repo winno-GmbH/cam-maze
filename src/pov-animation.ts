@@ -152,32 +152,16 @@ export function updatePOVAnimation(progress: number) {
       const pos = path.getPointAt(ghostProgress);
       ghost.position.copy(pos);
 
-      // Look ahead for orientation
-      const lookAheadProgress = Math.min(ghostProgress + 0.03, 1);
-      const lookAheadPos = path.getPointAt(lookAheadProgress);
-      ghost.lookAt(lookAheadPos);
+      // Make ghosts smaller during POV animation
+      ghost.scale.set(0.5, 0.5, 0.5);
+
+      // Proper tangent-based orientation along individual paths
+      const tangent = path.getTangentAt(ghostProgress).normalize();
+      const lookAtPoint = pos.clone().add(tangent);
+      ghost.lookAt(lookAtPoint);
 
       // Make ghosts visible during POV animation - ensure they're visible
       ghost.visible = true;
-
-      // Set materials to full opacity during POV animation
-      function ensureGhostVisible(obj: THREE.Object3D) {
-        if ((obj as any).material) {
-          const mats = Array.isArray((obj as any).material)
-            ? (obj as any).material
-            : [(obj as any).material];
-          mats.forEach((mat: any) => {
-            if (mat) {
-              mat.opacity = 1;
-              mat.transparent = false;
-              mat.depthWrite = true;
-              mat.needsUpdate = true;
-            }
-          });
-        }
-      }
-      ensureGhostVisible(ghost);
-      if (ghost instanceof THREE.Group) ghost.traverse(ensureGhostVisible);
 
       // Debug: log ghost movement to verify they're following paths
       if (currentProgress % 0.1 < 0.01) {
@@ -335,6 +319,14 @@ export function stopPOVAnimation() {
   // Reset camera to default state
   camera.fov = DEFAULT_FOV;
   camera.updateProjectionMatrix();
+
+  // Reset ghost scales to normal size
+  ghostKeys.forEach((key) => {
+    const ghost = ghosts[key];
+    if (ghost) {
+      ghost.scale.set(1, 1, 1); // Reset to normal scale
+    }
+  });
 
   // Hide all POV elements
   Object.entries(TriggerPositions).forEach(([key, trigger]) => {
