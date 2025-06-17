@@ -13,12 +13,12 @@ const CAMERA_FOV = 50;
 
 // Speed multipliers for scroll animation - higher = faster
 const GHOST_SPEED_MULTIPLIERS: Record<string, number> = {
-  ghost1: 1.25, // Fastest - arrives first
-  ghost2: 1.14,
-  ghost3: 1.05,
-  ghost4: 0.97,
-  ghost5: 0.89,
-  pacman: 0.8, // Slowest - arrives last
+  ghost1: 1.8, // Fastest - arrives first
+  ghost2: 1.6,
+  ghost3: 1.4,
+  ghost4: 1.2,
+  ghost5: 1.0,
+  pacman: 1.0, // Same speed as camera - arrives exactly when camera does
 };
 
 // When ghosts should finish their animation (0.8 = 80% of scroll progress)
