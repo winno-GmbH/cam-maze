@@ -312,8 +312,10 @@ class AnimationSystem {
     this.state = "HOME_ANIMATION";
     this.animationRunning = true;
     this.timeOffset = Date.now();
-    // Resume from saved progress
     this.savedHomeProgress = 0;
+    // Clear scroll camera path/quaternion so camera only animates on scroll when in SCROLL_TO_CENTER
+    scrollCameraCurve = null;
+    scrollCameraStartQuaternion = null;
   }
 
   // Public getters
