@@ -232,10 +232,8 @@ async function setupScrollTrigger() {
     });
 
     scrollTriggerInitialized = true;
-    console.log("✅ GSAP ScrollTrigger setup complete");
   } catch (error) {
     console.error("❌ GSAP ScrollTrigger setup failed:", error);
-    // Fallback to manual scroll listener
     setupManualScrollListener();
   }
 }
