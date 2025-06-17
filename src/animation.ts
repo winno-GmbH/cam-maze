@@ -41,6 +41,10 @@ const cameraHomePath = new THREE.CubicBezierCurve3(
 let initialCameraPosition = camera.position.clone();
 let initialCameraQuaternion = camera.quaternion.clone();
 
+// Camera scroll-to-center path
+let scrollCameraCurve: THREE.CubicBezierCurve3 | null = null;
+let scrollCameraStartQuaternion: THREE.Quaternion | null = null;
+
 class AnimationSystem {
   private state: AnimationState = "IDLE";
   private animationTime: number = 0;
@@ -113,6 +117,18 @@ class AnimationSystem {
     this.pauseHomeAnimation();
     this.captureGhostPositions();
     this.createBezierCurves();
+    // Capture camera position/quaternion and create scroll-to-center path
+    scrollCameraCurve = new THREE.CubicBezierCurve3(
+      camera.position.clone(),
+      new THREE.Vector3(
+        (camera.position.x + MAZE_CENTER.x) / 2,
+        2,
+        (camera.position.z + MAZE_CENTER.z) / 2
+      ),
+      new THREE.Vector3(0.55675, 3, 0.45175),
+      MAZE_CENTER.clone()
+    );
+    scrollCameraStartQuaternion = camera.quaternion.clone();
     this.state = "SCROLL_TO_CENTER";
   }
 
@@ -136,6 +152,7 @@ class AnimationSystem {
       this.animateCameraHome(tPath);
     } else if (this.state === "SCROLL_TO_CENTER") {
       this.animateScrollToCenter(this.scrollProgress);
+      this.animateCameraScrollToCenter(this.scrollProgress);
     }
   }
 
@@ -271,6 +288,24 @@ class AnimationSystem {
         });
       }
     });
+  }
+
+  private animateCameraScrollToCenter(scrollProgress: number): void {
+    if (!scrollCameraCurve || !scrollCameraStartQuaternion) return;
+    // Camera position
+    const position = scrollCameraCurve.getPoint(Math.min(scrollProgress, 1));
+    camera.position.copy(position);
+    // Camera FOV
+    camera.fov = ORIGINAL_FOV;
+    camera.updateProjectionMatrix();
+    // Camera rotation: slerp from start to endQuaternion
+    const q = new THREE.Quaternion();
+    q.slerpQuaternions(
+      scrollCameraStartQuaternion,
+      endQuaternion,
+      Math.min(scrollProgress, 1)
+    );
+    camera.quaternion.copy(q);
   }
 
   public resetToHome(): void {
