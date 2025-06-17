@@ -48,29 +48,8 @@ function animateIntroHeaderDirect(directProgress: number) {
     opacity = 0;
   }
 
-  // State-tracked positioning
-  const shouldBeFixed = directProgress > 0 && directProgress < 1;
-
-  if (shouldBeFixed && !isHeaderAnimating) {
-    // Start animation - add fixed class once
-    isHeaderAnimating = true;
-    introHeader.classList.add("intro-text-fixed");
-  } else if (!shouldBeFixed && isHeaderAnimating) {
-    // End animation - remove fixed class once
-    isHeaderAnimating = false;
-    introHeader.classList.remove("intro-text-fixed");
-  }
-
-  // Always update transform and opacity based on current state
-  if (isHeaderAnimating) {
-    introHeader.style.setProperty(
-      "transform",
-      `translate(-50%, -50%) scale(${scale})`,
-      "important"
-    );
-  } else {
-    introHeader.style.setProperty("transform", `scale(${scale})`, "important");
-  }
+  // Update transform and opacity
+  introHeader.style.setProperty("transform", `scale(${scale})`, "important");
   introHeader.style.opacity = opacity.toString();
 }
 
@@ -112,29 +91,8 @@ function animateIntroBodyDirect(directProgress: number) {
     opacity = 0;
   }
 
-  // State-tracked positioning
-  const shouldBeFixed = directProgress > 0 && directProgress < 1;
-
-  if (shouldBeFixed && !isBodyAnimating) {
-    // Start animation - add fixed class once
-    isBodyAnimating = true;
-    introBody.classList.add("intro-text-fixed");
-  } else if (!shouldBeFixed && isBodyAnimating) {
-    // End animation - remove fixed class once
-    isBodyAnimating = false;
-    introBody.classList.remove("intro-text-fixed");
-  }
-
-  // Always update transform and opacity based on current state
-  if (isBodyAnimating) {
-    introBody.style.setProperty(
-      "transform",
-      `translate(-50%, -50%) scale(${scale})`,
-      "important"
-    );
-  } else {
-    introBody.style.setProperty("transform", `scale(${scale})`, "important");
-  }
+  // Update transform and opacity
+  introBody.style.setProperty("transform", `scale(${scale})`, "important");
   introBody.style.opacity = opacity.toString();
 }
 
@@ -169,26 +127,24 @@ async function setupGSAPIntroAnimations() {
 
     console.log("🎬 Setting up GSAP intro animations");
 
-    // Header animation: top top to center center
+    // Header animation with pin: top top to center center
     gsap.fromTo(
-      ".sc_h--intro",
+      DOM_ELEMENTS.introHeader,
       {
         scale: 0,
         opacity: 0,
-        className: "+=intro-text-fixed",
       },
       {
         scale: 1.5,
         opacity: 0,
         scrollTrigger: {
-          trigger: ".sc--intro",
+          trigger: DOM_ELEMENTS.introSection,
           start: "top top",
           end: "center center",
           scrub: 0.3,
+          pin: true,
+          pinSpacing: false,
           invalidateOnRefresh: true,
-        },
-        onComplete: () => {
-          DOM_ELEMENTS.introHeader?.classList.remove("intro-text-fixed");
         },
         ease: "none",
         keyframes: [
@@ -200,23 +156,24 @@ async function setupGSAPIntroAnimations() {
       }
     );
 
-    // Body animation: center center to bottom bottom
+    // Body animation with pin: center center to bottom bottom
     gsap
       .timeline({
         scrollTrigger: {
-          trigger: ".sc--intro",
+          trigger: DOM_ELEMENTS.introSection,
           start: "center center",
           end: "bottom bottom",
           scrub: 0.3,
+          pin: true,
+          pinSpacing: false,
           invalidateOnRefresh: true,
         },
       })
       .fromTo(
-        ".sc_b--intro",
+        DOM_ELEMENTS.introBody,
         {
           scale: 0.5,
           opacity: 0,
-          className: "+=intro-text-fixed",
         },
         {
           keyframes: [
@@ -225,9 +182,6 @@ async function setupGSAPIntroAnimations() {
             { scale: 1.2, opacity: 1, duration: 0.4 },
             { scale: 1.5, opacity: 0, duration: 0.3 },
           ],
-          onComplete: () => {
-            DOM_ELEMENTS.introBody?.classList.remove("intro-text-fixed");
-          },
         }
       );
 
