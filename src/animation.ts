@@ -412,7 +412,7 @@ async function setupScrollTrigger() {
       },
     });
 
-    // Add a dummy animation to the timeline (required for scrub to work)
+    // Add fade-out animation for all ghosts and Pacman
     tl.to(
       {},
       {
@@ -420,6 +420,20 @@ async function setupScrollTrigger() {
         onUpdate: function () {
           const progress = this.progress();
           setScrollProgress(progress);
+
+          // Fade out all ghosts and Pacman from opacity 1 to 0
+          // Start fade at 80% progress and complete at 100%
+          let fadeOpacity = 1;
+          if (progress >= 0.8) {
+            const fadeProgress = (progress - 0.8) / 0.2; // 0 to 1 over last 20% (80% to 100%)
+            fadeOpacity = 1 - fadeProgress;
+            fadeOpacity = Math.max(0, fadeOpacity);
+          }
+
+          // Apply fade to all ghosts and Pacman
+          Object.values(ghosts).forEach((ghost) => {
+            setGhostOpacity(ghost, fadeOpacity);
+          });
         },
       }
     );
