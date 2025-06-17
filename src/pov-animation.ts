@@ -109,73 +109,58 @@ export function testPOVAnimation(progress: number = 0.5) {
     const ghost = ghosts[key];
     if (path && ghost) {
       const pos = path.getPointAt(progress);
-      console.log(`${key} path position at ${progress}:`, pos);
-      console.log(`${key} current position:`, ghost.position.clone());
-      console.log(`${key} visible:`, ghost.visible);
-    } else {
-      console.warn(`${key} path or ghost not found`);
     }
   });
 
   // Run the actual update
   updatePOVAnimation(progress);
-
-  // Check camera position after
-  console.log("Camera position after:", camera.position.clone());
-  console.log("Camera FOV after:", camera.fov);
-
-  console.log("=== END TEST ===");
 }
 
-// --- Main update function (to be called in animation loop) ---
 export function updatePOVAnimation(progress: number) {
-  // Debug: log when POV animation is called
-  console.log(`POV Animation called with progress: ${progress}`);
-
-  // Set POV as active immediately when called
   isPOVAnimationActive = true;
 
-  // Use progress directly - GSAP ScrollTrigger already handles smoothing
   const currentProgress = progress;
 
-  // 1. Move camera along camera POV path with sophisticated handling
   updatePOVCamera(currentProgress);
 
-  // 2. Move all ghosts along their respective POV paths
   ghostKeys.forEach((key) => {
     const ghost = ghosts[key];
     const path = povPaths[key];
     if (ghost && path) {
-      // Ghosts should move along their paths for the full duration
-      // Since their paths are short, we'll make them move continuously
-      const ghostProgress = currentProgress; // Use full progress - ghosts will loop through their short paths
+      // Each ghost moves at a different speed and timing
+      // This creates staggered movement like in the backup.js
+      let ghostProgress;
+
+      switch (key) {
+        case "ghost1":
+          ghostProgress = (currentProgress * 2) % 1; // 2x speed
+          break;
+        case "ghost2":
+          ghostProgress = (currentProgress * 1.5) % 1; // 1.5x speed
+          break;
+        case "ghost3":
+          ghostProgress = (currentProgress * 1.2) % 1; // 1.2x speed
+          break;
+        case "ghost4":
+          ghostProgress = (currentProgress * 0.8) % 1; // 0.8x speed
+          break;
+        case "ghost5":
+          ghostProgress = (currentProgress * 0.6) % 1; // 0.6x speed
+          break;
+        default:
+          ghostProgress = currentProgress % 1;
+      }
+
       const pos = path.getPointAt(ghostProgress);
       ghost.position.copy(pos);
 
-      // Make ghosts smaller during POV animation
       ghost.scale.set(0.5, 0.5, 0.5);
 
-      // Proper tangent-based orientation along individual paths
       const tangent = path.getTangentAt(ghostProgress).normalize();
       const lookAtPoint = pos.clone().add(tangent);
       ghost.lookAt(lookAtPoint);
 
-      // Make ghosts visible during POV animation - ensure they're visible
       ghost.visible = true;
-
-      // Debug: log ghost movement to verify they're following paths
-      if (currentProgress % 0.1 < 0.01) {
-        // Log every 10% progress for more detail
-        console.log(
-          `${key} at progress ${currentProgress.toFixed(
-            2
-          )}: ghostProgress=${ghostProgress.toFixed(
-            2
-          )}, position=${pos.x.toFixed(3)}, ${pos.y.toFixed(
-            3
-          )}, ${pos.z.toFixed(3)}`
-        );
-      }
     }
   });
 
