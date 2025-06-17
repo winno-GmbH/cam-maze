@@ -65,7 +65,7 @@ const CAMERA_SLERP_ALPHA = 0.18; // Slerp factor for smoothness
 // Scrub smoothing for camera movement
 let smoothedProgress = 0;
 let targetProgress = 0;
-const SCRUB_SMOOTHING = 0.15; // Reduced smoothing for better tangent feeling
+const SCRUB_SMOOTHING = 0.08; // Very light smoothing for responsive feel
 
 // POV Animation State for text transitions
 interface POVTriggerState {
@@ -165,6 +165,13 @@ export function updatePOVAnimation(progress: number) {
 
   // Apply scrub smoothing to camera movement
   targetProgress = progress;
+
+  // Initialize smoothed progress if it's the first call
+  if (smoothedProgress === 0 && progress > 0) {
+    smoothedProgress = progress;
+  }
+
+  // Apply smoothing
   smoothedProgress += (targetProgress - smoothedProgress) * SCRUB_SMOOTHING;
 
   // 1. Move camera along camera POV path with smoothed progress
@@ -233,8 +240,8 @@ export function updatePOVAnimation(progress: number) {
       const lookAheadPos = path.getPointAt(lookAheadProgress);
       ghost.lookAt(lookAheadPos);
 
-      // Make ghosts invisible during POV animation (like on start page)
-      ghost.visible = false;
+      // Make ghosts visible during POV animation
+      ghost.visible = true;
 
       // Debug: log ghost movement to verify they're following paths
       if (smoothedProgress % 0.2 < 0.01) {
@@ -495,7 +502,7 @@ export async function initPOVAnimationSystem() {
     trigger: ".sc--pov",
     start: "top top",
     end: "bottom bottom",
-    scrub: 0.3, // Reduced scrub for better tangent feeling
+    scrub: 0.8, // Increased scrub for better smoothing
     onUpdate: (self) => {
       // Progress von 0 (top top) bis 1 (bottom bottom)
       const progress = self.progress;
