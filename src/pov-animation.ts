@@ -94,6 +94,55 @@ function findClosestProgressOnPOVPath(
   return minT;
 }
 
+// Store original home positions for ghosts
+const originalGhostPositions: { [key: string]: THREE.Vector3 } = {};
+const originalGhostRotations: { [key: string]: THREE.Euler } = {};
+const originalGhostScales: { [key: string]: THREE.Vector3 } = {};
+let homePositionsCaptured = false;
+
+// Capture original home positions when POV starts
+function captureHomePositions() {
+  if (homePositionsCaptured) return;
+
+  ghostKeys.forEach((key) => {
+    const ghost = ghosts[key];
+    if (ghost) {
+      originalGhostPositions[key] = ghost.position.clone();
+      originalGhostRotations[key] = ghost.rotation.clone();
+      originalGhostScales[key] = ghost.scale.clone();
+    }
+  });
+
+  homePositionsCaptured = true;
+}
+
+// Restore ghosts to their home positions
+function restoreGhostsToHomePositions() {
+  ghostKeys.forEach((key) => {
+    const ghost = ghosts[key];
+    if (ghost && originalGhostPositions[key]) {
+      ghost.position.copy(originalGhostPositions[key]);
+      ghost.rotation.copy(originalGhostRotations[key]);
+      ghost.scale.copy(originalGhostScales[key]);
+      ghost.visible = true;
+
+      // Reset materials to full opacity
+      if (ghost instanceof THREE.Mesh && (ghost as any).material) {
+        (ghost as any).material.opacity = 1;
+        (ghost as any).material.transparent = false;
+      } else if (ghost instanceof THREE.Group) {
+        ghost.traverse((child) => {
+          if (child instanceof THREE.Mesh && (child as any).material) {
+            (child as any).material.opacity = 1;
+            (child as any).material.transparent = false;
+            (child as any).material.needsUpdate = true;
+          }
+        });
+      }
+    }
+  });
+}
+
 // Test function to manually trigger POV animation
 export function testPOVAnimation(progress: number = 0.5) {
   // Check if paths exist
@@ -118,6 +167,9 @@ export function testPOVAnimation(progress: number = 0.5) {
 
 export function updatePOVAnimation(progress: number) {
   isPOVAnimationActive = true;
+
+  // Capture home positions on first call
+  captureHomePositions();
 
   const currentProgress = progress;
 
@@ -391,13 +443,8 @@ export function stopPOVAnimation() {
   camera.fov = DEFAULT_FOV;
   camera.updateProjectionMatrix();
 
-  // Reset ghost scales to normal size
-  ghostKeys.forEach((key) => {
-    const ghost = ghosts[key];
-    if (ghost) {
-      ghost.scale.set(1, 1, 1); // Reset to normal scale
-    }
-  });
+  // Restore ghosts to their home positions
+  restoreGhostsToHomePositions();
 
   // Hide all POV elements
   Object.entries(TriggerPositions).forEach(([key, trigger]) => {
@@ -435,13 +482,14 @@ export function stopPOVAnimation() {
     };
   });
 
+  // Reset home positions capture flag so it can capture again next time
+  homePositionsCaptured = false;
+
   console.log("POV Animation stopped");
 }
 
 // --- POV ScrollTrigger Setup ---
 export async function initPOVAnimationSystem() {
-  console.log("Initializing POV Animation System...");
-
   // Check if POV section exists
   if (!DOM_ELEMENTS.povSection) {
     console.error("POV section not found! Check if .sc--pov.sc exists in HTML");
