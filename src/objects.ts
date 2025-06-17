@@ -68,7 +68,7 @@ export async function loadModel(): Promise<void> {
             });
 
             children.forEach((item) => ghosts.pacman.add(item));
-            ghosts.pacman.scale.set(0.08, 0.08, 0.08);
+            ghosts.pacman.scale.set(0.075, 0.075, 0.075);
             ghosts.pacman.rotation.set(Math.PI / 2, Math.PI / 2, Math.PI / 4);
 
             pacmanMixer = new THREE.AnimationMixer(ghosts.pacman);
