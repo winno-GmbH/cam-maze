@@ -112,15 +112,26 @@ function captureGhostPositions() {
     capturedRotations[key] = ghost.rotation.clone();
   });
 
-  // Create bezier curves once
+  // Create bezier curves once with more linear paths
   bezierCurves = {};
   Object.entries(capturedPositions).forEach(([key, startPos]) => {
     const endPos = MAZE_CENTER.clone();
-    const control = new THREE.Vector3(
+
+    // Create a more linear path by placing control points closer to the line
+    // This reduces the extreme acceleration/deceleration at the ends
+    const midPoint = new THREE.Vector3(
       (startPos.x + endPos.x) / 2,
-      2,
+      (startPos.y + endPos.y) / 2,
       (startPos.z + endPos.z) / 2
     );
+
+    // Move control point closer to the midpoint for more linear movement
+    const control = new THREE.Vector3(
+      midPoint.x + (midPoint.x - (startPos.x + endPos.x) / 2) * 0.3,
+      midPoint.y + 1, // Slight elevation
+      midPoint.z + (midPoint.z - (startPos.z + endPos.z) / 2) * 0.3
+    );
+
     bezierCurves[key] = new THREE.QuadraticBezierCurve3(
       startPos,
       control,
