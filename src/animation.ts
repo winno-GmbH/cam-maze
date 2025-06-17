@@ -8,7 +8,7 @@ import { MAZE_CENTER, DOM_ELEMENTS, SELECTORS } from "./config";
 // Animation state
 export type AnimationState = "HOME" | "SCROLL_ANIMATION";
 
-const HOME_ANIMATION_SPEED = 0.03; // loop speed
+const HOME_ANIMATION_SPEED = 0.06; // loop speed - doubled for smoother movement
 const CAMERA_FOV = 50;
 const TRANSITION_DURATION = 0.5; // seconds for smooth transition back to home
 
