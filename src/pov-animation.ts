@@ -176,20 +176,23 @@ export function updatePOVAnimation(progress: number) {
     if (cameraManualRotation) {
       camera.quaternion.copy(cameraManualRotation);
     } else {
-      // Tangent-following: look ahead along the path with better tangent calculation
-      const lookAheadProgress = Math.min(currentProgress + 0.05, 1); // Increased look-ahead for better tangent
+      // Enhanced tangent-following for better maze walking experience
+      const lookAheadProgress = Math.min(currentProgress + 0.08, 1); // Increased look-ahead for smoother tangent
       const lookAheadPos = povPaths.pacman.getPointAt(lookAheadProgress);
+
+      // Calculate tangent vector for camera direction
       const tangent = new THREE.Vector3()
         .subVectors(lookAheadPos, camPos)
         .normalize();
 
-      // Create a more natural camera orientation
+      // Create a more natural camera orientation for maze walking
       const up = new THREE.Vector3(0, 1, 0);
       const right = new THREE.Vector3().crossVectors(tangent, up).normalize();
       const adjustedUp = new THREE.Vector3()
         .crossVectors(right, tangent)
         .normalize();
 
+      // Create camera matrix for better tangent following
       const m = new THREE.Matrix4().lookAt(
         camPos,
         camPos.clone().add(tangent),
@@ -201,11 +204,11 @@ export function updatePOVAnimation(progress: number) {
         camera.quaternion.copy(targetQuat);
         prevCameraQuat = camera.quaternion.clone();
       } else {
-        // Reduced slerp for more responsive camera movement
+        // Faster rotation for more responsive camera movement
         camera.quaternion.slerpQuaternions(
           prevCameraQuat,
           targetQuat,
-          CAMERA_SLERP_ALPHA * 2 // Faster rotation for better responsiveness
+          CAMERA_SLERP_ALPHA * 3 // Increased for more responsive tangent following
         );
         prevCameraQuat.copy(camera.quaternion);
       }
@@ -232,8 +235,27 @@ export function updatePOVAnimation(progress: number) {
       const lookAheadPos = path.getPointAt(lookAheadProgress);
       ghost.lookAt(lookAheadPos);
 
-      // Make ghosts visible during POV animation
+      // Make ghosts visible during POV animation - ensure they're visible
       ghost.visible = true;
+
+      // Also ensure ghost materials are visible
+      function ensureGhostVisible(obj: THREE.Object3D) {
+        if ((obj as any).material) {
+          const mats = Array.isArray((obj as any).material)
+            ? (obj as any).material
+            : [(obj as any).material];
+          mats.forEach((mat: any) => {
+            if (mat) {
+              mat.opacity = 1;
+              mat.transparent = false;
+              mat.depthWrite = true;
+              mat.needsUpdate = true;
+            }
+          });
+        }
+      }
+      ensureGhostVisible(ghost);
+      if (ghost instanceof THREE.Group) ghost.traverse(ensureGhostVisible);
 
       // Debug: log ghost movement to verify they're following paths
       if (currentProgress % 0.1 < 0.01) {
