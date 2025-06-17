@@ -1,17 +1,11 @@
+// TypeScript declarations for global GSAP/ScrollTrigger (CDN approach)
+declare const gsap: any;
+declare const ScrollTrigger: any;
+
 import { initRenderer, setupLighting } from "./scene";
 import { initCamera, setupCameraResize } from "./camera";
 import { loadModel } from "./objects";
 import { initAnimationSystem, animationSystem } from "./animation";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-gsap.registerPlugin(ScrollTrigger);
-
-console.log("GSAP import:", gsap);
-console.log("ScrollTrigger import:", ScrollTrigger);
-gsap.registerPlugin(ScrollTrigger);
-console.log("GSAP after register:", gsap);
-console.log("ScrollTrigger after register:", ScrollTrigger);
 
 async function init() {
   try {
@@ -24,12 +18,13 @@ async function init() {
 
     initAnimationSystem();
 
+    gsap.registerPlugin(ScrollTrigger);
     ScrollTrigger.create({
       trigger: ".sc--home",
       start: "top top",
       end: "bottom top",
       scrub: 0.5,
-      onUpdate: (self: ScrollTrigger) => {
+      onUpdate: (self: any) => {
         if (animationSystem.getState() !== "SCROLL_TO_CENTER") {
           animationSystem.startScrollToCenter();
         }
