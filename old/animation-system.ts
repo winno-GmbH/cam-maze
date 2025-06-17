@@ -721,12 +721,10 @@ function animateIntroHeaderDirect(directProgress: number) {
     // Start animation - add fixed class once
     isHeaderAnimating = true;
     introHeader.classList.add("intro-text-fixed");
-    console.log("🎬 Header: Fixed positioning ON");
   } else if (!shouldBeFixed && isHeaderAnimating) {
     // End animation - remove fixed class once
     isHeaderAnimating = false;
     introHeader.classList.remove("intro-text-fixed");
-    console.log("🎬 Header: Fixed positioning OFF");
   }
 
   // Always update transform and opacity based on current state
@@ -787,12 +785,10 @@ function animateIntroBodyDirect(directProgress: number) {
     // Start animation - add fixed class once
     isBodyAnimating = true;
     introBody.classList.add("intro-text-fixed");
-    console.log("🎬 Body: Fixed positioning ON");
   } else if (!shouldBeFixed && isBodyAnimating) {
     // End animation - remove fixed class once
     isBodyAnimating = false;
     introBody.classList.remove("intro-text-fixed");
-    console.log("🎬 Body: Fixed positioning OFF");
   }
 
   // Always update transform and opacity based on current state
@@ -837,10 +833,6 @@ async function setupGSAPIntroAnimations() {
       autoRefreshEvents: "visibilitychange,DOMContentLoaded,load", // Reduce refresh triggers
       limitCallbacks: true, // Prevent callback overload during fast scrolling
     });
-
-    console.log(
-      "🎬 Setting up GSAP intro animations with exact backup.js timing"
-    );
 
     // EXACT backup.js setupIntroHeader() timing - ROBUST FIXED POSITIONING
     gsap.fromTo(
@@ -912,30 +904,16 @@ async function setupGSAPIntroAnimations() {
           },
         }
       );
-
-    console.log("✅ GSAP intro animations successfully setup");
   } catch (error) {
-    console.error("❌ GSAP setup failed:", error);
     throw error; // Re-throw to trigger the catch in setupScrollTriggers
   }
 }
 
 export function setupScrollTriggers() {
-  console.log("🚀 setupScrollTriggers called!");
-
   // Setup intro animations (set initial states correctly)
   setupIntroAnimations();
 
-  // TRY GSAP FIRST, fallback to manual on failure
-  console.log("🎬 Attempting to setup GSAP intro animations...");
-
-  // DISABLE GSAP FOR NOW - Use reliable manual system only
-  console.log("🔧 Using manual intro animations for maximum reliability");
-
-  // MANUAL SYSTEM ONLY: Skip GSAP, go straight to manual fallback
   {
-    console.log("🎬 Setting up reliable manual intro animations");
-
     // Manual scroll handler
     let scrollCount = 0;
     window.addEventListener("scroll", () => {
@@ -978,20 +956,6 @@ export function setupScrollTriggers() {
             const bodyProgress = (overallProgress - 0.5) / 0.5;
             animateIntroHeaderDirect(1);
             animateIntroBodyDirect(bodyProgress);
-          }
-
-          if (scrollCount % 20 === 0) {
-            console.log(
-              `🎬 Intro: ${(overallProgress * 100).toFixed(0)}% - Header: ${
-                overallProgress <= 0.5
-                  ? ((overallProgress / 0.5) * 100).toFixed(0)
-                  : 100
-              }% - Body: ${
-                overallProgress > 0.5
-                  ? (((overallProgress - 0.5) / 0.5) * 100).toFixed(0)
-                  : 0
-              }%`
-            );
           }
         } else {
           // Section not visible - reset

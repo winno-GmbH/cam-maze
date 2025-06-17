@@ -84,3 +84,27 @@ export function updatePOVAnimation(progress: number) {
     // TODO: Add fade in/out logic and DOM logic
   });
 }
+
+// --- POV ScrollTrigger Setup ---
+export async function initPOVAnimationSystem() {
+  // Dynamically import GSAP
+  const gsapModule = await import("gsap");
+  const scrollTriggerModule = await import("gsap/ScrollTrigger");
+  const gsap = gsapModule.gsap || gsapModule.default;
+  const ScrollTrigger =
+    scrollTriggerModule.ScrollTrigger || scrollTriggerModule.default;
+  gsap.registerPlugin(ScrollTrigger);
+
+  // Setup ScrollTrigger for .sc--pov
+  ScrollTrigger.create({
+    trigger: ".sc--pov",
+    start: "top top",
+    end: "bottom bottom",
+    scrub: 0.3,
+    onUpdate: (self) => {
+      // Progress von 0 (top top) bis 1 (bottom bottom)
+      const progress = self.progress;
+      updatePOVAnimation(progress);
+    },
+  });
+}
