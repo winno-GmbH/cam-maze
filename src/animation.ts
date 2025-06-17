@@ -85,12 +85,16 @@ function animateHomeLoop(dt: number) {
 }
 
 function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
+  let opacitySet = false;
+
   if (
     ghost instanceof THREE.Mesh &&
     ghost.material &&
     "opacity" in ghost.material
   ) {
     (ghost.material as any).opacity = opacity;
+    (ghost.material as any).transparent = opacity < 1;
+    opacitySet = true;
   } else if (ghost instanceof THREE.Group) {
     ghost.traverse((child) => {
       if (
@@ -99,8 +103,17 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
         "opacity" in child.material
       ) {
         (child.material as any).opacity = opacity;
+        (child.material as any).transparent = opacity < 1;
+        opacitySet = true;
       }
     });
+  }
+
+  // Debug logging for opacity changes
+  if (opacity < 1 && opacitySet) {
+    console.log(
+      `🎭 Setting opacity to ${opacity.toFixed(3)} for ${ghost.name || "ghost"}`
+    );
   }
 }
 
@@ -266,7 +279,17 @@ function animateScrollToCenter(progress: number) {
       const fadeProgress = (ghostProgress - 0.95) / 0.05; // 0 to 1 over last 5%
       opacity = 1 - fadeProgress;
       opacity = Math.max(0, opacity);
+
+      // Debug logging for fade-out
+      if (key === "pacman" && ghostProgress % 0.01 < 0.001) {
+        console.log(
+          `🎭 ${key} fade: progress=${ghostProgress.toFixed(
+            3
+          )}, opacity=${opacity.toFixed(3)}`
+        );
+      }
     }
+
     setGhostOpacity(ghost, opacity);
   });
 }
