@@ -3,6 +3,7 @@ import { camera } from "./camera";
 import { ghosts } from "./objects";
 import { DOM_ELEMENTS } from "./selectors";
 import { getPathsForSection } from "./paths";
+import { MAZE_CENTER } from "./config";
 
 // Flag to track POV animation state
 let isPOVAnimationActive = false;
@@ -19,10 +20,18 @@ const povPaths = getPathsForSection("pov") as Record<
 
 // Debug: Log the paths to see what we're working with
 console.log("POV Paths loaded:", Object.keys(povPaths));
+console.log("Maze Center:", MAZE_CENTER);
 Object.entries(povPaths).forEach(([key, path]) => {
   console.log(`${key} path length:`, path.getLength());
   console.log(`${key} start point:`, path.getPointAt(0));
   console.log(`${key} end point:`, path.getPointAt(1));
+
+  // Test a few points along the path to see the Y values
+  for (let i = 0; i <= 10; i++) {
+    const progress = i / 10;
+    const point = path.getPointAt(progress);
+    console.log(`${key} at ${progress * 100}%:`, point);
+  }
 });
 
 // List of ghost keys to animate
@@ -47,6 +56,14 @@ export function isPOVActive(): boolean {
   return isPOVAnimationActive;
 }
 
+// Test function to manually trigger POV animation
+export function testPOVAnimation(progress: number = 0.5) {
+  console.log("=== TESTING POV ANIMATION ===");
+  console.log("Testing at progress:", progress);
+  updatePOVAnimation(progress);
+  console.log("=== END TEST ===");
+}
+
 // --- Main update function (to be called in animation loop) ---
 export function updatePOVAnimation(progress: number) {
   // Set POV as active
@@ -60,18 +77,36 @@ export function updatePOVAnimation(progress: number) {
 
   // 1. Move camera along camera POV path (use pacman/cameraPOV path)
   if (povPaths.pacman) {
-    const camPos = povPaths.pacman.getPointAt(progress);
+    let camPos = povPaths.pacman.getPointAt(progress);
+
+    // FIX: Ensure camera is above the maze (minimum Y = 0.5)
+    if (camPos.y < 0.5) {
+      camPos = new THREE.Vector3(camPos.x, 0.5, camPos.z);
+    }
+
     camera.position.copy(camPos);
 
     // Debug: Log camera movement
     if (progress % 0.1 < 0.01) {
       console.log("Camera moved to:", camPos);
+      console.log("Distance from maze center:", camPos.distanceTo(MAZE_CENTER));
     }
 
-    // Add basic lookAt logic - look forward along the path
+    // Add basic lookAt logic - look at maze center or forward along the path
     const lookAheadProgress = Math.min(progress + 0.1, 1);
     const lookAheadPos = povPaths.pacman.getPointAt(lookAheadProgress);
-    camera.lookAt(lookAheadPos);
+
+    // Ensure look-ahead position is also above ground
+    if (lookAheadPos.y < 0.5) {
+      const fixedLookAhead = new THREE.Vector3(
+        lookAheadPos.x,
+        0.5,
+        lookAheadPos.z
+      );
+      camera.lookAt(fixedLookAhead);
+    } else {
+      camera.lookAt(lookAheadPos);
+    }
 
     // Set POV FOV
     camera.fov = POV_FOV;
@@ -164,4 +199,10 @@ export async function initPOVAnimationSystem() {
   });
 
   console.log("POV Animation System initialized successfully!");
+
+  // Test the animation after a short delay
+  setTimeout(() => {
+    console.log("Testing POV animation...");
+    testPOVAnimation(0.5);
+  }, 2000);
 }
