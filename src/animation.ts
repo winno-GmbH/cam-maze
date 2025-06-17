@@ -34,6 +34,7 @@ let capturedRotations: Record<string, THREE.Euler> = {};
 let cameraScrollCurve: THREE.CubicBezierCurve3 | null = null;
 let cameraScrollStartQuat: THREE.Quaternion | null = null;
 let scrollTriggerInitialized = false;
+let homePositionsCaptured = false;
 let pausedHomeProgress = 0;
 
 const homePathKeys = [
@@ -92,27 +93,31 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
   }
 }
 
-function updateBezierCurves() {
-  // Always recalculate curves based on current positions
-  Object.entries(ghosts).forEach(([key, ghost]) => {
-    const currentPos = ghost.position.clone();
-    const endPos = MAZE_CENTER.clone();
-    const control = new THREE.Vector3(
-      (currentPos.x + endPos.x) / 2,
-      2,
-      (currentPos.z + endPos.z) / 2
-    );
-    bezierCurves[key] = new THREE.QuadraticBezierCurve3(
-      currentPos,
-      control,
-      endPos
-    );
+function captureGhostPositions() {
+  if (homePositionsCaptured) return;
 
-    // Store current rotation for interpolation
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    capturedPositions[key] = ghost.position.clone();
     capturedRotations[key] = ghost.rotation.clone();
   });
 
-  // Update camera curve based on current camera position
+  // Create bezier curves once
+  bezierCurves = {};
+  Object.entries(capturedPositions).forEach(([key, startPos]) => {
+    const endPos = MAZE_CENTER.clone();
+    const control = new THREE.Vector3(
+      (startPos.x + endPos.x) / 2,
+      2,
+      (startPos.z + endPos.z) / 2
+    );
+    bezierCurves[key] = new THREE.QuadraticBezierCurve3(
+      startPos,
+      control,
+      endPos
+    );
+  });
+
+  // Create camera curve once
   cameraScrollCurve = new THREE.CubicBezierCurve3(
     camera.position.clone(),
     new THREE.Vector3(
@@ -124,6 +129,8 @@ function updateBezierCurves() {
     MAZE_CENTER.clone()
   );
   cameraScrollStartQuat = camera.quaternion.clone();
+
+  homePositionsCaptured = true;
 }
 
 function animateScrollToCenter(progress: number) {
@@ -183,14 +190,18 @@ function animationLoop() {
 
   if (pacmanMixer) pacmanMixer.update(dt);
 
-  // Handle different animation states
-  if (animationState === "HOME") {
-    animateHomeLoop(dt);
-  } else if (animationState === "SCROLL_ANIMATION") {
-    // Update curves every frame to ensure they're based on current positions
-    updateBezierCurves();
+  // Single animation function that handles both states
+  if (scrollProgress > 0.01) {
+    // Scroll animation
+    if (!homePositionsCaptured) {
+      captureGhostPositions();
+      pausedHomeProgress = homeProgress;
+    }
     animateScrollToCenter(scrollProgress);
     animateCameraScroll(scrollProgress);
+  } else {
+    // Home animation
+    animateHomeLoop(dt);
   }
 
   render();
@@ -198,15 +209,6 @@ function animationLoop() {
 
 export function setScrollProgress(progress: number) {
   scrollProgress = Math.max(0, Math.min(1, progress));
-
-  // Handle state transitions
-  if (animationState === "HOME" && progress > 0.01) {
-    animationState = "SCROLL_ANIMATION";
-    pausedHomeProgress = homeProgress;
-  } else if (animationState === "SCROLL_ANIMATION" && progress <= 0.01) {
-    animationState = "HOME";
-    homeProgress = pausedHomeProgress;
-  }
 }
 
 async function setupScrollTrigger() {
@@ -224,17 +226,6 @@ async function setupScrollTrigger() {
     }
 
     gsap.registerPlugin(ScrollTrigger);
-
-    // Configure GSAP for smooth performance
-    gsap.config({
-      nullTargetWarn: false,
-    });
-
-    // Optimize ScrollTrigger for smooth performance
-    ScrollTrigger.config({
-      ignoreMobileResize: true,
-      syncInterval: 60,
-    });
 
     // Get home section element
     const homeSection = document.querySelector(
