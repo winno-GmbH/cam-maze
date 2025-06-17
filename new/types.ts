@@ -49,7 +49,6 @@ export interface PathMapping {
   [key: string]: string;
 }
 
-// New Simplified Types for Animation System
 export type AnimationState = "HOME" | "SCROLL_ANIMATION";
 
 export interface GhostPosition {

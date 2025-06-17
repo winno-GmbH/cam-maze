@@ -1,10 +1,13 @@
 import * as THREE from "three";
 import { ASSETS } from "./config";
 
+// Texture Loader
 const textureLoader = new THREE.TextureLoader();
 
+// Load maze texture like in backup.js
 export const mazeTexture = textureLoader.load(ASSETS.mazeTexture);
 
+// Materials exactly like backup.js
 export const mazeMaterial = new THREE.MeshMatcapMaterial({
   matcap: mazeTexture,
 });
@@ -37,6 +40,7 @@ export const floorMaterial = new THREE.MeshStandardMaterial({
   metalness: 0.1,
 });
 
+// Pacman materials with transparency for opacity changes
 const pacmanMaterials = {
   blue: new THREE.MeshBasicMaterial({
     color: 0x1469d3,
@@ -73,4 +77,5 @@ export const materialMap = {
   default: pacmanMaterials.blue,
 };
 
+// Ghost Cover Materials
 export const ghostCoverMaterials = Array(5).fill(ghostMaterial);
