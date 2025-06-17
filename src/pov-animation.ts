@@ -65,7 +65,7 @@ const CAMERA_SLERP_ALPHA = 0.18; // Slerp factor for smoothness
 // Scrub smoothing for camera movement
 let smoothedProgress = 0;
 let targetProgress = 0;
-const SCRUB_SMOOTHING = 0.5; // Scrub smoothing factor (0.5 = medium smoothing)
+const SCRUB_SMOOTHING = 0.15; // Reduced smoothing for better tangent feeling
 
 // POV Animation State for text transitions
 interface POVTriggerState {
@@ -177,27 +177,36 @@ export function updatePOVAnimation(progress: number) {
     if (cameraManualRotation) {
       camera.quaternion.copy(cameraManualRotation);
     } else {
-      // Tangent-following: look ahead along the path
-      const lookAheadProgress = Math.min(smoothedProgress + 0.03, 1);
+      // Tangent-following: look ahead along the path with better tangent calculation
+      const lookAheadProgress = Math.min(smoothedProgress + 0.05, 1); // Increased look-ahead for better tangent
       const lookAheadPos = povPaths.pacman.getPointAt(lookAheadProgress);
       const tangent = new THREE.Vector3()
         .subVectors(lookAheadPos, camPos)
         .normalize();
+
+      // Create a more natural camera orientation
       const up = new THREE.Vector3(0, 1, 0);
+      const right = new THREE.Vector3().crossVectors(tangent, up).normalize();
+      const adjustedUp = new THREE.Vector3()
+        .crossVectors(right, tangent)
+        .normalize();
+
       const m = new THREE.Matrix4().lookAt(
         camPos,
         camPos.clone().add(tangent),
-        up
+        adjustedUp
       );
       const targetQuat = new THREE.Quaternion().setFromRotationMatrix(m);
+
       if (!prevCameraQuat) {
         camera.quaternion.copy(targetQuat);
         prevCameraQuat = camera.quaternion.clone();
       } else {
+        // Reduced slerp for more responsive camera movement
         camera.quaternion.slerpQuaternions(
           prevCameraQuat,
           targetQuat,
-          CAMERA_SLERP_ALPHA
+          CAMERA_SLERP_ALPHA * 2 // Faster rotation for better responsiveness
         );
         prevCameraQuat.copy(camera.quaternion);
       }
@@ -486,7 +495,7 @@ export async function initPOVAnimationSystem() {
     trigger: ".sc--pov",
     start: "top top",
     end: "bottom bottom",
-    scrub: 1, // Increased scrub for smoother animation
+    scrub: 0.3, // Reduced scrub for better tangent feeling
     onUpdate: (self) => {
       // Progress von 0 (top top) bis 1 (bottom bottom)
       const progress = self.progress;
