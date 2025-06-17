@@ -918,24 +918,11 @@ export function setupScrollTriggers() {
     let scrollCount = 0;
     window.addEventListener("scroll", () => {
       scrollCount++;
-      if (scrollCount % 10 === 0) {
-        // Only log every 10th scroll to avoid spam
-        console.log(`📜 SCROLL #${scrollCount} - Y: ${window.scrollY}`);
-      }
 
       // Test if we can find intro elements
       const intro = document.querySelector(".sc--intro");
       const header = document.querySelector(".sc_h--intro");
       const body = document.querySelector(".sc_b--intro");
-
-      if (scrollCount === 1) {
-        // Log once on first scroll
-        console.log("🔍 Elements found:", {
-          intro: !!intro,
-          header: !!header,
-          body: !!body,
-        });
-      }
 
       // WORKING INTRO ANIMATION: Use the exact backup.js timing
       if (intro && header && body) {

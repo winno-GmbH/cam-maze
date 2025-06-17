@@ -125,8 +125,6 @@ async function setupGSAPIntroAnimations() {
       limitCallbacks: true,
     });
 
-    console.log("🎬 Setting up GSAP intro animations (manual scrub)");
-
     // Header: 0% bis 50% Progress (top top bis center center)
     ScrollTrigger.create({
       trigger: DOM_ELEMENTS.introSection,
@@ -170,8 +168,6 @@ async function setupGSAPIntroAnimations() {
       onLeaveBack: () =>
         DOM_ELEMENTS.introBody.classList.remove("intro-centered"),
     });
-
-    console.log("✅ GSAP intro animations (manual scrub) successfully setup");
   } catch (error) {
     console.error("❌ GSAP intro animations setup failed:", error);
     setupManualIntroAnimations();
@@ -179,8 +175,6 @@ async function setupGSAPIntroAnimations() {
 }
 
 function setupManualIntroAnimations() {
-  console.log("Using manual intro animations as fallback");
-
   let scrollCount = 0;
   window.addEventListener("scroll", () => {
     scrollCount++;
@@ -219,6 +213,5 @@ function setupManualIntroAnimations() {
 }
 
 export function initIntroAnimations() {
-  console.log("🎬 Initializing intro animations...");
   setupGSAPIntroAnimations();
 }
