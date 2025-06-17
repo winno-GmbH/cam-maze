@@ -260,12 +260,10 @@ function animateScrollToCenter(progress: number) {
       origRot.z + (targetRot.z - origRot.z) * easedProgress
     );
 
-    // Fade out in last 10%
+    // Fade out in last 5% of the curve (95% to 100%)
     let opacity = 1;
-    if (ghostProgress >= GHOST_OPACITY_FADE_START) {
-      const fadeProgress =
-        (ghostProgress - GHOST_OPACITY_FADE_START) /
-        (1 - GHOST_OPACITY_FADE_START);
+    if (ghostProgress >= 0.95) {
+      const fadeProgress = (ghostProgress - 0.95) / 0.05; // 0 to 1 over last 5%
       opacity = 1 - fadeProgress;
       opacity = Math.max(0, opacity);
     }
