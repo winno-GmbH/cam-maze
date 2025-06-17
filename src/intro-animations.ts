@@ -137,12 +137,17 @@ async function setupGSAPIntroAnimations() {
       pinSpacing: false,
       invalidateOnRefresh: true,
       onUpdate: (self) => {
-        // Progress von 0 (top top) bis 1 (center center)
         const progress = self.progress;
         animateIntroHeaderDirect(progress);
-        // Body bleibt unsichtbar
         animateIntroBodyDirect(0);
       },
+      onEnter: () => DOM_ELEMENTS.introHeader.classList.add("intro-centered"),
+      onEnterBack: () =>
+        DOM_ELEMENTS.introHeader.classList.add("intro-centered"),
+      onLeave: () =>
+        DOM_ELEMENTS.introHeader.classList.remove("intro-centered"),
+      onLeaveBack: () =>
+        DOM_ELEMENTS.introHeader.classList.remove("intro-centered"),
     });
 
     // Body: 50% bis 100% Progress (center center bis bottom bottom)
@@ -155,11 +160,15 @@ async function setupGSAPIntroAnimations() {
       pinSpacing: false,
       invalidateOnRefresh: true,
       onUpdate: (self) => {
-        // Progress von 0 (center center) bis 1 (bottom bottom)
         const progress = self.progress;
-        animateIntroHeaderDirect(1); // Header bleibt am Ende
+        animateIntroHeaderDirect(1);
         animateIntroBodyDirect(progress);
       },
+      onEnter: () => DOM_ELEMENTS.introBody.classList.add("intro-centered"),
+      onEnterBack: () => DOM_ELEMENTS.introBody.classList.add("intro-centered"),
+      onLeave: () => DOM_ELEMENTS.introBody.classList.remove("intro-centered"),
+      onLeaveBack: () =>
+        DOM_ELEMENTS.introBody.classList.remove("intro-centered"),
     });
 
     console.log("✅ GSAP intro animations (manual scrub) successfully setup");
