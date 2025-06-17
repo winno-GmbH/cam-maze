@@ -197,9 +197,8 @@ function animateTransitionToHome(dt: number) {
           startRot.z + (targetRot.z - startRot.z) * easedProgress
         );
 
-        // Fade opacity back to 1
-        const opacity = 0.3 + 0.7 * easedProgress;
-        setGhostOpacity(ghost, opacity);
+        // Keep opacity at 1 during transition
+        setGhostOpacity(ghost, 1);
       }
     }
   });
