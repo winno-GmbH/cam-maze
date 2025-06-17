@@ -176,7 +176,7 @@ export function updatePOVAnimation(progress: number) {
         currentCameraProgress >= triggerProgress &&
         currentCameraProgress <= endProgress
       ) {
-        // Make ghost visible
+        // Make ghost visible and animate it
         ghost.visible = true;
         ghost.scale.set(0.5, 0.5, 0.5);
 
@@ -217,18 +217,21 @@ export function updatePOVAnimation(progress: number) {
         if (smoothGhostProgress > 0.95) {
           const fadeOpacity = 1 - (smoothGhostProgress - 0.95) / 0.05;
           // Apply opacity to ghost materials ONLY if POV animation is active
-          if (isPOVAnimationActive && ghost instanceof THREE.Group) {
+          if (isPOVAnimationActive) {
             console.log(
               `POV Fade: ghost=${key}, progress=${smoothGhostProgress.toFixed(
                 3
               )}, fadeOpacity=${fadeOpacity.toFixed(3)}`
             );
-            ghost.traverse((child) => {
-              if ((child as any).material) {
-                const mats = Array.isArray((child as any).material)
-                  ? (child as any).material
-                  : [(child as any).material];
-                mats.forEach((mat: any) => {
+
+            // Handle both Mesh and Group objects
+            if (ghost instanceof THREE.Mesh) {
+              // Direct mesh - set material opacity
+              if (ghost.material) {
+                const materials = Array.isArray(ghost.material)
+                  ? ghost.material
+                  : [ghost.material];
+                materials.forEach((mat: any) => {
                   if (mat && "opacity" in mat) {
                     mat.opacity = Math.max(0, Math.min(1, fadeOpacity));
                     mat.transparent = fadeOpacity < 1;
@@ -236,7 +239,23 @@ export function updatePOVAnimation(progress: number) {
                   }
                 });
               }
-            });
+            } else if (ghost instanceof THREE.Group) {
+              // Group - traverse all children
+              ghost.traverse((child) => {
+                if ((child as any).material) {
+                  const mats = Array.isArray((child as any).material)
+                    ? (child as any).material
+                    : [(child as any).material];
+                  mats.forEach((mat: any) => {
+                    if (mat && "opacity" in mat) {
+                      mat.opacity = Math.max(0, Math.min(1, fadeOpacity));
+                      mat.transparent = fadeOpacity < 1;
+                      mat.needsUpdate = true;
+                    }
+                  });
+                }
+              });
+            }
           }
         } else {
           // Reset opacity to full ONLY if POV animation is active AND we're not in home section
@@ -253,20 +272,22 @@ export function updatePOVAnimation(progress: number) {
           if (
             isPOVAnimationActive &&
             !isInHomeSection &&
-            !isInScrollAnimation &&
-            ghost instanceof THREE.Group
+            !isInScrollAnimation
           ) {
             console.log(
               `POV Reset: ghost=${key}, progress=${smoothGhostProgress.toFixed(
                 3
               )}, setting opacity=1, isInHomeSection=${isInHomeSection}, isInScrollAnimation=${isInScrollAnimation}`
             );
-            ghost.traverse((child) => {
-              if ((child as any).material) {
-                const mats = Array.isArray((child as any).material)
-                  ? (child as any).material
-                  : [(child as any).material];
-                mats.forEach((mat: any) => {
+
+            // Handle both Mesh and Group objects
+            if (ghost instanceof THREE.Mesh) {
+              // Direct mesh - set material opacity
+              if (ghost.material) {
+                const materials = Array.isArray(ghost.material)
+                  ? ghost.material
+                  : [ghost.material];
+                materials.forEach((mat: any) => {
                   if (mat && "opacity" in mat) {
                     mat.opacity = 1;
                     mat.transparent = false;
@@ -274,7 +295,23 @@ export function updatePOVAnimation(progress: number) {
                   }
                 });
               }
-            });
+            } else if (ghost instanceof THREE.Group) {
+              // Group - traverse all children
+              ghost.traverse((child) => {
+                if ((child as any).material) {
+                  const mats = Array.isArray((child as any).material)
+                    ? (child as any).material
+                    : [(child as any).material];
+                  mats.forEach((mat: any) => {
+                    if (mat && "opacity" in mat) {
+                      mat.opacity = 1;
+                      mat.transparent = false;
+                      mat.needsUpdate = true;
+                    }
+                  });
+                }
+              });
+            }
           } else if (isInScrollAnimation) {
             console.log(
               `POV Reset BLOCKED: ghost=${key}, scrollProgress=${scrollProgress.toFixed(
@@ -284,8 +321,14 @@ export function updatePOVAnimation(progress: number) {
           }
         }
       } else {
-        // Ghost invisible when outside trigger range
-        ghost.visible = false;
+        // Ghost outside trigger range - keep visible during POV animation but don't animate
+        if (isPOVAnimationActive) {
+          ghost.visible = true;
+          ghost.scale.set(0.5, 0.5, 0.5);
+        } else {
+          // Only hide when POV animation is not active
+          ghost.visible = false;
+        }
       }
     }
   });
