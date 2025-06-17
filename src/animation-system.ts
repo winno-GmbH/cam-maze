@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { ghosts, pacmanMixer, clock } from "./objects";
-import { pathsMap } from "./paths";
-import { renderer, scene } from "./scene";
+import { ghosts, pacmanMixer, clock } from "../old/objects";
+import { pathsMap } from "../old/paths";
+import { renderer, scene } from "../old/scene";
 import { camera, startQuaternion, endQuaternion } from "./camera";
 // Removed redundant smooth scroll system - using direct progress for precise control
 
@@ -1457,11 +1457,16 @@ function onPOVAnimationStart() {
     const startPosition = povAnimationState.cameraPOVPath.getPointAt(0);
     camera.position.copy(startPosition);
 
-    // Create downward-forward look direction (45° down and forward)
+    // Create STRONG 45° downward-forward look direction
     const forwardVector = new THREE.Vector3(0, 0, 1); // Forward (positive Z)
     const downVector = new THREE.Vector3(0, -1, 0); // Down
+
+    // Strong 45° down look: equal parts forward and down
     const downwardForwardDirection = new THREE.Vector3()
-      .addVectors(forwardVector, downVector)
+      .addVectors(
+        forwardVector.multiplyScalar(0.707), // cos(45°) = 0.707
+        downVector.multiplyScalar(0.707) // sin(45°) = 0.707
+      )
       .normalize();
 
     const lookAtPoint = startPosition.clone().add(downwardForwardDirection);
@@ -1609,7 +1614,7 @@ function updatePOVCamera(progress: number) {
   const transitionEndProgress = 2 / (totalPoints - 1); // Transition until point 2
 
   if (progress < transitionEndProgress) {
-    // Phase 1: Transition from 45° down to 45° up to straight ahead
+    // Phase 1: Three-phase camera orientation transition
     const transitionProgress = progress / transitionEndProgress; // 0 to 1 during transition
     const smoothTransition = smoothStep(transitionProgress);
 
@@ -1617,49 +1622,52 @@ function updatePOVCamera(progress: number) {
     const downVector = new THREE.Vector3(0, -1, 0); // Down
     const upVector = new THREE.Vector3(0, 1, 0); // Up
 
-    // 45° forward-down direction (initial look) - REDUCED intensity
-    const forwardDownDirection = new THREE.Vector3()
+    // Phase 1: Strong 45° forward-down direction (initial look)
+    const strongDownDirection = new THREE.Vector3()
       .addVectors(
-        forwardVector.multiplyScalar(0.8), // Reduced forward component
-        downVector.multiplyScalar(0.2) // Reduced down component
+        forwardVector.clone().multiplyScalar(0.707), // cos(45°) = 0.707
+        downVector.clone().multiplyScalar(0.707) // sin(45°) = 0.707
       )
       .normalize();
 
-    // 45° forward-up direction (middle look) - REDUCED intensity
-    const forwardUpDirection = new THREE.Vector3()
+    // Phase 2: 75° forward-up direction (middle look)
+    const up75Direction = new THREE.Vector3()
       .addVectors(
-        forwardVector.multiplyScalar(0.8), // Reduced forward component
-        upVector.multiplyScalar(0.2) // Reduced up component
+        forwardVector.clone().multiplyScalar(0.259), // cos(75°) = 0.259
+        upVector.clone().multiplyScalar(0.966) // sin(75°) = 0.966
       )
       .normalize();
 
-    // Straight ahead direction (final look)
+    // Phase 3: Straight ahead direction (final look)
     const straightAheadDirection = new THREE.Vector3(0, 0, 1); // Pure forward
 
     let lookAtDirection;
 
-    if (transitionProgress < 0.5) {
-      // First half: 45° down → 45° up
-      const firstHalfProgress = transitionProgress * 2; // 0 to 1 for first half
-      const smoothFirstHalf = smoothStep(firstHalfProgress);
+    if (transitionProgress < 0.33) {
+      // First third: Strong 45° down → 75° up
+      const firstPhaseProgress = transitionProgress / 0.33; // 0 to 1 for first phase
+      const smoothFirstPhase = smoothStep(firstPhaseProgress);
 
       lookAtDirection = new THREE.Vector3()
         .addVectors(
-          forwardDownDirection.multiplyScalar(1.0 - smoothFirstHalf),
-          forwardUpDirection.multiplyScalar(smoothFirstHalf)
+          strongDownDirection.multiplyScalar(1.0 - smoothFirstPhase),
+          up75Direction.multiplyScalar(smoothFirstPhase)
+        )
+        .normalize();
+    } else if (transitionProgress < 0.66) {
+      // Second third: 75° up → straight ahead
+      const secondPhaseProgress = (transitionProgress - 0.33) / 0.33; // 0 to 1 for second phase
+      const smoothSecondPhase = smoothStep(secondPhaseProgress);
+
+      lookAtDirection = new THREE.Vector3()
+        .addVectors(
+          up75Direction.multiplyScalar(1.0 - smoothSecondPhase),
+          straightAheadDirection.multiplyScalar(smoothSecondPhase)
         )
         .normalize();
     } else {
-      // Second half: 45° up → straight ahead
-      const secondHalfProgress = (transitionProgress - 0.5) * 2; // 0 to 1 for second half
-      const smoothSecondHalf = smoothStep(secondHalfProgress);
-
-      lookAtDirection = new THREE.Vector3()
-        .addVectors(
-          forwardUpDirection.multiplyScalar(1.0 - smoothSecondHalf),
-          straightAheadDirection.multiplyScalar(smoothSecondHalf)
-        )
-        .normalize();
+      // Final third: Straight ahead (maintain straight look)
+      lookAtDirection = straightAheadDirection;
     }
 
     // BLEND: Mix path-following with entry rotation for smoother transition

@@ -2,6 +2,7 @@ import { initRenderer, setupLighting, renderer, scene } from "./scene";
 import { initCamera, setupCameraResize, camera } from "./camera";
 import { loadModel } from "./objects";
 import { initAnimationSystem } from "./animation-system";
+import { initFinalAnimations } from "./final-animations";
 
 // Initialize everything
 async function init() {
@@ -18,6 +19,9 @@ async function init() {
 
     // Initialize animation system (handles rendering and animations)
     initAnimationSystem();
+
+    // Initialize final animations
+    initFinalAnimations();
   } catch (error) {
     console.error("Initialization error:", error);
   }
