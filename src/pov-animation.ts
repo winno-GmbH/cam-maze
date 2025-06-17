@@ -25,38 +25,16 @@ const povPaths = getPathsForSection("pov") as Record<
   THREE.CurvePath<THREE.Vector3>
 >;
 
-// Debug: Log the paths to see what we're working with
-console.log("POV Paths loaded:", Object.keys(povPaths));
-console.log("Maze Center:", MAZE_CENTER);
 Object.entries(povPaths).forEach(([key, path]) => {
-  console.log(`${key} path length:`, path.getLength());
-  console.log(`${key} start point:`, path.getPointAt(0));
-  console.log(`${key} end point:`, path.getPointAt(1));
-
   // Test a few points along the path to see the Y values
   for (let i = 0; i <= 10; i++) {
     const progress = i / 10;
     const point = path.getPointAt(progress);
-    console.log(`${key} at ${progress * 100}%:`, point);
   }
 });
 
 // List of ghost keys to animate
 const ghostKeys = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
-
-// Debug: Check if ghosts exist
-console.log("Available ghosts:", Object.keys(ghosts));
-ghostKeys.forEach((key) => {
-  console.log(`${key} exists:`, !!ghosts[key]);
-  if (ghosts[key]) {
-    console.log(`${key} position:`, ghosts[key].position);
-    console.log(`${key} visible:`, ghosts[key].visible);
-  }
-});
-
-// Debug: Check camera
-console.log("Camera position:", camera.position);
-console.log("Camera FOV:", camera.fov);
 
 // Store previous camera quaternion for slerp
 let prevCameraQuat: THREE.Quaternion | null = null;
@@ -118,24 +96,14 @@ function findClosestProgressOnPOVPath(
 
 // Test function to manually trigger POV animation
 export function testPOVAnimation(progress: number = 0.5) {
-  console.log("=== TESTING POV ANIMATION ===");
-  console.log("Testing at progress:", progress);
-
   // Check if paths exist
   if (!povPaths.pacman) {
     console.error("POV camera path not found!");
     return;
   }
 
-  // Check camera position before
-  console.log("Camera position before:", camera.position.clone());
-  console.log("Camera FOV before:", camera.fov);
-
-  // Test camera path
   const camPos = povPaths.pacman.getPointAt(progress);
-  console.log("Camera path position at", progress, ":", camPos);
 
-  // Test ghost paths
   ghostKeys.forEach((key) => {
     const path = povPaths[key];
     const ghost = ghosts[key];
@@ -161,30 +129,10 @@ export function testPOVAnimation(progress: number = 0.5) {
 
 // --- Main update function (to be called in animation loop) ---
 export function updatePOVAnimation(progress: number) {
-  // Don't run POV animation if we're in the middle of a scroll animation
-  // This prevents conflicts with the home section scroll animation
-  if (progress < 0.01) {
-    isPOVAnimationActive = false;
-    return;
-  }
+  // Debug: log when POV animation is called
+  console.log(`POV Animation called with progress: ${progress}`);
 
-  // Additional check: if we're in a scroll animation (home section), don't run POV
-  // This prevents conflicts between the two animation systems
-  const homeSection = document.querySelector(".sc--home.sc") as HTMLElement;
-  if (homeSection) {
-    const rect = homeSection.getBoundingClientRect();
-    const homeProgress = Math.max(
-      0,
-      Math.min(1, 1 - rect.bottom / window.innerHeight)
-    );
-
-    // If home section is still in view (progress > 0), don't run POV animation
-    if (homeProgress > 0.01) {
-      isPOVAnimationActive = false;
-      return;
-    }
-  }
-
+  // Set POV as active immediately when called
   isPOVAnimationActive = true;
 
   // Use progress directly - GSAP ScrollTrigger already handles smoothing
@@ -212,44 +160,24 @@ export function updatePOVAnimation(progress: number) {
       // Make ghosts visible during POV animation - ensure they're visible
       ghost.visible = true;
 
-      // IMPORTANT: Don't override opacity during POV animation if we're in scroll animation
-      // This prevents conflicts with the fade-out animation
-      const homeSection = document.querySelector(".sc--home.sc") as HTMLElement;
-      const isInScrollAnimation =
-        homeSection &&
-        (() => {
-          const rect = homeSection.getBoundingClientRect();
-          const homeProgress = Math.max(
-            0,
-            Math.min(1, 1 - rect.bottom / window.innerHeight)
-          );
-          return homeProgress > 0.01;
-        })();
-
-      // Only set materials to full opacity if we're not in scroll animation
-      if (!isInScrollAnimation) {
-        function ensureGhostVisible(obj: THREE.Object3D) {
-          if ((obj as any).material) {
-            const mats = Array.isArray((obj as any).material)
-              ? (obj as any).material
-              : [(obj as any).material];
-            mats.forEach((mat: any) => {
-              if (mat) {
-                // Only set to full opacity if the material is currently transparent
-                // This prevents overriding fade-out animations
-                if (mat.transparent && mat.opacity < 1) {
-                  mat.opacity = 1;
-                  mat.transparent = false;
-                  mat.depthWrite = true;
-                  mat.needsUpdate = true;
-                }
-              }
-            });
-          }
+      // Set materials to full opacity during POV animation
+      function ensureGhostVisible(obj: THREE.Object3D) {
+        if ((obj as any).material) {
+          const mats = Array.isArray((obj as any).material)
+            ? (obj as any).material
+            : [(obj as any).material];
+          mats.forEach((mat: any) => {
+            if (mat) {
+              mat.opacity = 1;
+              mat.transparent = false;
+              mat.depthWrite = true;
+              mat.needsUpdate = true;
+            }
+          });
         }
-        ensureGhostVisible(ghost);
-        if (ghost instanceof THREE.Group) ghost.traverse(ensureGhostVisible);
       }
+      ensureGhostVisible(ghost);
+      if (ghost instanceof THREE.Group) ghost.traverse(ensureGhostVisible);
 
       // Debug: log ghost movement to verify they're following paths
       if (currentProgress % 0.1 < 0.01) {
@@ -401,18 +329,12 @@ function updatePOVTexts(progress: number) {
 
 // Function to stop POV animation
 export function stopPOVAnimation() {
+  console.log("Stopping POV Animation...");
   isPOVAnimationActive = false;
+
+  // Reset camera to default state
   camera.fov = DEFAULT_FOV;
   camera.updateProjectionMatrix();
-  cameraManualRotation = null;
-  prevCameraQuat = null;
-
-  // Reset all trigger states
-  Object.values(povTriggerStates).forEach((state) => {
-    state.ghostTextOpacity = 0;
-    state.camTextOpacity = 0;
-    state.active = false;
-  });
 
   // Hide all POV elements
   Object.entries(TriggerPositions).forEach(([key, trigger]) => {
@@ -439,6 +361,15 @@ export function stopPOVAnimation() {
         element.style.display = "none";
       });
     }
+  });
+
+  // Reset trigger states
+  Object.keys(povTriggerStates).forEach((key) => {
+    povTriggerStates[key] = {
+      ghostTextOpacity: 0,
+      camTextOpacity: 0,
+      active: false,
+    };
   });
 
   console.log("POV Animation stopped");
@@ -514,6 +445,9 @@ export async function initPOVAnimationSystem() {
     onUpdate: (self) => {
       // Progress von 0 (top top) bis 1 (bottom bottom)
       const progress = self.progress;
+      console.log(
+        `POV ScrollTrigger onUpdate: progress=${progress.toFixed(3)}`
+      );
       updatePOVAnimation(progress);
     },
     onEnter: () => {
@@ -524,10 +458,35 @@ export async function initPOVAnimationSystem() {
       console.log("POV section left!");
       stopPOVAnimation();
     },
+    onEnterBack: () => {
+      console.log("POV section entered (backward)!");
+      isPOVAnimationActive = true;
+    },
+    onLeaveBack: () => {
+      console.log("POV section left (backward)!");
+      stopPOVAnimation();
+    },
   });
 
   console.log("POV Animation System initialized successfully!");
   console.log("ScrollTrigger created:", povScrollTrigger);
+
+  // Add manual test functions to window for debugging
+  (window as any).testPOV = (progress: number = 0.5) => {
+    console.log("=== MANUAL POV TEST ===");
+    testPOVAnimation(progress);
+  };
+
+  (window as any).startPOV = () => {
+    console.log("=== MANUAL POV START ===");
+    isPOVAnimationActive = true;
+    updatePOVAnimation(0.5);
+  };
+
+  (window as any).stopPOV = () => {
+    console.log("=== MANUAL POV STOP ===");
+    stopPOVAnimation();
+  };
 }
 
 // Update POV Text DOM Elements - TWO-STAGE ANIMATION
@@ -615,19 +574,36 @@ function updatePOVTextElements(trigger: any, triggerState: POVTriggerState) {
 
 // Sophisticated camera update with transition phases and flexible direction
 function updatePOVCamera(progress: number) {
-  if (!povPaths.pacman) return;
+  console.log(`updatePOVCamera called with progress: ${progress}`);
+
+  if (!povPaths.pacman) {
+    console.error("POV camera path not found!");
+    return;
+  }
 
   const cameraPosition = povPaths.pacman.getPointAt(progress);
+  console.log(
+    `Camera position: ${cameraPosition.x.toFixed(
+      3
+    )}, ${cameraPosition.y.toFixed(3)}, ${cameraPosition.z.toFixed(3)}`
+  );
+
   camera.position.copy(cameraPosition);
 
   // Get the tangent at current progress - this is the key missing piece!
   const tangent = povPaths.pacman.getTangentAt(progress).normalize();
   const defaultLookAt = cameraPosition.clone().add(tangent);
+  console.log(
+    `Tangent: ${tangent.x.toFixed(3)}, ${tangent.y.toFixed(
+      3
+    )}, ${tangent.z.toFixed(3)}`
+  );
 
   // Simple phase-based camera control like in backup.js
   if (progress === 0) {
     // Initial position - look slightly up
     camera.lookAt(new THREE.Vector3(camera.position.x, 2, camera.position.z));
+    console.log("Camera: Initial position");
   } else if (progress < 0.1) {
     // Entry transition - smooth from up to forward
     const transitionProgress = progress / 0.1;
@@ -645,6 +621,7 @@ function updatePOVCamera(progress: number) {
       smoothStep(transitionProgress)
     );
     camera.lookAt(interpolatedLookAt);
+    console.log("Camera: Entry transition");
   } else {
     // Normal path following - use tangent direction with slight smoothing
     const lookAheadProgress = Math.min(progress + 0.02, 1); // Small look-ahead for smoothing
@@ -665,11 +642,18 @@ function updatePOVCamera(progress: number) {
 
     // Apply smooth camera rotation
     applySmoothCameraRotation(lookAtPoint);
+    console.log("Camera: Normal path following");
   }
 
   camera.fov = POV_FOV;
   camera.updateProjectionMatrix();
   camera.updateMatrixWorld();
+
+  console.log(
+    `Camera FOV: ${camera.fov}, Final position: ${camera.position.x.toFixed(
+      3
+    )}, ${camera.position.y.toFixed(3)}, ${camera.position.z.toFixed(3)}`
+  );
 }
 
 // Simplified smooth camera rotation - much less aggressive than before

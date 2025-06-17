@@ -7,7 +7,7 @@ import { MAZE_CENTER, DOM_ELEMENTS, SELECTORS } from "./config";
 import { isPOVActive } from "./pov-animation";
 
 // Animation state
-export type AnimationState = "HOME" | "SCROLL_ANIMATION";
+export type AnimationState = "HOME" | "SCROLL_ANIMATION" | "POV_ANIMATION";
 
 const HOME_ANIMATION_SPEED = 0.03; // loop speed - doubled for smoother movement
 const CAMERA_FOV = 50;
@@ -138,15 +138,6 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
         applyOpacity(child);
       }
     });
-  }
-
-  // Debug: log if opacity was set and what type of object
-  if (opacity < 1) {
-    console.log(
-      `setGhostOpacity: ${ghost.name || "unknown"} (${
-        ghost.constructor.name
-      }), opacity=${opacity}, opacitySet=${opacitySet}`
-    );
   }
 }
 
@@ -320,13 +311,6 @@ function animateScrollToCenter(progress: number) {
       const fadeProgress = (progress - 0.9) / 0.1; // 0 to 1 over last 10% (90% to 100%)
       opacity = 1 - fadeProgress;
       opacity = Math.max(0, opacity);
-
-      // Debug: log fade-out
-      console.log(
-        `${key} fade-out: progress=${progress.toFixed(
-          3
-        )}, opacity=${opacity.toFixed(3)}`
-      );
     }
 
     setGhostOpacity(ghost, opacity);
@@ -355,8 +339,9 @@ function animationLoop() {
 
   if (pacmanMixer) pacmanMixer.update(dt);
 
-  // Check if POV animation is active - if so, skip home/scroll animations
+  // Check if POV animation is active - if so, handle POV state
   if (isPOVActive()) {
+    animationState = "POV_ANIMATION";
     // POV animation is controlling camera and ghosts, just render
     // Make sure ghosts are visible during POV animation
     Object.values(ghosts).forEach((ghost) => {
@@ -371,6 +356,7 @@ function animationLoop() {
     animateTransitionToHome(dt);
   } else if (scrollProgress > 0.01) {
     // Scroll animation
+    animationState = "SCROLL_ANIMATION";
     if (!homePositionsCaptured) {
       captureGhostPositions();
       pausedHomeProgress = homeProgress;
@@ -379,6 +365,7 @@ function animationLoop() {
     animateCameraScroll(scrollProgress);
   } else {
     // Home animation - start transition if we were in scroll animation
+    animationState = "HOME";
     if (homePositionsCaptured && !isTransitioningToHome) {
       startSmoothTransitionToHome();
     } else if (!isTransitioningToHome) {
@@ -469,13 +456,4 @@ export function initAnimationSystem() {
 
   // Setup GSAP ScrollTrigger
   setupScrollTrigger();
-
-  // Add manual test function to window for debugging
-  (window as any).testOpacity = () => {
-    console.log("Testing opacity on all ghosts...");
-    Object.entries(ghosts).forEach(([key, ghost]) => {
-      console.log(`Testing ${key}...`);
-      setGhostOpacity(ghost, 0.5);
-    });
-  };
 }
