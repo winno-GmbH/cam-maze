@@ -4,6 +4,7 @@ import { ghosts } from "./objects";
 import { DOM_ELEMENTS } from "./selectors";
 import { getPathsForSection } from "./paths";
 import { MAZE_CENTER } from "./config";
+import { TriggerPositions } from "./triggers";
 
 // Flag to track POV animation state
 let isPOVAnimationActive = false;
@@ -11,6 +12,12 @@ let isPOVAnimationActive = false;
 // Camera FOV settings
 const POV_FOV = 80; // Wider FOV for POV animation
 const DEFAULT_FOV = 50; // Default FOV
+
+// Camera manual rotation override
+let cameraManualRotation: THREE.Quaternion | null = null;
+export function setCameraManualRotation(q: THREE.Quaternion | null) {
+  cameraManualRotation = q;
+}
 
 // Get all POV paths for camera and ghosts
 const povPaths = getPathsForSection("pov") as Record<
@@ -66,91 +73,123 @@ export function testPOVAnimation(progress: number = 0.5) {
 
 // --- Main update function (to be called in animation loop) ---
 export function updatePOVAnimation(progress: number) {
-  // Set POV as active
   isPOVAnimationActive = true;
-
-  // Debug: Log progress
-  if (progress % 0.1 < 0.01) {
-    // Log every 10% progress
-    console.log("POV Animation Progress:", progress);
-  }
 
   // 1. Move camera along camera POV path (use pacman/cameraPOV path)
   if (povPaths.pacman) {
     let camPos = povPaths.pacman.getPointAt(progress);
-
-    // FIX: Ensure camera is above the maze (minimum Y = 0.5)
-    if (camPos.y < 0.5) {
-      camPos = new THREE.Vector3(camPos.x, 0.5, camPos.z);
-    }
-
+    if (camPos.y < 0.5) camPos = new THREE.Vector3(camPos.x, 0.5, camPos.z);
     camera.position.copy(camPos);
 
-    // Debug: Log camera movement
-    if (progress % 0.1 < 0.01) {
-      console.log("Camera moved to:", camPos);
-      console.log("Distance from maze center:", camPos.distanceTo(MAZE_CENTER));
-    }
-
-    // Add basic lookAt logic - look at maze center or forward along the path
-    const lookAheadProgress = Math.min(progress + 0.1, 1);
-    const lookAheadPos = povPaths.pacman.getPointAt(lookAheadProgress);
-
-    // Ensure look-ahead position is also above ground
-    if (lookAheadPos.y < 0.5) {
-      const fixedLookAhead = new THREE.Vector3(
-        lookAheadPos.x,
-        0.5,
-        lookAheadPos.z
-      );
-      camera.lookAt(fixedLookAhead);
+    // Camera orientation: tangent-following or manual override
+    if (cameraManualRotation) {
+      camera.quaternion.copy(cameraManualRotation);
     } else {
-      camera.lookAt(lookAheadPos);
+      // Tangent-following: look ahead along the path
+      const lookAheadProgress = Math.min(progress + 0.01, 1);
+      const lookAheadPos = povPaths.pacman.getPointAt(lookAheadProgress);
+      const tangent = new THREE.Vector3()
+        .subVectors(lookAheadPos, camPos)
+        .normalize();
+      const up = new THREE.Vector3(0, 1, 0);
+      const m = new THREE.Matrix4().lookAt(
+        camPos,
+        camPos.clone().add(tangent),
+        up
+      );
+      camera.quaternion.setFromRotationMatrix(m);
     }
 
-    // Set POV FOV
     camera.fov = POV_FOV;
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld();
-  } else {
-    console.error("No camera POV path found!");
   }
 
-  // 2. Move all ghosts along their respective POV paths
+  // 2. Move all ghosts along their respective POV paths and ensure visibility/material
   ghostKeys.forEach((key) => {
     const ghost = ghosts[key];
     const path = povPaths[key];
     if (ghost && path) {
       const pos = path.getPointAt(progress);
       ghost.position.copy(pos);
-
-      // Debug: Log ghost movement
-      if (progress % 0.1 < 0.01) {
-        console.log(`${key} moved to:`, pos);
-      }
-
-      // Add basic lookAt logic for ghosts
-      const lookAheadProgress = Math.min(progress + 0.1, 1);
+      // Look ahead for orientation
+      const lookAheadProgress = Math.min(progress + 0.01, 1);
       const lookAheadPos = path.getPointAt(lookAheadProgress);
       ghost.lookAt(lookAheadPos);
-
-      // Ensure ghost is visible
+      // Ensure visible
       ghost.visible = true;
-    } else {
-      if (!ghost) console.error(`Ghost ${key} not found!`);
-      if (!path) console.error(`Path for ${key} not found!`);
+      // Ensure material is visible
+      function setMaterialVisible(obj: THREE.Object3D) {
+        if ((obj as any).material) {
+          const mats = Array.isArray((obj as any).material)
+            ? (obj as any).material
+            : [(obj as any).material];
+          mats.forEach((mat: any) => {
+            if (mat) {
+              mat.opacity = 1;
+              mat.transparent = false;
+              mat.depthWrite = true;
+              mat.needsUpdate = true;
+            }
+          });
+        }
+      }
+      setMaterialVisible(ghost);
+      if (ghost instanceof THREE.Group) ghost.traverse(setMaterialVisible);
     }
   });
 
-  // TODO: Add fade in/out logic and DOM trigger logic using DOM_ELEMENTS.parentElements, etc.
+  // 3. Card (DOM) trigger logic: fade in/out .cmp--pov.cmp cards based on camera progress
+  Object.entries(TriggerPositions).forEach(([key, trigger], idx) => {
+    if (!trigger.parent) return;
+    // Find progress along the camera path for the trigger position
+    const path = povPaths.pacman;
+    if (!path) return;
+    // Find closest progress for triggerPos and endPosition
+    function findClosestProgress(target: THREE.Vector3, samples = 1000) {
+      let minDist = Infinity;
+      let minT = 0;
+      for (let i = 0; i <= samples; i++) {
+        const t = i / samples;
+        const p = path.getPointAt(t);
+        const d = p.distanceTo(target);
+        if (d < minDist) {
+          minDist = d;
+          minT = t;
+        }
+      }
+      return minT;
+    }
+    const triggerT = findClosestProgress(trigger.triggerPos);
+    const endT = findClosestProgress(trigger.endPosition);
+    // Fade in at triggerT, fade out at endT
+    let opacity = 0;
+    if (progress >= triggerT && progress <= endT) {
+      // Fade in over 5% of the section, fade out over last 5%
+      const fadeInT = triggerT + 0.05 * (endT - triggerT);
+      const fadeOutT = endT - 0.05 * (endT - triggerT);
+      if (progress < fadeInT) {
+        opacity = (progress - triggerT) / (fadeInT - triggerT);
+      } else if (progress > fadeOutT) {
+        opacity = 1 - (progress - fadeOutT) / (endT - fadeOutT);
+      } else {
+        opacity = 1;
+      }
+    }
+    // Apply to DOM
+    const el = trigger.parent as HTMLElement;
+    el.style.opacity = String(opacity);
+    el.style.visibility = opacity > 0.01 ? "visible" : "hidden";
+    el.style.pointerEvents = opacity > 0.01 ? "auto" : "none";
+  });
 }
 
 // Function to stop POV animation
 export function stopPOVAnimation() {
   isPOVAnimationActive = false;
-  // Reset camera FOV to default
   camera.fov = DEFAULT_FOV;
   camera.updateProjectionMatrix();
+  cameraManualRotation = null;
   console.log("POV Animation stopped");
 }
 
