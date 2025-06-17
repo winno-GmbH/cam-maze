@@ -7,7 +7,11 @@ import { MAZE_CENTER, DOM_ELEMENTS, SELECTORS } from "./config";
 import { isPOVActive } from "./pov-animation";
 
 // Animation state
-export type AnimationState = "HOME" | "SCROLL_ANIMATION" | "POV_ANIMATION";
+export type AnimationState =
+  | "HOME"
+  | "SCROLL_ANIMATION"
+  | "POV_ANIMATION"
+  | "TRANSITION";
 
 const HOME_ANIMATION_SPEED = 0.03; // loop speed - doubled for smoother movement
 const CAMERA_FOV = 50;
@@ -81,6 +85,15 @@ function animateHomeLoop(dt: number) {
         }
         // Only set opacity to 1 when not in scroll animation to avoid overriding GSAP fade-out
         if (scrollProgress <= 0.01) {
+          const timestamp = new Date()
+            .toISOString()
+            .split("T")[1]
+            .split(".")[0];
+          console.log(
+            `[${timestamp}] Home Animation: Setting opacity=1 for ghost=${key}, scrollProgress=${scrollProgress.toFixed(
+              3
+            )}`
+          );
           setGhostOpacity(ghost, 1);
         }
       }
@@ -106,17 +119,27 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
             material.isMeshPhysicalMaterial ||
             material.isMeshMatcapMaterial
           ) {
+            const oldOpacity = material.opacity;
             material.opacity = opacity;
             material.transparent = opacity < 1;
             material.depthWrite = opacity === 1;
             material.needsUpdate = true;
             opacitySet = true;
 
-            // Debug: Log when opacity is set
-            if (opacity < 1) {
+            // Debug: Log when opacity is set with more details
+            if (opacity < 1 || oldOpacity !== opacity) {
+              const timestamp = new Date()
+                .toISOString()
+                .split("T")[1]
+                .split(".")[0];
+              const caller =
+                new Error().stack?.split("\n")[2]?.trim() || "unknown";
               console.log(
-                `Set opacity ${opacity.toFixed(3)} on material:`,
-                material.type || material.constructor.name
+                `[${timestamp}] Set opacity ${opacity.toFixed(
+                  3
+                )} on material: ${
+                  material.type || material.constructor.name
+                }, oldOpacity: ${oldOpacity.toFixed(3)}, caller: ${caller}`
               );
             }
           } else if (material.isShaderMaterial) {
@@ -129,11 +152,29 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
           } else {
             // Fallback for any material with opacity property
             if ("opacity" in material) {
+              const oldOpacity = material.opacity;
               material.opacity = opacity;
               material.transparent = opacity < 1;
               material.depthWrite = opacity === 1;
               material.needsUpdate = true;
               opacitySet = true;
+
+              // Debug: Log when opacity is set with more details
+              if (opacity < 1 || oldOpacity !== opacity) {
+                const timestamp = new Date()
+                  .toISOString()
+                  .split("T")[1]
+                  .split(".")[0];
+                const caller =
+                  new Error().stack?.split("\n")[2]?.trim() || "unknown";
+                console.log(
+                  `[${timestamp}] Set opacity ${opacity.toFixed(
+                    3
+                  )} on fallback material, oldOpacity: ${oldOpacity.toFixed(
+                    3
+                  )}, caller: ${caller}`
+                );
+              }
             }
           }
         }
@@ -262,6 +303,15 @@ function animateTransitionToHome(dt: number) {
 
         // Only set opacity to 1 when not in scroll animation to avoid overriding GSAP fade-out
         if (scrollProgress <= 0.01) {
+          const timestamp = new Date()
+            .toISOString()
+            .split("T")[1]
+            .split(".")[0];
+          console.log(
+            `[${timestamp}] Transition: Setting opacity=1 for ghost=${key}, scrollProgress=${scrollProgress.toFixed(
+              3
+            )}, transitionProgress=${transitionProgress.toFixed(3)}`
+          );
           setGhostOpacity(ghost, 1);
         }
       }
@@ -344,7 +394,11 @@ function animationLoop() {
 
   // Check if POV animation is active - if so, handle POV state
   if (isPOVActive()) {
+    const oldState = animationState;
     animationState = "POV_ANIMATION";
+    if (oldState !== animationState) {
+      console.log(`Animation state changed: ${oldState} -> ${animationState}`);
+    }
     // POV animation is controlling camera and ghosts, just render
     // Make sure ghosts are visible during POV animation
     Object.values(ghosts).forEach((ghost) => {
@@ -356,10 +410,23 @@ function animationLoop() {
 
   // Handle different animation states
   if (isTransitioningToHome) {
+    const oldState = animationState;
+    animationState = "TRANSITION";
+    if (oldState !== animationState) {
+      console.log(`Animation state changed: ${oldState} -> ${animationState}`);
+    }
     animateTransitionToHome(dt);
   } else if (scrollProgress > 0.01) {
     // Scroll animation
+    const oldState = animationState;
     animationState = "SCROLL_ANIMATION";
+    if (oldState !== animationState) {
+      console.log(
+        `Animation state changed: ${oldState} -> ${animationState}, scrollProgress=${scrollProgress.toFixed(
+          3
+        )}`
+      );
+    }
     if (!homePositionsCaptured) {
       captureGhostPositions();
       pausedHomeProgress = homeProgress;
@@ -368,7 +435,15 @@ function animationLoop() {
     animateCameraScroll(scrollProgress);
   } else {
     // Home animation - start transition if we were in scroll animation
+    const oldState = animationState;
     animationState = "HOME";
+    if (oldState !== animationState) {
+      console.log(
+        `Animation state changed: ${oldState} -> ${animationState}, scrollProgress=${scrollProgress.toFixed(
+          3
+        )}`
+      );
+    }
     if (homePositionsCaptured && !isTransitioningToHome) {
       startSmoothTransitionToHome();
     } else if (!isTransitioningToHome) {
@@ -425,20 +500,26 @@ async function setupScrollTrigger() {
           setScrollProgress(progress);
 
           // Fade out all ghosts and Pacman from opacity 1 to 0
-          // Start fade at 80% progress and complete at 100%
+          // Start fade at 50% progress and complete at 100%
           let fadeOpacity = 1;
-          if (progress >= 0.8) {
-            const fadeProgress = (progress - 0.8) / 0.2; // 0 to 1 over last 20% (80% to 100%)
+          if (progress >= 0.5) {
+            const fadeProgress = (progress - 0.5) / 0.5; // 0 to 1 over last 50% (50% to 100%)
             fadeOpacity = 1 - fadeProgress;
             fadeOpacity = Math.max(0, fadeOpacity);
           }
 
-          // Debug: Log fade opacity values
-          if (progress >= 0.75) {
+          // Debug: Log fade opacity values with more details
+          if (progress >= 0.45) {
+            const timestamp = new Date()
+              .toISOString()
+              .split("T")[1]
+              .split(".")[0];
             console.log(
-              `GSAP Fade: progress=${progress.toFixed(
+              `[${timestamp}] GSAP Fade: progress=${progress.toFixed(
                 3
-              )}, fadeOpacity=${fadeOpacity.toFixed(3)}`
+              )}, fadeOpacity=${fadeOpacity.toFixed(
+                3
+              )}, scrollProgress=${scrollProgress.toFixed(3)}`
             );
           }
 
