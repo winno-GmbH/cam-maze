@@ -94,15 +94,15 @@ function findClosestProgressOnPOVPath(
   return minT;
 }
 
-// Store original home positions for ghosts
-const originalGhostPositions: { [key: string]: THREE.Vector3 } = {};
-const originalGhostRotations: { [key: string]: THREE.Euler } = {};
-const originalGhostScales: { [key: string]: THREE.Vector3 } = {};
-let homePositionsCaptured = false;
+// Store original home positions for restoration
+const originalGhostPositions: Record<string, THREE.Vector3> = {};
+const originalGhostRotations: Record<string, THREE.Euler> = {};
+const originalGhostScales: Record<string, THREE.Vector3> = {};
 
 // Capture original home positions when POV starts
 function captureHomePositions() {
-  if (homePositionsCaptured) return;
+  // Use the homePositionsCaptured from animation.ts
+  if ((window as any).homePositionsCaptured) return;
 
   ghostKeys.forEach((key) => {
     const ghost = ghosts[key];
@@ -113,7 +113,8 @@ function captureHomePositions() {
     }
   });
 
-  homePositionsCaptured = true;
+  // Set the flag in animation.ts
+  (window as any).homePositionsCaptured = true;
 }
 
 // Restore ghosts to their home positions
@@ -446,6 +447,12 @@ export function stopPOVAnimation() {
   // Restore ghosts to their home positions
   restoreGhostsToHomePositions();
 
+  // Reset home positions capture flag so animation system can capture again
+  // This is crucial for proper transition back to home animation
+  if (typeof window !== "undefined") {
+    (window as any).homePositionsCaptured = false;
+  }
+
   // Hide all POV elements
   Object.entries(TriggerPositions).forEach(([key, trigger]) => {
     if (trigger.parent) {
@@ -482,10 +489,9 @@ export function stopPOVAnimation() {
     };
   });
 
-  // Reset home positions capture flag so it can capture again next time
-  homePositionsCaptured = false;
-
-  console.log("POV Animation stopped");
+  console.log(
+    "POV Animation stopped - ghosts should be restored to home positions"
+  );
 }
 
 // --- POV ScrollTrigger Setup ---

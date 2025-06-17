@@ -39,6 +39,11 @@ let scrollTriggerInitialized = false;
 let homePositionsCaptured = false;
 let pausedHomeProgress = 0;
 
+// Expose homePositionsCaptured globally for POV animation access
+if (typeof window !== "undefined") {
+  (window as any).homePositionsCaptured = homePositionsCaptured;
+}
+
 // Simple transition variables
 let isTransitioningToHome = false;
 let transitionProgress = 0;
@@ -190,6 +195,11 @@ function captureGhostPositions() {
   cameraScrollStartQuat = camera.quaternion.clone();
 
   homePositionsCaptured = true;
+
+  // Update global version for POV animation access
+  if (typeof window !== "undefined") {
+    (window as any).homePositionsCaptured = true;
+  }
 }
 
 function startSmoothTransitionToHome() {
@@ -259,6 +269,11 @@ function animateTransitionToHome(dt: number) {
   if (transitionProgress >= 1) {
     isTransitioningToHome = false;
     homePositionsCaptured = false;
+
+    // Update global version for POV animation access
+    if (typeof window !== "undefined") {
+      (window as any).homePositionsCaptured = false;
+    }
   }
 }
 
@@ -306,6 +321,7 @@ function animateScrollToCenter(progress: number) {
     ghost.quaternion.copy(interpolatedQuat);
 
     // Fade out starting at 90% of the overall scroll progress (not individual ghost progress)
+    // This ensures all ghosts fade out together regardless of their speed
     let opacity = 1;
     if (progress >= 0.9) {
       const fadeProgress = (progress - 0.9) / 0.1; // 0 to 1 over last 10% (90% to 100%)
@@ -315,6 +331,17 @@ function animateScrollToCenter(progress: number) {
 
     setGhostOpacity(ghost, opacity);
   });
+
+  // Also fade out Pacman during the same period
+  if (pacman) {
+    let pacmanOpacity = 1;
+    if (progress >= 0.9) {
+      const fadeProgress = (progress - 0.9) / 0.1;
+      pacmanOpacity = 1 - fadeProgress;
+      pacmanOpacity = Math.max(0, pacmanOpacity);
+    }
+    setGhostOpacity(pacman, pacmanOpacity);
+  }
 }
 
 function animateCameraScroll(progress: number) {
@@ -366,9 +393,18 @@ function animationLoop() {
   } else {
     // Home animation - start transition if we were in scroll animation
     animationState = "HOME";
+
+    // If we just came from POV animation, ensure ghosts are visible and in home positions
     if (homePositionsCaptured && !isTransitioningToHome) {
+      // Make sure all ghosts are visible for home animation
+      Object.values(ghosts).forEach((ghost) => {
+        ghost.visible = true;
+        // Reset opacity to full
+        setGhostOpacity(ghost, 1);
+      });
       startSmoothTransitionToHome();
     } else if (!isTransitioningToHome) {
+      // Normal home animation
       animateHomeLoop(dt);
     }
   }
