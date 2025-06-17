@@ -1018,7 +1018,7 @@ export const ghost5HomePathPoints: PathPoint[] = [
 
 export const cameraPOVPathPoints: PathPoint[] = [
   {
-    pos: new THREE.Vector3(0.55675, -0.5, 0.45175),
+    pos: new THREE.Vector3(0.55675, 0.35, 0.45175),
     type: "curve",
     curveType: "forwardDownArc",
   },
