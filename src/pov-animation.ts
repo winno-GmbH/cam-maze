@@ -44,12 +44,12 @@ const ghostKeys = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
 
 // Store previous camera quaternion for slerp
 let prevCameraQuat: THREE.Quaternion | null = null;
-const CAMERA_SLERP_ALPHA = 0.12; // Reduced slerp factor for more responsive scrub
+const CAMERA_SLERP_ALPHA = 0.25; // Increased slerp factor for smoother movement
 
 // Scrub smoothing for camera movement
 let smoothedProgress = 0;
 let targetProgress = 0;
-const SCRUB_SMOOTHING = 0.05; // Very light smoothing for responsive scrub
+const SCRUB_SMOOTHING = 0.15; // Increased smoothing for smoother movement
 
 // POV Animation State for text transitions
 interface POVTriggerState {
@@ -587,7 +587,7 @@ export async function initPOVAnimationSystem() {
     trigger: ".sc--pov",
     start: "top top",
     end: "bottom bottom",
-    scrub: 0.8, // Reduced scrub for more responsive feel
+    scrub: 1.5, // Increased scrub for smoother, more controlled movement
     onEnter: () => {
       console.log("POV section entered!");
       isPOVAnimationActive = true;
@@ -789,16 +789,25 @@ function updatePOVCamera(progress: number) {
     console.log("Camera: Entry transition");
   } else {
     // Normal path following - use tangent direction with slight smoothing
-    const lookAheadProgress = Math.min(progress + 0.02, 1); // Small look-ahead for smoothing
+    const lookAheadProgress = Math.min(progress + 0.05, 1); // Increased look-ahead for smoother movement
     const lookAheadPos = povPaths.pacman.getPointAt(lookAheadProgress);
 
-    // Calculate smoothed tangent
+    // Calculate smoothed tangent with more weight on look-ahead
+    const currentTangent = povPaths.pacman.getTangentAt(progress).normalize();
+    const lookAheadTangent = povPaths.pacman
+      .getTangentAt(lookAheadProgress)
+      .normalize();
+
+    // Blend current and look-ahead tangents for smoother movement
     const smoothedTangent = new THREE.Vector3()
-      .subVectors(lookAheadPos, cameraPosition)
+      .addVectors(
+        currentTangent.clone().multiplyScalar(0.4),
+        lookAheadTangent.clone().multiplyScalar(0.6)
+      )
       .normalize();
 
     // Add slight upward tilt for natural walking perspective
-    const upTilt = new THREE.Vector3(0, 0.05, 0);
+    const upTilt = new THREE.Vector3(0, 0.08, 0); // Slightly increased upward tilt
     const finalDirection = new THREE.Vector3()
       .addVectors(smoothedTangent, upTilt)
       .normalize();
@@ -837,8 +846,8 @@ function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
     return;
   }
 
-  // Very light smoothing for responsive scrub - almost direct following
-  const smoothingFactor = 0.15; // Very light smoothing for smooth scrub
+  // Increased smoothing for smoother, more natural movement
+  const smoothingFactor = 0.35; // Increased smoothing for smoother movement
 
   camera.quaternion.slerpQuaternions(
     prevCameraQuat,
