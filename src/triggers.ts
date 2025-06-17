@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { DOM_ELEMENTS } from "./selectors";
 
 export const TriggerPositions = {

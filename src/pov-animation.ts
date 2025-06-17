@@ -58,6 +58,10 @@ ghostKeys.forEach((key) => {
 console.log("Camera position:", camera.position);
 console.log("Camera FOV:", camera.fov);
 
+// Store previous camera quaternion for slerp
+let prevCameraQuat: THREE.Quaternion | null = null;
+const CAMERA_SLERP_ALPHA = 0.18; // Slerp factor for smoothness
+
 // Export function to check if POV is active (for animation system)
 export function isPOVActive(): boolean {
   return isPOVAnimationActive;
@@ -67,7 +71,42 @@ export function isPOVActive(): boolean {
 export function testPOVAnimation(progress: number = 0.5) {
   console.log("=== TESTING POV ANIMATION ===");
   console.log("Testing at progress:", progress);
+
+  // Check if paths exist
+  if (!povPaths.pacman) {
+    console.error("POV camera path not found!");
+    return;
+  }
+
+  // Check camera position before
+  console.log("Camera position before:", camera.position.clone());
+  console.log("Camera FOV before:", camera.fov);
+
+  // Test camera path
+  const camPos = povPaths.pacman.getPointAt(progress);
+  console.log("Camera path position at", progress, ":", camPos);
+
+  // Test ghost paths
+  ghostKeys.forEach((key) => {
+    const path = povPaths[key];
+    const ghost = ghosts[key];
+    if (path && ghost) {
+      const pos = path.getPointAt(progress);
+      console.log(`${key} path position at ${progress}:`, pos);
+      console.log(`${key} current position:`, ghost.position.clone());
+      console.log(`${key} visible:`, ghost.visible);
+    } else {
+      console.warn(`${key} path or ghost not found`);
+    }
+  });
+
+  // Run the actual update
   updatePOVAnimation(progress);
+
+  // Check camera position after
+  console.log("Camera position after:", camera.position.clone());
+  console.log("Camera FOV after:", camera.fov);
+
   console.log("=== END TEST ===");
 }
 
@@ -86,7 +125,7 @@ export function updatePOVAnimation(progress: number) {
       camera.quaternion.copy(cameraManualRotation);
     } else {
       // Tangent-following: look ahead along the path
-      const lookAheadProgress = Math.min(progress + 0.01, 1);
+      const lookAheadProgress = Math.min(progress + 0.03, 1);
       const lookAheadPos = povPaths.pacman.getPointAt(lookAheadProgress);
       const tangent = new THREE.Vector3()
         .subVectors(lookAheadPos, camPos)
@@ -97,7 +136,18 @@ export function updatePOVAnimation(progress: number) {
         camPos.clone().add(tangent),
         up
       );
-      camera.quaternion.setFromRotationMatrix(m);
+      const targetQuat = new THREE.Quaternion().setFromRotationMatrix(m);
+      if (!prevCameraQuat) {
+        camera.quaternion.copy(targetQuat);
+        prevCameraQuat = camera.quaternion.clone();
+      } else {
+        camera.quaternion.slerpQuaternions(
+          prevCameraQuat,
+          targetQuat,
+          CAMERA_SLERP_ALPHA
+        );
+        prevCameraQuat.copy(camera.quaternion);
+      }
     }
 
     camera.fov = POV_FOV;
@@ -113,7 +163,7 @@ export function updatePOVAnimation(progress: number) {
       const pos = path.getPointAt(progress);
       ghost.position.copy(pos);
       // Look ahead for orientation
-      const lookAheadProgress = Math.min(progress + 0.01, 1);
+      const lookAheadProgress = Math.min(progress + 0.03, 1);
       const lookAheadPos = path.getPointAt(lookAheadProgress);
       ghost.lookAt(lookAheadPos);
       // Ensure visible
@@ -190,6 +240,7 @@ export function stopPOVAnimation() {
   camera.fov = DEFAULT_FOV;
   camera.updateProjectionMatrix();
   cameraManualRotation = null;
+  prevCameraQuat = null;
   console.log("POV Animation stopped");
 }
 
@@ -200,9 +251,51 @@ export async function initPOVAnimationSystem() {
   // Check if POV section exists
   if (!DOM_ELEMENTS.povSection) {
     console.error("POV section not found! Check if .sc--pov.sc exists in HTML");
+    console.log("Available DOM elements:", {
+      homeSection: !!DOM_ELEMENTS.homeSection,
+      introSection: !!DOM_ELEMENTS.introSection,
+      povSection: !!DOM_ELEMENTS.povSection,
+      finalSection: !!DOM_ELEMENTS.finalSection,
+    });
+    console.log(
+      "All sections in document:",
+      document.querySelectorAll('[class*="sc--"]')
+    );
     return;
   }
   console.log("POV section found:", DOM_ELEMENTS.povSection);
+
+  // Check if POV paths exist
+  if (!povPaths.pacman) {
+    console.error(
+      "POV paths not found! Check pathPoints.ts for POV path definitions"
+    );
+    console.log("Available POV paths:", Object.keys(povPaths));
+    return;
+  }
+  console.log("POV paths loaded successfully:", Object.keys(povPaths));
+
+  // Check if ghosts exist
+  const missingGhosts = ghostKeys.filter((key) => !ghosts[key]);
+  if (missingGhosts.length > 0) {
+    console.warn("Some ghosts are missing:", missingGhosts);
+    console.log("Available ghosts:", Object.keys(ghosts));
+  }
+
+  // Check if trigger elements exist
+  const missingTriggers = Object.entries(TriggerPositions).filter(
+    ([key, trigger]) => !trigger.parent
+  );
+  if (missingTriggers.length > 0) {
+    console.warn(
+      "Some trigger elements are missing:",
+      missingTriggers.map(([key]) => key)
+    );
+    console.log(
+      "Available parent elements:",
+      DOM_ELEMENTS.parentElements.length
+    );
+  }
 
   // Dynamically import GSAP
   const gsapModule = await import("gsap");
@@ -213,7 +306,7 @@ export async function initPOVAnimationSystem() {
   gsap.registerPlugin(ScrollTrigger);
 
   // Setup ScrollTrigger for .sc--pov
-  ScrollTrigger.create({
+  const povScrollTrigger = ScrollTrigger.create({
     trigger: ".sc--pov",
     start: "top top",
     end: "bottom bottom",
@@ -238,6 +331,7 @@ export async function initPOVAnimationSystem() {
   });
 
   console.log("POV Animation System initialized successfully!");
+  console.log("ScrollTrigger created:", povScrollTrigger);
 
   // Test the animation after a short delay
   setTimeout(() => {
