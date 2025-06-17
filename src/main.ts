@@ -7,6 +7,12 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
+console.log("GSAP import:", gsap);
+console.log("ScrollTrigger import:", ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger);
+console.log("GSAP after register:", gsap);
+console.log("ScrollTrigger after register:", ScrollTrigger);
+
 async function init() {
   try {
     initRenderer();
