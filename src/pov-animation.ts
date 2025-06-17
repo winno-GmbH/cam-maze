@@ -2,87 +2,38 @@ import * as THREE from "three";
 import { camera } from "./camera";
 import { ghosts } from "./objects";
 import { DOM_ELEMENTS } from "./selectors";
+import { getPathsForSection } from "./paths";
 
-// --- POV Path Definitions (from backup.js) ---
-// (You can move these to a config if you want)
-const cameraPOVPathPoints = [
-  { pos: new THREE.Vector3(0.55675, 0.35, 0.45175) },
-  { pos: new THREE.Vector3(0.55675, 0.55, 0.6025) },
-  { pos: new THREE.Vector3(0.607, 0.55, 0.703) },
-  { pos: new THREE.Vector3(0.65725, 0.55, 0.75325) },
-  { pos: new THREE.Vector3(0.7075, 0.55, 0.8035) },
-  { pos: new THREE.Vector3(0.9085, 0.55, 0.8035) },
-  { pos: new THREE.Vector3(0.95875, 0.55, 0.85375) },
-  { pos: new THREE.Vector3(0.95875, 0.55, 1.15525) },
-  { pos: new THREE.Vector3(0.9085, 0.55, 1.2055) },
-  { pos: new THREE.Vector3(0.808, 0.55, 1.2055) },
-  { pos: new THREE.Vector3(0.75775, 0.55, 1.15525) },
-  { pos: new THREE.Vector3(0.75775, 0.55, 1.05475) },
-  { pos: new THREE.Vector3(0.7075, 0.55, 1.0045) },
-  { pos: new THREE.Vector3(0.205, 0.55, 1.0045) },
-  { pos: new THREE.Vector3(0.15475, 0.55, 1.05475) },
-  { pos: new THREE.Vector3(0.15475, 0.55, 1.15525) },
-  { pos: new THREE.Vector3(0.205, 0.55, 1.2055) },
-  { pos: new THREE.Vector3(0.5065, 0.55, 1.2055) },
-  { pos: new THREE.Vector3(0.55675, 0.55, 1.306) },
-  { pos: new THREE.Vector3(-0.44825, 1, 2.0095) },
-];
+// Get all POV paths for camera and ghosts
+const povPaths = getPathsForSection("pov") as Record<
+  string,
+  THREE.CurvePath<THREE.Vector3>
+>;
 
-// Example: ghost1 path (add others as needed)
-const ghost1POVPathPoints = [
-  { pos: new THREE.Vector3(1.05925, 0.55, 0.703) },
-  { pos: new THREE.Vector3(1.05925, 0.55, 0.75325) },
-  { pos: new THREE.Vector3(1.009, 0.55, 0.8035) },
-  { pos: new THREE.Vector3(0.9085, 0.55, 0.8035) },
-];
-
-function createPOVPath(
-  points: { pos: THREE.Vector3 }[]
-): THREE.CurvePath<THREE.Vector3> {
-  const path = new THREE.CurvePath<THREE.Vector3>();
-  for (let i = 0; i < points.length - 1; i++) {
-    path.add(new THREE.LineCurve3(points[i].pos, points[i + 1].pos));
-  }
-  return path;
-}
-
-const cameraPOVPath = createPOVPath(cameraPOVPathPoints);
-const ghostPOVPaths = {
-  ghost1: createPOVPath(ghost1POVPathPoints),
-  // ghost2, ghost3, ...
-};
-
-// --- Trigger structure (simplified for now) ---
-const triggers = [
-  {
-    ghostKey: "ghost1",
-    triggerPos: new THREE.Vector3(0.65725, 0.55, 0.75325),
-    ghostTextPos: new THREE.Vector3(0.7075, 0.55, 0.8035),
-    camTextPos: new THREE.Vector3(0.75775, 0.55, 0.8035),
-    endPosition: new THREE.Vector3(0.85825, 0.55, 0.8035),
-    parent: null, // assign DOM element later
-  },
-  // ... weitere Ghosts
-];
+// List of ghost keys to animate
+const ghostKeys = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
 
 // --- Main update function (to be called in animation loop) ---
 export function updatePOVAnimation(progress: number) {
-  // 1. Move camera along cameraPOVPath
-  const camPos = cameraPOVPath.getPointAt(progress);
-  camera.position.copy(camPos);
+  // 1. Move camera along camera POV path (use pacman/cameraPOV path)
+  if (povPaths.pacman) {
+    const camPos = povPaths.pacman.getPointAt(progress);
+    camera.position.copy(camPos);
+    // Optionally: camera lookAt logic can be added here
+  }
 
-  // 2. Move ghosts along their paths (add fade logic next)
-  triggers.forEach((trigger) => {
-    const ghost = ghosts[trigger.ghostKey];
-    if (!ghost) return;
-    const ghostPath = (
-      ghostPOVPaths as Record<string, THREE.CurvePath<THREE.Vector3>>
-    )[trigger.ghostKey];
-    if (!ghostPath) return;
-    // For now, just move ghost to start of path
-    ghost.position.copy(ghostPath.getPointAt(progress));
-    // TODO: Add fade in/out logic and DOM logic
+  // 2. Move all ghosts along their respective POV paths
+  ghostKeys.forEach((key) => {
+    const ghost = ghosts[key];
+    const path = povPaths[key];
+    if (ghost && path) {
+      const pos = path.getPointAt(progress);
+      ghost.position.copy(pos);
+      // Optionally: ghost lookAt logic can be added here
+    }
   });
+
+  // TODO: Add fade in/out logic and DOM trigger logic using DOM_ELEMENTS.parentElements, etc.
 }
 
 // --- POV ScrollTrigger Setup ---
