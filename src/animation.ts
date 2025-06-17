@@ -13,12 +13,12 @@ const CAMERA_FOV = 50;
 
 // Speed multipliers for scroll animation - higher = faster
 const GHOST_SPEED_MULTIPLIERS: Record<string, number> = {
-  ghost1: 1.25, // Fastest
+  ghost1: 1.25, // Fastest - arrives first
   ghost2: 1.14,
   ghost3: 1.05,
   ghost4: 0.97,
   ghost5: 0.89,
-  pacman: 0.8, // Slowest - enters last
+  pacman: 0.8, // Slowest - arrives last
 };
 
 // When ghosts should finish their animation (0.8 = 80% of scroll progress)
@@ -123,26 +123,10 @@ function createBezierCurves() {
 function animateScrollToCenter(progress: number) {
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const speed = GHOST_SPEED_MULTIPLIERS[key] || 1.0;
-    let ghostProgress = Math.min((progress * speed) / GHOSTS_END_AT, 1);
 
-    // Add stagger delay for ghosts and pacman
-    if (key !== "pacman") {
-      ghostProgress = Math.max(
-        0,
-        Math.min(
-          1,
-          ((progress -
-            GHOST_STAGGER_DELAY * (parseInt(key.replace("ghost", "")) - 1)) *
-            speed) /
-            GHOSTS_END_AT
-        )
-      );
-    } else {
-      ghostProgress = Math.max(
-        0,
-        Math.min(1, ((progress - PACMAN_DELAY) * speed) / GHOSTS_END_AT)
-      );
-    }
+    // All ghosts start immediately, but travel at different speeds
+    // This creates the staggered arrival effect
+    let ghostProgress = Math.min(progress * speed, 1);
 
     const curve = bezierCurves[key];
     if (!curve) return;
