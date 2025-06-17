@@ -204,43 +204,33 @@ export function updatePOVAnimation(progress: number) {
     const ghost = ghosts[key];
     const path = povPaths[key];
     if (ghost && path) {
-      // Ghosts move along their POV paths at normal speed
-      const pos = path.getPointAt(progress);
+      // Ghosts have shorter paths than camera, so we need to scale their progress
+      // Make them move slower and stop earlier to stay visible longer
+      const ghostProgress = Math.min(progress * 0.4, 1); // Ghosts move at 40% speed and stop at 40% of camera progress
+      const pos = path.getPointAt(ghostProgress);
       ghost.position.copy(pos);
 
       // Look ahead for orientation
-      const lookAheadProgress = Math.min(progress + 0.03, 1);
+      const lookAheadProgress = Math.min(ghostProgress + 0.03, 1);
       const lookAheadPos = path.getPointAt(lookAheadProgress);
       ghost.lookAt(lookAheadPos);
 
-      // Ensure visible and set opacity
+      // Ensure visible - NO MATERIAL MANIPULATION
       ghost.visible = true;
 
-      // Set ghost opacity based on progress - fade in over first 10%
-      let ghostOpacity = 1;
-      if (progress < 0.1) {
-        ghostOpacity = progress / 0.1; // Fade in from 0 to 1 over first 10%
+      // Debug: log ghost movement to verify they're following paths
+      if (progress % 0.2 < 0.01) {
+        // Log every 20% progress
+        console.log(
+          `${key} at progress ${progress.toFixed(
+            2
+          )}: ghostProgress=${ghostProgress.toFixed(
+            2
+          )}, position=${pos.x.toFixed(3)}, ${pos.y.toFixed(
+            3
+          )}, ${pos.z.toFixed(3)}`
+        );
       }
-
-      // Apply opacity to ghost materials
-      function setGhostOpacity(obj: THREE.Object3D, opacity: number) {
-        if ((obj as any).material) {
-          const mats = Array.isArray((obj as any).material)
-            ? (obj as any).material
-            : [(obj as any).material];
-          mats.forEach((mat: any) => {
-            if (mat) {
-              mat.opacity = opacity;
-              mat.transparent = opacity < 1;
-              mat.depthWrite = opacity === 1;
-              mat.needsUpdate = true;
-            }
-          });
-        }
-      }
-      setGhostOpacity(ghost, ghostOpacity);
-      if (ghost instanceof THREE.Group)
-        ghost.traverse((child) => setGhostOpacity(child, ghostOpacity));
     }
   });
 
