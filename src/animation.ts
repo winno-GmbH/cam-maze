@@ -79,7 +79,10 @@ function animateHomeLoop(dt: number) {
           const zRot = Math.atan2(tangent.x, tangent.z);
           ghost.rotation.set(Math.PI / 2, Math.PI, zRot + Math.PI / 2);
         }
-        setGhostOpacity(ghost, 1);
+        // Only set opacity to 1 when not in scroll animation to avoid overriding GSAP fade-out
+        if (scrollProgress <= 0.01) {
+          setGhostOpacity(ghost, 1);
+        }
       }
     }
   });
@@ -108,6 +111,14 @@ function setGhostOpacity(ghost: THREE.Object3D, opacity: number) {
             material.depthWrite = opacity === 1;
             material.needsUpdate = true;
             opacitySet = true;
+
+            // Debug: Log when opacity is set
+            if (opacity < 1) {
+              console.log(
+                `Set opacity ${opacity.toFixed(3)} on material:`,
+                material.type || material.constructor.name
+              );
+            }
           } else if (material.isShaderMaterial) {
             // For shader materials, try to set opacity uniform if it exists
             if (material.uniforms && material.uniforms.opacity) {
@@ -249,8 +260,10 @@ function animateTransitionToHome(dt: number) {
         // Apply the interpolated rotation
         ghost.quaternion.copy(interpolatedQuat);
 
-        // Keep opacity at 1 during transition
-        setGhostOpacity(ghost, 1);
+        // Only set opacity to 1 when not in scroll animation to avoid overriding GSAP fade-out
+        if (scrollProgress <= 0.01) {
+          setGhostOpacity(ghost, 1);
+        }
       }
     }
   });
@@ -304,16 +317,6 @@ function animateScrollToCenter(progress: number) {
 
     // Apply the interpolated rotation
     ghost.quaternion.copy(interpolatedQuat);
-
-    // Fade out starting at 90% of the overall scroll progress (not individual ghost progress)
-    let opacity = 1;
-    if (progress >= 0.9) {
-      const fadeProgress = (progress - 0.9) / 0.1; // 0 to 1 over last 10% (90% to 100%)
-      opacity = 1 - fadeProgress;
-      opacity = Math.max(0, opacity);
-    }
-
-    setGhostOpacity(ghost, opacity);
   });
 }
 
@@ -428,6 +431,15 @@ async function setupScrollTrigger() {
             const fadeProgress = (progress - 0.8) / 0.2; // 0 to 1 over last 20% (80% to 100%)
             fadeOpacity = 1 - fadeProgress;
             fadeOpacity = Math.max(0, fadeOpacity);
+          }
+
+          // Debug: Log fade opacity values
+          if (progress >= 0.75) {
+            console.log(
+              `GSAP Fade: progress=${progress.toFixed(
+                3
+              )}, fadeOpacity=${fadeOpacity.toFixed(3)}`
+            );
           }
 
           // Apply fade to all ghosts and Pacman
