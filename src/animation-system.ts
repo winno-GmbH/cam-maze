@@ -1609,12 +1609,12 @@ function updatePOVCamera(progress: number) {
   const cameraPosition = povAnimationState.cameraPOVPath.getPointAt(progress);
   camera.position.copy(cameraPosition);
 
-  // Calculate progress for transition point - use first third of path for transition
+  // Calculate progress for transition point - extend transition for more dramatic effect
   const totalPoints = cameraPOVPathPoints.length;
-  const transitionEndProgress = 2 / (totalPoints - 1); // Transition until point 2
+  const transitionEndProgress = 3 / (totalPoints - 1); // Extended transition until point 3
 
   if (progress < transitionEndProgress) {
-    // Phase 1: Three-phase camera orientation transition
+    // Phase 1: Three-phase camera orientation transition - PURE ENTRY ANIMATION
     const transitionProgress = progress / transitionEndProgress; // 0 to 1 during transition
     const smoothTransition = smoothStep(transitionProgress);
 
@@ -1630,7 +1630,7 @@ function updatePOVCamera(progress: number) {
       )
       .normalize();
 
-    // Phase 2: 75° forward-up direction (middle look)
+    // Phase 2: DRAMATIC 75° forward-up direction (middle look) - MORE UPWARD
     const up75Direction = new THREE.Vector3()
       .addVectors(
         forwardVector.clone().multiplyScalar(0.259), // cos(75°) = 0.259
@@ -1643,9 +1643,9 @@ function updatePOVCamera(progress: number) {
 
     let lookAtDirection;
 
-    if (transitionProgress < 0.33) {
-      // First third: Strong 45° down → 75° up
-      const firstPhaseProgress = transitionProgress / 0.33; // 0 to 1 for first phase
+    if (transitionProgress < 0.4) {
+      // First 40%: Strong 45° down → 75° up (longer phase for dramatic effect)
+      const firstPhaseProgress = transitionProgress / 0.4; // 0 to 1 for first phase
       const smoothFirstPhase = smoothStep(firstPhaseProgress);
 
       lookAtDirection = new THREE.Vector3()
@@ -1654,9 +1654,9 @@ function updatePOVCamera(progress: number) {
           up75Direction.multiplyScalar(smoothFirstPhase)
         )
         .normalize();
-    } else if (transitionProgress < 0.66) {
-      // Second third: 75° up → straight ahead
-      const secondPhaseProgress = (transitionProgress - 0.33) / 0.33; // 0 to 1 for second phase
+    } else if (transitionProgress < 0.8) {
+      // Second 40%: 75° up → straight ahead (longer phase for smooth transition)
+      const secondPhaseProgress = (transitionProgress - 0.4) / 0.4; // 0 to 1 for second phase
       const smoothSecondPhase = smoothStep(secondPhaseProgress);
 
       lookAtDirection = new THREE.Vector3()
@@ -1666,24 +1666,13 @@ function updatePOVCamera(progress: number) {
         )
         .normalize();
     } else {
-      // Final third: Straight ahead (maintain straight look)
+      // Final 20%: Straight ahead (maintain straight look)
       lookAtDirection = straightAheadDirection;
     }
 
-    // BLEND: Mix path-following with entry rotation for smoother transition
-    const flexibleDirection = getFlexibleCameraDirection(progress);
-    const entryDirection = lookAtDirection;
-
-    // Gradually blend from entry rotation to flexible path following
-    const blendFactor = smoothStep(transitionProgress);
-    const blendedDirection = new THREE.Vector3()
-      .addVectors(
-        entryDirection.multiplyScalar(1.0 - blendFactor),
-        flexibleDirection.multiplyScalar(blendFactor)
-      )
-      .normalize();
-
-    const lookAtPoint = camera.position.clone().add(blendedDirection);
+    // PURE ENTRY ANIMATION: No blending with path following during entry phase
+    // This ensures the dramatic upward look is not diluted
+    const lookAtPoint = camera.position.clone().add(lookAtDirection);
 
     // DIRECT ROTATION during entry phase - no smoothing to match scroll progress
     const tempMatrix = new THREE.Matrix4();
