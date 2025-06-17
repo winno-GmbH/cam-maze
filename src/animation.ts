@@ -20,17 +20,19 @@ const GHOSTS_END_AT = 0.8;
 const GHOST_OPACITY_FADE_START = 0.9;
 const GHOST_STAGGER_DELAY = 0.15;
 const PACMAN_DELAY = 0.3;
+const HOME_ANIMATION_SPEED = 0.03; // matches animation-system.ts
 
 class AnimationSystem {
   private state: AnimationState = "IDLE";
   private animationTime: number = 0;
-  private animationDuration: number = 6; // 6 seconds for home animation
+  public animationDuration: number = 33; // 1/0.03 ≈ 33s for a full loop
   private animationRunning: boolean = true;
   private timeOffset: number = 0;
   private bezierCurves: Record<string, THREE.QuadraticBezierCurve3> = {};
   private capturedPositions: Record<string, THREE.Vector3> = {};
   private capturedRotations: Record<string, THREE.Euler> = {};
   private scrollProgress = 0;
+  private savedHomeProgress = 0;
 
   constructor() {
     console.log("AnimationSystem: Initializing...");
@@ -46,13 +48,18 @@ class AnimationSystem {
   }
 
   public pauseHomeAnimation(): void {
+    // Save current progress so we can resume from here
+    const currentTime = Date.now();
+    const elapsed = (currentTime - this.timeOffset) / 1000;
+    this.savedHomeProgress = (elapsed / this.animationDuration) % 1;
     this.animationRunning = false;
   }
 
   public resumeHomeAnimation(): void {
     this.state = "HOME_ANIMATION";
     this.animationRunning = true;
-    this.timeOffset = Date.now();
+    this.timeOffset =
+      Date.now() - this.savedHomeProgress * this.animationDuration * 1000;
   }
 
   public captureGhostPositions(): void {
@@ -80,6 +87,7 @@ class AnimationSystem {
   }
 
   public startScrollToCenter(): void {
+    if (this.state === "SCROLL_TO_CENTER") return;
     this.pauseHomeAnimation();
     this.captureGhostPositions();
     this.createBezierCurves();
@@ -95,7 +103,8 @@ class AnimationSystem {
     if (this.state === "HOME_ANIMATION" && this.animationRunning) {
       const currentTime = Date.now();
       const elapsed = (currentTime - this.timeOffset) / 1000;
-      let t = (elapsed / this.animationDuration) % 1;
+      // Use savedHomeProgress if paused/resumed
+      let t = (this.savedHomeProgress + elapsed * HOME_ANIMATION_SPEED) % 1;
       let tPath = t;
       if (t > 0.95) {
         const blend = (t - 0.95) / 0.05;
@@ -224,6 +233,8 @@ class AnimationSystem {
     this.state = "HOME_ANIMATION";
     this.animationRunning = true;
     this.timeOffset = Date.now();
+    // Resume from saved progress
+    this.savedHomeProgress = 0;
   }
 
   // Public getters
