@@ -128,7 +128,7 @@ function captureGhostPositions() {
     // Move control point closer to the midpoint for more linear movement
     const control = new THREE.Vector3(
       midPoint.x + (midPoint.x - (startPos.x + endPos.x) / 2) * 0.3,
-      midPoint.y + 1, // Higher elevation for more dramatic arc
+      midPoint.y + 1.5, // Higher elevation for more dramatic arc
       midPoint.z + (midPoint.z - (startPos.z + endPos.z) / 2) * 0.3
     );
 
