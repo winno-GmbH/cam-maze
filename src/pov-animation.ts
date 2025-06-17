@@ -582,11 +582,12 @@ export async function initPOVAnimationSystem() {
     scrollTriggerModule.ScrollTrigger || scrollTriggerModule.default;
   gsap.registerPlugin(ScrollTrigger);
 
-  // Setup ScrollTrigger for .sc--pov with proper GSAP timeline and scrub
+  // Setup ScrollTrigger for .sc--pov with VIRTUAL SCROLL DISTANCE
+  // This creates a longer scroll distance regardless of the actual section height
   const povScrollTrigger = ScrollTrigger.create({
     trigger: ".sc--pov",
     start: "top top",
-    end: "bottom bottom",
+    end: "+=300vh", // Virtual scroll distance: 3 viewport heights
     scrub: 1.5, // Increased scrub for smoother, more controlled movement
     onEnter: () => {
       console.log("POV section entered!");
@@ -606,18 +607,37 @@ export async function initPOVAnimationSystem() {
     },
   });
 
-  // Debug: Log POV section dimensions
+  // Debug: Log POV section dimensions and scroll behavior
   const povSection = document.querySelector(".sc--pov") as HTMLElement;
   if (povSection) {
     const rect = povSection.getBoundingClientRect();
+    const scrollDistance = povScrollTrigger.end - povScrollTrigger.start;
+    console.log(`=== POV SECTION ANALYSIS ===`);
     console.log(
       `POV Section dimensions: width=${rect.width}px, height=${rect.height}px`
     );
+    console.log(`POV Section scroll distance: ${scrollDistance}px`);
+    console.log(`Window height: ${window.innerHeight}px`);
+    console.log(`ScrollTrigger start: ${povScrollTrigger.start}px`);
+    console.log(`ScrollTrigger end: ${povScrollTrigger.end}px`);
     console.log(
-      `POV Section scroll distance: ${
-        povScrollTrigger.end - povScrollTrigger.start
-      }px`
+      `ScrollTrigger duration: ${
+        scrollDistance / window.innerHeight
+      } viewport heights`
     );
+
+    // Check if the section is too short
+    if (scrollDistance < window.innerHeight * 2) {
+      console.warn(
+        `⚠️ POV section is very short! Only ${(
+          scrollDistance / window.innerHeight
+        ).toFixed(2)} viewport heights.`
+      );
+      console.warn(
+        `This causes the entire maze animation to complete in a small scroll.`
+      );
+      console.warn(`Consider making the POV section taller in the HTML.`);
+    }
   }
 
   // Create a timeline for smooth POV animation with scrub
@@ -625,18 +645,18 @@ export async function initPOVAnimationSystem() {
     scrollTrigger: povScrollTrigger,
   });
 
-  // Add POV animation to timeline with proper scrub - SLOWER DURATION
+  // Add POV animation to timeline with proper scrub - MUCH SLOWER DURATION
   povTimeline.to(
     {},
     {
-      duration: 3, // Increased duration for slower animation
+      duration: 10, // Much longer duration for slower animation
       ease: "none", // Linear easing for smooth scrub
       onUpdate: function () {
         const rawProgress = this.progress();
 
-        // Apply custom easing to slow down the animation
-        // This makes the animation slower in the middle and faster at the ends
-        const easedProgress = smoothStep(smoothStep(rawProgress)); // Double smooth step for slower middle
+        // Apply custom easing to slow down the animation even more
+        // This makes the animation much slower in the middle
+        const easedProgress = smoothStep(smoothStep(smoothStep(rawProgress))); // Triple smooth step for very slow middle
 
         // Only update POV animation if the POV section is actually in view
         if (povScrollTrigger.isActive) {
