@@ -55,38 +55,39 @@ function animateFinalHeaderDirect(directProgress: number) {
   }
 
   // Header animation: directProgress goes from 0-1 for the full header animation
+  // EXACT SAME as intro header animation
   let scale = 0;
   let opacity = 0;
 
   if (directProgress > 0 && directProgress < 1) {
     if (directProgress <= 0.2) {
-      // 0% - 20%: scale 0->0.8, opacity 0->1
+      // 0% - 20%: scale 0->0.8, opacity 0->1 (EXACT SAME as intro)
       const keyframeProgress = directProgress / 0.2;
       const easedProgress = easeInOutCubic(keyframeProgress);
       scale = easedProgress * 0.8;
       opacity = easedProgress; // 0.0 -> 1.0
     } else if (directProgress <= 0.8) {
-      // 20% - 80%: scale 0.8->1.2, opacity stays 1
+      // 20% - 80%: scale 0.8->1.2, opacity stays 1 (EXACT SAME as intro)
       const keyframeProgress = (directProgress - 0.2) / 0.6;
       scale = 0.8 + keyframeProgress * 0.4; // 0.8 -> 1.2
       opacity = 1;
     } else {
-      // 80% - 100%: scale 1.2->1.5, opacity 1->0
+      // 80% - 100%: scale 1.2->1.5, opacity 1->0 (EXACT SAME as intro)
       const keyframeProgress = (directProgress - 0.8) / 0.2;
       scale = 1.2 + keyframeProgress * 0.3; // 1.2 -> 1.5
       opacity = 1 - keyframeProgress; // 1 -> 0.0
     }
   } else if (directProgress >= 1) {
-    // Header finished
+    // Header finished (EXACT SAME as intro)
     scale = 1.5;
     opacity = 0;
   } else {
-    // Header not started
+    // Header not started (EXACT SAME as intro)
     scale = 0;
     opacity = 0;
   }
 
-  // ROBUST STATE-TRACKED POSITIONING
+  // ROBUST STATE-TRACKED POSITIONING (EXACT SAME as intro)
   const shouldBeFixed = directProgress > 0 && directProgress < 1;
 
   if (shouldBeFixed && !isFinalHeaderAnimating) {
@@ -99,7 +100,7 @@ function animateFinalHeaderDirect(directProgress: number) {
     finalHeader.classList.remove("final-text-fixed");
   }
 
-  // Always update transform and opacity based on current state
+  // Always update transform and opacity based on current state (EXACT SAME as intro)
   if (isFinalHeaderAnimating) {
     finalHeader.style.setProperty(
       "transform",
@@ -207,7 +208,7 @@ async function setupGSAPFinalAnimations() {
       limitCallbacks: true, // Prevent callback overload during fast scrolling
     });
 
-    // Final header animation - similar to intro header
+    // Final header animation - EXACT SAME as intro header
     gsap.fromTo(
       ".sc_h--final",
       {
@@ -222,10 +223,10 @@ async function setupGSAPFinalAnimations() {
         opacity: 0,
         scrollTrigger: {
           trigger: ".sc--final.sc",
-          start: "top top", // Same timing as intro
-          end: "center center", // Same timing as intro
-          scrub: 0.3, // OPTIMIZED: Faster response for fast scrolling
-          invalidateOnRefresh: true, // Ensure proper recalculation
+          start: "top top", // EXACT SAME as intro
+          end: "center center", // EXACT SAME as intro
+          scrub: 0.3, // EXACT SAME as intro
+          invalidateOnRefresh: true, // EXACT SAME as intro
         },
         onComplete: () => {
           // Reset positioning after animation
@@ -297,7 +298,7 @@ function setupManualFinalAnimations() {
     const header = document.querySelector(".sc_h--final");
     const body = document.querySelector(".sc_b--final");
 
-    // WORKING FINAL ANIMATION: Use the same timing as intro
+    // WORKING FINAL ANIMATION: Use the EXACT SAME timing as intro
     if (finalSection && header && body) {
       const rect = finalSection.getBoundingClientRect();
 
@@ -306,13 +307,13 @@ function setupManualFinalAnimations() {
         const scrolledDistance = Math.abs(rect.top);
         const overallProgress = Math.min(1, scrolledDistance / rect.height);
 
-        // HEADER: 0% to 50% (same as intro: "top top" to "center center")
+        // HEADER: 0% to 50% (EXACT SAME as intro: "top top" to "center center")
         if (overallProgress <= 0.5) {
           const headerProgress = overallProgress / 0.5;
           animateFinalHeaderDirect(headerProgress);
           animateFinalBodyDirect(0);
         } else {
-          // BODY: 50% to 100% (same as intro: "center center" to "bottom bottom")
+          // BODY: 50% to 100% (EXACT SAME as intro: "center center" to "bottom bottom")
           const bodyProgress = (overallProgress - 0.5) / 0.5;
           animateFinalHeaderDirect(1);
           animateFinalBodyDirect(bodyProgress);
