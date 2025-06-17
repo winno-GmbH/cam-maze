@@ -14,6 +14,7 @@ const CAMERA_FOV = 50;
 let animationState: AnimationState = "HOME";
 let homeProgress = 0;
 let animationPaused = false;
+let pausedHomeProgress = 0; // Store the progress when paused
 let bezierCurves: Record<string, THREE.QuadraticBezierCurve3> = {};
 let capturedPositions: Record<string, THREE.Vector3> = {};
 let capturedRotations: Record<string, THREE.Euler> = {};
@@ -159,6 +160,7 @@ export function setScrollProgress(progress: number) {
   // Trigger scroll animation when progress starts
   if (animationState === "HOME" && progress > 0 && !animationPaused) {
     animationPaused = true;
+    pausedHomeProgress = homeProgress; // Store current progress
     captureGhostPositions();
     createBezierCurves();
     // Camera bezier
@@ -174,6 +176,23 @@ export function setScrollProgress(progress: number) {
     );
     cameraScrollStartQuat = camera.quaternion.clone();
     animationState = "SCROLL_ANIMATION";
+  }
+
+  // Resume home animation when scrolling back to top (progress = 0)
+  if (animationState === "SCROLL_ANIMATION" && progress === 0) {
+    animationState = "HOME";
+    animationPaused = false;
+    homeProgress = pausedHomeProgress; // Resume from where we paused
+    scrollProgress = 0;
+
+    // Reset scroll animation state
+    bezierCurves = {};
+    capturedPositions = {};
+    capturedRotations = {};
+    cameraScrollCurve = null;
+    cameraScrollStartQuat = null;
+
+    console.log("Resuming home animation from progress:", pausedHomeProgress);
   }
 }
 
@@ -205,7 +224,7 @@ async function setupScrollTrigger() {
     // Create ScrollTrigger for home section bottom to top animation
     ScrollTrigger.create({
       trigger: homeSection,
-      start: "top top", // Start when bottom of home section hits bottom of viewport
+      start: "top top", // Start when top of home section hits top of viewport
       end: "bottom top", // End when bottom of home section hits top of viewport
       onUpdate: (self) => {
         setScrollProgress(self.progress);
@@ -236,20 +255,16 @@ async function setupScrollTrigger() {
 function setupManualScrollListener() {
   console.log("Using manual scroll listener as fallback");
   window.addEventListener("scroll", () => {
-    if (animationState === "HOME" && !animationPaused) {
-      // Simple scroll detection - you can refine this
-      const scrollY = window.scrollY;
-      const homeSection = document.querySelector(
-        SELECTORS.homeSection
-      ) as HTMLElement;
-      if (homeSection) {
-        const rect = homeSection.getBoundingClientRect();
-        const progress = Math.max(
-          0,
-          Math.min(1, 1 - rect.bottom / window.innerHeight)
-        );
-        setScrollProgress(progress);
-      }
+    const homeSection = document.querySelector(
+      SELECTORS.homeSection
+    ) as HTMLElement;
+    if (homeSection) {
+      const rect = homeSection.getBoundingClientRect();
+      const progress = Math.max(
+        0,
+        Math.min(1, 1 - rect.bottom / window.innerHeight)
+      );
+      setScrollProgress(progress);
     }
   });
 }
