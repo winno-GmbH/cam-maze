@@ -8,7 +8,7 @@ import { MAZE_CENTER, DOM_ELEMENTS, SELECTORS } from "./config";
 // Animation state
 export type AnimationState = "HOME" | "SCROLL_ANIMATION";
 
-const HOME_ANIMATION_SPEED = 0.06; // loop speed - doubled for smoother movement
+const HOME_ANIMATION_SPEED = 0.03; // loop speed - doubled for smoother movement
 const CAMERA_FOV = 50;
 const TRANSITION_DURATION = 0.5; // seconds for smooth transition back to home
 
@@ -210,6 +210,19 @@ function animateTransitionToHome(dt: number) {
   }
 }
 
+// Add a small threshold to prevent rapid state switching
+let lastScrollProgress = 0;
+const PROGRESS_THRESHOLD = 0.001; // Reduced for smoother movement
+
+export function setScrollProgress(progress: number) {
+  // Prevent rapid progress changes that cause flickering
+  const progressChange = Math.abs(progress - lastScrollProgress);
+  if (progressChange < PROGRESS_THRESHOLD) return;
+
+  scrollProgress = Math.max(0, Math.min(1, progress));
+  lastScrollProgress = progress;
+}
+
 function animateScrollToCenter(progress: number) {
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const speed = GHOST_SPEED_MULTIPLIERS[key] || 1.0;
@@ -220,16 +233,20 @@ function animateScrollToCenter(progress: number) {
     const curve = bezierCurves[key];
     if (!curve) return;
 
-    const pos = curve.getPoint(ghostProgress);
+    // Use getPointAt for smoother interpolation along the curve
+    const pos = curve.getPointAt(ghostProgress);
     ghost.position.copy(pos);
 
-    // Interpolate rotation
+    // Interpolate rotation more smoothly
     const origRot = capturedRotations[key];
     const targetRot = new THREE.Euler(-Math.PI / 2, 0, 0);
+
+    // Use easing for smoother rotation transition
+    const easedProgress = easeInOutCubic(ghostProgress);
     ghost.rotation.set(
-      origRot.x + (targetRot.x - origRot.x) * ghostProgress,
-      origRot.y + (targetRot.y - origRot.y) * ghostProgress,
-      origRot.z + (targetRot.z - origRot.z) * ghostProgress
+      origRot.x + (targetRot.x - origRot.x) * easedProgress,
+      origRot.y + (targetRot.y - origRot.y) * easedProgress,
+      origRot.z + (targetRot.z - origRot.z) * easedProgress
     );
 
     // Fade out in last 10%
@@ -288,19 +305,6 @@ function animationLoop() {
   }
 
   render();
-}
-
-// Add a small threshold to prevent rapid state switching
-let lastScrollProgress = 0;
-const PROGRESS_THRESHOLD = 0.005; // Minimum change to trigger state switch
-
-export function setScrollProgress(progress: number) {
-  // Prevent rapid progress changes that cause flickering
-  const progressChange = Math.abs(progress - lastScrollProgress);
-  if (progressChange < PROGRESS_THRESHOLD) return;
-
-  scrollProgress = Math.max(0, Math.min(1, progress));
-  lastScrollProgress = progress;
 }
 
 async function setupScrollTrigger() {
