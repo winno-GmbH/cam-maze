@@ -178,21 +178,17 @@ export function setScrollProgress(progress: number) {
     animationState = "SCROLL_ANIMATION";
   }
 
-  // Resume home animation when scrolling back to top (progress = 0)
   if (animationState === "SCROLL_ANIMATION" && progress === 0) {
     animationState = "HOME";
     animationPaused = false;
-    homeProgress = pausedHomeProgress; // Resume from where we paused
+    homeProgress = pausedHomeProgress;
     scrollProgress = 0;
 
-    // Reset scroll animation state
     bezierCurves = {};
     capturedPositions = {};
     capturedRotations = {};
     cameraScrollCurve = null;
     cameraScrollStartQuat = null;
-
-    console.log("Resuming home animation from progress:", pausedHomeProgress);
   }
 }
 
