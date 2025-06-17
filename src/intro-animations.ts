@@ -125,79 +125,44 @@ async function setupGSAPIntroAnimations() {
       limitCallbacks: true,
     });
 
-    console.log("🎬 Setting up GSAP intro animations");
+    console.log("🎬 Setting up GSAP intro animations (manual scrub)");
 
-    // Header animation with pin to center: top top to center center
-    gsap.fromTo(
-      DOM_ELEMENTS.introHeader,
-      {
-        scale: 0,
-        opacity: 0,
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        xPercent: -50,
-        yPercent: -50,
-        zIndex: 1000,
+    // Header: 0% bis 50% Progress (top top bis center center)
+    ScrollTrigger.create({
+      trigger: DOM_ELEMENTS.introSection,
+      start: "top top",
+      end: "center center",
+      scrub: 0.3,
+      pin: DOM_ELEMENTS.introHeader,
+      pinSpacing: false,
+      invalidateOnRefresh: true,
+      onUpdate: (self) => {
+        // Progress von 0 (top top) bis 1 (center center)
+        const progress = self.progress;
+        animateIntroHeaderDirect(progress);
+        // Body bleibt unsichtbar
+        animateIntroBodyDirect(0);
       },
-      {
-        scale: 1.5,
-        opacity: 0,
-        scrollTrigger: {
-          trigger: DOM_ELEMENTS.introSection,
-          start: "top top",
-          end: "center center",
-          scrub: 0.3,
-          pin: DOM_ELEMENTS.introHeader,
-          pinSpacing: false,
-          invalidateOnRefresh: true,
-        },
-        ease: "none",
-        keyframes: [
-          { scale: 0, opacity: 0, duration: 0 },
-          { scale: 0.8, opacity: 1, duration: 0.3 },
-          { scale: 1.2, opacity: 1, duration: 0.4 },
-          { scale: 1.5, opacity: 0, duration: 0.3 },
-        ],
-      }
-    );
+    });
 
-    // Body animation with pin to center: center center to bottom bottom
-    gsap
-      .timeline({
-        scrollTrigger: {
-          trigger: DOM_ELEMENTS.introSection,
-          start: "center center",
-          end: "bottom bottom",
-          scrub: 0.3,
-          pin: DOM_ELEMENTS.introBody,
-          pinSpacing: false,
-          invalidateOnRefresh: true,
-        },
-      })
-      .fromTo(
-        DOM_ELEMENTS.introBody,
-        {
-          scale: 0.5,
-          opacity: 0,
-          position: "fixed",
-          top: "50%",
-          left: "50%",
-          xPercent: -50,
-          yPercent: -50,
-          zIndex: 1000,
-        },
-        {
-          keyframes: [
-            { scale: 0.5, opacity: 0, duration: 0 },
-            { scale: 0.8, opacity: 1, duration: 0.3 },
-            { scale: 1.2, opacity: 1, duration: 0.4 },
-            { scale: 1.5, opacity: 0, duration: 0.3 },
-          ],
-        }
-      );
+    // Body: 50% bis 100% Progress (center center bis bottom bottom)
+    ScrollTrigger.create({
+      trigger: DOM_ELEMENTS.introSection,
+      start: "center center",
+      end: "bottom bottom",
+      scrub: 0.3,
+      pin: DOM_ELEMENTS.introBody,
+      pinSpacing: false,
+      invalidateOnRefresh: true,
+      onUpdate: (self) => {
+        // Progress von 0 (center center) bis 1 (bottom bottom)
+        const progress = self.progress;
+        animateIntroHeaderDirect(1); // Header bleibt am Ende
+        animateIntroBodyDirect(progress);
+      },
+    });
 
-    console.log("✅ GSAP intro animations successfully setup");
+    console.log("✅ GSAP intro animations (manual scrub) successfully setup");
   } catch (error) {
     console.error("❌ GSAP intro animations setup failed:", error);
     setupManualIntroAnimations();
