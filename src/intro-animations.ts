@@ -1,6 +1,8 @@
 // Intro animations for the intro section
 // Extracted from old animation-system.ts and adapted for current structure
 
+import { DOM_ELEMENTS } from "./selectors";
+
 let isHeaderAnimating = false;
 let isBodyAnimating = false;
 
@@ -9,7 +11,7 @@ function easeInOutCubic(t: number): number {
 }
 
 function animateIntroHeaderDirect(directProgress: number) {
-  const introHeader = document.querySelector(".sc_h--intro") as HTMLElement;
+  const introHeader = DOM_ELEMENTS.introHeader;
   if (!introHeader) {
     return;
   }
@@ -73,7 +75,7 @@ function animateIntroHeaderDirect(directProgress: number) {
 }
 
 function animateIntroBodyDirect(directProgress: number) {
-  const introBody = document.querySelector(".sc_b--intro") as HTMLElement;
+  const introBody = DOM_ELEMENTS.introBody;
   if (!introBody) {
     return;
   }
@@ -186,9 +188,7 @@ async function setupGSAPIntroAnimations() {
           invalidateOnRefresh: true,
         },
         onComplete: () => {
-          document
-            .querySelector(".sc_h--intro")
-            ?.classList.remove("intro-text-fixed");
+          DOM_ELEMENTS.introHeader?.classList.remove("intro-text-fixed");
         },
         ease: "none",
         keyframes: [
@@ -226,9 +226,7 @@ async function setupGSAPIntroAnimations() {
             { scale: 1.5, opacity: 0, duration: 0.3 },
           ],
           onComplete: () => {
-            document
-              .querySelector(".sc_b--intro")
-              ?.classList.remove("intro-text-fixed");
+            DOM_ELEMENTS.introBody?.classList.remove("intro-text-fixed");
           },
         }
       );
@@ -247,14 +245,13 @@ function setupManualIntroAnimations() {
   window.addEventListener("scroll", () => {
     scrollCount++;
 
-    // Test if we can find intro elements
-    const intro = document.querySelector(".sc--intro");
-    const header = document.querySelector(".sc_h--intro");
-    const body = document.querySelector(".sc_b--intro");
-
     // Manual intro animation: Use the exact backup.js timing
-    if (intro && header && body) {
-      const rect = intro.getBoundingClientRect();
+    if (
+      DOM_ELEMENTS.introSection &&
+      DOM_ELEMENTS.introHeader &&
+      DOM_ELEMENTS.introBody
+    ) {
+      const rect = DOM_ELEMENTS.introSection.getBoundingClientRect();
 
       if (rect.top <= 0 && rect.bottom >= 0) {
         // Section is visible - calculate progress
