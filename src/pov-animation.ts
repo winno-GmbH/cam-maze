@@ -332,10 +332,4 @@ export async function initPOVAnimationSystem() {
 
   console.log("POV Animation System initialized successfully!");
   console.log("ScrollTrigger created:", povScrollTrigger);
-
-  // Test the animation after a short delay
-  setTimeout(() => {
-    console.log("Testing POV animation...");
-    testPOVAnimation(0.5);
-  }, 2000);
 }
