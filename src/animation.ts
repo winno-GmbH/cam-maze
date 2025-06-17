@@ -207,8 +207,17 @@ function animationLoop() {
   render();
 }
 
+// Add a small threshold to prevent rapid state switching
+let lastScrollProgress = 0;
+const PROGRESS_THRESHOLD = 0.005; // Minimum change to trigger state switch
+
 export function setScrollProgress(progress: number) {
+  // Prevent rapid progress changes that cause flickering
+  const progressChange = Math.abs(progress - lastScrollProgress);
+  if (progressChange < PROGRESS_THRESHOLD) return;
+
   scrollProgress = Math.max(0, Math.min(1, progress));
+  lastScrollProgress = progress;
 }
 
 async function setupScrollTrigger() {
@@ -243,9 +252,7 @@ async function setupScrollTrigger() {
         start: "top top",
         end: "bottom top",
         scrub: 1, // 1 second scrub delay
-        onUpdate: (self) => {
-          setScrollProgress(self.progress);
-        },
+        // Remove onUpdate from ScrollTrigger to prevent dual updates
       },
     });
 
