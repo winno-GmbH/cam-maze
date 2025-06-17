@@ -205,7 +205,7 @@ async function setupScrollTrigger() {
     // Create ScrollTrigger for home section bottom to top animation
     ScrollTrigger.create({
       trigger: homeSection,
-      start: "bottom bottom", // Start when bottom of home section hits bottom of viewport
+      start: "top top", // Start when bottom of home section hits bottom of viewport
       end: "bottom top", // End when bottom of home section hits top of viewport
       onUpdate: (self) => {
         setScrollProgress(self.progress);
