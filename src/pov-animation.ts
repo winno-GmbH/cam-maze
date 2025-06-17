@@ -620,57 +620,50 @@ function updatePOVCamera(progress: number) {
   const cameraPosition = povPaths.pacman.getPointAt(progress);
   camera.position.copy(cameraPosition);
 
-  // Calculate transition phase - use first third of path for transition
-  const transitionEndProgress = 0.33; // Transition until 33% of path
+  // Get the tangent at current progress - this is the key missing piece!
+  const tangent = povPaths.pacman.getTangentAt(progress).normalize();
+  const defaultLookAt = cameraPosition.clone().add(tangent);
 
-  if (progress < transitionEndProgress) {
-    // Phase 1: Transition from entry to path following
-    const transitionProgress = progress / transitionEndProgress; // 0 to 1 during transition
-    const smoothTransition = smoothStep(transitionProgress);
-
-    // Entry rotation: 45° forward-down to straight ahead
-    const forwardVector = new THREE.Vector3(0, 0, 1);
-    const downVector = new THREE.Vector3(0, -1, 0);
-    const upVector = new THREE.Vector3(0, 1, 0);
-
-    // 45° forward-down direction (initial look)
-    const forwardDownDirection = new THREE.Vector3()
-      .addVectors(
-        forwardVector.clone().multiplyScalar(0.8),
-        downVector.clone().multiplyScalar(0.2)
-      )
-      .normalize();
-
-    // Straight ahead direction (final look)
-    const straightAheadDirection = new THREE.Vector3(0, 0, 1);
-
-    // Blend from entry rotation to path following
-    const entryDirection = forwardDownDirection;
-    const flexibleDirection = getFlexibleCameraDirection(progress);
-
-    const blendedDirection = new THREE.Vector3()
-      .addVectors(
-        entryDirection.clone().multiplyScalar(1.0 - smoothTransition),
-        flexibleDirection.clone().multiplyScalar(smoothTransition)
-      )
-      .normalize();
-
-    const lookAtPoint = camera.position.clone().add(blendedDirection);
-
-    // Direct rotation during entry phase
-    const tempMatrix = new THREE.Matrix4();
-    tempMatrix.lookAt(camera.position, lookAtPoint, camera.up);
-    const targetQuaternion = new THREE.Quaternion().setFromRotationMatrix(
-      tempMatrix
+  // Simple phase-based camera control like in backup.js
+  if (progress === 0) {
+    // Initial position - look slightly up
+    camera.lookAt(new THREE.Vector3(camera.position.x, 2, camera.position.z));
+  } else if (progress < 0.1) {
+    // Entry transition - smooth from up to forward
+    const transitionProgress = progress / 0.1;
+    const upLookAt = new THREE.Vector3(camera.position.x, 1, camera.position.z);
+    const frontLookAt = new THREE.Vector3(
+      camera.position.x,
+      0.5,
+      camera.position.z + 1
     );
-    camera.quaternion.copy(targetQuaternion);
 
-    // Reset smoothing state
-    prevCameraQuat = targetQuaternion.clone();
+    const interpolatedLookAt = new THREE.Vector3();
+    interpolatedLookAt.lerpVectors(
+      upLookAt,
+      frontLookAt,
+      smoothStep(transitionProgress)
+    );
+    camera.lookAt(interpolatedLookAt);
   } else {
-    // Normal flexible camera behavior after transition
-    const flexibleDirection = getFlexibleCameraDirection(progress);
-    const lookAtPoint = camera.position.clone().add(flexibleDirection);
+    // Normal path following - use tangent direction with slight smoothing
+    const lookAheadProgress = Math.min(progress + 0.02, 1); // Small look-ahead for smoothing
+    const lookAheadPos = povPaths.pacman.getPointAt(lookAheadProgress);
+
+    // Calculate smoothed tangent
+    const smoothedTangent = new THREE.Vector3()
+      .subVectors(lookAheadPos, cameraPosition)
+      .normalize();
+
+    // Add slight upward tilt for natural walking perspective
+    const upTilt = new THREE.Vector3(0, 0.05, 0);
+    const finalDirection = new THREE.Vector3()
+      .addVectors(smoothedTangent, upTilt)
+      .normalize();
+
+    const lookAtPoint = cameraPosition.clone().add(finalDirection);
+
+    // Apply smooth camera rotation
     applySmoothCameraRotation(lookAtPoint);
   }
 
@@ -679,83 +672,7 @@ function updatePOVCamera(progress: number) {
   camera.updateMatrixWorld();
 }
 
-// Get flexible camera direction for natural movement
-function getFlexibleCameraDirection(progress: number): THREE.Vector3 {
-  if (!povPaths.pacman) return new THREE.Vector3(0, 0, 1);
-
-  // Get smooth tangent
-  const smoothTangent = getSmoothCameraTangent(progress);
-
-  // Add slight upward tilt for more natural walking perspective
-  const upTilt = new THREE.Vector3(0, 0.1, 0);
-  const direction = new THREE.Vector3()
-    .addVectors(smoothTangent, upTilt)
-    .normalize();
-
-  return direction;
-}
-
-// Get smooth tangent with different smoothing for turns vs straight sections
-function getSmoothCameraTangent(progress: number): THREE.Vector3 {
-  if (!povPaths.pacman) return new THREE.Vector3(0, 0, 1);
-
-  const LOOK_AHEAD_DISTANCE = 0.05;
-
-  // Get current tangent
-  const currentTangent = povPaths.pacman.getTangentAt(progress).normalize();
-
-  // Get look-ahead tangent for smoothing
-  const lookAheadProgress = Math.min(progress + LOOK_AHEAD_DISTANCE, 1);
-  const lookAheadTangent = povPaths.pacman
-    .getTangentAt(lookAheadProgress)
-    .normalize();
-
-  // Get look-behind tangent for more context
-  const lookBehindProgress = Math.max(progress - LOOK_AHEAD_DISTANCE, 0);
-  const lookBehindTangent = povPaths.pacman
-    .getTangentAt(lookBehindProgress)
-    .normalize();
-
-  // Calculate average tangent for smoothing
-  const averageTangent = new THREE.Vector3()
-    .addVectors(lookBehindTangent, currentTangent)
-    .add(lookAheadTangent)
-    .divideScalar(3)
-    .normalize();
-
-  // Detect sharp turns
-  const dotProduct = currentTangent.dot(lookAheadTangent);
-  const isSharpTurn = dotProduct < 0.3;
-  const isModerateTurn = dotProduct < 0.7;
-
-  if (isSharpTurn) {
-    // For sharp turns, use very strong smoothing
-    return new THREE.Vector3()
-      .addVectors(
-        currentTangent.clone().multiplyScalar(0.05),
-        averageTangent.clone().multiplyScalar(0.95)
-      )
-      .normalize();
-  } else if (isModerateTurn) {
-    // For moderate turns, use strong smoothing
-    return new THREE.Vector3()
-      .addVectors(
-        currentTangent.clone().multiplyScalar(0.15),
-        averageTangent.clone().multiplyScalar(0.85)
-      )
-      .normalize();
-  } else {
-    // For straight sections, use moderate smoothing
-    return new THREE.Vector3()
-      .addVectors(
-        currentTangent.clone().multiplyScalar(0.6),
-        averageTangent.clone().multiplyScalar(0.4)
-      )
-      .normalize();
-  }
-}
-
-// Apply smooth camera rotation with dynamic smoothing
+// Simplified smooth camera rotation - much less aggressive than before
 function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
   // Calculate target rotation
   const tempMatrix = new THREE.Matrix4();
@@ -771,34 +688,13 @@ function applySmoothCameraRotation(targetLookAt: THREE.Vector3) {
     return;
   }
 
-  // Calculate rotation difference
-  const angleDifference = camera.quaternion.angleTo(targetQuaternion);
+  // Much lighter smoothing - more responsive like the working versions
+  const smoothingFactor = 0.3; // Reduced from previous values
 
-  // Dynamic smoothing based on rotation angle
-  let dynamicSmoothing = CAMERA_SLERP_ALPHA;
-
-  // Check if we're near the end of the path
-  const isNearExit = camera.position.z > 1.8;
-
-  if (isNearExit) {
-    // Smooth rotation for end sequence
-    dynamicSmoothing = 0.15;
-  } else if (angleDifference > Math.PI / 8) {
-    // Sharp corner - balanced smoothing
-    dynamicSmoothing = CAMERA_SLERP_ALPHA * 0.7;
-  } else if (angleDifference > Math.PI / 16) {
-    // Moderate corner - light smoothing
-    dynamicSmoothing = CAMERA_SLERP_ALPHA * 0.85;
-  } else {
-    // Small rotations - normal smoothing
-    dynamicSmoothing = CAMERA_SLERP_ALPHA;
-  }
-
-  // Apply smooth rotation
   camera.quaternion.slerpQuaternions(
     prevCameraQuat,
     targetQuaternion,
-    dynamicSmoothing
+    smoothingFactor
   );
   prevCameraQuat.copy(camera.quaternion);
 }
