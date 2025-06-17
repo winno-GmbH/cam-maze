@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { camera, initCamera } from "./camera";
+import { camera, initCamera, endQuaternion } from "./camera";
 import { scene, renderer, clock } from "./scene";
 import { ghosts, pacman } from "./objects";
 import { paths, getPathsForSection } from "./paths";
@@ -21,6 +21,25 @@ const GHOST_OPACITY_FADE_START = 0.9;
 const GHOST_STAGGER_DELAY = 0.15;
 const PACMAN_DELAY = 0.3;
 const HOME_ANIMATION_SPEED = 0.03; // matches animation-system.ts
+const ORIGINAL_FOV = 50;
+
+// Camera home path setup (matches animation-system.ts)
+const isMobile = window.innerWidth < 768;
+const cameraStartPosition = isMobile
+  ? new THREE.Vector3(0.5, 2.5, 2.5)
+  : new THREE.Vector3(-2, 2.5, 2);
+const cameraSecondPosition = isMobile
+  ? new THREE.Vector3(0.5, 2.5, 2)
+  : new THREE.Vector3(-1.5, 3, 2);
+const cameraHomePath = new THREE.CubicBezierCurve3(
+  cameraStartPosition,
+  cameraSecondPosition,
+  new THREE.Vector3(0.55675, 3, 0.45175),
+  new THREE.Vector3(0.55675, 0.5, 0.45175)
+);
+
+let initialCameraPosition = camera.position.clone();
+let initialCameraQuaternion = camera.quaternion.clone();
 
 class AnimationSystem {
   private state: AnimationState = "IDLE";
@@ -45,6 +64,9 @@ class AnimationSystem {
     this.animationTime = 0;
     this.animationRunning = true;
     this.timeOffset = Date.now();
+    // Store initial camera state for slerp
+    initialCameraPosition = camera.position.clone();
+    initialCameraQuaternion = camera.quaternion.clone();
   }
 
   public pauseHomeAnimation(): void {
@@ -111,6 +133,7 @@ class AnimationSystem {
         tPath = (1 - blend) * t + blend * 0;
       }
       this.animateHomePaths(tPath);
+      this.animateCameraHome(tPath);
     } else if (this.state === "SCROLL_TO_CENTER") {
       this.animateScrollToCenter(this.scrollProgress);
     }
@@ -160,6 +183,27 @@ class AnimationSystem {
         }
       }
     });
+  }
+
+  private animateCameraHome(t: number): void {
+    // Animate camera position along the cubic bezier path
+    const position = cameraHomePath.getPointAt(t);
+    camera.position.copy(position);
+    // Animate camera FOV
+    camera.fov = ORIGINAL_FOV;
+    camera.updateProjectionMatrix();
+    // Animate camera rotation (slerp from initial to endQuaternion)
+    if (t === 0) {
+      camera.quaternion.copy(initialCameraQuaternion);
+    } else {
+      const currentQuaternion = new THREE.Quaternion();
+      currentQuaternion.slerpQuaternions(
+        initialCameraQuaternion,
+        endQuaternion,
+        t
+      );
+      camera.quaternion.copy(currentQuaternion);
+    }
   }
 
   private animateScrollToCenter(scrollProgress: number): void {
