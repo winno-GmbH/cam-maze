@@ -255,6 +255,17 @@ async function setupScrollTrigger() {
 
     gsap.registerPlugin(ScrollTrigger);
 
+    // Configure GSAP for smooth performance
+    gsap.config({
+      nullTargetWarn: false,
+    });
+
+    // Optimize ScrollTrigger for smooth performance
+    ScrollTrigger.config({
+      ignoreMobileResize: true,
+      syncInterval: 60,
+    });
+
     // Get home section element
     const homeSection = document.querySelector(
       SELECTORS.homeSection
@@ -264,11 +275,12 @@ async function setupScrollTrigger() {
       return;
     }
 
-    // Create ScrollTrigger for home section bottom to top animation
+    // Create ScrollTrigger with scrub for smooth animation
     ScrollTrigger.create({
       trigger: homeSection,
       start: "top top", // Start when top of home section hits top of viewport
       end: "bottom top", // End when bottom of home section hits top of viewport
+      scrub: 1, // Smooth scrubbing with 1 second delay
       onUpdate: (self) => {
         setScrollProgress(self.progress);
       },
