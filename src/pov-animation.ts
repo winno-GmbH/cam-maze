@@ -606,28 +606,48 @@ export async function initPOVAnimationSystem() {
     },
   });
 
+  // Debug: Log POV section dimensions
+  const povSection = document.querySelector(".sc--pov") as HTMLElement;
+  if (povSection) {
+    const rect = povSection.getBoundingClientRect();
+    console.log(
+      `POV Section dimensions: width=${rect.width}px, height=${rect.height}px`
+    );
+    console.log(
+      `POV Section scroll distance: ${
+        povScrollTrigger.end - povScrollTrigger.start
+      }px`
+    );
+  }
+
   // Create a timeline for smooth POV animation with scrub
   const povTimeline = gsap.timeline({
     scrollTrigger: povScrollTrigger,
   });
 
-  // Add POV animation to timeline with proper scrub
+  // Add POV animation to timeline with proper scrub - SLOWER DURATION
   povTimeline.to(
     {},
     {
-      duration: 1,
+      duration: 3, // Increased duration for slower animation
       ease: "none", // Linear easing for smooth scrub
       onUpdate: function () {
-        const progress = this.progress();
+        const rawProgress = this.progress();
+
+        // Apply custom easing to slow down the animation
+        // This makes the animation slower in the middle and faster at the ends
+        const easedProgress = smoothStep(smoothStep(rawProgress)); // Double smooth step for slower middle
 
         // Only update POV animation if the POV section is actually in view
         if (povScrollTrigger.isActive) {
           console.log(
-            `POV Timeline onUpdate: progress=${progress.toFixed(3)}, isActive=${
+            `POV Timeline onUpdate: rawProgress=${rawProgress.toFixed(
+              3
+            )}, easedProgress=${easedProgress.toFixed(3)}, isActive=${
               povScrollTrigger.isActive
             }`
           );
-          updatePOVAnimation(progress);
+          updatePOVAnimation(easedProgress);
         }
       },
     }
