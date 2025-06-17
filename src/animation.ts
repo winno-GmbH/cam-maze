@@ -303,6 +303,10 @@ function animationLoop() {
   // Check if POV animation is active - if so, skip home/scroll animations
   if (isPOVActive()) {
     // POV animation is controlling camera and ghosts, just render
+    // Make sure ghosts are visible during POV animation
+    Object.values(ghosts).forEach((ghost) => {
+      ghost.visible = true;
+    });
     render();
     return;
   }

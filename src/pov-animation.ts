@@ -163,20 +163,12 @@ export function testPOVAnimation(progress: number = 0.5) {
 export function updatePOVAnimation(progress: number) {
   isPOVAnimationActive = true;
 
-  // Apply scrub smoothing to camera movement
-  targetProgress = progress;
+  // Use progress directly - GSAP ScrollTrigger already handles smoothing
+  const currentProgress = progress;
 
-  // Initialize smoothed progress if it's the first call
-  if (smoothedProgress === 0 && progress > 0) {
-    smoothedProgress = progress;
-  }
-
-  // Apply smoothing
-  smoothedProgress += (targetProgress - smoothedProgress) * SCRUB_SMOOTHING;
-
-  // 1. Move camera along camera POV path with smoothed progress
+  // 1. Move camera along camera POV path
   if (povPaths.pacman) {
-    let camPos = povPaths.pacman.getPointAt(smoothedProgress);
+    let camPos = povPaths.pacman.getPointAt(currentProgress);
     if (camPos.y < 0.5) camPos = new THREE.Vector3(camPos.x, 0.5, camPos.z);
     camera.position.copy(camPos);
 
@@ -185,7 +177,7 @@ export function updatePOVAnimation(progress: number) {
       camera.quaternion.copy(cameraManualRotation);
     } else {
       // Tangent-following: look ahead along the path with better tangent calculation
-      const lookAheadProgress = Math.min(smoothedProgress + 0.05, 1); // Increased look-ahead for better tangent
+      const lookAheadProgress = Math.min(currentProgress + 0.05, 1); // Increased look-ahead for better tangent
       const lookAheadPos = povPaths.pacman.getPointAt(lookAheadProgress);
       const tangent = new THREE.Vector3()
         .subVectors(lookAheadPos, camPos)
@@ -231,7 +223,7 @@ export function updatePOVAnimation(progress: number) {
     if (ghost && path) {
       // Ghosts have shorter paths than camera, so we need to scale their progress
       // Make them move slower and stop earlier to stay visible longer
-      const ghostProgress = Math.min(smoothedProgress * 0.4, 1); // Ghosts move at 40% speed and stop at 40% of camera progress
+      const ghostProgress = Math.min(currentProgress * 0.4, 1); // Ghosts move at 40% speed and stop at 40% of camera progress
       const pos = path.getPointAt(ghostProgress);
       ghost.position.copy(pos);
 
@@ -244,10 +236,10 @@ export function updatePOVAnimation(progress: number) {
       ghost.visible = true;
 
       // Debug: log ghost movement to verify they're following paths
-      if (smoothedProgress % 0.2 < 0.01) {
+      if (currentProgress % 0.2 < 0.01) {
         // Log every 20% progress
         console.log(
-          `${key} at progress ${smoothedProgress.toFixed(
+          `${key} at progress ${currentProgress.toFixed(
             2
           )}: ghostProgress=${ghostProgress.toFixed(
             2
@@ -260,7 +252,7 @@ export function updatePOVAnimation(progress: number) {
   });
 
   // 3. Update POV text animations
-  updatePOVTexts(smoothedProgress);
+  updatePOVTexts(currentProgress);
 }
 
 // Update POV Texts with proper animation logic
@@ -502,7 +494,7 @@ export async function initPOVAnimationSystem() {
     trigger: ".sc--pov",
     start: "top top",
     end: "bottom bottom",
-    scrub: 0.8, // Increased scrub for better smoothing
+    scrub: 1.2, // Increased scrub for better smoothing
     onUpdate: (self) => {
       // Progress von 0 (top top) bis 1 (bottom bottom)
       const progress = self.progress;
