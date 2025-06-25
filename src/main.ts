@@ -5,9 +5,14 @@ import { initAnimationSystem } from "./animation";
 
 async function init() {
   try {
+    initRenderer();
+    setupLighting();
+    initCamera();
+    setupCameraResize();
+
     await loadModel();
 
-    initAnimationSystem();
+    //initAnimationSystem();
   } catch (error) {
     console.error("Initialization error:", error);
   }
