@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { PathPoint } from "./types";
+import { PathPoint } from "./typescript/types";
 import { startPosition, secondPosition } from "./config";
 import * as pathPoints from "./pathpoints";
 

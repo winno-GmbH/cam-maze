@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { isMobile } from "./config";
-import { DOM_ELEMENTS } from "./selectors";
-import { camera } from "./camera";
+import { isMobile } from "../config";
+import { DOM_ELEMENTS } from "../selectors";
+import { camera } from "../camera";
 
 export const scene = new THREE.Scene();
 

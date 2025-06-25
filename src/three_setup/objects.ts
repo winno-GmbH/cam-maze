@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { ASSETS } from "./config";
-import { GhostContainer } from "./types";
+import { ASSETS } from "../config";
+import { GhostContainer } from "../typescript/types";
 import { scene, clock } from "./scene";
 import {
   mazeMaterial,

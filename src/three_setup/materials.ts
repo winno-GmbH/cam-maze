@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { ASSETS } from "./config";
+import { ASSETS } from "../config";
 
 const textureLoader = new THREE.TextureLoader();
 

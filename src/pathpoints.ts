@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { PathPoint } from "./types";
+import { PathPoint } from "./typescript/types";
 
 export const pacmanHomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.25525, 0.55, 0.6025), type: "straight" },
