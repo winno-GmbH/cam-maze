@@ -42,30 +42,3 @@ export const secondPosition = isMobile
 export const lookAtPosition = isMobile
   ? CAMERA_POSITIONS.mobileLookAt
   : CAMERA_POSITIONS.desktopLookAt;
-
-// DOM Selectors
-export const SELECTORS = {
-  mazeContainer: ".el--home-maze.el",
-  homeSection: ".sc--home.sc",
-  introSection: ".sc--intro.sc",
-  povSection: ".sc--pov.sc",
-  finalSection: ".sc--final.sc",
-  scrollComponent: ".cmp--scroll.cmp",
-  parentElements: ".cmp--pov.cmp",
-  pov: ".pov",
-  cam: ".cam",
-  finalContainer: ".cr--final.cr",
-};
-
-// DOM Elements
-export const DOM_ELEMENTS = {
-  mazeContainer: document.querySelector(SELECTORS.mazeContainer) as HTMLElement,
-  canvas: document.querySelector("canvas") as HTMLCanvasElement,
-  finalSection: document.querySelector(SELECTORS.finalSection) as HTMLElement,
-  finalContainer: document.querySelector(
-    SELECTORS.finalContainer
-  ) as HTMLElement,
-  parentElements: document.querySelectorAll(
-    SELECTORS.parentElements
-  ) as NodeListOf<Element>,
-};

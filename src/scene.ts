@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { isMobile, DOM_ELEMENTS } from "./config";
+import { isMobile } from "./config";
+import { DOM_ELEMENTS } from "./selectors";
 
 export const scene = new THREE.Scene();
 
