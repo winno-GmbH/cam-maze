@@ -6,9 +6,9 @@ async function init() {
   try {
     initCamera();
     await loadModel();
+    setupLighting();
 
     initRenderer();
-    setupLighting();
   } catch (error) {
     console.error("Initialization error:", error);
   }
