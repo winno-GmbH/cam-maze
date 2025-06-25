@@ -107,24 +107,6 @@ class AnimationSystem {
   public isAnimationActive(): boolean {
     return this.isAnimating;
   }
-
-  // Render function
-  public render(): void {
-    renderer.render(scene, camera);
-  }
 }
 
 export const animationSystem = new AnimationSystem();
-
-function animate(): void {
-  animationSystem.render();
-}
-
-export function startAnimationLoop(): void {
-  animate();
-}
-
-export function initAnimationSystem(): void {
-  initCamera();
-  startAnimationLoop();
-}

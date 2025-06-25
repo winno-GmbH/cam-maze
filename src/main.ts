@@ -1,6 +1,15 @@
-import { initRenderer, setupLighting } from "./scene";
+import { initRenderer, setupLighting, renderer, scene } from "./scene";
 import { loadModel } from "./objects";
-import { initAnimationSystem } from "./animation";
+import { animationSystem } from "./animation";
+import { camera } from "./camera";
+
+function render(): void {
+  animationSystem.update();
+
+  renderer.render(scene, camera);
+
+  requestAnimationFrame(render);
+}
 
 async function init() {
   try {
@@ -9,7 +18,9 @@ async function init() {
 
     await loadModel();
 
-    initAnimationSystem();
+    render();
+
+    console.log("🚀 Application initialized successfully");
   } catch (error) {
     console.error("Initialization error:", error);
   }
