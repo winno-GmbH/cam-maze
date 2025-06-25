@@ -22,14 +22,9 @@ class AnimationSystem {
   } = {};
 
   constructor() {
-    console.log("AnimationSystem: Initializing...");
-    console.log("AnimationSystem: MAZE_CENTER:", MAZE_CENTER);
-
-    // Get home paths for all objects
     const homePathData = getPathsForSection("home");
     this.homePaths = homePathData;
 
-    console.log(
       "AnimationSystem: Home paths loaded:",
       Object.keys(this.homePaths)
     );
@@ -39,16 +34,11 @@ class AnimationSystem {
   public startHomeAnimation(): void {
     if (this.isAnimating) return;
 
-    console.log("AnimationSystem: Starting home animation...");
-    console.log("AnimationSystem: Pacman position:", pacman.position);
-    console.log("AnimationSystem: Ghosts:", ghosts);
-
     this.state = "HOME_ANIMATION";
     this.isAnimating = true;
     this.animationTime = 0;
     this.timeOffset = Date.now();
 
-    console.log("AnimationSystem: Home animation started");
   }
 
   // Update animation
@@ -141,9 +131,6 @@ class AnimationSystem {
 export const animationSystem = new AnimationSystem();
 
 function animate(): void {
-  //requestAnimationFrame(animate);
-
-  //animationSystem.update();
   animationSystem.render();
 }
 
