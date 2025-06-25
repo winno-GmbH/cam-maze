@@ -1,7 +1,7 @@
 import { initRenderer, setupLighting, renderer, scene } from "./scene";
 import { loadModel } from "./objects";
 import { animationSystem } from "./animation";
-import { camera } from "./camera";
+import { camera, initCamera } from "./camera";
 
 function render(): void {
   animationSystem.update();
@@ -18,6 +18,7 @@ async function init() {
 
     await loadModel();
 
+    initCamera();
     render();
 
     console.log("🚀 Application initialized successfully");
