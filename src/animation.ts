@@ -152,7 +152,7 @@ export function startAnimationLoop(): void {
 }
 
 export function initAnimationSystem(): void {
-  //initCamera();
+  initCamera();
 
   startAnimationLoop();
 
