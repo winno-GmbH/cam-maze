@@ -144,7 +144,7 @@ function animate(): void {
   requestAnimationFrame(animate);
 
   //animationSystem.update();
-  //animationSystem.render();
+  animationSystem.render();
 }
 
 export function startAnimationLoop(): void {
@@ -156,7 +156,7 @@ export function initAnimationSystem(): void {
 
   startAnimationLoop();
 
-  setTimeout(() => {
+  /*setTimeout(() => {
     animationSystem.startHomeAnimation();
-  }, 1000);
+  }, 1000);*/
 }
