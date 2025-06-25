@@ -61,6 +61,9 @@ export function initRenderer(): void {
     setPixelRatio();
   }
   window.addEventListener("resize", setPixelRatio);
+}
+
+export function initialRender(): void {
   renderer.render(scene, camera);
 }
 
