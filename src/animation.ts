@@ -141,7 +141,7 @@ class AnimationSystem {
 export const animationSystem = new AnimationSystem();
 
 function animate(): void {
-  requestAnimationFrame(animate);
+  //requestAnimationFrame(animate);
 
   //animationSystem.update();
   animationSystem.render();
@@ -153,10 +153,5 @@ export function startAnimationLoop(): void {
 
 export function initAnimationSystem(): void {
   initCamera();
-
   startAnimationLoop();
-
-  /*setTimeout(() => {
-    animationSystem.startHomeAnimation();
-  }, 1000);*/
 }
