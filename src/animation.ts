@@ -154,7 +154,7 @@ export function startAnimationLoop(): void {
 export function initAnimationSystem(): void {
   initCamera();
 
-  startAnimationLoop();
+  //startAnimationLoop();
 
   setTimeout(() => {
     animationSystem.startHomeAnimation();
