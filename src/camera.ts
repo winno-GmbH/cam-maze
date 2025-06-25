@@ -31,17 +31,6 @@ export function getCameraLookAtPoint(): THREE.Vector3 {
   return lookAtPoint;
 }
 
-/*(window as any).setCamera = function (lookAt: string | THREE.Vector3): void {
-  if (typeof lookAt === "string") {
-    const [x, y, z] = lookAt.split(",").map(Number);
-    lookAt = new THREE.Vector3(x, y, z);
-  }
-  camera.lookAt(lookAt);
-  camera.updateProjectionMatrix();
-  camera.updateMatrix();
-  camera.updateMatrixWorld();
-};*/
-
 export function setupCameraResize(): void {
   const updateCamera = () => {
     camera.aspect = window.innerWidth / window.innerHeight;

@@ -5,8 +5,8 @@ import { initAnimationSystem } from "./animation";
 
 async function init() {
   try {
-    //initRenderer();
-    setupLighting();
+    initRenderer();
+    //setupLighting();
     initCamera();
     setupCameraResize();
 
