@@ -43,14 +43,12 @@ export function initRenderer(): void {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   if (DOM_ELEMENTS.mazeContainer) {
-    console.log("Found maze container, using it for renderer");
     renderer.setSize(
       DOM_ELEMENTS.mazeContainer.clientWidth,
       DOM_ELEMENTS.mazeContainer.clientHeight
     );
     DOM_ELEMENTS.mazeContainer.appendChild(renderer.domElement);
   } else {
-    console.log("Maze container not found, using body for renderer");
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
   }

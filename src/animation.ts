@@ -58,13 +58,6 @@ class AnimationSystem {
       pacman.visible = true;
     }
 
-    // Update Pacman mixer if available
-    // Note: You'll need to import pacmanMixer from objects.ts if you want this
-    // if (pacmanMixer) {
-    //   pacmanMixer.update(deltaTime);
-    // }
-
-    // Animate all objects along their paths (same logic as backup.js)
     Object.entries(ghosts).forEach(([key, ghost]) => {
       const pathKey = pathMapping[key];
       if (pathKey && paths[pathKey as keyof typeof paths]) {
