@@ -1,7 +1,20 @@
 import * as THREE from "three";
-import { PathPoint } from "./typescript/types";
-import { startPosition, secondPosition } from "./config";
-import * as pathPoints from "./pathpoints";
+import { PathPoint } from "../types/types";
+import { startPosition, secondPosition } from "../config/config";
+import {
+  pacmanHomePathPoints,
+  ghost1HomePathPoints,
+  ghost2HomePathPoints,
+  ghost3HomePathPoints,
+  ghost4HomePathPoints,
+  ghost5HomePathPoints,
+  cameraPOVPathPoints,
+  ghost1POVPathPoints,
+  ghost2POVPathPoints,
+  ghost3POVPathPoints,
+  ghost4POVPathPoints,
+  ghost5POVPathPoints,
+} from "./pathpoints";
 
 export const cameraHomePath = new THREE.CubicBezierCurve3(
   startPosition,
@@ -11,18 +24,18 @@ export const cameraHomePath = new THREE.CubicBezierCurve3(
 );
 
 export const paths = {
-  pacmanHome: createPath(pathPoints.pacmanHomePathPoints),
-  ghost1Home: createPath(pathPoints.ghost1HomePathPoints),
-  ghost2Home: createPath(pathPoints.ghost2HomePathPoints),
-  ghost3Home: createPath(pathPoints.ghost3HomePathPoints),
-  ghost4Home: createPath(pathPoints.ghost4HomePathPoints),
-  ghost5Home: createPath(pathPoints.ghost5HomePathPoints),
-  cameraPOV: createPath(pathPoints.cameraPOVPathPoints),
-  ghost1POV: createPath(pathPoints.ghost1POVPathPoints),
-  ghost2POV: createPath(pathPoints.ghost2POVPathPoints),
-  ghost3POV: createPath(pathPoints.ghost3POVPathPoints),
-  ghost4POV: createPath(pathPoints.ghost4POVPathPoints),
-  ghost5POV: createPath(pathPoints.ghost5POVPathPoints),
+  pacmanHome: createPath(pacmanHomePathPoints),
+  ghost1Home: createPath(ghost1HomePathPoints),
+  ghost2Home: createPath(ghost2HomePathPoints),
+  ghost3Home: createPath(ghost3HomePathPoints),
+  ghost4Home: createPath(ghost4HomePathPoints),
+  ghost5Home: createPath(ghost5HomePathPoints),
+  cameraPOV: createPath(cameraPOVPathPoints),
+  ghost1POV: createPath(ghost1POVPathPoints),
+  ghost2POV: createPath(ghost2POVPathPoints),
+  ghost3POV: createPath(ghost3POVPathPoints),
+  ghost4POV: createPath(ghost4POVPathPoints),
+  ghost5POV: createPath(ghost5POVPathPoints),
 };
 
 function createPath(pathPoints: PathPoint[]): THREE.CurvePath<THREE.Vector3> {

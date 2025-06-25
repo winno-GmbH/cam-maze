@@ -1,6 +1,6 @@
-import { initRenderer, setupLighting } from "./three_setup/scene";
-import { loadModel } from "./three_setup/objects";
-import { initCamera } from "./camera";
+import { initRenderer, setupLighting } from "./core/scene";
+import { loadModel } from "./core/objects";
+import { initCamera } from "./core/camera";
 
 async function init() {
   try {

@@ -4,7 +4,7 @@ import {
   startPosition,
   secondPosition,
   lookAtPosition,
-} from "./config";
+} from "../config/config";
 
 export const camera = new THREE.PerspectiveCamera(
   CAMERA_CONFIG.originalFOV,
