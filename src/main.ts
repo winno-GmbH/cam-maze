@@ -12,7 +12,7 @@ async function init() {
 
     await loadModel();
 
-    //initAnimationSystem();
+    initAnimationSystem();
   } catch (error) {
     console.error("Initialization error:", error);
   }
