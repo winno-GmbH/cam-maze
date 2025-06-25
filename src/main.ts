@@ -1,12 +1,6 @@
-import {
-  initRenderer,
-  setupLighting,
-  renderer,
-  scene,
-  initialRender,
-} from "./three_setup/scene";
+import { initRenderer, setupLighting } from "./three_setup/scene";
 import { loadModel } from "./three_setup/objects";
-import { camera, initCamera } from "./camera";
+import { initCamera } from "./camera";
 
 async function init() {
   try {
@@ -15,7 +9,6 @@ async function init() {
 
     initRenderer();
     setupLighting();
-    initialRender();
   } catch (error) {
     console.error("Initialization error:", error);
   }

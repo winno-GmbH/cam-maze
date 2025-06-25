@@ -61,11 +61,10 @@ export function initRenderer(): void {
     setPixelRatio();
   }
   window.addEventListener("resize", setPixelRatio);
-}
-
-export function initialRender(): void {
   renderer.render(scene, camera);
 }
+
+export function initialRender(): void {}
 
 export function setupLighting(): void {
   const ambientLight = new THREE.AmbientLight(0xffffff);
