@@ -138,39 +138,25 @@ class AnimationSystem {
   }
 }
 
-// Create and export the animation system
 export const animationSystem = new AnimationSystem();
 
-// Animation loop (same as backup.js)
 function animate(): void {
   requestAnimationFrame(animate);
 
-  // Update animation system
   animationSystem.update();
-
-  // Render the scene
   animationSystem.render();
 }
 
-// Start the animation loop
 export function startAnimationLoop(): void {
-  console.log("AnimationSystem: Starting animation loop...");
   animate();
 }
 
-// Initialize animation system
 export function initAnimationSystem(): void {
-  console.log("AnimationSystem: Initializing animation system...");
-
-  // Initialize camera
   initCamera();
 
-  // Start animation loop
   startAnimationLoop();
 
-  // Auto-start home animation after a short delay
   setTimeout(() => {
-    console.log("AnimationSystem: Auto-starting home animation...");
     animationSystem.startHomeAnimation();
   }, 1000);
 }
