@@ -143,7 +143,7 @@ export const animationSystem = new AnimationSystem();
 function animate(): void {
   requestAnimationFrame(animate);
 
-  animationSystem.update();
+  //animationSystem.update();
   animationSystem.render();
 }
 
@@ -154,7 +154,7 @@ export function startAnimationLoop(): void {
 export function initAnimationSystem(): void {
   initCamera();
 
-  //startAnimationLoop();
+  startAnimationLoop();
 
   setTimeout(() => {
     animationSystem.startHomeAnimation();
