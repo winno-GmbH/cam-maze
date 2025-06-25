@@ -24,13 +24,8 @@ class AnimationSystem {
   constructor() {
     const homePathData = getPathsForSection("home");
     this.homePaths = homePathData;
-
-      "AnimationSystem: Home paths loaded:",
-      Object.keys(this.homePaths)
-    );
   }
 
-  // Start the home animation
   public startHomeAnimation(): void {
     if (this.isAnimating) return;
 
@@ -38,10 +33,8 @@ class AnimationSystem {
     this.isAnimating = true;
     this.animationTime = 0;
     this.timeOffset = Date.now();
-
   }
 
-  // Update animation
   public update(): void {
     if (!this.isAnimating) return;
 
