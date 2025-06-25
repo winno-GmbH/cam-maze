@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Animation Test</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: #f0f0f0;
+      }
+      .test-section {
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 20px;
+      }
+      .intro {
+        background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+      }
+      .home {
+        background: linear-gradient(45deg, #4834d4, #686de0);
+      }
+      .pov {
+        background: linear-gradient(45deg, #00b894, #00cec9);
+      }
+      .final {
+        background: linear-gradient(45deg, #fdcb6e, #e17055);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="test-section intro sc--intro sc">Intro Section</div>
+    <div class="test-section home sc--home sc">Home Section</div>
+    <div class="test-section pov sc--pov sc">POV Section</div>
+    <div class="test-section final sc--final sc">Final Section</div>
+
+    <!-- Load Three.js and GSAP from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <!-- Load our script -->
+    <script src="script.js"></script>
+
+    <script>
+      // Simple test to see if script loaded
+      console.log("🔄 Test HTML loaded");
+
+      // Check if our script created the animationController
+      setTimeout(() => {
+        if (window.animationController) {
+          console.log(
+            "✅ AnimationController found on window:",
+            window.animationController
+          );
+        } else {
+          console.log("❌ AnimationController not found on window");
+        }
+      }, 2000);
+    </script>
+  </body>
+</html>

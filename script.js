@@ -1,2 +1,532 @@
-(()=>{"use strict";const e=THREE,r=window.innerWidth<768,t=new e.Vector3(.45175,.5,.55675),o=(new e.Vector3(.65725,.55,.75325),new e.Vector3(.9085,.55,.8035),new e.Vector3(.75775,.55,1.05475),new e.Vector3(.65725,.55,1.0045),new e.Vector3(.15475,.55,1.15525),{startMobile:new e.Vector3(.5,2.5,2.5),startDesktop:new e.Vector3(-2,2.5,2),secondMobile:new e.Vector3(.5,2.5,2),secondDesktop:new e.Vector3(-1.5,3,2),mobileLookAt:new e.Vector3(.5,.5,-1.5),desktopLookAt:new e.Vector3(-1.25,.5,.25)}),c=r?o.startMobile:o.startDesktop,p=r?o.secondMobile:o.secondDesktop,n=r?o.mobileLookAt:o.desktopLookAt,s={mazeContainer:document.querySelector(".el--home-maze.el"),canvas:document.querySelector("canvas"),finalSection:document.querySelector(".sc--final.sc"),finalContainer:document.querySelector(".cr--final.cr"),parentElements:document.querySelectorAll(".cmp--pov.cmp")},u=new e.Scene,y=new e.WebGLRenderer({antialias:!0,alpha:!0,powerPreference:"high-performance",precision:"highp"}),a=new e.Clock;function w(){const e=Math.min(window.devicePixelRatio,r?2:3);y.setPixelRatio(e),s.mazeContainer?y.setSize(s.mazeContainer.clientWidth,s.mazeContainer.clientHeight):y.setSize(window.innerWidth,window.innerHeight)}const i=new e.PerspectiveCamera(50,window.innerWidth/window.innerHeight,.001,1e3);function v(){i.position.copy(c),i.lookAt(n)}i.quaternion.clone(),(new e.Quaternion).setFromEuler(new e.Euler(-1.5708,0,0));const V=(new e.TextureLoader).load("https://c-am.b-cdn.net/CAM/matcap24.png"),h=new e.MeshMatcapMaterial({matcap:V}),A=new e.MeshStandardMaterial({color:15923705,metalness:.4,roughness:0,envMapIntensity:10}),l=new e.MeshPhysicalMaterial({color:16777215,opacity:1,transparent:!0,depthWrite:!1,depthTest:!0,blending:e.NormalBlending,side:e.DoubleSide,roughness:.75,metalness:.2,transmission:.5}),T=new e.MeshStandardMaterial({color:16777215,opacity:.8,transparent:!0,roughness:.5,metalness:.1}),m={blue:new e.MeshBasicMaterial({color:1337811,transparent:!0,opacity:1}),white:new e.MeshBasicMaterial({color:16777215,transparent:!0,opacity:1}),default:new e.MeshBasicMaterial({color:1337811,transparent:!0,opacity:1})},g={CAM_Pacman_Backframe:m.blue,"CAM-Pacman_Bitcoin_1":m.white,"CAM-Pacman_Bitcoin_2":m.white,"CAM-Pacman_Bottom":m.blue,"CAM-Pacman_Top":m.blue,"CAM-Pacman_Eye":m.white,CAM_Pacman_Logo_1:m.white,CAM_Pacman_Logo_2:m.white,"CAM-Pacman_Shell_Boolean":m.blue,"CAM-Pacman_Shell":m.blue,"CAM-Pacman_Bottom_electronic":m.white,"CAM-Pacman_Top_electronic":m.white,"CAM-Pacman_Bottom_Text":m.white,"CAM-Pacman_Top_Text":m.white,default:m.blue},d=(Array(5).fill(l),new e.GLTFLoader);let M;const f=new e.Group;u.add(f);const P={pacman:f,ghost1:new e.Mesh(new e.BufferGeometry,l),ghost2:new e.Mesh(new e.BufferGeometry,l),ghost3:new e.Mesh(new e.BufferGeometry,l),ghost4:new e.Mesh(new e.BufferGeometry,l),ghost5:new e.Mesh(new e.BufferGeometry,l)},S={Ghost_EUR:P.ghost1,Ghost_CHF:P.ghost2,Ghost_YEN:P.ghost3,Ghost_USD:P.ghost4,Ghost_GBP:P.ghost5};Object.values(P).forEach((e=>u.add(e)));const C=[{pos:new e.Vector3(.25525,.55,.6025),type:"straight"},{pos:new e.Vector3(.25525,.55,.301),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.35575,.55,.2005),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.45625,.55,.1),type:"straight"},{pos:new e.Vector3(.45625,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.35575,.55,-.2015),type:"straight"},{pos:new e.Vector3(.15475,.55,-.2015),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.05425,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.04625,.55,-5e-4),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.14675,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.24725,.55,-.2015),type:"straight"},{pos:new e.Vector3(-.34775,.55,-.2015),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.44825,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.398,.55,-5e-4),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.34775,.55,.1),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.24725,.55,.2005),type:"straight"},{pos:new e.Vector3(-.04625,.55,.2005),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.05425,.55,.301),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.04625,.55,.4015),type:"straight"},{pos:new e.Vector3(-.14675,.55,.4015),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.24725,.55,.502),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.14675,.55,.6025),type:"straight"},{pos:new e.Vector3(-.04625,.55,.6025),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.05425,.55,.703),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.04625,.55,.8035),type:"straight"},{pos:new e.Vector3(-.24725,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.34775,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.398,.55,1.0045),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.44825,.55,1.105),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.34775,.55,1.2055),type:"straight"},{pos:new e.Vector3(-.24725,.55,1.2055),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.14675,.55,1.105),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.04625,.55,1.0045),type:"straight"},{pos:new e.Vector3(.05425,.55,1.0045),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.15475,.55,1.105),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.05425,.55,1.2055),type:"straight"},{pos:new e.Vector3(-.04625,.55,1.2055),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.14675,.55,1.105),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.04625,.55,1.0045),type:"straight"},{pos:new e.Vector3(.65725,.55,1.0045),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.75775,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.7075,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.65725,.55,.75325),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.55675,.55,.703),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.45625,.55,.75325),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.35575,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.25525,.55,.703),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.25525,.55,.6025),type:"straight"}],_=[{pos:new e.Vector3(-.44825,.55,.502),type:"straight"},{pos:new e.Vector3(-.44825,.55,.301),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.34775,.55,.2005),type:"straight"},{pos:new e.Vector3(-.24725,.55,.2005),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.14675,.55,.1),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.04625,.55,-5e-4),type:"straight"},{pos:new e.Vector3(.35575,.55,-5e-4),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.45625,.55,.1),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.35575,.55,.2005),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.25525,.55,.301),type:"straight"},{pos:new e.Vector3(.25525,.55,.703),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.35575,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.45625,.55,.75325),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.55675,.55,.703),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.65725,.55,.75325),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.75775,.55,.8035),type:"straight"},{pos:new e.Vector3(.95875,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.05925,.55,.75325),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.15975,.55,.703),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.26025,.55,.75325),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.36075,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.46125,.55,.703),type:"straight"},{pos:new e.Vector3(1.46125,.55,.301),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.36075,.55,.2005),type:"straight"},{pos:new e.Vector3(.35575,.55,.2005),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.25525,.55,.301),type:"straight"},{pos:new e.Vector3(.25525,.55,.502),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.15475,.55,.6025),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.05425,.55,.703),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.004,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.04625,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.05425,.55,1.0045),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.15475,.55,1.105),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.05425,.55,1.2055),type:"straight"},{pos:new e.Vector3(-.04625,.55,1.2055),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.14675,.55,1.105),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.0965,.55,1.0045),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.04625,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.14675,.55,.8035),type:"straight"},{pos:new e.Vector3(-.34775,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.44825,.55,.703),type:"straight"},{pos:new e.Vector3(-.44825,.55,.502),type:"straight"}],b=[{pos:new e.Vector3(-.04625,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.004,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.05425,.55,.703),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.04625,.55,.6025),type:"straight"},{pos:new e.Vector3(-.14675,.55,.6025),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.24725,.55,.502),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.14675,.55,.4015),type:"straight"},{pos:new e.Vector3(.15475,.55,.4015),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.25525,.55,.502),type:"straight"},{pos:new e.Vector3(.25525,.55,.703),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.3055,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.35575,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.45625,.55,1.0045),type:"straight"},{pos:new e.Vector3(.65725,.55,1.0045),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.75775,.55,1.105),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.85825,.55,1.2055),type:"straight"},{pos:new e.Vector3(1.36075,.55,1.2055),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.46125,.55,1.105),type:"straight"},{pos:new e.Vector3(1.46125,.55,.1),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.36075,.55,-5e-4),type:"straight"},{pos:new e.Vector3(1.15975,.55,-5e-4),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.05925,.55,.1),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.95875,.55,.2005),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.85825,.55,.1),type:"straight"},{pos:new e.Vector3(.85825,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.75775,.55,-.2015),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.65725,.55,-.15125),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.55675,.55,-.101),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.45625,.55,-5e-4),type:"straight"},{pos:new e.Vector3(.45625,.55,.1),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.35575,.55,.2005),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.25525,.55,.301),type:"straight"},{pos:new e.Vector3(.25525,.55,.703),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.3055,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.35575,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.25525,.55,1.0045),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.15475,.55,1.105),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.05425,.55,1.2055),type:"straight"},{pos:new e.Vector3(-.04625,.55,1.2055),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.14675,.55,1.105),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.0965,.55,1.0045),type:"curve",curveType:"lowerArc"}],z=[{pos:new e.Vector3(.808,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.85825,.55,.703),type:"straight"},{pos:new e.Vector3(.85825,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.75775,.55,-.2015),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.65725,.55,-.15125),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.55675,.55,-.101),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.45625,.55,-.15125),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.35575,.55,-.2015),type:"straight"},{pos:new e.Vector3(.15475,.55,-.2015),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.05425,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.15475,.55,-5e-4),type:"straight"},{pos:new e.Vector3(.35575,.55,-5e-4),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.45625,.55,.1),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.55675,.55,.2005),type:"straight"},{pos:new e.Vector3(1.36075,.55,.2005),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.46125,.55,.301),type:"straight"},{pos:new e.Vector3(1.46125,.55,.703),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.36075,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.26025,.55,.75325),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.15975,.55,.703),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.05925,.55,.75325),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.009,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.95875,.55,.904),type:"straight"},{pos:new e.Vector3(.95875,.55,1.105),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.85825,.55,1.2055),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.75775,.55,1.105),type:"straight"},{pos:new e.Vector3(.75775,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.7075,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.65725,.55,.75325),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.55675,.55,.703),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.45625,.55,.75325),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.35575,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.25525,.55,.703),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.15475,.55,.6025),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.05425,.55,.703),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.004,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.04625,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.05425,.55,1.0045),type:"straight"},{pos:new e.Vector3(.65725,.55,1.0045),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.75775,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.808,.55,.8035),type:"curve",curveType:"upperArc"}],H=[{pos:new e.Vector3(1.05925,.55,.4015),type:"straight"},{pos:new e.Vector3(1.05925,.55,.703),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.95875,.55,.8035),type:"straight"},{pos:new e.Vector3(.85825,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.75775,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.65725,.55,1.0045),type:"straight"},{pos:new e.Vector3(.25525,.55,1.0045),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.15475,.55,1.105),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.05425,.55,1.2055),type:"straight"},{pos:new e.Vector3(-.34775,.55,1.2055),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.44825,.55,1.105),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.398,.55,1.0045),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.34775,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.398,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.44825,.55,.703),type:"straight"},{pos:new e.Vector3(-.44825,.55,.301),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.34775,.55,.2005),type:"straight"},{pos:new e.Vector3(-.04625,.55,.2005),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.05425,.55,.301),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.15475,.55,.4015),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.25525,.55,.301),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.35575,.55,.2005),type:"straight"},{pos:new e.Vector3(.75775,.55,.2005),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.85825,.55,.1),type:"straight"},{pos:new e.Vector3(.85825,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.95875,.55,-.2015),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.05925,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.15975,.55,5e-4),type:"straight"},{pos:new e.Vector3(1.36075,.55,5e-4),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.46125,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.36075,.55,-.2015),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.26025,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.36075,.55,5e-4),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.46125,.55,.1),type:"straight"},{pos:new e.Vector3(1.46125,.55,.703),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.36075,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.26025,.55,.75325),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.15975,.55,.703),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.05925,.55,.6025),type:"straight"},{pos:new e.Vector3(1.05925,.55,.4015),type:"straight"}],E=[{pos:new e.Vector3(.45625,.55,-.04975),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.35575,.55,5e-4),type:"straight"},{pos:new e.Vector3(-.04625,.55,5e-4),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.14675,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.24725,.55,-.2015),type:"straight"},{pos:new e.Vector3(-.34775,.55,-.2015),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.44825,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.398,.55,5e-4),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.34775,.55,.1),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.24725,.55,.2005),type:"straight"},{pos:new e.Vector3(-.04625,.55,.2005),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.05425,.55,.301),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.04625,.55,.4015),type:"straight"},{pos:new e.Vector3(-.14675,.55,.4015),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(-.24725,.55,.502),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.14675,.55,.6025),type:"straight"},{pos:new e.Vector3(.15475,.55,.6025),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.25525,.55,.703),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.3055,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.35575,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.45625,.55,1.0045),type:"straight"},{pos:new e.Vector3(.65725,.55,1.0045),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.75775,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.85825,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.95875,.55,.904),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.95875,.55,1.105),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.05925,.55,1.2055),type:"straight"},{pos:new e.Vector3(1.36075,.55,1.2055),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.46125,.55,1.105),type:"straight"},{pos:new e.Vector3(1.46125,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.36075,.55,-.2015),type:"straight"},{pos:new e.Vector3(1.15975,.55,-.2015),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(1.05925,.55,-.101),type:"straight"},{pos:new e.Vector3(1.05925,.55,.1),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.95875,.55,.2005),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.85825,.55,.1),type:"straight"},{pos:new e.Vector3(.85825,.55,-.101),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.75775,.55,-.2015),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.65725,.55,-.15125),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.55675,.55,-.101),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.45625,.55,-.04975),type:"curve",curveType:"lowerArc"}],B=[{pos:new e.Vector3(.55675,-.5,.45175),type:"curve",curveType:"forwardDownArc"},{pos:new e.Vector3(.55675,.55,.6025),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.607,.55,.703),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.65725,.55,.75325),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.7075,.55,.8035),type:"straight"},{pos:new e.Vector3(.9085,.55,.8035),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.95875,.55,.85375),type:"straight"},{pos:new e.Vector3(.95875,.55,1.15525),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.9085,.55,1.2055),type:"straight"},{pos:new e.Vector3(.808,.55,1.2055),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.75775,.55,1.15525),type:"straight"},{pos:new e.Vector3(.75775,.55,1.05475),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.7075,.55,1.0045),type:"straight"},{pos:new e.Vector3(.205,.55,1.0045),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.15475,.55,1.05475),type:"straight"},{pos:new e.Vector3(.15475,.55,1.15525),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.205,.55,1.2055),type:"straight"},{pos:new e.Vector3(.5065,.55,1.2055),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.55675,.55,1.306),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(-.44825,1,2.0095),type:"straight"}],I=[{pos:new e.Vector3(1.05925,.55,.703),type:"straight"},{pos:new e.Vector3(1.05925,.55,.75325),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(1.009,.55,.8035),type:"straight"},{pos:new e.Vector3(.9085,.55,.8035),type:"straight"}],O=[{pos:new e.Vector3(1.05925,.55,1.2055),type:"straight"},{pos:new e.Vector3(1.009,.55,1.2055),type:"curve",curveType:"lowerArc"},{pos:new e.Vector3(.95875,.55,1.15525),type:"straight"},{pos:new e.Vector3(.95875,.55,1.05475),type:"straight"}],L=[{pos:new e.Vector3(.35575,.55,.904),type:"straight"},{pos:new e.Vector3(.35575,.55,.95425),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.406,.55,1.0045),type:"straight"},{pos:new e.Vector3(.5065,.55,1.0045),type:"straight"}],R=[{pos:new e.Vector3(.15475,.55,1.105),type:"straight"},{pos:new e.Vector3(.15475,.55,1.05475),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.205,.55,1.0045),type:"straight"},{pos:new e.Vector3(.3055,.55,1.0045),type:"straight"}],x=[{pos:new e.Vector3(.55675,.55,1.306),type:"straight"},{pos:new e.Vector3(.55675,.55,1.25575),type:"curve",curveType:"upperArc"},{pos:new e.Vector3(.5065,.55,1.2055),type:"straight"},{pos:new e.Vector3(.406,.55,1.2055),type:"straight"}],G=(new e.CubicBezierCurve3(c,p,new e.Vector3(.55675,3,.45175),new e.Vector3(.55675,.5,.45175)),{pacmanHome:D(C),ghost1Home:D(_),ghost2Home:D(b),ghost3Home:D(z),ghost4Home:D(H),ghost5Home:D(E),cameraPOV:D(B),ghost1POV:D(I),ghost2POV:D(O),ghost3POV:D(L),ghost4POV:D(R),ghost5POV:D(x)});function D(r){const t=new e.CurvePath;for(let o=0;o<r.length-1;o++){const c=r[o],p=r[o+1];if("straight"===c.type){const r=new e.LineCurve3(c.pos,p.pos);t.add(r)}else if("curve"===c.type){let r;r="upperArc"===c.curveType?new e.Vector3(c.pos.x,c.pos.y,p.pos.z):"lowerArc"===c.curveType?new e.Vector3(p.pos.x,c.pos.y,c.pos.z):"forwardDownArc"===c.curveType?new e.Vector3(c.pos.x,p.pos.y,c.pos.z):new e.Vector3(c.pos.x,c.pos.y,p.pos.z);const o=new e.QuadraticBezierCurve3(c.pos,r,p.pos);t.add(o)}}return t}function k(e){return"home"===e?{pacman:G.pacmanHome,ghost1:G.ghost1Home,ghost2:G.ghost2Home,ghost3:G.ghost3Home,ghost4:G.ghost4Home,ghost5:G.ghost5Home}:"pov"===e?{pacman:G.cameraPOV,ghost1:G.ghost1POV,ghost2:G.ghost2POV,ghost3:G.ghost3POV,ghost4:G.ghost4POV,ghost5:G.ghost5POV}:{}}const W=new class{constructor(){this.state="IDLE",this.animationTime=0,this.animationDuration=6e3,this.isAnimating=!1,this.timeOffset=0,this.animationRunning=!0,this.homePaths={},console.log("AnimationSystem: Initializing..."),console.log("AnimationSystem: MAZE_CENTER:",t);const e=k("home");this.homePaths=e,console.log("AnimationSystem: Home paths loaded:",Object.keys(this.homePaths))}startHomeAnimation(){this.isAnimating||(console.log("AnimationSystem: Starting home animation..."),console.log("AnimationSystem: Pacman position:",f.position),console.log("AnimationSystem: Ghosts:",P),this.state="HOME_ANIMATION",this.isAnimating=!0,this.animationTime=0,this.timeOffset=Date.now(),console.log("AnimationSystem: Home animation started"))}update(){if(!this.isAnimating)return;const e=a.getDelta();this.animationTime+=e,"HOME_ANIMATION"===this.state&&this.updateHomeAnimation()}updateHomeAnimation(){const e=(Date.now()-this.timeOffset)/this.animationDuration%6/6,r=k("home");f.visible||(f.visible=!0),Object.entries(P).forEach((([t,o])=>{const c=r[t];if(c&&G[c]){const r=G[c];if(r){const c=r.getPointAt(e);o.position.copy(c);const p=r.getTangentAt(e).normalize();if(o.lookAt(c.clone().add(p)),"pacman"===t){const e=Math.atan2(p.x,p.z);void 0===o.previousZRotation&&(o.previousZRotation=e);let r=e-o.previousZRotation;r>Math.PI?r-=2*Math.PI:r<-Math.PI&&(r+=2*Math.PI);const t=.1,c=o.previousZRotation+r*t;o.previousZRotation=c,o.rotation.set(Math.PI/2,Math.PI,c+Math.PI/2)}}}}))}getState(){return this.state}isAnimationActive(){return this.isAnimating}render(){y.render(u,i)}};function F(){requestAnimationFrame(F),W.update(),W.render()}!async function(){try{r?y.setPixelRatio(Math.min(window.devicePixelRatio,2)):y.setPixelRatio(window.devicePixelRatio),y.shadowMap.enabled=!0,y.shadowMap.type=e.PCFSoftShadowMap,y.shadowMap.enabled=!0,y.shadowMap.type=e.PCFSoftShadowMap,s.mazeContainer?(console.log("Found maze container, using it for renderer"),y.setSize(s.mazeContainer.clientWidth,s.mazeContainer.clientHeight),s.mazeContainer.appendChild(y.domElement)):(console.log("Maze container not found, using body for renderer"),y.setSize(window.innerWidth,window.innerHeight),document.body.appendChild(y.domElement)),"loading"===document.readyState?document.addEventListener("DOMContentLoaded",w):w(),window.addEventListener("resize",w),function(){const r=new e.AmbientLight(16777215);u.add(r);const t=new e.DirectionalLight(16777215,.8);u.add(t),t.position.set(-5,15,10),t.shadow.mapSize.width=4096,t.shadow.mapSize.height=4096,t.shadow.camera.left=-20,t.shadow.camera.right=20,t.shadow.camera.top=20,t.shadow.camera.bottom=-20,t.shadow.camera.near=.1,t.shadow.camera.far=50,t.shadow.bias=-.001,t.shadow.radius=3,t.castShadow=!0}(),v(),window.addEventListener("resize",(()=>{i.aspect=window.innerWidth/window.innerHeight,i.updateProjectionMatrix()})),await async function(){return new Promise(((r,t)=>{d.load("https://c-am.b-cdn.net/CAM/c-am-assets-3.glb",(function(t){const o=t.scene;o.traverse((r=>{if("CAM-Pacman"===r.name){const o=[];r.traverse((e=>{if(e.isMesh&&"CAM-Pacman_Shell"!==e.name&&"CAM-Pacman_Shell_Boolean"!==e.name){const r=g[e.name]||g.default;e.material=r,o.push(e)}else"CAM-Pacman_Shell"!==e.name&&"CAM-Pacman_Shell_Boolean"!==e.name||(e.visible=!1)})),o.forEach((e=>P.pacman.add(e))),P.pacman.scale.set(.05,.05,.05),P.pacman.rotation.set(Math.PI/2,Math.PI/2,Math.PI/4),M=new e.AnimationMixer(P.pacman);const c={};t.animations.forEach((e=>{const r=M.clipAction(e);c[e.name]=r,r.setEffectiveWeight(1),r.play()}))}else if(r.name&&S[r.name]){const t=S[r.name],o=new e.Group;r.rotation.z=Math.PI,r.rotation.x=Math.PI/2,r.scale.set(.75,.75,.75);const c=[];r.traverse((e=>{e.isMesh&&(e.name&&e.name.startsWith("Ghost_Mesh")?e.material=l:e.name&&["EUR","CHF","YEN","USD","GBP"].includes(e.name)&&(e.visible=!1),c.push(e))})),c.forEach((e=>{e.name&&(e.name.includes("EUR")||e.name.startsWith("Ghost_Mesh"))?(e.rotation.z=Math.PI,e.rotation.x=Math.PI/2):e.rotation.set(0,0,0),o.add(e)})),t.add(o)}if(r.isMesh)if("CAM-Arena_LowRes_Top"===r.name)r.material=A,r.castShadow=!0;else if("CAM-Arena_LowRes_Bottom"===r.name)r.material=h,r.castShadow=!0;else if("CAM-Floor"===r.name){const t=r.clone();r.position.y=-.1,r.position.x=0,r.position.z=0,r.material=new e.MeshBasicMaterial({color:16777215,opacity:1,transparent:!1,depthWrite:!0,depthTest:!0,side:e.FrontSide}),r.receiveShadow=!1,r.castShadow=!0,r.scale.set(.5,.5,.5),t.material=T,t.position.y=-.5,t.receiveShadow=!0,u.add(t)}})),o.traverse((function(e){e.isMesh&&(e.castShadow=!0,e.receiveShadow=!0)})),u.add(o),o.position.set(.5,.5,.5),r()}),(function(e){}),(function(e){t(e)}))}))}(),console.log("AnimationSystem: Initializing animation system..."),v(),console.log("AnimationSystem: Starting animation loop..."),F(),setTimeout((()=>{console.log("AnimationSystem: Auto-starting home animation..."),W.startHomeAnimation()}),1e3)}catch(e){console.error("Initialization error:",e)}}()})();
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	var __webpack_modules__ = ({
+
+/***/ "./src/config.ts":
+/*!***********************!*\
+  !*** ./src/config.ts ***!
+  \***********************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ASSETS: () => (/* binding */ ASSETS),
+/* harmony export */   CAMERA_CONFIG: () => (/* binding */ CAMERA_CONFIG),
+/* harmony export */   CAMERA_POSITIONS: () => (/* binding */ CAMERA_POSITIONS),
+/* harmony export */   DOM_ELEMENTS: () => (/* binding */ DOM_ELEMENTS),
+/* harmony export */   MAZE_CENTER: () => (/* binding */ MAZE_CENTER),
+/* harmony export */   POV_POSITIONS: () => (/* binding */ POV_POSITIONS),
+/* harmony export */   SELECTORS: () => (/* binding */ SELECTORS),
+/* harmony export */   isMobile: () => (/* binding */ isMobile),
+/* harmony export */   lookAtPosition: () => (/* binding */ lookAtPosition),
+/* harmony export */   secondPosition: () => (/* binding */ secondPosition),
+/* harmony export */   startPosition: () => (/* binding */ startPosition)
+/* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "three");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(three__WEBPACK_IMPORTED_MODULE_0__);
+
+const isMobile = window.innerWidth < 768;
+const CAMERA_CONFIG = {
+    originalFOV: 50,
+    wideFOV: 80,
+    near: 0.001,
+    far: 1000,
+};
+const ASSETS = {
+    mazeTexture: "https://c-am.b-cdn.net/CAM/matcap24.png",
+    mazeModel: "https://c-am.b-cdn.net/CAM/c-am-assets-3.glb",
+};
+const MAZE_CENTER = new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0.45175, 0.5, 0.55675);
+const POV_POSITIONS = {
+    ghost1: new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0.65725, 0.55, 0.75325),
+    ghost2: new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0.9085, 0.55, 0.8035),
+    ghost3: new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0.75775, 0.55, 1.05475),
+    ghost4: new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0.65725, 0.55, 1.0045),
+    ghost5: new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0.15475, 0.55, 1.15525),
+};
+const CAMERA_POSITIONS = {
+    startMobile: new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0.5, 2.5, 2.5),
+    startDesktop: new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(-2, 2.5, 2),
+    secondMobile: new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0.5, 2.5, 2),
+    secondDesktop: new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(-1.5, 3, 2),
+    mobileLookAt: new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(0.5, 0.5, -1.5),
+    desktopLookAt: new three__WEBPACK_IMPORTED_MODULE_0__.Vector3(-1.25, 0.5, 0.25),
+};
+const startPosition = isMobile
+    ? CAMERA_POSITIONS.startMobile
+    : CAMERA_POSITIONS.startDesktop;
+const secondPosition = isMobile
+    ? CAMERA_POSITIONS.secondMobile
+    : CAMERA_POSITIONS.secondDesktop;
+const lookAtPosition = isMobile
+    ? CAMERA_POSITIONS.mobileLookAt
+    : CAMERA_POSITIONS.desktopLookAt;
+// DOM Selectors
+const SELECTORS = {
+    mazeContainer: ".el--home-maze.el",
+    homeSection: ".sc--home.sc",
+    introSection: ".sc--intro.sc",
+    povSection: ".sc--pov.sc",
+    finalSection: ".sc--final.sc",
+    scrollComponent: ".cmp--scroll.cmp",
+    parentElements: ".cmp--pov.cmp",
+    pov: ".pov",
+    cam: ".cam",
+    finalContainer: ".cr--final.cr",
+};
+// DOM Elements
+const DOM_ELEMENTS = {
+    mazeContainer: document.querySelector(SELECTORS.mazeContainer),
+    canvas: document.querySelector("canvas"),
+    finalSection: document.querySelector(SELECTORS.finalSection),
+    finalContainer: document.querySelector(SELECTORS.finalContainer),
+    parentElements: document.querySelectorAll(SELECTORS.parentElements),
+};
+
+
+/***/ }),
+
+/***/ "./src/materials.ts":
+/*!**************************!*\
+  !*** ./src/materials.ts ***!
+  \**************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   floorMaterial: () => (/* binding */ floorMaterial),
+/* harmony export */   ghostCoverMaterials: () => (/* binding */ ghostCoverMaterials),
+/* harmony export */   ghostMaterial: () => (/* binding */ ghostMaterial),
+/* harmony export */   materialMap: () => (/* binding */ materialMap),
+/* harmony export */   mazeMaterial: () => (/* binding */ mazeMaterial),
+/* harmony export */   mazeTexture: () => (/* binding */ mazeTexture),
+/* harmony export */   topMaterial: () => (/* binding */ topMaterial)
+/* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "three");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(three__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _config__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./config */ "./src/config.ts");
+
+
+const textureLoader = new three__WEBPACK_IMPORTED_MODULE_0__.TextureLoader();
+const mazeTexture = textureLoader.load(_config__WEBPACK_IMPORTED_MODULE_1__.ASSETS.mazeTexture);
+const mazeMaterial = new three__WEBPACK_IMPORTED_MODULE_0__.MeshMatcapMaterial({
+    matcap: mazeTexture,
+});
+const topMaterial = new three__WEBPACK_IMPORTED_MODULE_0__.MeshStandardMaterial({
+    color: 0xf2f9f9,
+    metalness: 0.4,
+    roughness: 0,
+    envMapIntensity: 10,
+});
+const ghostMaterial = new three__WEBPACK_IMPORTED_MODULE_0__.MeshPhysicalMaterial({
+    color: 0xffffff,
+    opacity: 1,
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    blending: three__WEBPACK_IMPORTED_MODULE_0__.NormalBlending,
+    side: three__WEBPACK_IMPORTED_MODULE_0__.DoubleSide,
+    roughness: 0.75,
+    metalness: 0.2,
+    transmission: 0.5,
+});
+const floorMaterial = new three__WEBPACK_IMPORTED_MODULE_0__.MeshStandardMaterial({
+    color: 0xffffff,
+    opacity: 0.8,
+    transparent: true,
+    roughness: 0.5,
+    metalness: 0.1,
+});
+const pacmanMaterials = {
+    blue: new three__WEBPACK_IMPORTED_MODULE_0__.MeshBasicMaterial({
+        color: 0x1469d3,
+        transparent: true,
+        opacity: 1,
+    }),
+    white: new three__WEBPACK_IMPORTED_MODULE_0__.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 1,
+    }),
+    default: new three__WEBPACK_IMPORTED_MODULE_0__.MeshBasicMaterial({
+        color: 0x1469d3,
+        transparent: true,
+        opacity: 1,
+    }),
+};
+const materialMap = {
+    CAM_Pacman_Backframe: pacmanMaterials.blue,
+    "CAM-Pacman_Bitcoin_1": pacmanMaterials.white,
+    "CAM-Pacman_Bitcoin_2": pacmanMaterials.white,
+    "CAM-Pacman_Bottom": pacmanMaterials.blue,
+    "CAM-Pacman_Top": pacmanMaterials.blue,
+    "CAM-Pacman_Eye": pacmanMaterials.white,
+    CAM_Pacman_Logo_1: pacmanMaterials.white,
+    CAM_Pacman_Logo_2: pacmanMaterials.white,
+    "CAM-Pacman_Shell_Boolean": pacmanMaterials.blue,
+    "CAM-Pacman_Shell": pacmanMaterials.blue,
+    "CAM-Pacman_Bottom_electronic": pacmanMaterials.white,
+    "CAM-Pacman_Top_electronic": pacmanMaterials.white,
+    "CAM-Pacman_Bottom_Text": pacmanMaterials.white,
+    "CAM-Pacman_Top_Text": pacmanMaterials.white,
+    default: pacmanMaterials.blue,
+};
+const ghostCoverMaterials = Array(5).fill(ghostMaterial);
+
+
+/***/ }),
+
+/***/ "./src/objects.ts":
+/*!************************!*\
+  !*** ./src/objects.ts ***!
+  \************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   clock: () => (/* reexport safe */ _scene__WEBPACK_IMPORTED_MODULE_2__.clock),
+/* harmony export */   ghosts: () => (/* binding */ ghosts),
+/* harmony export */   loadModel: () => (/* binding */ loadModel),
+/* harmony export */   pacman: () => (/* binding */ pacman),
+/* harmony export */   pacmanMixer: () => (/* binding */ pacmanMixer)
+/* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "three");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(three__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _config__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./config */ "./src/config.ts");
+/* harmony import */ var _scene__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./scene */ "./src/scene.ts");
+/* harmony import */ var _materials__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./materials */ "./src/materials.ts");
+
+
+
+
+
+const loader = new three__WEBPACK_IMPORTED_MODULE_0__.GLTFLoader();
+let pacmanMixer;
+const pacman = new three__WEBPACK_IMPORTED_MODULE_0__.Group();
+_scene__WEBPACK_IMPORTED_MODULE_2__.scene.add(pacman);
+const ghosts = {
+    pacman: pacman,
+    ghost1: new three__WEBPACK_IMPORTED_MODULE_0__.Mesh(new three__WEBPACK_IMPORTED_MODULE_0__.BufferGeometry(), _materials__WEBPACK_IMPORTED_MODULE_3__.ghostMaterial),
+    ghost2: new three__WEBPACK_IMPORTED_MODULE_0__.Mesh(new three__WEBPACK_IMPORTED_MODULE_0__.BufferGeometry(), _materials__WEBPACK_IMPORTED_MODULE_3__.ghostMaterial),
+    ghost3: new three__WEBPACK_IMPORTED_MODULE_0__.Mesh(new three__WEBPACK_IMPORTED_MODULE_0__.BufferGeometry(), _materials__WEBPACK_IMPORTED_MODULE_3__.ghostMaterial),
+    ghost4: new three__WEBPACK_IMPORTED_MODULE_0__.Mesh(new three__WEBPACK_IMPORTED_MODULE_0__.BufferGeometry(), _materials__WEBPACK_IMPORTED_MODULE_3__.ghostMaterial),
+    ghost5: new three__WEBPACK_IMPORTED_MODULE_0__.Mesh(new three__WEBPACK_IMPORTED_MODULE_0__.BufferGeometry(), _materials__WEBPACK_IMPORTED_MODULE_3__.ghostMaterial),
+};
+const ghostContainers = {
+    Ghost_EUR: ghosts.ghost1,
+    Ghost_CHF: ghosts.ghost2,
+    Ghost_YEN: ghosts.ghost3,
+    Ghost_USD: ghosts.ghost4,
+    Ghost_GBP: ghosts.ghost5,
+};
+Object.values(ghosts).forEach((ghost) => _scene__WEBPACK_IMPORTED_MODULE_2__.scene.add(ghost));
+async function loadModel() {
+    return new Promise((resolve, reject) => {
+        loader.load(_config__WEBPACK_IMPORTED_MODULE_1__.ASSETS.mazeModel, function (gltf) {
+            const model = gltf.scene;
+            model.traverse((child) => {
+                if (child.name === "CAM-Pacman") {
+                    const children = [];
+                    child.traverse((subChild) => {
+                        if (subChild.isMesh &&
+                            subChild.name !== "CAM-Pacman_Shell" &&
+                            subChild.name !== "CAM-Pacman_Shell_Boolean") {
+                            const material = _materials__WEBPACK_IMPORTED_MODULE_3__.materialMap[subChild.name] ||
+                                _materials__WEBPACK_IMPORTED_MODULE_3__.materialMap.default;
+                            subChild.material = material;
+                            children.push(subChild);
+                        }
+                        else if (subChild.name === "CAM-Pacman_Shell" ||
+                            subChild.name === "CAM-Pacman_Shell_Boolean") {
+                            subChild.visible = false;
+                        }
+                    });
+                    children.forEach((item) => ghosts.pacman.add(item));
+                    ghosts.pacman.scale.set(0.05, 0.05, 0.05);
+                    ghosts.pacman.rotation.set(Math.PI / 2, Math.PI / 2, Math.PI / 4);
+                    pacmanMixer = new three__WEBPACK_IMPORTED_MODULE_0__.AnimationMixer(ghosts.pacman);
+                    const pacmanActions = {};
+                    gltf.animations.forEach((clip) => {
+                        const action = pacmanMixer.clipAction(clip);
+                        pacmanActions[clip.name] = action;
+                        action.setEffectiveWeight(1);
+                        action.play();
+                    });
+                }
+                else if (child.name &&
+                    ghostContainers[child.name]) {
+                    const ghostContainer = ghostContainers[child.name];
+                    const ghostGroup = new three__WEBPACK_IMPORTED_MODULE_0__.Group();
+                    child.rotation.z = Math.PI;
+                    child.rotation.x = Math.PI / 2;
+                    child.scale.set(0.75, 0.75, 0.75);
+                    const children = [];
+                    child.traverse((subChild) => {
+                        if (subChild.isMesh) {
+                            if (subChild.name && subChild.name.startsWith("Ghost_Mesh")) {
+                                subChild.material = _materials__WEBPACK_IMPORTED_MODULE_3__.ghostMaterial;
+                            }
+                            else if (subChild.name &&
+                                ["EUR", "CHF", "YEN", "USD", "GBP"].includes(subChild.name)) {
+                                subChild.visible = false;
+                            }
+                            children.push(subChild);
+                        }
+                    });
+                    children.forEach((item) => {
+                        if (item.name &&
+                            (item.name.includes("EUR") ||
+                                item.name.startsWith("Ghost_Mesh"))) {
+                            item.rotation.z = Math.PI;
+                            item.rotation.x = Math.PI / 2;
+                        }
+                        else {
+                            item.rotation.set(0, 0, 0);
+                        }
+                        ghostGroup.add(item);
+                    });
+                    ghostContainer.add(ghostGroup);
+                }
+                if (child.isMesh) {
+                    if (child.name === "CAM-Arena_LowRes_Top") {
+                        child.material = _materials__WEBPACK_IMPORTED_MODULE_3__.topMaterial;
+                        child.castShadow = true;
+                    }
+                    else if (child.name === "CAM-Arena_LowRes_Bottom") {
+                        child.material = _materials__WEBPACK_IMPORTED_MODULE_3__.mazeMaterial;
+                        child.castShadow = true;
+                    }
+                    else if (child.name === "CAM-Floor") {
+                        const clonedChild = child.clone();
+                        child.position.y = -0.1;
+                        child.position.x = 0;
+                        child.position.z = 0;
+                        child.material = new three__WEBPACK_IMPORTED_MODULE_0__.MeshBasicMaterial({
+                            color: 0xffffff,
+                            opacity: 1,
+                            transparent: false,
+                            depthWrite: true,
+                            depthTest: true,
+                            side: three__WEBPACK_IMPORTED_MODULE_0__.FrontSide,
+                        });
+                        child.receiveShadow = false;
+                        child.castShadow = true;
+                        child.scale.set(0.5, 0.5, 0.5);
+                        clonedChild.material = _materials__WEBPACK_IMPORTED_MODULE_3__.floorMaterial;
+                        clonedChild.position.y = -0.5;
+                        clonedChild.receiveShadow = true;
+                        _scene__WEBPACK_IMPORTED_MODULE_2__.scene.add(clonedChild);
+                    }
+                }
+            });
+            model.traverse(function (node) {
+                if (node.isMesh) {
+                    node.castShadow = true;
+                    node.receiveShadow = true;
+                }
+            });
+            _scene__WEBPACK_IMPORTED_MODULE_2__.scene.add(model);
+            model.position.set(0.5, 0.5, 0.5);
+            resolve();
+        }, function (progress) { }, function (error) {
+            reject(error);
+        });
+    });
+}
+
+
+/***/ }),
+
+/***/ "./src/scene.ts":
+/*!**********************!*\
+  !*** ./src/scene.ts ***!
+  \**********************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   clock: () => (/* binding */ clock),
+/* harmony export */   initRenderer: () => (/* binding */ initRenderer),
+/* harmony export */   renderer: () => (/* binding */ renderer),
+/* harmony export */   scene: () => (/* binding */ scene),
+/* harmony export */   setupLighting: () => (/* binding */ setupLighting)
+/* harmony export */ });
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! three */ "three");
+/* harmony import */ var three__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(three__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _config__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./config */ "./src/config.ts");
+
+
+const scene = new three__WEBPACK_IMPORTED_MODULE_0__.Scene();
+const renderer = new three__WEBPACK_IMPORTED_MODULE_0__.WebGLRenderer({
+    antialias: true,
+    alpha: true,
+    powerPreference: "high-performance",
+    precision: "highp",
+});
+const clock = new three__WEBPACK_IMPORTED_MODULE_0__.Clock();
+function enhanceAntiAliasing() {
+    if (_config__WEBPACK_IMPORTED_MODULE_1__.isMobile) {
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    }
+    else {
+        renderer.setPixelRatio(window.devicePixelRatio);
+    }
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = three__WEBPACK_IMPORTED_MODULE_0__.PCFSoftShadowMap;
+}
+function setPixelRatio() {
+    const pixelRatio = Math.min(window.devicePixelRatio, _config__WEBPACK_IMPORTED_MODULE_1__.isMobile ? 2 : 3);
+    renderer.setPixelRatio(pixelRatio);
+    if (_config__WEBPACK_IMPORTED_MODULE_1__.DOM_ELEMENTS.mazeContainer) {
+        renderer.setSize(_config__WEBPACK_IMPORTED_MODULE_1__.DOM_ELEMENTS.mazeContainer.clientWidth, _config__WEBPACK_IMPORTED_MODULE_1__.DOM_ELEMENTS.mazeContainer.clientHeight);
+    }
+    else {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+}
+function initRenderer() {
+    enhanceAntiAliasing();
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = three__WEBPACK_IMPORTED_MODULE_0__.PCFSoftShadowMap;
+    if (_config__WEBPACK_IMPORTED_MODULE_1__.DOM_ELEMENTS.mazeContainer) {
+        console.log("Found maze container, using it for renderer");
+        renderer.setSize(_config__WEBPACK_IMPORTED_MODULE_1__.DOM_ELEMENTS.mazeContainer.clientWidth, _config__WEBPACK_IMPORTED_MODULE_1__.DOM_ELEMENTS.mazeContainer.clientHeight);
+        _config__WEBPACK_IMPORTED_MODULE_1__.DOM_ELEMENTS.mazeContainer.appendChild(renderer.domElement);
+    }
+    else {
+        console.log("Maze container not found, using body for renderer");
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+    }
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", setPixelRatio);
+    }
+    else {
+        setPixelRatio();
+    }
+    window.addEventListener("resize", setPixelRatio);
+}
+function setupLighting() {
+    const ambientLight = new three__WEBPACK_IMPORTED_MODULE_0__.AmbientLight(0xffffff);
+    scene.add(ambientLight);
+    const directionalLight = new three__WEBPACK_IMPORTED_MODULE_0__.DirectionalLight(0xffffff, 0.8);
+    scene.add(directionalLight);
+    directionalLight.position.set(-5, 15, 10);
+    directionalLight.shadow.mapSize.width = 4096;
+    directionalLight.shadow.mapSize.height = 4096;
+    directionalLight.shadow.camera.left = -20;
+    directionalLight.shadow.camera.right = 20;
+    directionalLight.shadow.camera.top = 20;
+    directionalLight.shadow.camera.bottom = -20;
+    directionalLight.shadow.camera.near = 0.1;
+    directionalLight.shadow.camera.far = 50;
+    directionalLight.shadow.bias = -0.001;
+    directionalLight.shadow.radius = 3;
+    directionalLight.castShadow = true;
+}
+
+
+/***/ }),
+
+/***/ "three":
+/*!************************!*\
+  !*** external "THREE" ***!
+  \************************/
+/***/ ((module) => {
+
+module.exports = THREE;
+
+/***/ })
+
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/compat get default export */
+/******/ 	(() => {
+/******/ 		// getDefaultExport function for compatibility with non-harmony modules
+/******/ 		__webpack_require__.n = (module) => {
+/******/ 			var getter = module && module.__esModule ?
+/******/ 				() => (module['default']) :
+/******/ 				() => (module);
+/******/ 			__webpack_require__.d(getter, { a: getter });
+/******/ 			return getter;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
+// This entry needs to be wrapped in an IIFE because it needs to be isolated against other modules in the chunk.
+(() => {
+/*!*********************!*\
+  !*** ./src/main.ts ***!
+  \*********************/
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _objects__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./objects */ "./src/objects.ts");
+
+async function init() {
+    try {
+        await (0,_objects__WEBPACK_IMPORTED_MODULE_0__.loadModel)();
+    }
+    catch (error) {
+        console.error("Initialization error:", error);
+    }
+}
+init();
+
+})();
+
+/******/ })()
+;
 //# sourceMappingURL=script.js.map
