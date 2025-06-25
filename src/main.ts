@@ -7,7 +7,6 @@ async function init() {
   try {
     initRenderer();
     setupLighting();
-    //setupCameraResize();
 
     await loadModel();
 
