@@ -519,6 +519,11 @@ export const ghost2HomePathPoints: PathPoint[] = [
     type: "curve",
     curveType: "lowerArc",
   },
+  {
+    pos: new THREE.Vector3(-0.04625, 0.55, 0.904),
+    type: "curve",
+    curveType: "upperArc",
+  },
 ];
 
 export const ghost3HomePathPoints: PathPoint[] = [
