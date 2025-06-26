@@ -115,7 +115,12 @@ export function updateHomeLoop() {
         const localT = localTime / seg.duration;
         t = seg.startT + (seg.endT - seg.startT) * localT;
       }
+      t = Math.max(0, Math.min(1, t));
       const position = path.getPointAt(t);
+      if (!position) {
+        console.warn("getPointAt returned null for t:", t, "on path", path);
+        return;
+      }
       ghost.position.copy(position);
       const tangent = path.getTangentAt(t).normalize();
       ghost.lookAt(position.clone().add(tangent));
