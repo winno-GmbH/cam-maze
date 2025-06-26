@@ -11,7 +11,7 @@ const pathMapping = {
   ghost5: "ghost5Home",
 } as const;
 
-const LOOP_DURATION = 10; // seconds for a full loop
+const LOOP_DURATION = 100; // seconds for a full loop
 const CURVE_TIME_FACTOR = 1.25; // Curves take 1.5x as long as straights
 const LOOKUP_DIVISIONS = 100;
 const ROTATION_SMOOTH_FACTOR = 0.08; // Lower = smoother rotation
