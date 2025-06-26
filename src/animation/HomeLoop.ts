@@ -11,11 +11,14 @@ const pathMapping = {
   ghost5: "ghost5Home",
 } as const;
 
-const LOOP_DURATION = 10; // seconds for a full loop
+const LOOP_DURATION = 30; // seconds for a full loop
 const CURVE_TIME_FACTOR = 1.25; // Curves take 1.5x as long as straights
 const LOOKUP_DIVISIONS = 100;
+const ROTATION_SMOOTH_FACTOR = 0.08; // Lower = smoother rotation
+const MAX_ROTATION_CHANGE = Math.PI / 3; // Maximum rotation change per frame (60 degrees)
 
-// Store previous positions to calculate velocity
+// Store current rotation and previous position for each object
+const currentRotations: Record<string, number> = {};
 const previousPositions: Record<string, THREE.Vector3> = {};
 
 type Segment = {
@@ -82,9 +85,9 @@ export function initHomeLoop() {
 export function updateHomeLoop() {
   const globalTime = (performance.now() / 1000) % LOOP_DURATION;
 
-  // Reset rotation state at the beginning of each loop (when globalTime is very small)
+  // Reset position history at the start of each loop
   if (globalTime < 0.1) {
-    Object.keys(ghosts).forEach((key) => {
+    Object.keys(previousPositions).forEach((key) => {
       delete previousPositions[key];
     });
   }
@@ -123,7 +126,7 @@ export function updateHomeLoop() {
       return;
     }
 
-    // Calculate forward direction from velocity (current position - previous position)
+    // Calculate velocity-based direction
     let forwardDirection = new THREE.Vector3(0, 0, 1); // Default forward
     if (previousPositions[key]) {
       forwardDirection = position
@@ -138,15 +141,42 @@ export function updateHomeLoop() {
     // Update position
     ghost.position.copy(position);
 
-    // Calculate rotation from forward direction
+    // Calculate target rotation from velocity direction
     const targetRotation = Math.atan2(forwardDirection.x, forwardDirection.z);
 
-    // Apply rotation directly (no smoothing, no accumulation)
+    // Initialize current rotation if not set
+    if (currentRotations[key] === undefined) {
+      currentRotations[key] = targetRotation;
+    }
+
+    // Smoothly interpolate to target rotation
+    const currentRotation = currentRotations[key];
+    let rotationDiff = targetRotation - currentRotation;
+
+    // Handle rotation wrapping (shortest path)
+    if (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;
+    else if (rotationDiff < -Math.PI) rotationDiff += 2 * Math.PI;
+
+    // Clamp rotation change to prevent extreme spins
+    rotationDiff = Math.max(
+      -MAX_ROTATION_CHANGE,
+      Math.min(MAX_ROTATION_CHANGE, rotationDiff)
+    );
+
+    // Apply smooth interpolation
+    currentRotations[key] =
+      currentRotation + rotationDiff * ROTATION_SMOOTH_FACTOR;
+
+    // Apply rotation to object
     if (key === "pacman") {
-      ghost.rotation.set(Math.PI / 2, Math.PI, targetRotation + Math.PI / 2);
+      ghost.rotation.set(
+        Math.PI / 2,
+        Math.PI,
+        currentRotations[key] + Math.PI / 2
+      );
     } else {
       // For ghosts, use a simpler rotation setup
-      ghost.rotation.set(0, targetRotation, 0);
+      ghost.rotation.set(0, currentRotations[key], 0);
     }
   });
   const delta = clock.getDelta();
