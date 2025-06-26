@@ -11,7 +11,7 @@ const pathMapping = {
   ghost5: "ghost5Home",
 } as const;
 
-const LOOP_DURATION = 25; // seconds for a full loop
+const LOOP_DURATION = 40; // seconds for a full loop
 const CURVE_TIME_FACTOR = 1.5; // Curves take 1.5x as long as straights
 const LOOKUP_DIVISIONS = 100;
 let previousZRotation: number | undefined = undefined;
