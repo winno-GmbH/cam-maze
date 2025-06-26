@@ -175,16 +175,19 @@ function createSmoothedPath(pathKey: string): THREE.CurvePath<THREE.Vector3> {
         nextPoint.type === "curve" &&
         isOpposingCurvePair(current.curveType, nextPoint.curveType)
       ) {
-        // Create a smoother curve that combines both opposing curves
-        const smoothedCurve = createSmoothedOpposingCurves(
-          current,
+        // For opposing curves, create slightly smoother control points
+        // but maintain the original path structure
+        const smoothedCurve1 = createSlightlySmoothedCurve(current, next, true);
+        const smoothedCurve2 = createSlightlySmoothedCurve(
           next,
-          nextPoint
+          nextPoint,
+          false
         );
-        smoothedPath.add(smoothedCurve);
-        i++; // Skip the next point since we've combined it
+        smoothedPath.add(smoothedCurve1);
+        smoothedPath.add(smoothedCurve2);
+        i++; // Skip the next point since we've processed it
       } else {
-        // Normal curve
+        // Normal curve - use original control points
         let midPoint: THREE.Vector3;
         if (current.curveType === "upperArc") {
           midPoint = new THREE.Vector3(
@@ -224,28 +227,53 @@ function createSmoothedPath(pathKey: string): THREE.CurvePath<THREE.Vector3> {
   return smoothedPath;
 }
 
-function createSmoothedOpposingCurves(
-  first: any,
-  middle: any,
-  last: any
+function createSlightlySmoothedCurve(
+  current: any,
+  next: any,
+  isFirstCurve: boolean
 ): THREE.Curve<THREE.Vector3> {
-  // Create a single smooth curve that goes from first to last, avoiding the sharp turn at middle
-  // This will naturally reduce the rotation intensity
+  // Create a curve with slightly adjusted control points to reduce rotation intensity
+  // but maintain the original path structure
 
-  // Calculate a smoother control point that reduces the sharp turn
-  const start = first.pos;
-  const end = last.pos;
+  let originalMidPoint: THREE.Vector3;
+  if (current.curveType === "upperArc") {
+    originalMidPoint = new THREE.Vector3(
+      current.pos.x,
+      current.pos.y,
+      next.pos.z
+    );
+  } else if (current.curveType === "lowerArc") {
+    originalMidPoint = new THREE.Vector3(
+      next.pos.x,
+      current.pos.y,
+      current.pos.z
+    );
+  } else if (current.curveType === "forwardDownArc") {
+    originalMidPoint = new THREE.Vector3(
+      current.pos.x,
+      next.pos.y,
+      current.pos.z
+    );
+  } else {
+    originalMidPoint = new THREE.Vector3(
+      current.pos.x,
+      current.pos.y,
+      next.pos.z
+    );
+  }
 
-  // Create a control point that's more centered, reducing the sharp turn
-  const originalMid = middle.pos;
-  const direction = end.clone().sub(start).normalize();
-  const distance = start.distanceTo(end);
+  // Only make a very small adjustment to reduce rotation intensity
+  const smoothingFactor = 0.1; // Only 10% adjustment
+  const centerPoint = current.pos.clone().add(next.pos).multiplyScalar(0.5);
+  const smoothedMidPoint = originalMidPoint
+    .clone()
+    .lerp(centerPoint, smoothingFactor);
 
-  // Move the control point closer to the center line to reduce rotation
-  const centerPoint = start.clone().add(end).multiplyScalar(0.5);
-  const smoothedControl = centerPoint.clone().lerp(originalMid, 0.3); // 30% toward original, 70% toward center
-
-  return new THREE.QuadraticBezierCurve3(start, smoothedControl, end);
+  return new THREE.QuadraticBezierCurve3(
+    current.pos,
+    smoothedMidPoint,
+    next.pos
+  );
 }
 
 function getPathPoints(pathKey: string): any[] {
