@@ -22,8 +22,8 @@ const pathMapping = {
   ghost5: "ghost5Home",
 } as const;
 
-const LOOP_DURATION = 25; // seconds for a full loop for all objects
-const curveWeight = 0.5; // Curves take twice as long as straights
+const LOOP_DURATION = 25;
+const curveWeight = 0.5;
 const straightWeight = 1.0;
 
 export function initHomeLoop() {
