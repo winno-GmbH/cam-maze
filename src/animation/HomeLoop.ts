@@ -16,44 +16,38 @@ const ROTATION_SMOOTH_FACTOR = 0.1;
 
 const currentRotations: Record<string, number> = {};
 
-// Animation state management
+// Simple pause mechanism
 let isHomeLoopActive = true;
-let homeLoopStartTime = 0;
-let savedAnimationTime = 0; // Save the current t value when stopping
+let isPaused = false;
+let pauseStartTime = 0;
+let totalPausedTime = 0;
 
 export function startHomeLoop() {
   isHomeLoopActive = true;
-  // Don't reset homeLoopStartTime if we have a saved time
-  if (savedAnimationTime === 0) {
-    homeLoopStartTime = performance.now() / 1000;
+  if (isPaused) {
+    // Resume from pause
+    const currentTime = performance.now() / 1000;
+    totalPausedTime += currentTime - pauseStartTime;
+    isPaused = false;
   }
 }
 
 export function stopHomeLoop() {
   isHomeLoopActive = false;
-  // Save the current animation time
-  const currentTime = (performance.now() / 1000) % LOOP_DURATION;
-  savedAnimationTime = currentTime / LOOP_DURATION; // Save as 0-1 value
+  isPaused = true;
+  pauseStartTime = performance.now() / 1000;
 }
 
 export function updateHomeLoop() {
   if (!isHomeLoopActive) return;
 
-  let globalTime: number;
-
-  if (savedAnimationTime > 0) {
-    // Resume from saved position
-    const elapsedSinceSave = performance.now() / 1000 - homeLoopStartTime;
-    globalTime =
-      (savedAnimationTime * LOOP_DURATION + elapsedSinceSave) % LOOP_DURATION;
-  } else {
-    // Normal animation from start
-    globalTime = (performance.now() / 1000) % LOOP_DURATION;
-  }
-
+  // Calculate time with pause compensation
+  const currentTime = performance.now() / 1000;
+  const adjustedTime = currentTime - totalPausedTime;
+  const globalTime = adjustedTime % LOOP_DURATION;
   const t = globalTime / LOOP_DURATION;
 
-  if (t < 0.01 && savedAnimationTime === 0) {
+  if (t < 0.01) {
     Object.keys(currentRotations).forEach((key) => {
       delete currentRotations[key];
     });
@@ -104,10 +98,11 @@ export function updateHomeLoop() {
   }
 }
 
-// Function to reset animation to beginning (for new loops)
+// Function to reset animation to beginning
 export function resetHomeLoop() {
-  savedAnimationTime = 0;
-  homeLoopStartTime = performance.now() / 1000;
+  totalPausedTime = 0;
+  pauseStartTime = 0;
+  isPaused = false;
   Object.keys(currentRotations).forEach((key) => {
     delete currentRotations[key];
   });
