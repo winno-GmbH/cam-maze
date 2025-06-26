@@ -14,6 +14,7 @@ const pathMapping = {
 const LOOP_DURATION = 100; // seconds for a full loop
 const CURVE_TIME_FACTOR = 1.25; // Curves take 1.5x as long as straights
 const LOOKUP_DIVISIONS = 100;
+const OPPOSING_CURVE_ROTATION_FACTOR = 0.75; // Reduce rotation by 25% for opposing curves
 
 type Segment = {
   type: "curve" | "straight";
@@ -28,13 +29,22 @@ type Segment = {
 
 const segmentTables: Record<string, Segment[]> = {};
 
+// Store segment information for curve analysis
+const segmentInfo: Record<
+  string,
+  { curveType: string; startT: number; endT: number }[]
+> = {};
+
 export function initHomeLoop() {
   Object.entries(pathMapping).forEach(([key, pathKey]) => {
     const path = (paths as any)[pathKey];
     if (!path) return;
     const segments: Segment[] = [];
+    const curveInfo: { curveType: string; startT: number; endT: number }[] = [];
     let totalTime = 0;
     let t = 0;
+    let curveIndex = 0;
+
     for (let i = 0; i < path.curves.length; i++) {
       const curve = path.curves[i];
       const type = getCurveType(curve);
@@ -53,6 +63,8 @@ export function initHomeLoop() {
       };
       if (type === "curve") {
         seg.tLookup = buildTimeToTLookup(seg.duration, LOOKUP_DIVISIONS);
+        // Store curve type for analysis - we'll need to get this from the path points
+        curveInfo.push({ curveType: "curve", startT: t0, endT: t1 });
       }
       segments.push(seg);
       totalTime += duration;
@@ -73,6 +85,7 @@ export function initHomeLoop() {
       }
     });
     segmentTables[key] = segments;
+    segmentInfo[key] = curveInfo;
   });
 }
 
@@ -123,8 +136,51 @@ export function updateHomeLoop() {
     // Update position
     ghost.position.copy(position);
 
-    // Calculate rotation directly from tangent (no smoothing, no state)
-    const rotation = Math.atan2(tangent.x, tangent.z);
+    // Calculate base rotation from tangent
+    let rotation = Math.atan2(tangent.x, tangent.z);
+
+    // Check if we're in a curve and if there are opposing curves nearby
+    if (seg.type === "curve") {
+      const curveInfo = segmentInfo[key];
+      if (curveInfo) {
+        const currentCurveIdx = curveInfo.findIndex(
+          (curve) => t >= curve.startT && t <= curve.endT
+        );
+
+        if (currentCurveIdx !== -1) {
+          const nextCurve = curveInfo[currentCurveIdx + 1];
+          const prevCurve = curveInfo[currentCurveIdx - 1];
+
+          // Check if next curve opposes current curve (simplified check)
+          const hasOpposingNext =
+            nextCurve && isAdjacentOpposingCurve(currentCurveIdx, curveInfo);
+          const hasOpposingPrev =
+            prevCurve &&
+            isAdjacentOpposingCurve(currentCurveIdx - 1, curveInfo);
+
+          // If we have opposing curves, reduce rotation magnitude
+          if (hasOpposingNext || hasOpposingPrev) {
+            // Calculate how far we are through the current curve
+            const currentCurve = curveInfo[currentCurveIdx];
+            const curveProgress =
+              (t - currentCurve.startT) /
+              (currentCurve.endT - currentCurve.startT);
+
+            // Apply reduced rotation factor
+            const baseRotation = Math.atan2(tangent.x, tangent.z);
+            const reducedRotation =
+              baseRotation * OPPOSING_CURVE_ROTATION_FACTOR;
+
+            // Interpolate between reduced and full rotation based on curve progress
+            // Use full rotation at the start and end, reduced in the middle
+            const interpolationFactor = Math.sin(curveProgress * Math.PI);
+            rotation =
+              reducedRotation +
+              (baseRotation - reducedRotation) * interpolationFactor;
+          }
+        }
+      }
+    }
 
     // Apply rotation directly to object
     if (key === "pacman") {
@@ -144,6 +200,16 @@ function getCurveType(curve: any): "curve" | "straight" {
   if (curve.type && curve.type.includes("Quadratic")) return "curve";
   if (curve instanceof THREE.QuadraticBezierCurve3) return "curve";
   return "straight";
+}
+
+function isAdjacentOpposingCurve(
+  curveIdx: number,
+  curveInfo: { curveType: string; startT: number; endT: number }[]
+): boolean {
+  // For now, we'll use a simplified approach: if we have consecutive curves,
+  // they're likely opposing (upperArc followed by lowerArc or vice versa)
+  // This is a heuristic based on the typical maze pattern
+  return curveIdx >= 0 && curveIdx < curveInfo.length - 1;
 }
 
 // Build a lookup table mapping elapsed time (0..duration) to t (0..1) for a curve segment
