@@ -1,59 +1,57 @@
-import gsap from "gsap";
-import { MotionPathPlugin } from "gsap/MotionPathPlugin";
-gsap.registerPlugin(MotionPathPlugin);
-import { pacman, ghosts } from "../core/objects";
+import { pacman, ghosts, pacmanMixer } from "../core/objects";
 import { paths } from "../paths/paths";
+import { clock } from "../core/scene";
 
-export function startHomeLoop() {
-  // Animate Pacman along its home path
-  gsap.to(pacman.position, {
-    duration: 8,
-    repeat: -1,
-    ease: "power2.inOut",
-    motionPath: {
-      path: curveToPoints(paths.pacmanHome),
-      autoRotate: true,
-      useRadians: true,
-    },
-  });
+let previousZRotation: number | undefined = undefined;
 
-  // Animate each ghost along its own home path
-  const ghostKeys = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
-  const ghostPathKeys = [
-    "ghost1Home",
-    "ghost2Home",
-    "ghost3Home",
-    "ghost4Home",
-    "ghost5Home",
-  ];
+export function updateHomeLoop() {
+  // Use a time-based parameter t for looping
+  const loopDuration = 8; // seconds for a full loop
+  const t = ((Date.now() / 1000) % loopDuration) / loopDuration;
+  const pathMapping = {
+    pacman: "pacmanHome",
+    ghost1: "ghost1Home",
+    ghost2: "ghost2Home",
+    ghost3: "ghost3Home",
+    ghost4: "ghost4Home",
+    ghost5: "ghost5Home",
+  } as const;
 
-  ghostKeys.forEach((key, i) => {
-    const ghost = ghosts[key];
-    const pathKey = ghostPathKeys[i];
+  // Animate Pacman and ghosts
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    const pathKey = pathMapping[key as keyof typeof pathMapping];
     const path = (paths as any)[pathKey];
-    if (ghost && path) {
-      gsap.to(ghost.position, {
-        duration: 10 + i * 2,
-        repeat: -1,
-        ease: "power2.inOut",
-        motionPath: {
-          path: curveToPoints(path),
-          autoRotate: true,
-          useRadians: true,
-        },
-      });
+    if (path) {
+      const position = path.getPointAt(t);
+      ghost.position.copy(position);
+      const tangent = path.getTangentAt(t).normalize();
+      ghost.lookAt(position.clone().add(tangent));
+
+      // Special smoothing for Pacman rotation
+      if (key === "pacman") {
+        const zRotation = Math.atan2(tangent.x, tangent.z);
+        if (previousZRotation === undefined) {
+          previousZRotation = zRotation;
+        }
+        let rotationDiff = zRotation - previousZRotation;
+        if (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;
+        else if (rotationDiff < -Math.PI) rotationDiff += 2 * Math.PI;
+        const smoothFactor = 0.1;
+        const smoothedRotation =
+          previousZRotation + rotationDiff * smoothFactor;
+        previousZRotation = smoothedRotation;
+        ghost.rotation.set(
+          Math.PI / 2,
+          Math.PI,
+          smoothedRotation + Math.PI / 2
+        );
+      }
     }
   });
-}
 
-function curveToPoints(curve: any) {
-  // Convert a Three.js CurvePath to an array of {x, y, z} points for GSAP
-  const divisions = 100;
-  const points = [];
-  for (let i = 0; i <= divisions; i++) {
-    const t = i / divisions;
-    const p = curve.getPointAt(t);
-    points.push({ x: p.x, y: p.y, z: p.z });
+  // Update Pacman animation mixer if present
+  if (pacmanMixer) {
+    const delta = clock.getDelta();
+    pacmanMixer.update(delta);
   }
-  return points;
 }

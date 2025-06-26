@@ -1,7 +1,7 @@
 import { initRenderer, setupLighting, renderer, scene } from "./core/scene";
 import { loadModel } from "./core/objects";
 import { initCamera, camera } from "./core/camera";
-import { startHomeLoop } from "./animation/HomeLoop";
+import { updateHomeLoop } from "./animation/HomeLoop";
 
 async function init() {
   try {
@@ -9,9 +9,6 @@ async function init() {
     await loadModel();
     setupLighting();
     initRenderer();
-
-    // Start the Home Loop animation
-    startHomeLoop();
 
     // Start the main render loop
     startRenderLoop();
@@ -24,6 +21,7 @@ async function init() {
 
 function startRenderLoop(): void {
   const render = () => {
+    updateHomeLoop();
     renderer.render(scene, camera);
     requestAnimationFrame(render);
   };
