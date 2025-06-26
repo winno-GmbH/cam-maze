@@ -14,14 +14,12 @@ const pathMapping = {
 const LOOP_DURATION = 100; // seconds for a full loop
 const CURVE_TIME_FACTOR = 1.25; // Curves take 1.5x as long as straights
 const LOOKUP_DIVISIONS = 100;
-const DOUBLE_CURVE_STRETCH_FACTOR = 1.5; // Stretch double curves by 50%
 
-// Store segment information with curve type detection
-const segmentTables: Record<string, Segment[]> = {};
-const pathCurveTypes: Record<string, string[]> = {};
+// Store smoothed paths
+const smoothedPaths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 
 type Segment = {
-  type: "curve" | "straight" | "double-curve";
+  type: "curve" | "straight";
   startT: number;
   endT: number;
   length: number;
@@ -29,82 +27,45 @@ type Segment = {
   startTime: number;
   endTime: number;
   tLookup?: number[]; // For curves: tLookup[timeIndex] = t
-  curveTypes?: string[]; // For double-curves: array of curve types
 };
+
+const segmentTables: Record<string, Segment[]> = {};
 
 export function initHomeLoop() {
   Object.entries(pathMapping).forEach(([key, pathKey]) => {
-    const path = (paths as any)[pathKey];
-    if (!path) return;
+    const originalPath = (paths as any)[pathKey];
+    if (!originalPath) return;
 
-    // First, analyze the path to detect curve types
-    const curveTypes = analyzePathCurveTypes(pathKey);
-    pathCurveTypes[key] = curveTypes;
+    // Create a smoothed version of the path
+    const smoothedPath = createSmoothedPath(pathKey);
+    smoothedPaths[key] = smoothedPath;
 
     const segments: Segment[] = [];
     let totalTime = 0;
     let t = 0;
-    let curveIndex = 0;
 
-    for (let i = 0; i < path.curves.length; i++) {
-      const curve = path.curves[i];
+    for (let i = 0; i < smoothedPath.curves.length; i++) {
+      const curve = smoothedPath.curves[i];
       const type = getCurveType(curve);
       const t0 = t;
-      const t1 = t0 + curve.getLength() / path.getLength();
+      const t1 = t0 + curve.getLength() / smoothedPath.getLength();
       const length = curve.getLength();
-
-      // Check if this curve is part of a double-curve (opposing curves)
-      let segmentType: "curve" | "straight" | "double-curve" = type;
-      let segmentDuration = (type === "curve" ? CURVE_TIME_FACTOR : 1) * length;
-      let curveTypesForSegment: string[] = [];
-
-      if (type === "curve" && curveTypes[curveIndex]) {
-        const currentCurveType = curveTypes[curveIndex];
-        const nextCurveType = curveTypes[curveIndex + 1];
-
-        // Check if this curve and the next curve are opposing
-        if (isOpposingCurvePair(currentCurveType, nextCurveType)) {
-          // This is a double-curve - combine with next curve
-          segmentType = "double-curve";
-          curveTypesForSegment = [currentCurveType, nextCurveType];
-
-          // Calculate combined length and duration
-          const nextCurve = path.curves[i + 1];
-          if (nextCurve) {
-            const nextLength = nextCurve.getLength();
-            const combinedLength = length + nextLength;
-            segmentDuration =
-              DOUBLE_CURVE_STRETCH_FACTOR * CURVE_TIME_FACTOR * combinedLength;
-
-            // Skip the next curve since we've combined it
-            i++;
-            curveIndex++;
-          }
-        } else {
-          curveTypesForSegment = [currentCurveType];
-        }
-      }
-
+      const duration = (type === "curve" ? CURVE_TIME_FACTOR : 1) * length;
       const seg: Segment = {
-        type: segmentType,
+        type,
         startT: t0,
         endT: t1,
         length,
-        duration: segmentDuration,
+        duration,
         startTime: totalTime,
-        endTime: totalTime + segmentDuration,
-        curveTypes:
-          curveTypesForSegment.length > 0 ? curveTypesForSegment : undefined,
+        endTime: totalTime + duration,
       };
-
-      if (segmentType === "curve" || segmentType === "double-curve") {
+      if (type === "curve") {
         seg.tLookup = buildTimeToTLookup(seg.duration, LOOKUP_DIVISIONS);
       }
-
       segments.push(seg);
-      totalTime += segmentDuration;
+      totalTime += duration;
       t = t1;
-      curveIndex++;
     }
 
     // Normalize durations so totalTime = LOOP_DURATION
@@ -117,7 +78,7 @@ export function initHomeLoop() {
       seg.startTime = acc;
       seg.endTime = acc + seg.duration;
       acc = seg.endTime;
-      if (seg.type === "curve" || seg.type === "double-curve") {
+      if (seg.type === "curve") {
         seg.tLookup = buildTimeToTLookup(seg.duration, LOOKUP_DIVISIONS);
       }
     });
@@ -130,7 +91,7 @@ export function updateHomeLoop() {
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const pathKey = pathMapping[key as keyof typeof pathMapping];
-    const path = (paths as any)[pathKey];
+    const path = smoothedPaths[key];
     const segments = segmentTables[key];
     if (!path || !segments) return;
     let segIdx = segments.findIndex((seg) => globalTime < seg.endTime);
@@ -143,11 +104,6 @@ export function updateHomeLoop() {
     let t;
     if (seg.type === "curve" && seg.tLookup) {
       // Use the lookup table to get t for this localTime
-      let idx = Math.floor((localTime / seg.duration) * LOOKUP_DIVISIONS);
-      idx = Math.max(0, Math.min(idx, LOOKUP_DIVISIONS));
-      t = seg.startT + (seg.endT - seg.startT) * seg.tLookup[idx];
-    } else if (seg.type === "double-curve" && seg.tLookup) {
-      // For double-curves, use a special lookup that reduces rotation intensity
       let idx = Math.floor((localTime / seg.duration) * LOOKUP_DIVISIONS);
       idx = Math.max(0, Math.min(idx, LOOKUP_DIVISIONS));
       t = seg.startT + (seg.endT - seg.startT) * seg.tLookup[idx];
@@ -177,17 +133,8 @@ export function updateHomeLoop() {
     // Update position
     ghost.position.copy(position);
 
-    // Calculate rotation from tangent
-    let rotation = Math.atan2(tangent.x, tangent.z);
-
-    // For double-curves, reduce rotation intensity
-    if (seg.type === "double-curve") {
-      const curveProgress = localTime / seg.duration;
-      // Use a smoother rotation profile that reduces the peak rotation
-      const rotationReduction = 0.6; // Reduce rotation by 40%
-      const smoothFactor = Math.sin(curveProgress * Math.PI);
-      rotation *= 1 - rotationReduction * smoothFactor;
-    }
+    // Calculate rotation directly from tangent (no conflicts!)
+    const rotation = Math.atan2(tangent.x, tangent.z);
 
     // Apply rotation to object
     if (key === "pacman") {
@@ -209,19 +156,96 @@ function getCurveType(curve: any): "curve" | "straight" {
   return "straight";
 }
 
-function analyzePathCurveTypes(pathKey: string): string[] {
-  // Get the path points to analyze curve types
+function createSmoothedPath(pathKey: string): THREE.CurvePath<THREE.Vector3> {
   const pathPoints = getPathPoints(pathKey);
-  const curveTypes: string[] = [];
+  const smoothedPath = new THREE.CurvePath<THREE.Vector3>();
 
   for (let i = 0; i < pathPoints.length - 1; i++) {
     const current = pathPoints[i];
-    if (current.type === "curve" && current.curveType) {
-      curveTypes.push(current.curveType);
+    const next = pathPoints[i + 1];
+
+    if (current.type === "straight") {
+      const line = new THREE.LineCurve3(current.pos, next.pos);
+      smoothedPath.add(line);
+    } else if (current.type === "curve") {
+      // Check if this curve and the next one are opposing
+      const nextPoint = pathPoints[i + 2];
+      if (
+        nextPoint &&
+        nextPoint.type === "curve" &&
+        isOpposingCurvePair(current.curveType, nextPoint.curveType)
+      ) {
+        // Create a smoother curve that combines both opposing curves
+        const smoothedCurve = createSmoothedOpposingCurves(
+          current,
+          next,
+          nextPoint
+        );
+        smoothedPath.add(smoothedCurve);
+        i++; // Skip the next point since we've combined it
+      } else {
+        // Normal curve
+        let midPoint: THREE.Vector3;
+        if (current.curveType === "upperArc") {
+          midPoint = new THREE.Vector3(
+            current.pos.x,
+            current.pos.y,
+            next.pos.z
+          );
+        } else if (current.curveType === "lowerArc") {
+          midPoint = new THREE.Vector3(
+            next.pos.x,
+            current.pos.y,
+            current.pos.z
+          );
+        } else if (current.curveType === "forwardDownArc") {
+          midPoint = new THREE.Vector3(
+            current.pos.x,
+            next.pos.y,
+            current.pos.z
+          );
+        } else {
+          midPoint = new THREE.Vector3(
+            current.pos.x,
+            current.pos.y,
+            next.pos.z
+          );
+        }
+        const curve = new THREE.QuadraticBezierCurve3(
+          current.pos,
+          midPoint,
+          next.pos
+        );
+        smoothedPath.add(curve);
+      }
     }
   }
 
-  return curveTypes;
+  return smoothedPath;
+}
+
+function createSmoothedOpposingCurves(
+  first: any,
+  middle: any,
+  last: any
+): THREE.Curve<THREE.Vector3> {
+  // Create a single smooth curve that goes from first to last, avoiding the sharp turn at middle
+  // This will naturally reduce the rotation intensity
+
+  // Calculate a smoother control point that reduces the sharp turn
+  const start = first.pos;
+  const end = last.pos;
+
+  // Create a control point that's more centered, reducing the sharp turn
+  const originalMid = middle.pos;
+  const direction = end.clone().sub(start).normalize();
+  const distance = start.distanceTo(end);
+
+  // Move the control point closer to the center line to reduce rotation
+  const centerPoint = start.clone().add(end).multiplyScalar(0.5);
+  const smoothedControl = centerPoint.clone().lerp(originalMid, 0.3); // 30% toward original, 70% toward center
+
+  return new THREE.QuadraticBezierCurve3(start, smoothedControl, end);
 }
 
 function getPathPoints(pathKey: string): any[] {
