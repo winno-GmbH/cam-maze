@@ -12,7 +12,7 @@ const pathMapping = {
 } as const;
 
 const LOOP_DURATION = 30;
-const ROTATION_SMOOTH_FACTOR = 0.05;
+const ROTATION_SMOOTH_FACTOR = 0.1;
 
 const currentRotations: Record<string, number> = {};
 
