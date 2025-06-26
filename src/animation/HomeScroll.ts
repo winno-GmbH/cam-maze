@@ -5,7 +5,7 @@ import { MAZE_CENTER } from "../config/config";
 
 const curveHeight = 0.75;
 const ghostOrder = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5", "pacman"];
-const ghostDurations = [0.36, 0.36, 0.36, 0.36, 0.36, 0.36];
+const ghostDurations = [0.25, 0.28, 0.31, 0.34, 0.37, 0.4];
 
 let scrollAnimationCurves: Record<
   string,
@@ -56,12 +56,13 @@ export function updateHomeScrollAnimation(animatedT: number) {
   if (!isScrollActive) return;
   // Remove this restriction for bidirectional support
   lastAnimatedT = animatedT;
-  ghostOrder.forEach((key) => {
+  ghostOrder.forEach((key, i) => {
     const obj = key === "pacman" ? pacman : ghosts[key];
     if (!obj) return;
     const anim = scrollAnimationCurves[key];
     if (!anim) return;
-    let t = animatedT / anim.duration;
+    // Each object has its own progress based on its duration
+    let t = animatedT / ghostDurations[i];
     t = Math.max(0, Math.min(1, t));
     let pos: THREE.Vector3;
     if (animatedT >= lastAnimatedT) {
