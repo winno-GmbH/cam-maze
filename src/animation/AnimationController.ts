@@ -1,4 +1,9 @@
-import { updateHomeLoop, startHomeLoop, stopHomeLoop } from "./HomeLoop";
+import {
+  updateHomeLoop,
+  startHomeLoop,
+  stopHomeLoop,
+  resetHomeLoop,
+} from "./HomeLoop";
 
 export type AnimationState = "home" | "scroll" | "transition";
 
@@ -32,6 +37,11 @@ class AnimationController {
     if (this.currentState === "home") {
       startHomeLoop();
     }
+  }
+
+  public resetToBeginning() {
+    resetHomeLoop();
+    this.startHomeLoop();
   }
 
   public update() {
@@ -77,4 +87,8 @@ export function pauseAnimations() {
 
 export function resumeAnimations() {
   animationController.resumeAnimations();
+}
+
+export function resetHomeLoopToBeginning() {
+  animationController.resetToBeginning();
 }

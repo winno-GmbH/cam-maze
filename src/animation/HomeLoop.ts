@@ -19,23 +19,41 @@ const currentRotations: Record<string, number> = {};
 // Animation state management
 let isHomeLoopActive = true;
 let homeLoopStartTime = 0;
+let savedAnimationTime = 0; // Save the current t value when stopping
 
 export function startHomeLoop() {
   isHomeLoopActive = true;
-  homeLoopStartTime = performance.now() / 1000;
+  // Don't reset homeLoopStartTime if we have a saved time
+  if (savedAnimationTime === 0) {
+    homeLoopStartTime = performance.now() / 1000;
+  }
 }
 
 export function stopHomeLoop() {
   isHomeLoopActive = false;
+  // Save the current animation time
+  const currentTime = (performance.now() / 1000) % LOOP_DURATION;
+  savedAnimationTime = currentTime / LOOP_DURATION; // Save as 0-1 value
 }
 
 export function updateHomeLoop() {
   if (!isHomeLoopActive) return;
 
-  const globalTime = (performance.now() / 1000) % LOOP_DURATION;
+  let globalTime: number;
+
+  if (savedAnimationTime > 0) {
+    // Resume from saved position
+    const elapsedSinceSave = performance.now() / 1000 - homeLoopStartTime;
+    globalTime =
+      (savedAnimationTime * LOOP_DURATION + elapsedSinceSave) % LOOP_DURATION;
+  } else {
+    // Normal animation from start
+    globalTime = (performance.now() / 1000) % LOOP_DURATION;
+  }
+
   const t = globalTime / LOOP_DURATION;
 
-  if (t < 0.01) {
+  if (t < 0.01 && savedAnimationTime === 0) {
     Object.keys(currentRotations).forEach((key) => {
       delete currentRotations[key];
     });
@@ -84,4 +102,13 @@ export function updateHomeLoop() {
   if (pacmanMixer) {
     pacmanMixer.update(delta);
   }
+}
+
+// Function to reset animation to beginning (for new loops)
+export function resetHomeLoop() {
+  savedAnimationTime = 0;
+  homeLoopStartTime = performance.now() / 1000;
+  Object.keys(currentRotations).forEach((key) => {
+    delete currentRotations[key];
+  });
 }
