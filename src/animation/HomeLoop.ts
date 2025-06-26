@@ -2,15 +2,8 @@ import { pacman, ghosts, pacmanMixer } from "../core/objects";
 import { paths } from "../paths/paths";
 import { clock } from "../core/scene";
 
-const arcLengthTables: Record<
-  string,
-  { arcLengths: number[]; totalLength: number }
-> = {};
-const weightedArcLengthTables: Record<
-  string,
-  { weightedArcLengths: number[]; totalWeightedLength: number }
-> = {};
-const progressByKey: Record<string, number> = {};
+const segmentTables: Record<string, Segment[]> = {};
+const totalDurations: Record<string, number> = {};
 let previousZRotation: number | undefined = undefined;
 
 const pathMapping = {
@@ -22,62 +15,88 @@ const pathMapping = {
   ghost5: "ghost5Home",
 } as const;
 
-const LOOP_DURATION = 40;
-const curveWeight = 0.5;
-const straightWeight = 1.0;
+const LOOP_DURATION = 25; // seconds for a full loop for all objects
+const CURVE_TIME_FACTOR = 1.5; // Curves take 1.5x as long as straights
+const BASE_SPEED = 1; // Arbitrary, only relative durations matter
+const SEGMENT_DIVISIONS = 100;
+
+type Segment = {
+  type: "curve" | "straight";
+  startT: number;
+  endT: number;
+  length: number;
+  duration: number;
+  startTime: number;
+  endTime: number;
+};
 
 export function initHomeLoop() {
   Object.entries(pathMapping).forEach(([key, pathKey]) => {
     const path = (paths as any)[pathKey];
     if (path) {
-      const divisions = 500;
-      const arcLengths: number[] = [0];
-      const weightedArcLengths: number[] = [0];
-      let prev = path.getPointAt(0);
-      let totalLength = 0;
-      let totalWeightedLength = 0;
-      for (let i = 1; i <= divisions; i++) {
-        const t = i / divisions;
-        const pt = path.getPointAt(t);
-        const segmentLength = pt.distanceTo(prev);
-        totalLength += segmentLength;
-        arcLengths.push(totalLength);
-        // Determine if this segment is a curve or straight
-        const segment = getSegmentType(path, t, divisions);
-        const weight = segment === "curve" ? curveWeight : straightWeight;
-        totalWeightedLength += segmentLength * weight;
-        weightedArcLengths.push(totalWeightedLength);
-        prev = pt;
+      const segments: Segment[] = [];
+      let totalTime = 0;
+      let t = 0;
+      for (let i = 0; i < path.curves.length; i++) {
+        const curve = path.curves[i];
+        const type = getCurveType(curve);
+        const t0 = t;
+        const t1 = t0 + curve.getLength() / path.getLength();
+        const length = curve.getLength();
+        const duration =
+          (type === "curve" ? CURVE_TIME_FACTOR : 1) * (length / BASE_SPEED);
+        segments.push({
+          type,
+          startT: t0,
+          endT: t1,
+          length,
+          duration,
+          startTime: totalTime,
+          endTime: totalTime + duration,
+        });
+        totalTime += duration;
+        t = t1;
       }
-      arcLengthTables[key] = { arcLengths, totalLength };
-      weightedArcLengthTables[key] = {
-        weightedArcLengths,
-        totalWeightedLength,
-      };
-      progressByKey[key] = 0;
+      // Normalize all durations so totalTime = LOOP_DURATION
+      const scale = LOOP_DURATION / totalTime;
+      segments.forEach((seg) => {
+        seg.duration *= scale;
+      });
+      // Recompute startTime/endTime with new durations
+      let acc = 0;
+      segments.forEach((seg) => {
+        seg.startTime = acc;
+        seg.endTime = acc + seg.duration;
+        acc = seg.endTime;
+      });
+      segmentTables[key] = segments;
+      totalDurations[key] = LOOP_DURATION;
     }
   });
 }
 
 export function updateHomeLoop() {
-  const delta = clock.getDelta();
+  const globalTime = (performance.now() / 1000) % LOOP_DURATION;
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const pathKey = pathMapping[key as keyof typeof pathMapping];
     const path = (paths as any)[pathKey];
-    const arcTable = arcLengthTables[key];
-    const weightedTable = weightedArcLengthTables[key];
-    if (path && arcTable && weightedTable) {
-      // Advance progress by (totalWeightedLength / LOOP_DURATION) * delta, wrap around
-      const weightedSpeed = weightedTable.totalWeightedLength / LOOP_DURATION;
-      progressByKey[key] += weightedSpeed * delta;
-      if (progressByKey[key] > weightedTable.totalWeightedLength)
-        progressByKey[key] -= weightedTable.totalWeightedLength;
-      // Find t for current weighted arc length
-      const t = weightedArcLengthToT(
-        weightedTable.weightedArcLengths,
-        weightedTable.totalWeightedLength,
-        progressByKey[key]
-      );
+    const segments = segmentTables[key];
+    if (path && segments) {
+      // Find which segment we're in
+      let segIdx = segments.findIndex((seg) => globalTime < seg.endTime);
+      if (segIdx === -1) segIdx = segments.length - 1;
+      const seg = segments[segIdx];
+      const localTime = globalTime - seg.startTime;
+      const localT = localTime / seg.duration;
+      // For curves, use a cosine ramp for t
+      let t;
+      if (seg.type === "curve") {
+        // Ease: slowest at middle, fastest at ends
+        const eased = 0.5 - 0.5 * Math.cos(Math.PI * localT);
+        t = seg.startT + (seg.endT - seg.startT) * eased;
+      } else {
+        t = seg.startT + (seg.endT - seg.startT) * localT;
+      }
       const position = path.getPointAt(t);
       ghost.position.copy(position);
       const tangent = path.getTangentAt(t).normalize();
@@ -102,46 +121,14 @@ export function updateHomeLoop() {
       }
     }
   });
+  const delta = clock.getDelta();
   if (pacmanMixer) {
     pacmanMixer.update(delta);
   }
 }
 
-function getSegmentType(
-  path: any,
-  t: number,
-  divisions: number
-): "curve" | "straight" {
-  // Try to detect if the segment at t is a curve or straight by checking the type of the segment in the CurvePath
-  // This is a heuristic: we check which child curve the t falls into
-  if (!path.curves || !Array.isArray(path.curves)) return "straight";
-  const curveCount = path.curves.length;
-  const curveIndex = Math.floor(t * curveCount);
-  const curve = path.curves[curveIndex];
-  if (!curve) return "straight";
-  // QuadraticBezierCurve3 is a curve, LineCurve3 is a straight
+function getCurveType(curve: any): "curve" | "straight" {
   if (curve.type && curve.type.includes("Quadratic")) return "curve";
   if (curve instanceof THREE.QuadraticBezierCurve3) return "curve";
   return "straight";
-}
-
-function weightedArcLengthToT(
-  weightedArcLengths: number[],
-  totalWeightedLength: number,
-  arc: number
-): number {
-  let low = 0,
-    high = weightedArcLengths.length - 1;
-  while (low < high) {
-    const mid = Math.floor((low + high) / 2);
-    if (weightedArcLengths[mid] < arc) low = mid + 1;
-    else high = mid;
-  }
-  const i = Math.max(1, low);
-  const t0 = (i - 1) / (weightedArcLengths.length - 1);
-  const t1 = i / (weightedArcLengths.length - 1);
-  const l0 = weightedArcLengths[i - 1];
-  const l1 = weightedArcLengths[i];
-  const t = l0 === l1 ? t0 : t0 + ((arc - l0) / (l1 - l0)) * (t1 - t0);
-  return t;
 }
