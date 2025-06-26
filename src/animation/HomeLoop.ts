@@ -84,10 +84,9 @@ export function updateHomeLoop() {
     );
     let t;
     if (seg.type === "curve") {
-      // Use a smooth ramp: slowest at center, fastest at ends
+      // Use a smooth cubic ease-in-out: slowest at center, but no hard stops at ends
       const localT = localTime / seg.duration;
-      // Integrate the speed profile analytically: t = (1 - cos(pi * localT)) / 2
-      const rampT = (1 - Math.cos(Math.PI * localT)) / 2;
+      const rampT = cubicEaseInOut(localT);
       t = seg.startT + (seg.endT - seg.startT) * rampT;
     } else {
       // Linear for straights
@@ -131,4 +130,8 @@ function getCurveType(curve: any): "curve" | "straight" {
   if (curve.type && curve.type.includes("Quadratic")) return "curve";
   if (curve instanceof THREE.QuadraticBezierCurve3) return "curve";
   return "straight";
+}
+
+function cubicEaseInOut(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
