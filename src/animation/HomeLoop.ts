@@ -23,7 +23,7 @@ const pathMapping = {
 } as const;
 
 const LOOP_DURATION = 25;
-const curveWeight = 0.5;
+const curveWeight = 0.9;
 const straightWeight = 1.0;
 
 export function initHomeLoop() {
