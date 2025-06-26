@@ -97,13 +97,3 @@ export function updateHomeLoop() {
     pacmanMixer.update(delta);
   }
 }
-
-// Function to reset animation to beginning
-export function resetHomeLoop() {
-  totalPausedTime = 0;
-  pauseStartTime = 0;
-  isPaused = false;
-  Object.keys(currentRotations).forEach((key) => {
-    delete currentRotations[key];
-  });
-}

@@ -2,10 +2,10 @@ import { initRenderer, setupLighting, renderer, scene } from "./core/scene";
 import { loadModel } from "./core/objects";
 import { initCamera, camera } from "./core/camera";
 import {
-  animationController,
-  startScrollAnimation,
-  returnToHomeLoop,
-} from "./animation";
+  updateHomeLoop,
+  stopHomeLoop,
+  startHomeLoop,
+} from "./animation/HomeLoop";
 
 async function init() {
   try {
@@ -14,6 +14,7 @@ async function init() {
     setupLighting();
     initRenderer();
 
+    // Add scroll event listener
     setupScrollHandling();
 
     startRenderLoop();
@@ -30,10 +31,13 @@ function setupScrollHandling() {
   window.addEventListener("scroll", () => {
     const isAtTop = window.scrollY === 0;
 
+    // If we just left the top of the page
     if (wasAtTop && !isAtTop) {
-      startScrollAnimation();
-    } else if (!wasAtTop && isAtTop) {
-      returnToHomeLoop();
+      stopHomeLoop();
+    }
+    // If we just returned to the top of the page
+    else if (!wasAtTop && isAtTop) {
+      startHomeLoop();
     }
 
     wasAtTop = isAtTop;
@@ -42,11 +46,12 @@ function setupScrollHandling() {
 
 function startRenderLoop(): void {
   const render = () => {
-    animationController.update();
+    updateHomeLoop();
     renderer.render(scene, camera);
     requestAnimationFrame(render);
   };
   render();
 }
 
+// Start the application
 init();
