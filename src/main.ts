@@ -66,7 +66,7 @@ function setupCameraAnimation() {
         trigger: ".sc--home",
         start: "top top",
         end: "bottom top",
-        scrub: 0.5,
+        scrub: 1,
       },
     })
     .to(
