@@ -6,6 +6,12 @@ import {
   stopHomeLoop,
   startHomeLoop,
 } from "./animation/HomeLoop";
+import { cameraHomePath } from "./paths/paths";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+// Register ScrollTrigger plugin
+gsap.registerPlugin(ScrollTrigger);
 
 async function init() {
   try {
@@ -16,6 +22,9 @@ async function init() {
 
     // Add scroll event listener
     setupScrollHandling();
+
+    // Setup camera animation
+    setupCameraAnimation();
 
     startRenderLoop();
 
@@ -42,6 +51,38 @@ function setupScrollHandling() {
 
     wasAtTop = isAtTop;
   });
+}
+
+function setupCameraAnimation() {
+  gsap
+    .timeline({
+      scrollTrigger: {
+        trigger: ".sc--home",
+        start: "top top",
+        end: "bottom top",
+        scrub: 0.5,
+      },
+    })
+    .to(
+      {},
+      {
+        duration: 1,
+        onUpdate: function () {
+          const progress = this.progress();
+          const position = cameraHomePath.getPointAt(progress);
+          camera.position.copy(position);
+
+          // Calculate camera rotation based on path tangent
+          const tangent = cameraHomePath.getTangentAt(progress);
+          if (tangent && tangent.length() > 0) {
+            const lookAtPoint = position.clone().add(tangent.normalize());
+            camera.lookAt(lookAtPoint);
+          }
+
+          camera.updateProjectionMatrix();
+        },
+      }
+    );
 }
 
 function startRenderLoop(): void {
