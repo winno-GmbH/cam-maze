@@ -16,7 +16,7 @@ const pathMapping = {
 } as const;
 
 const LOOP_DURATION = 25; // seconds for a full loop for all objects
-const CURVE_TIME_FACTOR = 1.5; // Curves take 1.5x as long as straights
+const CURVE_TIME_FACTOR = 1.25; // Curves take 1.5x as long as straights
 const BASE_SPEED = 1; // Arbitrary, only relative durations matter
 const LOOKUP_DIVISIONS = 100;
 
