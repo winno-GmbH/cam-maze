@@ -64,13 +64,7 @@ function setupCameraAnimation() {
           const progress = this.progress();
           const position = cameraHomePath.getPointAt(progress);
           camera.position.copy(position);
-
-          const tangent = cameraHomePath.getTangentAt(progress);
-          if (tangent && tangent.length() > 0) {
-            const lookAtPoint = position.clone().add(tangent.normalize());
-            camera.lookAt(lookAtPoint);
-          }
-
+          camera.lookAt(0, 0, 0);
           camera.updateProjectionMatrix();
         },
       }
@@ -86,5 +80,4 @@ function startRenderLoop(): void {
   render();
 }
 
-// Start the application
 init();
