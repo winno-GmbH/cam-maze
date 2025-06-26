@@ -5,7 +5,7 @@ import { clock } from "../core/scene";
 let previousZRotation: number | undefined = undefined;
 
 export function updateHomeLoop() {
-  const loopDuration = 20;
+  const loopDuration = 40;
   const t = ((Date.now() / 1000) % loopDuration) / loopDuration;
   const pathMapping = {
     pacman: "pacmanHome",
