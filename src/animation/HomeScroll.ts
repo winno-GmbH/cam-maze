@@ -3,7 +3,6 @@ import * as THREE from "three";
 import { clock } from "../core/scene";
 import { MAZE_CENTER } from "../config/config";
 
-const mazeCenter = new THREE.Vector3(0, 0.5, 0); // Adjust as needed
 const curveHeight = 2.5;
 const ghostOrder = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5", "pacman"];
 const ghostDelays = [0.0, 0.08, 0.16, 0.24, 0.32, 0.44];
@@ -29,7 +28,6 @@ export function startHomeScrollAnimation() {
     const obj = key === "pacman" ? pacman : ghosts[key];
     if (!obj) return;
     const startPos = obj.position.clone();
-    // Curve to center
     const midToCenter = startPos.clone().lerp(MAZE_CENTER, 0.5);
     midToCenter.y += curveHeight;
     const curveToCenter = new THREE.QuadraticBezierCurve3(
@@ -37,7 +35,6 @@ export function startHomeScrollAnimation() {
       midToCenter,
       MAZE_CENTER.clone()
     );
-    // Curve from center
     const midFromCenter = MAZE_CENTER.clone().lerp(startPos, 0.5);
     midFromCenter.y += curveHeight;
     const curveFromCenter = new THREE.QuadraticBezierCurve3(
