@@ -18,7 +18,7 @@ const pathMapping = {
   ghost5: "ghost5Home",
 } as const;
 
-const LOOP_DURATION = 40; // seconds for a full loop for all objects
+const LOOP_DURATION = 25; // seconds for a full loop for all objects
 
 export function initHomeLoop() {
   Object.entries(pathMapping).forEach(([key, pathKey]) => {
