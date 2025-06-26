@@ -15,9 +15,6 @@ const LOOP_DURATION = 100; // seconds for a full loop
 const CURVE_TIME_FACTOR = 1.25; // Curves take 1.5x as long as straights
 const LOOKUP_DIVISIONS = 100;
 
-// Store smoothed paths
-const smoothedPaths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
-
 type Segment = {
   type: "curve" | "straight";
   startT: number;
@@ -33,22 +30,16 @@ const segmentTables: Record<string, Segment[]> = {};
 
 export function initHomeLoop() {
   Object.entries(pathMapping).forEach(([key, pathKey]) => {
-    const originalPath = (paths as any)[pathKey];
-    if (!originalPath) return;
-
-    // Create a smoothed version of the path
-    const smoothedPath = createSmoothedPath(pathKey);
-    smoothedPaths[key] = smoothedPath;
-
+    const path = (paths as any)[pathKey];
+    if (!path) return;
     const segments: Segment[] = [];
     let totalTime = 0;
     let t = 0;
-
-    for (let i = 0; i < smoothedPath.curves.length; i++) {
-      const curve = smoothedPath.curves[i];
+    for (let i = 0; i < path.curves.length; i++) {
+      const curve = path.curves[i];
       const type = getCurveType(curve);
       const t0 = t;
-      const t1 = t0 + curve.getLength() / smoothedPath.getLength();
+      const t1 = t0 + curve.getLength() / path.getLength();
       const length = curve.getLength();
       const duration = (type === "curve" ? CURVE_TIME_FACTOR : 1) * length;
       const seg: Segment = {
@@ -67,7 +58,6 @@ export function initHomeLoop() {
       totalTime += duration;
       t = t1;
     }
-
     // Normalize durations so totalTime = LOOP_DURATION
     const scale = LOOP_DURATION / totalTime;
     segments.forEach((seg) => {
@@ -91,7 +81,7 @@ export function updateHomeLoop() {
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const pathKey = pathMapping[key as keyof typeof pathMapping];
-    const path = smoothedPaths[key];
+    const path = (paths as any)[pathKey];
     const segments = segmentTables[key];
     if (!path || !segments) return;
     let segIdx = segments.findIndex((seg) => globalTime < seg.endTime);
@@ -133,10 +123,10 @@ export function updateHomeLoop() {
     // Update position
     ghost.position.copy(position);
 
-    // Calculate rotation directly from tangent (no conflicts!)
+    // Calculate rotation directly from tangent (no smoothing, no state)
     const rotation = Math.atan2(tangent.x, tangent.z);
 
-    // Apply rotation to object
+    // Apply rotation directly to object
     if (key === "pacman") {
       ghost.rotation.set(Math.PI / 2, Math.PI, rotation + Math.PI / 2);
     } else {
@@ -154,152 +144,6 @@ function getCurveType(curve: any): "curve" | "straight" {
   if (curve.type && curve.type.includes("Quadratic")) return "curve";
   if (curve instanceof THREE.QuadraticBezierCurve3) return "curve";
   return "straight";
-}
-
-function createSmoothedPath(pathKey: string): THREE.CurvePath<THREE.Vector3> {
-  const pathPoints = getPathPoints(pathKey);
-  const smoothedPath = new THREE.CurvePath<THREE.Vector3>();
-
-  for (let i = 0; i < pathPoints.length - 1; i++) {
-    const current = pathPoints[i];
-    const next = pathPoints[i + 1];
-
-    if (current.type === "straight") {
-      const line = new THREE.LineCurve3(current.pos, next.pos);
-      smoothedPath.add(line);
-    } else if (current.type === "curve") {
-      // Check if this curve and the next one are opposing
-      const nextPoint = pathPoints[i + 2];
-      if (
-        nextPoint &&
-        nextPoint.type === "curve" &&
-        isOpposingCurvePair(current.curveType, nextPoint.curveType)
-      ) {
-        // For opposing curves, create slightly smoother control points
-        // but maintain the original path structure
-        const smoothedCurve1 = createSlightlySmoothedCurve(current, next, true);
-        const smoothedCurve2 = createSlightlySmoothedCurve(
-          next,
-          nextPoint,
-          false
-        );
-        smoothedPath.add(smoothedCurve1);
-        smoothedPath.add(smoothedCurve2);
-        i++; // Skip the next point since we've processed it
-      } else {
-        // Normal curve - use original control points
-        let midPoint: THREE.Vector3;
-        if (current.curveType === "upperArc") {
-          midPoint = new THREE.Vector3(
-            current.pos.x,
-            current.pos.y,
-            next.pos.z
-          );
-        } else if (current.curveType === "lowerArc") {
-          midPoint = new THREE.Vector3(
-            next.pos.x,
-            current.pos.y,
-            current.pos.z
-          );
-        } else if (current.curveType === "forwardDownArc") {
-          midPoint = new THREE.Vector3(
-            current.pos.x,
-            next.pos.y,
-            current.pos.z
-          );
-        } else {
-          midPoint = new THREE.Vector3(
-            current.pos.x,
-            current.pos.y,
-            next.pos.z
-          );
-        }
-        const curve = new THREE.QuadraticBezierCurve3(
-          current.pos,
-          midPoint,
-          next.pos
-        );
-        smoothedPath.add(curve);
-      }
-    }
-  }
-
-  return smoothedPath;
-}
-
-function createSlightlySmoothedCurve(
-  current: any,
-  next: any,
-  isFirstCurve: boolean
-): THREE.Curve<THREE.Vector3> {
-  // Create a curve with slightly adjusted control points to reduce rotation intensity
-  // but maintain the original path structure
-
-  let originalMidPoint: THREE.Vector3;
-  if (current.curveType === "upperArc") {
-    originalMidPoint = new THREE.Vector3(
-      current.pos.x,
-      current.pos.y,
-      next.pos.z
-    );
-  } else if (current.curveType === "lowerArc") {
-    originalMidPoint = new THREE.Vector3(
-      next.pos.x,
-      current.pos.y,
-      current.pos.z
-    );
-  } else if (current.curveType === "forwardDownArc") {
-    originalMidPoint = new THREE.Vector3(
-      current.pos.x,
-      next.pos.y,
-      current.pos.z
-    );
-  } else {
-    originalMidPoint = new THREE.Vector3(
-      current.pos.x,
-      current.pos.y,
-      next.pos.z
-    );
-  }
-
-  // Only make a very small adjustment to reduce rotation intensity
-  const smoothingFactor = 0.1; // Only 10% adjustment
-  const centerPoint = current.pos.clone().add(next.pos).multiplyScalar(0.5);
-  const smoothedMidPoint = originalMidPoint
-    .clone()
-    .lerp(centerPoint, smoothingFactor);
-
-  return new THREE.QuadraticBezierCurve3(
-    current.pos,
-    smoothedMidPoint,
-    next.pos
-  );
-}
-
-function getPathPoints(pathKey: string): any[] {
-  // Map path keys to their corresponding path points
-  const pathPointsMap: Record<string, any[]> = {
-    pacmanHome: require("../paths/pathpoints").pacmanHomePathPoints,
-    ghost1Home: require("../paths/pathpoints").ghost1HomePathPoints,
-    ghost2Home: require("../paths/pathpoints").ghost2HomePathPoints,
-    ghost3Home: require("../paths/pathpoints").ghost3HomePathPoints,
-    ghost4Home: require("../paths/pathpoints").ghost4HomePathPoints,
-    ghost5Home: require("../paths/pathpoints").ghost5HomePathPoints,
-  };
-
-  return pathPointsMap[pathKey] || [];
-}
-
-function isOpposingCurvePair(curve1Type: string, curve2Type: string): boolean {
-  // Define which curve types oppose each other
-  const opposingPairs = [
-    ["upperArc", "lowerArc"],
-    ["lowerArc", "upperArc"],
-  ];
-
-  return opposingPairs.some(
-    (pair) => pair[0] === curve1Type && pair[1] === curve2Type
-  );
 }
 
 // Build a lookup table mapping elapsed time (0..duration) to t (0..1) for a curve segment
