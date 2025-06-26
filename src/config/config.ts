@@ -14,7 +14,7 @@ export const ASSETS = {
   mazeModel: "https://c-am.b-cdn.net/CAM/c-am-assets-3.glb",
 };
 
-export const MAZE_CENTER = new THREE.Vector3(0.45175, 0.5, 0.55675);
+export const MAZE_CENTER = new THREE.Vector3(0.95175, 0.5, 1.05675);
 
 export const POV_POSITIONS = {
   ghost1: new THREE.Vector3(0.65725, 0.55, 0.75325),
