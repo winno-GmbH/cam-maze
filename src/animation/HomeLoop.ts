@@ -12,20 +12,26 @@ const pathMapping = {
 } as const;
 
 const LOOP_DURATION = 100; // seconds for a full loop
+const ROTATION_SMOOTH_FACTOR = 0.15; // Smooth rotation interpolation
+
+// Store current rotation for each object
+const currentRotations: Record<string, number> = {};
 
 export function updateHomeLoop() {
   const globalTime = (performance.now() / 1000) % LOOP_DURATION;
   const t = globalTime / LOOP_DURATION; // Simple 0 to 1 parameter
 
+  // Reset rotation state at start of loop
+  if (t < 0.01) {
+    Object.keys(currentRotations).forEach((key) => {
+      delete currentRotations[key];
+    });
+  }
+
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const pathKey = pathMapping[key as keyof typeof pathMapping];
     const path = (paths as any)[pathKey];
     if (!path) return;
-
-    // Reset rotation at start of loop to prevent accumulation
-    if (t < 0.01) {
-      ghost.rotation.set(0, 0, 0);
-    }
 
     const position = path.getPointAt(t);
     if (!position) return;
@@ -33,14 +39,38 @@ export function updateHomeLoop() {
     const tangent = path.getTangentAt(t);
     if (!tangent || tangent.length() === 0) return;
 
-    // Update position and rotation
+    // Update position
     ghost.position.copy(position);
-    const rotation = Math.atan2(tangent.x, tangent.z);
 
+    // Calculate target rotation from tangent
+    const targetRotation = Math.atan2(tangent.x, tangent.z);
+
+    // Initialize current rotation if not set
+    if (currentRotations[key] === undefined) {
+      currentRotations[key] = targetRotation;
+    }
+
+    // Smoothly interpolate to target rotation
+    const currentRotation = currentRotations[key];
+    let rotationDiff = targetRotation - currentRotation;
+
+    // Handle rotation wrapping (shortest path)
+    while (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;
+    while (rotationDiff < -Math.PI) rotationDiff += 2 * Math.PI;
+
+    // Apply smooth interpolation
+    currentRotations[key] =
+      currentRotation + rotationDiff * ROTATION_SMOOTH_FACTOR;
+
+    // Apply rotation to object
     if (key === "pacman") {
-      ghost.rotation.set(Math.PI / 2, Math.PI, rotation + Math.PI / 2);
+      ghost.rotation.set(
+        Math.PI / 2,
+        Math.PI,
+        currentRotations[key] + Math.PI / 2
+      );
     } else {
-      ghost.rotation.set(0, rotation, 0);
+      ghost.rotation.set(0, currentRotations[key], 0);
     }
   });
 
