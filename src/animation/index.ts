@@ -1,2 +1,1 @@
-export { HomeLoopController } from "./HomeLoopController";
-export { AnimationManager } from "./AnimationManager";
+export { startHomeLoop } from "./HomeLoop";

@@ -1,9 +1,7 @@
 import { initRenderer, setupLighting, renderer, scene } from "./core/scene";
 import { loadModel } from "./core/objects";
 import { initCamera, camera } from "./core/camera";
-import { AnimationManager } from "./animation";
-
-let animationManager: AnimationManager;
+import { startHomeLoop } from "./animation/HomeLoop";
 
 async function init() {
   try {
@@ -12,11 +10,8 @@ async function init() {
     setupLighting();
     initRenderer();
 
-    // Initialize animation system
-    animationManager = new AnimationManager();
-
     // Start the Home Loop animation
-    animationManager.startHomeLoop();
+    startHomeLoop();
 
     // Start the main render loop
     startRenderLoop();
@@ -29,16 +24,9 @@ async function init() {
 
 function startRenderLoop(): void {
   const render = () => {
-    // Update animation system
-    animationManager.update();
-
-    // Render the scene
     renderer.render(scene, camera);
-
-    // Continue the loop
     requestAnimationFrame(render);
   };
-
   render();
 }
 
