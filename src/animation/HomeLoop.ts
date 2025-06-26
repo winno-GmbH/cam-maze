@@ -16,7 +16,22 @@ const ROTATION_SMOOTH_FACTOR = 0.1;
 
 const currentRotations: Record<string, number> = {};
 
+// Animation state management
+let isHomeLoopActive = true;
+let homeLoopStartTime = 0;
+
+export function startHomeLoop() {
+  isHomeLoopActive = true;
+  homeLoopStartTime = performance.now() / 1000;
+}
+
+export function stopHomeLoop() {
+  isHomeLoopActive = false;
+}
+
 export function updateHomeLoop() {
+  if (!isHomeLoopActive) return;
+
   const globalTime = (performance.now() / 1000) % LOOP_DURATION;
   const t = globalTime / LOOP_DURATION;
 
