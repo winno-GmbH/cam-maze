@@ -193,7 +193,7 @@ export const pacmanHomePathPoints: PathPoint[] = [
 ];
 
 export const ghost1HomePathPoints: PathPoint[] = [
-  { pos: new THREE.Vector3(-0.44825, 0.55, 0.502), type: "straight" },
+  { pos: new THREE.Vector3(-0.44825, 0.55, 0.703), type: "straight" },
   {
     pos: new THREE.Vector3(-0.44825, 0.55, 0.301),
     type: "curve",
@@ -354,7 +354,6 @@ export const ghost1HomePathPoints: PathPoint[] = [
     curveType: "lowerArc",
   },
   { pos: new THREE.Vector3(-0.44825, 0.55, 0.703), type: "straight" },
-  { pos: new THREE.Vector3(-0.44825, 0.55, 0.502), type: "straight" },
 ];
 
 export const ghost2HomePathPoints: PathPoint[] = [
