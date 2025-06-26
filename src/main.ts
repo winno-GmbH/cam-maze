@@ -7,10 +7,9 @@ import {
   startHomeLoop,
 } from "./animation/HomeLoop";
 import { cameraHomePath } from "./paths/paths";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+import gsap from "gsap";
+import ScrollTrigger from "gsap/ScrollTrigger";
 
-// Register ScrollTrigger plugin
 gsap.registerPlugin(ScrollTrigger);
 
 async function init() {
@@ -20,10 +19,8 @@ async function init() {
     setupLighting();
     initRenderer();
 
-    // Add scroll event listener
     setupScrollHandling();
 
-    // Setup camera animation
     setupCameraAnimation();
 
     startRenderLoop();
@@ -40,15 +37,11 @@ function setupScrollHandling() {
   window.addEventListener("scroll", () => {
     const isAtTop = window.scrollY === 0;
 
-    // If we just left the top of the page
     if (wasAtTop && !isAtTop) {
       stopHomeLoop();
-    }
-    // If we just returned to the top of the page
-    else if (!wasAtTop && isAtTop) {
+    } else if (!wasAtTop && isAtTop) {
       startHomeLoop();
     }
-
     wasAtTop = isAtTop;
   });
 }
@@ -72,7 +65,6 @@ function setupCameraAnimation() {
           const position = cameraHomePath.getPointAt(progress);
           camera.position.copy(position);
 
-          // Calculate camera rotation based on path tangent
           const tangent = cameraHomePath.getTangentAt(progress);
           if (tangent && tangent.length() > 0) {
             const lookAtPoint = position.clone().add(tangent.normalize());

@@ -1,4 +1,4 @@
-import { pacman, ghosts, pacmanMixer } from "../core/objects";
+import { ghosts, pacmanMixer } from "../core/objects";
 import { paths } from "../paths/paths";
 import { clock } from "../core/scene";
 
