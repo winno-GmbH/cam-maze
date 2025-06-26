@@ -16,7 +16,6 @@ export function updateHomeLoop() {
     ghost5: "ghost5Home",
   } as const;
 
-  // Animate Pacman and ghosts
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const pathKey = pathMapping[key as keyof typeof pathMapping];
     const path = (paths as any)[pathKey];
@@ -26,7 +25,6 @@ export function updateHomeLoop() {
       const tangent = path.getTangentAt(t).normalize();
       ghost.lookAt(position.clone().add(tangent));
 
-      // Special smoothing for Pacman rotation
       if (key === "pacman") {
         const zRotation = Math.atan2(tangent.x, tangent.z);
         if (previousZRotation === undefined) {
@@ -48,7 +46,6 @@ export function updateHomeLoop() {
     }
   });
 
-  // Update Pacman animation mixer if present
   if (pacmanMixer) {
     const delta = clock.getDelta();
     pacmanMixer.update(delta);
