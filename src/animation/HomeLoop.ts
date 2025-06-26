@@ -12,19 +12,23 @@ const pathMapping = {
 } as const;
 
 const LOOP_DURATION = 100; // seconds for a full loop
-const ROTATION_SMOOTH_FACTOR = 0.15; // Smooth rotation interpolation
+const ROTATION_SMOOTH_FACTOR = 0.1; // Smooth rotation interpolation
 
-// Store current rotation for each object
+// Store current rotation and previous positions for each object
 const currentRotations: Record<string, number> = {};
+const previousPositions: Record<string, THREE.Vector3[]> = {};
 
 export function updateHomeLoop() {
   const globalTime = (performance.now() / 1000) % LOOP_DURATION;
   const t = globalTime / LOOP_DURATION; // Simple 0 to 1 parameter
 
-  // Reset rotation state at start of loop
+  // Reset state at start of loop
   if (t < 0.01) {
     Object.keys(currentRotations).forEach((key) => {
       delete currentRotations[key];
+    });
+    Object.keys(previousPositions).forEach((key) => {
+      delete previousPositions[key];
     });
   }
 
@@ -36,14 +40,12 @@ export function updateHomeLoop() {
     const position = path.getPointAt(t);
     if (!position) return;
 
-    const tangent = path.getTangentAt(t);
-    if (!tangent || tangent.length() === 0) return;
-
     // Update position
     ghost.position.copy(position);
 
-    // Calculate target rotation from tangent
-    const targetRotation = Math.atan2(tangent.x, tangent.z);
+    // Calculate smooth rotation direction using multiple samples
+    const smoothDirection = calculateSmoothDirection(path, t, key);
+    const targetRotation = Math.atan2(smoothDirection.x, smoothDirection.z);
 
     // Initialize current rotation if not set
     if (currentRotations[key] === undefined) {
@@ -78,4 +80,43 @@ export function updateHomeLoop() {
   if (pacmanMixer) {
     pacmanMixer.update(delta);
   }
+}
+
+function calculateSmoothDirection(
+  path: any,
+  t: number,
+  key: string
+): THREE.Vector3 {
+  const sampleDistance = 0.02; // Distance to sample ahead and behind
+  const numSamples = 5; // Number of samples to average
+
+  let totalDirection = new THREE.Vector3(0, 0, 0);
+  let validSamples = 0;
+
+  // Sample multiple points around current position
+  for (let i = -numSamples; i <= numSamples; i++) {
+    const sampleT = t + i * sampleDistance;
+
+    // Handle wrapping around the path
+    let wrappedT = sampleT;
+    while (wrappedT < 0) wrappedT += 1;
+    while (wrappedT > 1) wrappedT -= 1;
+
+    const samplePos = path.getPointAt(wrappedT);
+    if (samplePos) {
+      // Calculate direction from current position to sample
+      const direction = samplePos.clone().sub(ghosts[key].position).normalize();
+      totalDirection.add(direction);
+      validSamples++;
+    }
+  }
+
+  // Return averaged direction
+  if (validSamples > 0) {
+    return totalDirection.divideScalar(validSamples).normalize();
+  }
+
+  // Fallback to tangent if no valid samples
+  const tangent = path.getTangentAt(t);
+  return tangent ? tangent.normalize() : new THREE.Vector3(0, 0, 1);
 }
