@@ -15,9 +15,11 @@ const LOOP_DURATION = 30; // seconds for a full loop
 const CURVE_TIME_FACTOR = 1.25; // Curves take 1.5x as long as straights
 const LOOKUP_DIVISIONS = 100;
 const ROTATION_SMOOTH_FACTOR = 0.05; // Lower = smoother rotation
+const MAX_ROTATION_CHANGE = Math.PI / 4; // Maximum rotation change per frame (45 degrees)
 
-// Store current rotation for each object
+// Store current rotation and previous tangent for each object
 const currentRotations: Record<string, number> = {};
+const previousTangents: Record<string, THREE.Vector3> = {};
 
 type Segment = {
   type: "curve" | "straight";
@@ -116,23 +118,57 @@ export function updateHomeLoop() {
       return;
     }
     ghost.position.copy(position);
-    const tangent = path.getTangentAt(t).normalize();
 
-    // Calculate target rotation from tangent
-    const targetRotation = Math.atan2(tangent.x, tangent.z);
+    // Get raw tangent and smooth it
+    const rawTangent = path.getTangentAt(t);
+    if (!rawTangent || rawTangent.length() === 0) {
+      console.warn("Invalid tangent at t:", t, "for path", pathKey);
+      return;
+    }
+
+    const normalizedTangent = rawTangent.normalize();
+    let smoothedTangent = normalizedTangent;
+
+    // Smooth tangent direction to prevent discontinuities
+    if (previousTangents[key]) {
+      const prevTangent = previousTangents[key];
+      const dotProduct = prevTangent.dot(normalizedTangent);
+
+      // If tangent direction changed significantly, smooth the transition
+      if (dotProduct < 0.9) {
+        // Less than ~25 degrees
+        const smoothingFactor = 0.3;
+        smoothedTangent = new THREE.Vector3()
+          .copy(prevTangent)
+          .lerp(normalizedTangent, smoothingFactor)
+          .normalize();
+      }
+    }
+
+    // Store current tangent for next frame
+    previousTangents[key] = smoothedTangent.clone();
+
+    // Calculate target rotation from smoothed tangent
+    const targetRotation = Math.atan2(smoothedTangent.x, smoothedTangent.z);
 
     // Initialize current rotation if not set
     if (currentRotations[key] === undefined) {
       currentRotations[key] = targetRotation;
     }
 
-    // Smoothly interpolate to target rotation
+    // Smoothly interpolate to target rotation with additional safeguards
     const currentRotation = currentRotations[key];
     let rotationDiff = targetRotation - currentRotation;
 
     // Handle rotation wrapping (shortest path)
     if (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;
     else if (rotationDiff < -Math.PI) rotationDiff += 2 * Math.PI;
+
+    // Clamp rotation change to prevent extreme spins
+    rotationDiff = Math.max(
+      -MAX_ROTATION_CHANGE,
+      Math.min(MAX_ROTATION_CHANGE, rotationDiff)
+    );
 
     // Apply smooth interpolation
     currentRotations[key] =
