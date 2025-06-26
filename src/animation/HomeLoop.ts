@@ -14,7 +14,9 @@ const pathMapping = {
 const LOOP_DURATION = 100; // seconds for a full loop
 const CURVE_TIME_FACTOR = 1.25; // Curves take 1.5x as long as straights
 const LOOKUP_DIVISIONS = 100;
-const OPPOSING_CURVE_ROTATION_FACTOR = 0.75; // Reduce rotation by 25% for opposing curves
+
+// Store previous rotation to detect large jumps
+const previousRotations: Record<string, number> = {};
 
 type Segment = {
   type: "curve" | "straight";
@@ -92,6 +94,13 @@ export function initHomeLoop() {
 export function updateHomeLoop() {
   const globalTime = (performance.now() / 1000) % LOOP_DURATION;
 
+  // Reset rotation state at the start of each loop
+  if (globalTime < 0.1) {
+    Object.keys(previousRotations).forEach((key) => {
+      delete previousRotations[key];
+    });
+  }
+
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const pathKey = pathMapping[key as keyof typeof pathMapping];
     const path = (paths as any)[pathKey];
@@ -136,58 +145,41 @@ export function updateHomeLoop() {
     // Update position
     ghost.position.copy(position);
 
-    // Calculate base rotation from tangent
-    let rotation = Math.atan2(tangent.x, tangent.z);
+    // Calculate rotation from tangent
+    const targetRotation = Math.atan2(tangent.x, tangent.z);
 
-    // Check if we're in a curve and if there are opposing curves nearby
-    if (seg.type === "curve") {
-      const curveInfo = segmentInfo[key];
-      if (curveInfo) {
-        const currentCurveIdx = curveInfo.findIndex(
-          (curve) => t >= curve.startT && t <= curve.endT
-        );
-
-        if (currentCurveIdx !== -1) {
-          const nextCurve = curveInfo[currentCurveIdx + 1];
-          const prevCurve = curveInfo[currentCurveIdx - 1];
-
-          // Check if next curve opposes current curve (simplified check)
-          const hasOpposingNext =
-            nextCurve && isAdjacentOpposingCurve(currentCurveIdx, curveInfo);
-          const hasOpposingPrev =
-            prevCurve &&
-            isAdjacentOpposingCurve(currentCurveIdx - 1, curveInfo);
-
-          // If we have opposing curves, reduce rotation magnitude
-          if (hasOpposingNext || hasOpposingPrev) {
-            // Calculate how far we are through the current curve
-            const currentCurve = curveInfo[currentCurveIdx];
-            const curveProgress =
-              (t - currentCurve.startT) /
-              (currentCurve.endT - currentCurve.startT);
-
-            // Apply reduced rotation factor
-            const baseRotation = Math.atan2(tangent.x, tangent.z);
-            const reducedRotation =
-              baseRotation * OPPOSING_CURVE_ROTATION_FACTOR;
-
-            // Interpolate between reduced and full rotation based on curve progress
-            // Use full rotation at the start and end, reduced in the middle
-            const interpolationFactor = Math.sin(curveProgress * Math.PI);
-            rotation =
-              reducedRotation +
-              (baseRotation - reducedRotation) * interpolationFactor;
-          }
-        }
-      }
+    // Initialize previous rotation if not set
+    if (previousRotations[key] === undefined) {
+      previousRotations[key] = targetRotation;
     }
 
-    // Apply rotation directly to object
+    // Check for large rotation jumps that might indicate opposing curves
+    const currentRotation = previousRotations[key];
+    let rotationDiff = targetRotation - currentRotation;
+
+    // Handle rotation wrapping (shortest path)
+    while (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;
+    while (rotationDiff < -Math.PI) rotationDiff += 2 * Math.PI;
+
+    // If there's a large rotation change, it might be due to opposing curves
+    // In this case, we'll use a smoother interpolation
+    let finalRotation = targetRotation;
+    if (Math.abs(rotationDiff) > Math.PI / 2) {
+      // More than 90 degrees
+      // Use a smoother interpolation for large changes
+      const smoothingFactor = 0.3;
+      finalRotation = currentRotation + rotationDiff * smoothingFactor;
+    }
+
+    // Store the final rotation for next frame
+    previousRotations[key] = finalRotation;
+
+    // Apply rotation to object
     if (key === "pacman") {
-      ghost.rotation.set(Math.PI / 2, Math.PI, rotation + Math.PI / 2);
+      ghost.rotation.set(Math.PI / 2, Math.PI, finalRotation + Math.PI / 2);
     } else {
       // For ghosts, use a simpler rotation setup
-      ghost.rotation.set(0, rotation, 0);
+      ghost.rotation.set(0, finalRotation, 0);
     }
   });
   const delta = clock.getDelta();
@@ -200,16 +192,6 @@ function getCurveType(curve: any): "curve" | "straight" {
   if (curve.type && curve.type.includes("Quadratic")) return "curve";
   if (curve instanceof THREE.QuadraticBezierCurve3) return "curve";
   return "straight";
-}
-
-function isAdjacentOpposingCurve(
-  curveIdx: number,
-  curveInfo: { curveType: string; startT: number; endT: number }[]
-): boolean {
-  // For now, we'll use a simplified approach: if we have consecutive curves,
-  // they're likely opposing (upperArc followed by lowerArc or vice versa)
-  // This is a heuristic based on the typical maze pattern
-  return curveIdx >= 0 && curveIdx < curveInfo.length - 1;
 }
 
 // Build a lookup table mapping elapsed time (0..duration) to t (0..1) for a curve segment
