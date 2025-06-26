@@ -3,9 +3,8 @@ import * as THREE from "three";
 import { clock } from "../core/scene";
 import { MAZE_CENTER } from "../config/config";
 
-const curveHeight = 2.5;
+const curveHeight = 0.75;
 const ghostOrder = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5", "pacman"];
-const ghostDelays = [0.0, 0.08, 0.16, 0.24, 0.32, 0.44];
 const ghostDurations = [0.36, 0.36, 0.36, 0.36, 0.36, 0.36];
 
 let scrollAnimationCurves: Record<
@@ -45,7 +44,7 @@ export function startHomeScrollAnimation() {
     scrollAnimationCurves[key] = {
       curveToCenter,
       curveFromCenter,
-      start: ghostDelays[i],
+      start: 0,
       duration: ghostDurations[i],
       startPos,
     };
@@ -55,7 +54,6 @@ export function startHomeScrollAnimation() {
 
 export function updateHomeScrollAnimation(animatedT: number) {
   if (!isScrollActive) return;
-  // Prevent jump: only update if animatedT >= lastAnimatedT (i.e., GSAP scrub is done or moving forward)
   // Remove this restriction for bidirectional support
   lastAnimatedT = animatedT;
   ghostOrder.forEach((key) => {
@@ -63,7 +61,7 @@ export function updateHomeScrollAnimation(animatedT: number) {
     if (!obj) return;
     const anim = scrollAnimationCurves[key];
     if (!anim) return;
-    let t = (animatedT - anim.start) / anim.duration;
+    let t = animatedT / anim.duration;
     t = Math.max(0, Math.min(1, t));
     let pos: THREE.Vector3;
     if (animatedT >= lastAnimatedT) {
