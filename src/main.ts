@@ -14,7 +14,6 @@ async function init() {
     setupLighting();
     initRenderer();
 
-    // Add scroll event listener
     setupScrollHandling();
 
     startRenderLoop();
@@ -31,12 +30,9 @@ function setupScrollHandling() {
   window.addEventListener("scroll", () => {
     const isAtTop = window.scrollY === 0;
 
-    // If we just left the top of the page
     if (wasAtTop && !isAtTop) {
       startScrollAnimation();
-    }
-    // If we just returned to the top of the page
-    else if (!wasAtTop && isAtTop) {
+    } else if (!wasAtTop && isAtTop) {
       returnToHomeLoop();
     }
 
@@ -53,5 +49,4 @@ function startRenderLoop(): void {
   render();
 }
 
-// Start the application
 init();
