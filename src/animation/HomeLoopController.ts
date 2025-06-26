@@ -1,5 +1,7 @@
 import * as THREE from "three";
-import { gsap } from "gsap";
+import gsap from "gsap";
+import { MotionPathPlugin } from "gsap/MotionPathPlugin";
+gsap.registerPlugin(MotionPathPlugin);
 import { scene, clock } from "../core/scene";
 import { pacman, ghosts, pacmanMixer } from "../core/objects";
 import { paths } from "../paths/paths";
