@@ -6,6 +6,11 @@ import {
   stopHomeLoop,
   startHomeLoop,
 } from "./animation/HomeLoop";
+import {
+  startHomeScrollAnimation,
+  updateHomeScrollAnimation,
+  stopHomeScrollAnimation,
+} from "./animation/HomeScroll";
 import { cameraHomePath } from "./paths/paths";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
@@ -35,7 +40,7 @@ async function init() {
     camera.quaternion.copy(startQuaternion);
 
     setupScrollHandling();
-    setupCameraAnimation();
+    setupCameraAndObjectAnimation();
     startRenderLoop();
 
     console.log("🚀 Application initialized successfully");
@@ -59,7 +64,7 @@ function setupScrollHandling() {
   });
 }
 
-function setupCameraAnimation() {
+function setupCameraAndObjectAnimation() {
   gsap
     .timeline({
       scrollTrigger: {
@@ -67,6 +72,10 @@ function setupCameraAnimation() {
         start: "top top",
         end: "bottom top",
         scrub: 1,
+        onEnter: () => startHomeScrollAnimation(),
+        onLeave: () => stopHomeScrollAnimation(),
+        onEnterBack: () => startHomeScrollAnimation(),
+        onLeaveBack: () => stopHomeScrollAnimation(),
       },
     })
     .to(
@@ -88,6 +97,7 @@ function setupCameraAnimation() {
             camera.quaternion.copy(currentQuaternion);
           }
           camera.updateProjectionMatrix();
+          updateHomeScrollAnimation(t);
         },
       }
     );
