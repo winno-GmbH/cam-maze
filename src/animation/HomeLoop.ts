@@ -14,7 +14,10 @@ const pathMapping = {
 const LOOP_DURATION = 30; // seconds for a full loop
 const CURVE_TIME_FACTOR = 1.25; // Curves take 1.5x as long as straights
 const LOOKUP_DIVISIONS = 100;
-let previousZRotation: number | undefined = undefined;
+const ROTATION_SMOOTH_FACTOR = 0.05; // Lower = smoother rotation
+
+// Store current rotation for each object
+const currentRotations: Record<string, number> = {};
 
 type Segment = {
   type: "curve" | "straight";
@@ -114,19 +117,37 @@ export function updateHomeLoop() {
     }
     ghost.position.copy(position);
     const tangent = path.getTangentAt(t).normalize();
-    ghost.lookAt(position.clone().add(tangent));
+
+    // Calculate target rotation from tangent
+    const targetRotation = Math.atan2(tangent.x, tangent.z);
+
+    // Initialize current rotation if not set
+    if (currentRotations[key] === undefined) {
+      currentRotations[key] = targetRotation;
+    }
+
+    // Smoothly interpolate to target rotation
+    const currentRotation = currentRotations[key];
+    let rotationDiff = targetRotation - currentRotation;
+
+    // Handle rotation wrapping (shortest path)
+    if (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;
+    else if (rotationDiff < -Math.PI) rotationDiff += 2 * Math.PI;
+
+    // Apply smooth interpolation
+    currentRotations[key] =
+      currentRotation + rotationDiff * ROTATION_SMOOTH_FACTOR;
+
+    // Apply rotation to object
     if (key === "pacman") {
-      const zRotation = Math.atan2(tangent.x, tangent.z);
-      if (previousZRotation === undefined) {
-        previousZRotation = zRotation;
-      }
-      let rotationDiff = zRotation - previousZRotation;
-      if (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;
-      else if (rotationDiff < -Math.PI) rotationDiff += 2 * Math.PI;
-      const smoothFactor = 0.1;
-      const smoothedRotation = previousZRotation + rotationDiff * smoothFactor;
-      previousZRotation = smoothedRotation;
-      ghost.rotation.set(Math.PI / 2, Math.PI, smoothedRotation + Math.PI / 2);
+      ghost.rotation.set(
+        Math.PI / 2,
+        Math.PI,
+        currentRotations[key] + Math.PI / 2
+      );
+    } else {
+      // For ghosts, use a simpler rotation setup
+      ghost.rotation.set(0, currentRotations[key], 0);
     }
   });
   const delta = clock.getDelta();
