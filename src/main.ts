@@ -22,10 +22,7 @@ async function init() {
     setupLighting();
     initRenderer();
 
-    // Store the camera's starting quaternion
     startQuaternion = camera.quaternion.clone();
-    // Define a suitable end quaternion (looking down the path)
-    // We'll use the tangent at the end of the path to set the end orientation
     const endPos = cameraHomePath.getPoint(1);
     const endTangent = cameraHomePath.getTangent(1);
     if (endPos && endTangent) {
@@ -34,7 +31,6 @@ async function init() {
       camera.lookAt(lookAt);
       endQuaternion = camera.quaternion.clone();
     }
-    // Reset camera to start position
     camera.position.copy(cameraHomePath.getPoint(0));
     camera.quaternion.copy(startQuaternion);
 
@@ -70,7 +66,7 @@ function setupCameraAnimation() {
         trigger: ".sc--home",
         start: "top top",
         end: "bottom top",
-        scrub: 5,
+        scrub: 0.5,
       },
     })
     .to(
@@ -79,7 +75,6 @@ function setupCameraAnimation() {
         t: 1,
         immediateRender: false,
         onUpdate: function () {
-          // Use the animated property 't' for smoothing
           const t = this.targets()[0].t;
           const position = cameraHomePath.getPoint(t);
           camera.position.copy(position);
