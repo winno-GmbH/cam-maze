@@ -19,14 +19,7 @@ const pathMapping = {
   ghost5: "ghost5Home",
 } as const;
 
-const speedByKey: Record<string, number> = {
-  pacman: 0.06, // units per second
-  ghost1: 0.05,
-  ghost2: 0.048,
-  ghost3: 0.052,
-  ghost4: 0.049,
-  ghost5: 0.051,
-};
+const SPEED = 0.05; // units per second, global speed for all
 
 export function initHomeLoop() {
   // Precompute arc length tables for each path
@@ -57,8 +50,8 @@ export function updateHomeLoop() {
     const path = (paths as any)[pathKey];
     const arcTable = arcLengthTables[key];
     if (path && arcTable) {
-      // Advance progress by speed * delta, wrap around
-      progressByKey[key] += speedByKey[key] * delta;
+      // Advance progress by SPEED * delta, wrap around
+      progressByKey[key] += SPEED * delta;
       if (progressByKey[key] > arcTable.totalLength)
         progressByKey[key] -= arcTable.totalLength;
       // Find t for current arc length
