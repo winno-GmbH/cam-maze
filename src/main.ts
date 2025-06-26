@@ -64,7 +64,7 @@ function setupCameraAnimation() {
           const progress = this.progress();
           const position = cameraHomePath.getPointAt(progress);
           camera.position.copy(position);
-          camera.lookAt(0, 0, 0);
+          camera.lookAt(0, 0.5, 0);
           camera.updateProjectionMatrix();
         },
       }
