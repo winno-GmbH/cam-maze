@@ -79,15 +79,16 @@ function setupCameraAnimation() {
         t: 1,
         immediateRender: false,
         onUpdate: function () {
-          const progress = this.targets()[0].t;
-          const position = cameraHomePath.getPoint(progress);
+          // Use the animated property 't' for smoothing
+          const t = this.targets()[0].t;
+          const position = cameraHomePath.getPoint(t);
           camera.position.copy(position);
           if (startQuaternion && endQuaternion) {
             const currentQuaternion = new THREE.Quaternion();
             currentQuaternion.slerpQuaternions(
               startQuaternion,
               endQuaternion,
-              progress
+              t
             );
             camera.quaternion.copy(currentQuaternion);
           }
