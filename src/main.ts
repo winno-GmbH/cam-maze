@@ -26,23 +26,21 @@ async function init() {
 }
 
 function setupScrollHandling() {
-  let isScrolling = false;
-  let scrollTimeout: number;
+  let wasAtTop = true;
 
   window.addEventListener("scroll", () => {
-    if (!isScrolling) {
-      isScrolling = true;
+    const isAtTop = window.scrollY === 0;
+
+    // If we just left the top of the page
+    if (wasAtTop && !isAtTop) {
       startScrollAnimation();
     }
-
-    // Clear the timeout
-    clearTimeout(scrollTimeout);
-
-    // Set a timeout to detect when scrolling stops
-    scrollTimeout = window.setTimeout(() => {
-      isScrolling = false;
+    // If we just returned to the top of the page
+    else if (!wasAtTop && isAtTop) {
       returnToHomeLoop();
-    }, 150); // Wait 150ms after scrolling stops
+    }
+
+    wasAtTop = isAtTop;
   });
 }
 
