@@ -14,12 +14,14 @@ const pathMapping = {
 const LOOP_DURATION = 100; // seconds for a full loop
 const CURVE_TIME_FACTOR = 1.25; // Curves take 1.5x as long as straights
 const LOOKUP_DIVISIONS = 100;
+const DOUBLE_CURVE_STRETCH_FACTOR = 1.5; // Stretch double curves by 50%
 
-// Store previous rotation to detect large jumps
-const previousRotations: Record<string, number> = {};
+// Store segment information with curve type detection
+const segmentTables: Record<string, Segment[]> = {};
+const pathCurveTypes: Record<string, string[]> = {};
 
 type Segment = {
-  type: "curve" | "straight";
+  type: "curve" | "straight" | "double-curve";
   startT: number;
   endT: number;
   length: number;
@@ -27,22 +29,19 @@ type Segment = {
   startTime: number;
   endTime: number;
   tLookup?: number[]; // For curves: tLookup[timeIndex] = t
+  curveTypes?: string[]; // For double-curves: array of curve types
 };
-
-const segmentTables: Record<string, Segment[]> = {};
-
-// Store segment information for curve analysis
-const segmentInfo: Record<
-  string,
-  { curveType: string; startT: number; endT: number }[]
-> = {};
 
 export function initHomeLoop() {
   Object.entries(pathMapping).forEach(([key, pathKey]) => {
     const path = (paths as any)[pathKey];
     if (!path) return;
+
+    // First, analyze the path to detect curve types
+    const curveTypes = analyzePathCurveTypes(pathKey);
+    pathCurveTypes[key] = curveTypes;
+
     const segments: Segment[] = [];
-    const curveInfo: { curveType: string; startT: number; endT: number }[] = [];
     let totalTime = 0;
     let t = 0;
     let curveIndex = 0;
@@ -53,25 +52,61 @@ export function initHomeLoop() {
       const t0 = t;
       const t1 = t0 + curve.getLength() / path.getLength();
       const length = curve.getLength();
-      const duration = (type === "curve" ? CURVE_TIME_FACTOR : 1) * length;
+
+      // Check if this curve is part of a double-curve (opposing curves)
+      let segmentType: "curve" | "straight" | "double-curve" = type;
+      let segmentDuration = (type === "curve" ? CURVE_TIME_FACTOR : 1) * length;
+      let curveTypesForSegment: string[] = [];
+
+      if (type === "curve" && curveTypes[curveIndex]) {
+        const currentCurveType = curveTypes[curveIndex];
+        const nextCurveType = curveTypes[curveIndex + 1];
+
+        // Check if this curve and the next curve are opposing
+        if (isOpposingCurvePair(currentCurveType, nextCurveType)) {
+          // This is a double-curve - combine with next curve
+          segmentType = "double-curve";
+          curveTypesForSegment = [currentCurveType, nextCurveType];
+
+          // Calculate combined length and duration
+          const nextCurve = path.curves[i + 1];
+          if (nextCurve) {
+            const nextLength = nextCurve.getLength();
+            const combinedLength = length + nextLength;
+            segmentDuration =
+              DOUBLE_CURVE_STRETCH_FACTOR * CURVE_TIME_FACTOR * combinedLength;
+
+            // Skip the next curve since we've combined it
+            i++;
+            curveIndex++;
+          }
+        } else {
+          curveTypesForSegment = [currentCurveType];
+        }
+      }
+
       const seg: Segment = {
-        type,
+        type: segmentType,
         startT: t0,
         endT: t1,
         length,
-        duration,
+        duration: segmentDuration,
         startTime: totalTime,
-        endTime: totalTime + duration,
+        endTime: totalTime + segmentDuration,
+        curveTypes:
+          curveTypesForSegment.length > 0 ? curveTypesForSegment : undefined,
       };
-      if (type === "curve") {
+
+      if (segmentType === "curve" || segmentType === "double-curve") {
         seg.tLookup = buildTimeToTLookup(seg.duration, LOOKUP_DIVISIONS);
-        // Store curve type for analysis - we'll need to get this from the path points
-        curveInfo.push({ curveType: "curve", startT: t0, endT: t1 });
       }
+
       segments.push(seg);
-      totalTime += duration;
+      totalTime += segmentDuration;
       t = t1;
+      curveIndex++;
     }
+
     // Normalize durations so totalTime = LOOP_DURATION
     const scale = LOOP_DURATION / totalTime;
     segments.forEach((seg) => {
@@ -82,24 +117,16 @@ export function initHomeLoop() {
       seg.startTime = acc;
       seg.endTime = acc + seg.duration;
       acc = seg.endTime;
-      if (seg.type === "curve") {
+      if (seg.type === "curve" || seg.type === "double-curve") {
         seg.tLookup = buildTimeToTLookup(seg.duration, LOOKUP_DIVISIONS);
       }
     });
     segmentTables[key] = segments;
-    segmentInfo[key] = curveInfo;
   });
 }
 
 export function updateHomeLoop() {
   const globalTime = (performance.now() / 1000) % LOOP_DURATION;
-
-  // Reset rotation state at the start of each loop
-  if (globalTime < 0.1) {
-    Object.keys(previousRotations).forEach((key) => {
-      delete previousRotations[key];
-    });
-  }
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const pathKey = pathMapping[key as keyof typeof pathMapping];
@@ -116,6 +143,11 @@ export function updateHomeLoop() {
     let t;
     if (seg.type === "curve" && seg.tLookup) {
       // Use the lookup table to get t for this localTime
+      let idx = Math.floor((localTime / seg.duration) * LOOKUP_DIVISIONS);
+      idx = Math.max(0, Math.min(idx, LOOKUP_DIVISIONS));
+      t = seg.startT + (seg.endT - seg.startT) * seg.tLookup[idx];
+    } else if (seg.type === "double-curve" && seg.tLookup) {
+      // For double-curves, use a special lookup that reduces rotation intensity
       let idx = Math.floor((localTime / seg.duration) * LOOKUP_DIVISIONS);
       idx = Math.max(0, Math.min(idx, LOOKUP_DIVISIONS));
       t = seg.startT + (seg.endT - seg.startT) * seg.tLookup[idx];
@@ -146,40 +178,23 @@ export function updateHomeLoop() {
     ghost.position.copy(position);
 
     // Calculate rotation from tangent
-    const targetRotation = Math.atan2(tangent.x, tangent.z);
+    let rotation = Math.atan2(tangent.x, tangent.z);
 
-    // Initialize previous rotation if not set
-    if (previousRotations[key] === undefined) {
-      previousRotations[key] = targetRotation;
+    // For double-curves, reduce rotation intensity
+    if (seg.type === "double-curve") {
+      const curveProgress = localTime / seg.duration;
+      // Use a smoother rotation profile that reduces the peak rotation
+      const rotationReduction = 0.6; // Reduce rotation by 40%
+      const smoothFactor = Math.sin(curveProgress * Math.PI);
+      rotation *= 1 - rotationReduction * smoothFactor;
     }
-
-    // Check for large rotation jumps that might indicate opposing curves
-    const currentRotation = previousRotations[key];
-    let rotationDiff = targetRotation - currentRotation;
-
-    // Handle rotation wrapping (shortest path)
-    while (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;
-    while (rotationDiff < -Math.PI) rotationDiff += 2 * Math.PI;
-
-    // If there's a large rotation change, it might be due to opposing curves
-    // In this case, we'll use a smoother interpolation
-    let finalRotation = targetRotation;
-    if (Math.abs(rotationDiff) > Math.PI / 2) {
-      // More than 90 degrees
-      // Use a smoother interpolation for large changes
-      const smoothingFactor = 0.3;
-      finalRotation = currentRotation + rotationDiff * smoothingFactor;
-    }
-
-    // Store the final rotation for next frame
-    previousRotations[key] = finalRotation;
 
     // Apply rotation to object
     if (key === "pacman") {
-      ghost.rotation.set(Math.PI / 2, Math.PI, finalRotation + Math.PI / 2);
+      ghost.rotation.set(Math.PI / 2, Math.PI, rotation + Math.PI / 2);
     } else {
       // For ghosts, use a simpler rotation setup
-      ghost.rotation.set(0, finalRotation, 0);
+      ghost.rotation.set(0, rotation, 0);
     }
   });
   const delta = clock.getDelta();
@@ -192,6 +207,47 @@ function getCurveType(curve: any): "curve" | "straight" {
   if (curve.type && curve.type.includes("Quadratic")) return "curve";
   if (curve instanceof THREE.QuadraticBezierCurve3) return "curve";
   return "straight";
+}
+
+function analyzePathCurveTypes(pathKey: string): string[] {
+  // Get the path points to analyze curve types
+  const pathPoints = getPathPoints(pathKey);
+  const curveTypes: string[] = [];
+
+  for (let i = 0; i < pathPoints.length - 1; i++) {
+    const current = pathPoints[i];
+    if (current.type === "curve" && current.curveType) {
+      curveTypes.push(current.curveType);
+    }
+  }
+
+  return curveTypes;
+}
+
+function getPathPoints(pathKey: string): any[] {
+  // Map path keys to their corresponding path points
+  const pathPointsMap: Record<string, any[]> = {
+    pacmanHome: require("../paths/pathpoints").pacmanHomePathPoints,
+    ghost1Home: require("../paths/pathpoints").ghost1HomePathPoints,
+    ghost2Home: require("../paths/pathpoints").ghost2HomePathPoints,
+    ghost3Home: require("../paths/pathpoints").ghost3HomePathPoints,
+    ghost4Home: require("../paths/pathpoints").ghost4HomePathPoints,
+    ghost5Home: require("../paths/pathpoints").ghost5HomePathPoints,
+  };
+
+  return pathPointsMap[pathKey] || [];
+}
+
+function isOpposingCurvePair(curve1Type: string, curve2Type: string): boolean {
+  // Define which curve types oppose each other
+  const opposingPairs = [
+    ["upperArc", "lowerArc"],
+    ["lowerArc", "upperArc"],
+  ];
+
+  return opposingPairs.some(
+    (pair) => pair[0] === curve1Type && pair[1] === curve2Type
+  );
 }
 
 // Build a lookup table mapping elapsed time (0..duration) to t (0..1) for a curve segment
