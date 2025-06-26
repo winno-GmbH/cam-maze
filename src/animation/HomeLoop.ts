@@ -19,7 +19,7 @@ const pathMapping = {
   ghost5: "ghost5Home",
 } as const;
 
-const SPEED = 0.05; // units per second, global speed for all
+const SPEED = 0.5; // units per second, global speed for all
 
 export function initHomeLoop() {
   // Precompute arc length tables for each path
