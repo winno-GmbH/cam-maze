@@ -13,9 +13,10 @@ const pathMapping = {
 
 const LOOP_DURATION = 25; // seconds for a full loop
 const CURVE_TIME_FACTOR = 1.5; // Curves take 1.5x as long as straights
+const LOOKUP_DIVISIONS = 100;
 let previousZRotation: number | undefined = undefined;
 
-type SimpleSegment = {
+type Segment = {
   type: "curve" | "straight";
   startT: number;
   endT: number;
@@ -23,15 +24,16 @@ type SimpleSegment = {
   duration: number;
   startTime: number;
   endTime: number;
+  tLookup?: number[]; // For curves: tLookup[timeIndex] = t
 };
 
-const segmentTables: Record<string, SimpleSegment[]> = {};
+const segmentTables: Record<string, Segment[]> = {};
 
 export function initHomeLoop() {
   Object.entries(pathMapping).forEach(([key, pathKey]) => {
     const path = (paths as any)[pathKey];
     if (!path) return;
-    const segments: SimpleSegment[] = [];
+    const segments: Segment[] = [];
     let totalTime = 0;
     let t = 0;
     for (let i = 0; i < path.curves.length; i++) {
@@ -41,7 +43,7 @@ export function initHomeLoop() {
       const t1 = t0 + curve.getLength() / path.getLength();
       const length = curve.getLength();
       const duration = (type === "curve" ? CURVE_TIME_FACTOR : 1) * length;
-      segments.push({
+      const seg: Segment = {
         type,
         startT: t0,
         endT: t1,
@@ -49,7 +51,11 @@ export function initHomeLoop() {
         duration,
         startTime: totalTime,
         endTime: totalTime + duration,
-      });
+      };
+      if (type === "curve") {
+        seg.tLookup = buildTimeToTLookup(seg.duration, LOOKUP_DIVISIONS);
+      }
+      segments.push(seg);
       totalTime += duration;
       t = t1;
     }
@@ -63,6 +69,9 @@ export function initHomeLoop() {
       seg.startTime = acc;
       seg.endTime = acc + seg.duration;
       acc = seg.endTime;
+      if (seg.type === "curve") {
+        seg.tLookup = buildTimeToTLookup(seg.duration, LOOKUP_DIVISIONS);
+      }
     });
     segmentTables[key] = segments;
   });
@@ -83,11 +92,11 @@ export function updateHomeLoop() {
       Math.min(globalTime - seg.startTime, seg.duration)
     );
     let t;
-    if (seg.type === "curve") {
-      // Use a smooth cubic ease-in-out: slowest at center, but no hard stops at ends
-      const localT = localTime / seg.duration;
-      const rampT = cubicEaseInOut(localT);
-      t = seg.startT + (seg.endT - seg.startT) * rampT;
+    if (seg.type === "curve" && seg.tLookup) {
+      // Use the lookup table to get t for this localTime
+      let idx = Math.floor((localTime / seg.duration) * LOOKUP_DIVISIONS);
+      idx = Math.max(0, Math.min(idx, LOOKUP_DIVISIONS));
+      t = seg.startT + (seg.endT - seg.startT) * seg.tLookup[idx];
     } else {
       // Linear for straights
       const localT = localTime / seg.duration;
@@ -132,6 +141,47 @@ function getCurveType(curve: any): "curve" | "straight" {
   return "straight";
 }
 
-function cubicEaseInOut(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+// Build a lookup table mapping elapsed time (0..duration) to t (0..1) for a curve segment
+function buildTimeToTLookup(duration: number, divisions: number): number[] {
+  // Speed profile: slowest at center, fastest at ends
+  // speed(t) = minSpeed + (1 - minSpeed) * (1 - Math.cos(2 * Math.PI * t)) / 2
+  // Integrate 1/speed(t) to get time as a function of t, then invert
+  const minSpeed = 1 / CURVE_TIME_FACTOR;
+  const N = divisions;
+  const timeAtT: number[] = [0];
+  let total = 0;
+  for (let i = 1; i <= N; i++) {
+    const t0 = (i - 1) / N;
+    const t1 = i / N;
+    // Average speed over this interval
+    const s0 =
+      minSpeed + ((1 - minSpeed) * (1 - Math.cos(2 * Math.PI * t0))) / 2;
+    const s1 =
+      minSpeed + ((1 - minSpeed) * (1 - Math.cos(2 * Math.PI * t1))) / 2;
+    const avgSpeed = 0.5 * (s0 + s1);
+    const dt = 1 / avgSpeed / N;
+    total += dt;
+    timeAtT.push(total);
+  }
+  // Normalize so total time = duration
+  for (let i = 0; i < timeAtT.length; i++) {
+    timeAtT[i] = (timeAtT[i] / total) * duration;
+  }
+  // For each time step, find the corresponding t
+  const table: number[] = [];
+  for (let i = 0; i <= N; i++) {
+    const targetTime = (i / N) * duration;
+    let tIdx = 0;
+    while (tIdx < timeAtT.length - 1 && timeAtT[tIdx] < targetTime) tIdx++;
+    // Linear interpolate between tIdx-1 and tIdx
+    const t0 = (tIdx - 1) / N;
+    const t1 = tIdx / N;
+    const time0 = timeAtT[tIdx - 1];
+    const time1 = timeAtT[tIdx];
+    let tVal;
+    if (time1 === time0) tVal = t1;
+    else tVal = t0 + ((targetTime - time0) / (time1 - time0)) * (t1 - t0);
+    table.push(Math.max(0, Math.min(1, tVal)));
+  }
+  return table;
 }
