@@ -12,6 +12,9 @@ import ScrollTrigger from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
+let startQuaternion: THREE.Quaternion | null = null;
+let endQuaternion: THREE.Quaternion | null = null;
+
 async function init() {
   try {
     initCamera();
@@ -19,10 +22,24 @@ async function init() {
     setupLighting();
     initRenderer();
 
+    // Store the camera's starting quaternion
+    startQuaternion = camera.quaternion.clone();
+    // Define a suitable end quaternion (looking down the path)
+    // We'll use the tangent at the end of the path to set the end orientation
+    const endPos = cameraHomePath.getPoint(1);
+    const endTangent = cameraHomePath.getTangent(1);
+    if (endPos && endTangent) {
+      const lookAt = endPos.clone().add(endTangent);
+      camera.position.copy(endPos);
+      camera.lookAt(lookAt);
+      endQuaternion = camera.quaternion.clone();
+    }
+    // Reset camera to start position
+    camera.position.copy(cameraHomePath.getPoint(0));
+    camera.quaternion.copy(startQuaternion);
+
     setupScrollHandling();
-
     setupCameraAnimation();
-
     startRenderLoop();
 
     console.log("🚀 Application initialized successfully");
@@ -57,16 +74,22 @@ function setupCameraAnimation() {
       },
     })
     .to(
-      {},
+      { t: 0 },
       {
-        duration: 1,
+        t: 1,
+        immediateRender: false,
         onUpdate: function () {
-          const progress = this.progress();
-          const position = cameraHomePath.getPointAt(progress);
+          const progress = this.targets()[0].t;
+          const position = cameraHomePath.getPoint(progress);
           camera.position.copy(position);
-          const tangent = cameraHomePath.getTangentAt(progress);
-          if (tangent && tangent.length() > 0) {
-            camera.lookAt(position.clone().add(tangent));
+          if (startQuaternion && endQuaternion) {
+            const currentQuaternion = new THREE.Quaternion();
+            currentQuaternion.slerpQuaternions(
+              startQuaternion,
+              endQuaternion,
+              progress
+            );
+            camera.quaternion.copy(currentQuaternion);
           }
           camera.updateProjectionMatrix();
         },
