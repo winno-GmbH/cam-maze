@@ -1,7 +1,7 @@
 import { initRenderer, setupLighting, renderer, scene } from "./core/scene";
 import { loadModel } from "./core/objects";
 import { initCamera, camera } from "./core/camera";
-import { updateHomeLoop, initHomeLoop } from "./animation/HomeLoop";
+import { updateHomeLoop } from "./animation/HomeLoop";
 
 async function init() {
   try {
@@ -10,10 +10,6 @@ async function init() {
     setupLighting();
     initRenderer();
 
-    // Initialize arc length tables for home loop
-    initHomeLoop();
-
-    // Start the main render loop
     startRenderLoop();
 
     console.log("🚀 Application initialized successfully");
