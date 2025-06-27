@@ -3,9 +3,12 @@ import { PathPoint } from "../types/types";
 import { startPosition, secondPosition } from "../config/config";
 import { MAZE_CENTER, pathPoints } from "./pathpoints";
 
-// Convert PathPoint[] to Vector3[] for camera path
-const cameraPathPoints = pathPoints.cameraPOV.map((point) => point.pos);
-export const cameraHomePath = new THREE.CatmullRomCurve3(cameraPathPoints);
+export const cameraHomePath = new THREE.CubicBezierCurve3(
+  startPosition,
+  secondPosition,
+  new THREE.Vector3(0.55675, 3, 0.45175),
+  new THREE.Vector3(0.55675, 0.5, 0.45175)
+);
 
 export const paths = {
   pacmanHome: createPath(pathPoints.pacmanHome),

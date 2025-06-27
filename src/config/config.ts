@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import { CAMERA_POSITIONS } from "../paths/pathpoints";
 
 export const isMobile = window.innerWidth < 768;
 
@@ -12,25 +12,6 @@ export const CAMERA_CONFIG = {
 export const ASSETS = {
   mazeTexture: "https://c-am.b-cdn.net/CAM/matcap24.png",
   mazeModel: "https://c-am.b-cdn.net/CAM/c-am-assets-3.glb",
-};
-
-export const MAZE_CENTER = new THREE.Vector3(0.45175, 0.5, 0.55675);
-
-export const POV_POSITIONS = {
-  ghost1: new THREE.Vector3(0.65725, 0.55, 0.75325),
-  ghost2: new THREE.Vector3(0.9085, 0.55, 0.8035),
-  ghost3: new THREE.Vector3(0.75775, 0.55, 1.05475),
-  ghost4: new THREE.Vector3(0.65725, 0.55, 1.0045),
-  ghost5: new THREE.Vector3(0.15475, 0.55, 1.15525),
-};
-
-export const CAMERA_POSITIONS = {
-  startMobile: new THREE.Vector3(0.5, 2.5, 2.5),
-  startDesktop: new THREE.Vector3(-2, 2.5, 2),
-  secondMobile: new THREE.Vector3(0.5, 2.5, 2),
-  secondDesktop: new THREE.Vector3(-1.5, 3, 2),
-  mobileLookAt: new THREE.Vector3(0.5, 0.5, -1.5),
-  desktopLookAt: new THREE.Vector3(-1.25, 0.5, 0.25),
 };
 
 export const startPosition = isMobile
