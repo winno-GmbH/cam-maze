@@ -71,10 +71,6 @@ function setupCameraAndObjectAnimation() {
         start: "top top",
         end: "bottom top",
         scrub: 5,
-        onEnter: () => startHomeScrollAnimation(),
-        onLeave: () => stopHomeScrollAnimation(),
-        onEnterBack: () => startHomeScrollAnimation(),
-        onLeaveBack: () => stopHomeScrollAnimation(),
       },
     })
     .to(

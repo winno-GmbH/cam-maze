@@ -10,33 +10,23 @@ let isReturningToPaused = false;
 let scrollPaths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 let pausedPositions: Record<string, THREE.Vector3> = {};
 let returnAnimationProgress = 0;
-
-export function startHomeScrollAnimation() {
-  isScrollActive = true;
-  isReturningToPaused = false;
-  returnAnimationProgress = 0;
-
-  // Save paused positions
-  pausedPositions = {};
-  ghostOrder.forEach((key) => {
-    const obj = key === "pacman" ? pacman : ghosts[key];
-    if (obj) {
-      pausedPositions[key] = obj.position.clone();
-    }
-  });
-
-  // Create paths
-  scrollPaths = createHomeScrollPaths(pacman, ghosts);
-}
+let lastScrollY = 0;
 
 export function updateHomeScrollAnimation(animatedT: number) {
-  if (!isScrollActive) return;
+  const currentScrollY = window.scrollY;
 
-  // If we're at the top and need to return to paused positions
-  if (window.scrollY === 0 && !isReturningToPaused) {
+  // Start scroll animation when scrolling starts
+  if (currentScrollY > 0 && !isScrollActive) {
+    startHomeScrollAnimation();
+  }
+
+  // Stop scroll animation when back at top
+  if (currentScrollY === 0 && isScrollActive && !isReturningToPaused) {
     isReturningToPaused = true;
     returnAnimationProgress = 0;
   }
+
+  if (!isScrollActive) return;
 
   if (isReturningToPaused) {
     // Animate back to paused positions
@@ -78,6 +68,26 @@ export function updateHomeScrollAnimation(animatedT: number) {
 
   const delta = clock.getDelta();
   if (pacmanMixer) pacmanMixer.update(delta);
+
+  lastScrollY = currentScrollY;
+}
+
+function startHomeScrollAnimation() {
+  isScrollActive = true;
+  isReturningToPaused = false;
+  returnAnimationProgress = 0;
+
+  // Save paused positions
+  pausedPositions = {};
+  ghostOrder.forEach((key) => {
+    const obj = key === "pacman" ? pacman : ghosts[key];
+    if (obj) {
+      pausedPositions[key] = obj.position.clone();
+    }
+  });
+
+  // Create paths
+  scrollPaths = createHomeScrollPaths(pacman, ghosts);
 }
 
 export function stopHomeScrollAnimation() {
