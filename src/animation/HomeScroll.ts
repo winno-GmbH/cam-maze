@@ -90,14 +90,16 @@ export function updateHomeScrollAnimation(animatedT: number) {
     t = Math.max(0, Math.min(1, t));
 
     let pos: THREE.Vector3;
-    // Use the appropriate curve based on whether we're going to or from center
-    if (t <= 1) {
-      // Moving to center
-      pos = anim.curveToCenter.getPoint(t);
+    // Use different curves for different parts of the animation
+    if (t <= 0.5) {
+      // First half: moving to center (t goes from 0 to 0.5, map to 0 to 1)
+      const curveT = t * 2;
+      pos = anim.curveToCenter.getPoint(curveT);
       obj.lookAt(MAZE_CENTER);
     } else {
-      // This shouldn't happen with current setup, but just in case
-      pos = anim.curveFromCenter.getPoint(1);
+      // Second half: moving from center back to start (t goes from 0.5 to 1, map to 0 to 1)
+      const curveT = (t - 0.5) * 2;
+      pos = anim.curveFromCenter.getPoint(curveT);
       obj.lookAt(anim.startPos);
     }
 
