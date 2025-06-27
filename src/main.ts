@@ -7,7 +7,6 @@ import {
   startHomeLoop,
 } from "./animation/HomeLoop";
 import {
-  startHomeScrollAnimation,
   updateHomeScrollAnimation,
   stopHomeScrollAnimation,
   haveObjectsReturnedToPausedPositions,
