@@ -5,6 +5,8 @@ import {
   updateHomeLoop,
   stopHomeLoop,
   startHomeLoop,
+  startTransitionToHome,
+  updateTransitionToHome,
 } from "./animation/HomeLoop";
 import {
   startHomeScrollAnimation,
@@ -58,7 +60,7 @@ function setupScrollHandling() {
     if (wasAtTop && !isAtTop) {
       stopHomeLoop();
     } else if (!wasAtTop && isAtTop) {
-      startHomeLoop();
+      startTransitionToHome();
     }
     wasAtTop = isAtTop;
   });
@@ -75,7 +77,10 @@ function setupCameraAndObjectAnimation() {
         onEnter: () => startHomeScrollAnimation(),
         onLeave: () => stopHomeScrollAnimation(),
         onEnterBack: () => startHomeScrollAnimation(),
-        onLeaveBack: () => stopHomeScrollAnimation(),
+        onLeaveBack: () => {
+          stopHomeScrollAnimation();
+          startTransitionToHome();
+        },
       },
     })
     .to(
@@ -106,6 +111,7 @@ function setupCameraAndObjectAnimation() {
 function startRenderLoop(): void {
   const render = () => {
     updateHomeLoop();
+    updateTransitionToHome();
     renderer.render(scene, camera);
     requestAnimationFrame(render);
   };
