@@ -74,7 +74,7 @@ function setupCameraAndObjectAnimation() {
         trigger: ".sc--home",
         start: "top top",
         end: "bottom top",
-        scrub: 1,
+        scrub: 5,
         onEnter: () => {
           startHomeScrollAnimation();
           isScrubCatchingUp = false;
