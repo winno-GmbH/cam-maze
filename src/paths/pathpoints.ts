@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { PathPoint } from "../types/types";
+import { MazePathPoint, PathPoint } from "../types/types";
 import { isMobile } from "../config/config";
 
 const mazeCenterPathPoint = new THREE.Vector3(0.45175, 0.5, 0.55675);
@@ -23,7 +23,7 @@ const lookAtPosition = isMobile
   ? cameraStartPoints.mobileLookAt
   : cameraStartPoints.desktopLookAt;
 
-const pacmanHomePathPoints: PathPoint[] = [
+const pacmanHomePathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(0.25525, 0.55, 0.6025), type: "straight" },
   {
     pos: new THREE.Vector3(0.25525, 0.55, 0.301),
@@ -217,7 +217,7 @@ const pacmanHomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.25525, 0.55, 0.6025), type: "straight" },
 ];
 
-const ghost1HomePathPoints: PathPoint[] = [
+const ghost1HomePathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(-0.44825, 0.55, 0.703), type: "straight" },
   {
     pos: new THREE.Vector3(-0.44825, 0.55, 0.301),
@@ -381,7 +381,7 @@ const ghost1HomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(-0.44825, 0.55, 0.703), type: "straight" },
 ];
 
-const ghost2HomePathPoints: PathPoint[] = [
+const ghost2HomePathPoints: MazePathPoint[] = [
   {
     pos: new THREE.Vector3(-0.04625, 0.55, 0.904),
     type: "curve",
@@ -549,7 +549,7 @@ const ghost2HomePathPoints: PathPoint[] = [
   },
 ];
 
-const ghost3HomePathPoints: PathPoint[] = [
+const ghost3HomePathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(0.85825, 0.55, 0.75325), type: "straight" },
   {
     pos: new THREE.Vector3(0.85825, 0.55, -0.101),
@@ -721,7 +721,7 @@ const ghost3HomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.85825, 0.55, 0.75325), type: "straight" },
 ];
 
-const ghost4HomePathPoints: PathPoint[] = [
+const ghost4HomePathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(1.05925, 0.55, 0.4015), type: "straight" },
   {
     pos: new THREE.Vector3(1.05925, 0.55, 0.703),
@@ -876,7 +876,7 @@ const ghost4HomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(1.05925, 0.55, 0.4015), type: "straight" },
 ];
 
-const ghost5HomePathPoints: PathPoint[] = [
+const ghost5HomePathPoints: MazePathPoint[] = [
   {
     pos: new THREE.Vector3(0.45625, 0.55, -0.04975),
     type: "curve",
@@ -1040,7 +1040,43 @@ const ghost5HomePathPoints: PathPoint[] = [
   },
 ];
 
-const cameraPOVPathPoints: PathPoint[] = [
+const pacmanScrollPathPoints: PathPoint[] = [
+  { pos: getPausedPathPoints().pacman },
+  { pos: generateArcPathPoints().pacman },
+  { pos: mazeCenterPathPoint },
+];
+
+const ghost1ScrollPathPoints: PathPoint[] = [
+  { pos: getPausedPathPoints().ghost1 },
+  { pos: generateArcPathPoints().ghost1 },
+  { pos: mazeCenterPathPoint },
+];
+
+const ghost2ScrollPathPoints: PathPoint[] = [
+  { pos: getPausedPathPoints().ghost2 },
+  { pos: generateArcPathPoints().ghost2 },
+  { pos: mazeCenterPathPoint },
+];
+
+const ghost3ScrollPathPoints: PathPoint[] = [
+  { pos: getPausedPathPoints().ghost3 },
+  { pos: generateArcPathPoints().ghost3 },
+  { pos: mazeCenterPathPoint },
+];
+
+const ghost4ScrollPathPoints: PathPoint[] = [
+  { pos: getPausedPathPoints().ghost4 },
+  { pos: generateArcPathPoints().ghost4 },
+  { pos: mazeCenterPathPoint },
+];
+
+const ghost5ScrollPathPoints: PathPoint[] = [
+  { pos: getPausedPathPoints().ghost5 },
+  { pos: generateArcPathPoints().ghost5 },
+  { pos: mazeCenterPathPoint },
+];
+
+const cameraPOVPathPoints: MazePathPoint[] = [
   {
     pos: new THREE.Vector3(0.55675, -0.5, 0.45175),
     type: "curve",
@@ -1111,7 +1147,7 @@ const cameraPOVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(-0.44825, 1, 2.0095), type: "straight" },
 ];
 
-const ghost1POVPathPoints: PathPoint[] = [
+const ghost1POVPathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(1.05925, 0.55, 0.703), type: "straight" },
   {
     pos: new THREE.Vector3(1.05925, 0.55, 0.75325),
@@ -1122,7 +1158,7 @@ const ghost1POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.9085, 0.55, 0.8035), type: "straight" },
 ];
 
-const ghost2POVPathPoints: PathPoint[] = [
+const ghost2POVPathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(1.05925, 0.55, 1.2055), type: "straight" },
   {
     pos: new THREE.Vector3(1.009, 0.55, 1.2055),
@@ -1133,7 +1169,7 @@ const ghost2POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.95875, 0.55, 1.05475), type: "straight" },
 ];
 
-const ghost3POVPathPoints: PathPoint[] = [
+const ghost3POVPathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(0.35575, 0.55, 0.904), type: "straight" },
   {
     pos: new THREE.Vector3(0.35575, 0.55, 0.95425),
@@ -1144,7 +1180,7 @@ const ghost3POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.5065, 0.55, 1.0045), type: "straight" },
 ];
 
-const ghost4POVPathPoints: PathPoint[] = [
+const ghost4POVPathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(0.15475, 0.55, 1.105), type: "straight" },
   {
     pos: new THREE.Vector3(0.15475, 0.55, 1.05475),
@@ -1155,7 +1191,7 @@ const ghost4POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.3055, 0.55, 1.0045), type: "straight" },
 ];
 
-const ghost5POVPathPoints: PathPoint[] = [
+const ghost5POVPathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(0.55675, 0.55, 1.306), type: "straight" },
   {
     pos: new THREE.Vector3(0.55675, 0.55, 1.25575),
@@ -1193,6 +1229,12 @@ export const pathPoints = {
   ghost3Home: ghost3HomePathPoints,
   ghost4Home: ghost4HomePathPoints,
   ghost5Home: ghost5HomePathPoints,
+  pacmanHomeScroll: pacmanScrollPathPoints,
+  ghost1HomeScroll: ghost1ScrollPathPoints,
+  ghost2HomeScroll: ghost2ScrollPathPoints,
+  ghost3HomeScroll: ghost3ScrollPathPoints,
+  ghost4HomeScroll: ghost4ScrollPathPoints,
+  ghost5HomeScroll: ghost5ScrollPathPoints,
   cameraPOV: cameraPOVPathPoints,
   ghost1POV: ghost1POVPathPoints,
   ghost2POV: ghost2POVPathPoints,
@@ -1212,37 +1254,4 @@ export const cameraPositions = {
   startPosition,
   secondPosition,
   lookAtPosition,
-};
-
-export const homeScrollPathPoints: Record<string, THREE.Vector3[]> = {
-  pacman: [
-    getPausedPathPoints().pacman,
-    generateArcPathPoints().pacman,
-    mazeCenterPathPoint,
-  ],
-  ghost1: [
-    getPausedPathPoints().ghost1,
-    generateArcPathPoints().ghost1,
-    mazeCenterPathPoint,
-  ],
-  ghost2: [
-    getPausedPathPoints().ghost2,
-    generateArcPathPoints().ghost2,
-    mazeCenterPathPoint,
-  ],
-  ghost3: [
-    getPausedPathPoints().ghost3,
-    generateArcPathPoints().ghost3,
-    mazeCenterPathPoint,
-  ],
-  ghost4: [
-    getPausedPathPoints().ghost4,
-    generateArcPathPoints().ghost4,
-    mazeCenterPathPoint,
-  ],
-  ghost5: [
-    getPausedPathPoints().ghost5,
-    generateArcPathPoints().ghost5,
-    mazeCenterPathPoint,
-  ],
 };

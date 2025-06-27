@@ -2,12 +2,15 @@ import * as THREE from "three";
 
 export interface PathPoint {
   pos: THREE.Vector3;
+}
+
+export interface MazePathPoint extends PathPoint {
   type: "straight" | "curve";
   curveType?: "upperArc" | "lowerArc" | "forwardDownArc";
 }
 
 export interface PathData {
-  points: PathPoint[];
+  points: MazePathPoint[];
   color: number;
 }
 

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { PathPoint } from "../types/types";
+import { MazePathPoint, PathPoint } from "../types/types";
 import { pathPoints, cameraScrollPathPoints } from "./pathpoints";
 
 export function createHomeScrollPaths(
@@ -20,7 +20,9 @@ export function createHomeScrollPaths(
   return paths;
 }
 
-function createPath(pathPoints: PathPoint[]): THREE.CurvePath<THREE.Vector3> {
+function createMazePath(
+  pathPoints: MazePathPoint[]
+): THREE.CurvePath<THREE.Vector3> {
   const path = new THREE.CurvePath<THREE.Vector3>();
 
   for (let i = 0; i < pathPoints.length - 1; i++) {
@@ -48,8 +50,8 @@ function createPath(pathPoints: PathPoint[]): THREE.CurvePath<THREE.Vector3> {
 }
 
 function createSimpleMidPoint(
-  current: PathPoint,
-  next: PathPoint
+  current: MazePathPoint,
+  next: MazePathPoint
 ): THREE.Vector3 {
   const { curveType } = current;
 
@@ -65,8 +67,8 @@ function createSimpleMidPoint(
 }
 
 function createSmoothMidPoint(
-  current: PathPoint,
-  next: PathPoint,
+  current: MazePathPoint,
+  next: MazePathPoint,
   hasPrevCurve: boolean,
   hasNextCurve: boolean
 ): THREE.Vector3 {
@@ -77,6 +79,20 @@ function createSmoothMidPoint(
   const stretchFactor =
     hasPrevCurve && hasNextCurve ? smoothingFactor * 2 : smoothingFactor;
   return originalMidPoint.clone().lerp(straightMidPoint, stretchFactor);
+}
+
+function createPath(pathPoints: PathPoint[]): THREE.CurvePath<THREE.Vector3> {
+  const path = new THREE.CurvePath<THREE.Vector3>();
+
+  // Create a quadratic Bezier curve from the 3 points
+  const curve = new THREE.QuadraticBezierCurve3(
+    pathPoints[0].pos, // Start point
+    pathPoints[1].pos, // Mid point
+    pathPoints[2].pos // End point
+  );
+
+  path.add(curve);
+  return path;
 }
 
 export function getPathsForSection(section: string) {
@@ -110,16 +126,22 @@ export const cameraHomePath = new THREE.CubicBezierCurve3(
 );
 
 export const paths = {
-  pacmanHome: createPath(pathPoints.pacmanHome),
-  ghost1Home: createPath(pathPoints.ghost1Home),
-  ghost2Home: createPath(pathPoints.ghost2Home),
-  ghost3Home: createPath(pathPoints.ghost3Home),
-  ghost4Home: createPath(pathPoints.ghost4Home),
-  ghost5Home: createPath(pathPoints.ghost5Home),
-  cameraPOV: createPath(pathPoints.cameraPOV),
-  ghost1POV: createPath(pathPoints.ghost1POV),
-  ghost2POV: createPath(pathPoints.ghost2POV),
-  ghost3POV: createPath(pathPoints.ghost3POV),
-  ghost4POV: createPath(pathPoints.ghost4POV),
-  ghost5POV: createPath(pathPoints.ghost5POV),
+  pacmanHome: createMazePath(pathPoints.pacmanHome),
+  ghost1Home: createMazePath(pathPoints.ghost1Home),
+  ghost2Home: createMazePath(pathPoints.ghost2Home),
+  ghost3Home: createMazePath(pathPoints.ghost3Home),
+  ghost4Home: createMazePath(pathPoints.ghost4Home),
+  ghost5Home: createMazePath(pathPoints.ghost5Home),
+  pacmanHomeScroll: createPath(pathPoints.pacmanHomeScroll),
+  ghost1HomeScroll: createPath(pathPoints.ghost1HomeScroll),
+  ghost2HomeScroll: createPath(pathPoints.ghost2HomeScroll),
+  ghost3HomeScroll: createPath(pathPoints.ghost3HomeScroll),
+  ghost4HomeScroll: createPath(pathPoints.ghost4HomeScroll),
+  ghost5HomeScroll: createPath(pathPoints.ghost5Scroll),
+  cameraPOV: createMazePath(pathPoints.cameraPOV),
+  ghost1POV: createMazePath(pathPoints.ghost1POV),
+  ghost2POV: createMazePath(pathPoints.ghost2POV),
+  ghost3POV: createMazePath(pathPoints.ghost3POV),
+  ghost4POV: createMazePath(pathPoints.ghost4POV),
+  ghost5POV: createMazePath(pathPoints.ghost5POV),
 };
