@@ -20,9 +20,12 @@ let scrollAnimationCurves: Record<
 let isScrollActive = false;
 let lastAnimatedT: number = 0;
 let previousT: number = 0;
+let isScrubCatchingUp = false;
+let targetT: number = 0;
 
 export function startHomeScrollAnimation() {
   isScrollActive = true;
+  isScrubCatchingUp = false;
   scrollAnimationCurves = {};
   ghostOrder.forEach((key, i) => {
     const obj = key === "pacman" ? pacman : ghosts[key];
@@ -52,13 +55,25 @@ export function startHomeScrollAnimation() {
   });
   lastAnimatedT = 0;
   previousT = 0;
+  targetT = 0;
 }
 
 export function updateHomeScrollAnimation(animatedT: number) {
   if (!isScrollActive) return;
 
-  // Only update if we're moving forward (handles scrub delay)
+  // Handle GSAP scrub delay
   if (animatedT < previousT) {
+    // GSAP is catching up (scrub delay), pause animation
+    isScrubCatchingUp = true;
+    targetT = animatedT;
+    return;
+  } else if (isScrubCatchingUp && animatedT >= targetT) {
+    // Scrub has caught up, resume animation
+    isScrubCatchingUp = false;
+  }
+
+  // Only update if we're moving forward or at the target
+  if (isScrubCatchingUp && animatedT < targetT) {
     return;
   }
 
@@ -97,4 +112,11 @@ export function stopHomeScrollAnimation() {
   isScrollActive = false;
   lastAnimatedT = 0;
   previousT = 0;
+  isScrubCatchingUp = false;
+  targetT = 0;
+}
+
+// Export the scrub state so main.ts can check it
+export function isScrubStillCatchingUp(): boolean {
+  return isScrubCatchingUp;
 }
