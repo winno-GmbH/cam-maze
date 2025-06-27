@@ -86,7 +86,8 @@ export function updateHomeScrollAnimation(animatedT: number) {
     const anim = scrollAnimationCurves[key];
     if (!anim) return;
 
-    let t = animatedT / anim.duration;
+    // Use animatedT directly (0 to 1) without duration scaling
+    let t = animatedT;
     t = Math.max(0, Math.min(1, t));
 
     let pos: THREE.Vector3;
