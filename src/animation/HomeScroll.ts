@@ -19,9 +19,12 @@ let scrollAnimationCurves: Record<
 > = {};
 let isScrollActive = false;
 let lastAnimatedT: number = 0;
+let isScrubCatchingUp = false;
+let targetT: number = 0;
 
 export function startHomeScrollAnimation() {
   isScrollActive = true;
+  isScrubCatchingUp = false;
   scrollAnimationCurves = {};
   ghostOrder.forEach((key, i) => {
     const obj = key === "pacman" ? pacman : ghosts[key];
@@ -50,36 +53,62 @@ export function startHomeScrollAnimation() {
     };
   });
   lastAnimatedT = 0;
+  targetT = 0;
 }
 
 export function updateHomeScrollAnimation(animatedT: number) {
   if (!isScrollActive) return;
-  // Remove this restriction for bidirectional support
+
+  // Handle GSAP scrub delay
+  if (animatedT < lastAnimatedT) {
+    // GSAP is catching up (scrub delay), pause animation
+    isScrubCatchingUp = true;
+    targetT = animatedT;
+    return;
+  } else if (isScrubCatchingUp && animatedT >= targetT) {
+    // Scrub has caught up, resume animation
+    isScrubCatchingUp = false;
+  }
+
+  // Only update if we're moving forward or at the target
+  if (isScrubCatchingUp && animatedT < targetT) {
+    return;
+  }
+
   lastAnimatedT = animatedT;
+
   ghostOrder.forEach((key) => {
     const obj = key === "pacman" ? pacman : ghosts[key];
     if (!obj) return;
     const anim = scrollAnimationCurves[key];
     if (!anim) return;
+
     let t = animatedT / anim.duration;
     t = Math.max(0, Math.min(1, t));
+
     let pos: THREE.Vector3;
-    if (animatedT >= lastAnimatedT) {
-      // Scrolling forward: to center
-      pos = anim.curveToCenter.getPoint(t);
+    // Always use the forward direction curve, but handle both directions
+    // by using t for forward and (1-t) for backward
+    if (t <= 0.5) {
+      // First half: moving to center
+      pos = anim.curveToCenter.getPoint(t * 2);
       obj.lookAt(MAZE_CENTER);
     } else {
-      // Scrolling backward: from center
-      pos = anim.curveFromCenter.getPoint(1 - t);
+      // Second half: moving from center back to start
+      pos = anim.curveFromCenter.getPoint((t - 0.5) * 2);
       obj.lookAt(anim.startPos);
     }
+
     obj.position.copy(pos);
   });
+
   const delta = clock.getDelta();
   if (pacmanMixer) pacmanMixer.update(delta);
 }
 
 export function stopHomeScrollAnimation() {
   isScrollActive = false;
+  isScrubCatchingUp = false;
   lastAnimatedT = 0;
+  targetT = 0;
 }
