@@ -58,8 +58,6 @@ function setupScrollHandling() {
 
     if (wasAtTop && !isAtTop) {
       stopHomeLoop();
-    } else if (!wasAtTop && isAtTop && haveObjectsReturnedToPausedPositions()) {
-      startHomeLoop();
     }
     wasAtTop = isAtTop;
   });
@@ -100,6 +98,11 @@ function setupCameraAndObjectAnimation() {
           }
           camera.updateProjectionMatrix();
           updateHomeScrollAnimation(t);
+
+          // Check if objects have returned to paused positions and resume HomeLoop
+          if (window.scrollY === 0 && haveObjectsReturnedToPausedPositions()) {
+            startHomeLoop();
+          }
         },
       }
     );

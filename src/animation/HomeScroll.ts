@@ -6,11 +6,15 @@ import { createHomeScrollPaths } from "../paths/paths";
 const ghostOrder = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5", "pacman"];
 
 let isScrollActive = false;
+let isReturningToPaused = false;
 let scrollPaths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 let pausedPositions: Record<string, THREE.Vector3> = {};
+let returnAnimationProgress = 0;
 
 export function startHomeScrollAnimation() {
   isScrollActive = true;
+  isReturningToPaused = false;
+  returnAnimationProgress = 0;
 
   // Save paused positions
   pausedPositions = {};
@@ -28,18 +32,49 @@ export function startHomeScrollAnimation() {
 export function updateHomeScrollAnimation(animatedT: number) {
   if (!isScrollActive) return;
 
-  ghostOrder.forEach((key) => {
-    const obj = key === "pacman" ? pacman : ghosts[key];
-    if (!obj) return;
+  // If we're at the top and need to return to paused positions
+  if (window.scrollY === 0 && !isReturningToPaused) {
+    isReturningToPaused = true;
+    returnAnimationProgress = 0;
+  }
 
-    const path = scrollPaths[key];
-    if (!path) return;
-
-    const position = path.getPointAt(animatedT);
-    if (position) {
-      obj.position.copy(position);
+  if (isReturningToPaused) {
+    // Animate back to paused positions
+    returnAnimationProgress += 0.02; // Adjust speed as needed
+    if (returnAnimationProgress >= 1) {
+      returnAnimationProgress = 1;
+      isScrollActive = false;
+      isReturningToPaused = false;
     }
-  });
+
+    ghostOrder.forEach((key) => {
+      const obj = key === "pacman" ? pacman : ghosts[key];
+      if (!obj) return;
+
+      const path = scrollPaths[key];
+      if (!path) return;
+
+      // Animate backwards along the path
+      const position = path.getPointAt(1 - returnAnimationProgress);
+      if (position) {
+        obj.position.copy(position);
+      }
+    });
+  } else {
+    // Normal scroll animation
+    ghostOrder.forEach((key) => {
+      const obj = key === "pacman" ? pacman : ghosts[key];
+      if (!obj) return;
+
+      const path = scrollPaths[key];
+      if (!path) return;
+
+      const position = path.getPointAt(animatedT);
+      if (position) {
+        obj.position.copy(position);
+      }
+    });
+  }
 
   const delta = clock.getDelta();
   if (pacmanMixer) pacmanMixer.update(delta);
@@ -47,6 +82,7 @@ export function updateHomeScrollAnimation(animatedT: number) {
 
 export function stopHomeScrollAnimation() {
   isScrollActive = false;
+  isReturningToPaused = false;
   scrollPaths = {};
 }
 
