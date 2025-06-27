@@ -1,10 +1,6 @@
 import * as THREE from "three";
 import { PathPoint } from "../types/types";
-import {
-  pathPoints,
-  cameraScrollPathPoints,
-  objectScrollPathPoints,
-} from "./pathpoints";
+import { pathPoints, cameraScrollPathPoints } from "./pathpoints";
 
 export function createHomeScrollPaths(
   pacman: THREE.Object3D,
@@ -18,22 +14,6 @@ export function createHomeScrollPaths(
     if (!obj) return;
 
     const path = new THREE.CurvePath<THREE.Vector3>();
-
-    // Get the paused position for this object
-    const pausedPosition = objectScrollPathPoints.pausedPositions[key];
-    if (!pausedPosition) return;
-
-    // Get the arc point for this object
-    const arcPoint = objectScrollPathPoints.arcPoints[key];
-    if (!arcPoint) return;
-
-    const curve = new THREE.QuadraticBezierCurve3(
-      pausedPosition,
-      arcPoint,
-      objectScrollPathPoints.mazeCenter
-    );
-
-    path.add(curve);
     paths[key] = path;
   });
 

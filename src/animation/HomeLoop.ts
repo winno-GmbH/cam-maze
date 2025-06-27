@@ -1,7 +1,6 @@
 import { pacman, ghosts, pacmanMixer } from "../core/objects";
 import { paths } from "../paths/paths";
 import { clock } from "../core/scene";
-import { setupObjectScrollPathPoints } from "../paths/pathpoints";
 
 const pathMapping = {
   pacman: "pacmanHome",
@@ -45,8 +44,6 @@ export function setupScrollHandling() {
     const isAtTop = window.scrollY === 0;
 
     if (wasAtTop && !isAtTop) {
-      // Capture paused positions when scroll starts
-      setupObjectScrollPathPoints(pacman, ghosts);
       stopHomeLoop();
     }
     wasAtTop = isAtTop;

@@ -13,8 +13,6 @@ async function init() {
     setupScrollHandling();
     setupCameraAnimation();
     startRenderLoop();
-
-    console.log("🚀 Application initialized successfully");
   } catch (error) {
     console.error("Initialization error:", error);
   }

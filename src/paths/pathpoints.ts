@@ -23,25 +23,6 @@ const lookAtPosition = isMobile
   ? cameraStartPoints.mobileLookAt
   : cameraStartPoints.desktopLookAt;
 
-export const cameraScrollPathPoints = {
-  start: startPosition,
-  second: secondPosition,
-  highPoint: new THREE.Vector3(0.55675, 3, 0.45175),
-  end: mazeCenterPathPoint,
-};
-
-export const objectScrollPathPoints = {
-  pausedPositions: {} as Record<string, THREE.Vector3>,
-  arcPoints: {} as Record<string, THREE.Vector3>,
-  mazeCenter: mazeCenterPathPoint,
-};
-
-export const cameraPositions = {
-  startPosition,
-  secondPosition,
-  lookAtPosition,
-};
-
 const pacmanHomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.25525, 0.55, 0.6025), type: "straight" },
   {
@@ -189,7 +170,10 @@ const pacmanHomePathPoints: PathPoint[] = [
     type: "curve",
     curveType: "upperArc",
   },
-  { pos: new THREE.Vector3(-0.04625, 0.55, 1.0045), type: "straight" },
+  {
+    pos: new THREE.Vector3(-0.04625, 0.55, 1.0045),
+    type: "straight",
+  },
   {
     pos: new THREE.Vector3(0.65725, 0.55, 1.0045),
     type: "curve",
@@ -1182,6 +1166,26 @@ const ghost5POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.406, 0.55, 1.2055), type: "straight" },
 ];
 
+function getPausedPathPoints(): Record<string, THREE.Vector3> {
+  const pausedPathPoints: Record<string, THREE.Vector3> = {};
+  return pausedPathPoints;
+}
+
+function generateArcPathPoints(): Record<string, THREE.Vector3> {
+  const pausedPathPoints = getPausedPathPoints();
+  const arcPathPoints: Record<string, THREE.Vector3> = {};
+
+  Object.entries(pausedPathPoints).forEach(([key, pausedPos]) => {
+    arcPathPoints[key] = new THREE.Vector3(
+      (pausedPos.x + mazeCenterPathPoint.x) / 2,
+      1,
+      (pausedPos.z + mazeCenterPathPoint.z) / 2
+    );
+  });
+
+  return arcPathPoints;
+}
+
 export const pathPoints = {
   pacmanHome: pacmanHomePathPoints,
   ghost1Home: ghost1HomePathPoints,
@@ -1197,45 +1201,48 @@ export const pathPoints = {
   ghost5POV: ghost5POVPathPoints,
 };
 
-export function getPausedPositions(
-  pacman: THREE.Object3D,
-  ghosts: Record<string, THREE.Object3D>
-): Record<string, THREE.Vector3> {
-  const pausedPositions: Record<string, THREE.Vector3> = {};
-  const objects = { pacman, ...ghosts };
+export const cameraScrollPathPoints = {
+  start: startPosition,
+  second: secondPosition,
+  highPoint: new THREE.Vector3(0.55675, 3, 0.45175),
+  end: mazeCenterPathPoint,
+};
 
-  Object.entries(objects).forEach(([key, obj]) => {
-    if (obj) {
-      pausedPositions[key] = obj.position.clone();
-    }
-  });
+export const cameraPositions = {
+  startPosition,
+  secondPosition,
+  lookAtPosition,
+};
 
-  return pausedPositions;
-}
-
-export function generateArcPoints(
-  pausedPositions: Record<string, THREE.Vector3>,
-  arcHeight: number = 1
-): Record<string, THREE.Vector3> {
-  const arcPoints: Record<string, THREE.Vector3> = {};
-
-  Object.entries(pausedPositions).forEach(([key, pausedPos]) => {
-    arcPoints[key] = new THREE.Vector3(
-      (pausedPos.x + objectScrollPathPoints.mazeCenter.x) / 2,
-      arcHeight,
-      (pausedPos.z + objectScrollPathPoints.mazeCenter.z) / 2
-    );
-  });
-
-  return arcPoints;
-}
-
-export function setupObjectScrollPathPoints(
-  pacman: THREE.Object3D,
-  ghosts: Record<string, THREE.Object3D>
-): void {
-  objectScrollPathPoints.pausedPositions = getPausedPositions(pacman, ghosts);
-  objectScrollPathPoints.arcPoints = generateArcPoints(
-    objectScrollPathPoints.pausedPositions
-  );
-}
+export const homeScrollPathPoints: Record<string, THREE.Vector3[]> = {
+  pacman: [
+    getPausedPathPoints().pacman,
+    generateArcPathPoints().pacman,
+    mazeCenterPathPoint,
+  ],
+  ghost1: [
+    getPausedPathPoints().ghost1,
+    generateArcPathPoints().ghost1,
+    mazeCenterPathPoint,
+  ],
+  ghost2: [
+    getPausedPathPoints().ghost2,
+    generateArcPathPoints().ghost2,
+    mazeCenterPathPoint,
+  ],
+  ghost3: [
+    getPausedPathPoints().ghost3,
+    generateArcPathPoints().ghost3,
+    mazeCenterPathPoint,
+  ],
+  ghost4: [
+    getPausedPathPoints().ghost4,
+    generateArcPathPoints().ghost4,
+    mazeCenterPathPoint,
+  ],
+  ghost5: [
+    getPausedPathPoints().ghost5,
+    generateArcPathPoints().ghost5,
+    mazeCenterPathPoint,
+  ],
+};
