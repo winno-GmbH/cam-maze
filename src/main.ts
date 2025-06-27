@@ -10,7 +10,7 @@ import {
   startHomeScrollAnimation,
   updateHomeScrollAnimation,
   stopHomeScrollAnimation,
-  haveObjectsReturnedToOriginalPositions,
+  haveObjectsReturnedToPausedPositions,
 } from "./animation/HomeScroll";
 import { cameraHomePath } from "./paths/paths";
 import gsap from "gsap";
@@ -20,8 +20,6 @@ gsap.registerPlugin(ScrollTrigger);
 
 let startQuaternion: THREE.Quaternion | null = null;
 let endQuaternion: THREE.Quaternion | null = null;
-let isScrubCatchingUp = false;
-let lastTimelineProgress = 0;
 
 async function init() {
   try {
@@ -60,11 +58,7 @@ function setupScrollHandling() {
 
     if (wasAtTop && !isAtTop) {
       stopHomeLoop();
-    } else if (
-      !wasAtTop &&
-      isAtTop &&
-      haveObjectsReturnedToOriginalPositions()
-    ) {
+    } else if (!wasAtTop && isAtTop && haveObjectsReturnedToPausedPositions()) {
       startHomeLoop();
     }
     wasAtTop = isAtTop;
@@ -79,22 +73,10 @@ function setupCameraAndObjectAnimation() {
         start: "top top",
         end: "bottom top",
         scrub: 5,
-        onEnter: () => {
-          startHomeScrollAnimation();
-          isScrubCatchingUp = false;
-        },
-        onLeave: () => {
-          stopHomeScrollAnimation();
-          isScrubCatchingUp = false;
-        },
-        onEnterBack: () => {
-          startHomeScrollAnimation();
-          isScrubCatchingUp = false;
-        },
-        onLeaveBack: () => {
-          stopHomeScrollAnimation();
-          isScrubCatchingUp = false;
-        },
+        onEnter: () => startHomeScrollAnimation(),
+        onLeave: () => stopHomeScrollAnimation(),
+        onEnterBack: () => startHomeScrollAnimation(),
+        onLeaveBack: () => stopHomeScrollAnimation(),
       },
     })
     .to(
@@ -104,15 +86,6 @@ function setupCameraAndObjectAnimation() {
         immediateRender: false,
         onUpdate: function () {
           const t = this.targets()[0].t;
-
-          // Detect if timeline is catching up (scrub delay)
-          if (t < lastTimelineProgress) {
-            isScrubCatchingUp = true;
-          } else if (isScrubCatchingUp && t >= lastTimelineProgress) {
-            isScrubCatchingUp = false;
-          }
-
-          lastTimelineProgress = t;
 
           const position = cameraHomePath.getPoint(t);
           camera.position.copy(position);
