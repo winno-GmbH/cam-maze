@@ -1,11 +1,7 @@
 import * as THREE from "three";
-import {
-  CAMERA_CONFIG,
-  startPosition,
-  secondPosition,
-  lookAtPosition,
-} from "../config/config";
+import { CAMERA_CONFIG } from "../config/config";
 import { cameraHomePath } from "../paths/paths";
+import { startPosition, lookAtPosition } from "../paths/pathpoints";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 
