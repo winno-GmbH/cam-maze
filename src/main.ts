@@ -60,13 +60,8 @@ function setupScrollHandling() {
 
     if (wasAtTop && !isAtTop) {
       stopHomeLoop();
-    } else if (!wasAtTop && isAtTop) {
-      // Check if GSAP timeline has caught up to the beginning
-      if (lastTimelineProgress <= 0.01) {
-        // Allow small tolerance
-        startHomeLoop();
-      }
-      // If timeline hasn't caught up yet, wait for it in the onUpdate callback
+    } else if (!wasAtTop && isAtTop && !isScrubCatchingUp) {
+      startHomeLoop();
     }
     wasAtTop = isAtTop;
   });
@@ -114,11 +109,6 @@ function setupCameraAndObjectAnimation() {
           }
 
           lastTimelineProgress = t;
-
-          // If we're at the top and timeline has caught up to beginning, start home loop
-          if (window.scrollY === 0 && t <= 0.01 && !isScrubCatchingUp) {
-            startHomeLoop();
-          }
 
           const position = cameraHomePath.getPoint(t);
           camera.position.copy(position);
