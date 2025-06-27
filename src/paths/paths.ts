@@ -84,11 +84,10 @@ function createSmoothMidPoint(
 function createPath(pathPoints: PathPoint[]): THREE.CurvePath<THREE.Vector3> {
   const path = new THREE.CurvePath<THREE.Vector3>();
 
-  // Create a quadratic Bezier curve from the 3 points
   const curve = new THREE.QuadraticBezierCurve3(
-    pathPoints[0].pos, // Start point
-    pathPoints[1].pos, // Mid point
-    pathPoints[2].pos // End point
+    pathPoints[0].pos,
+    pathPoints[1].pos,
+    pathPoints[2].pos
   );
 
   path.add(curve);
@@ -137,7 +136,7 @@ export const paths = {
   ghost2HomeScroll: createPath(pathPoints.ghost2HomeScroll),
   ghost3HomeScroll: createPath(pathPoints.ghost3HomeScroll),
   ghost4HomeScroll: createPath(pathPoints.ghost4HomeScroll),
-  ghost5HomeScroll: createPath(pathPoints.ghost5Scroll),
+  ghost5HomeScroll: createPath(pathPoints.ghost5HomeScroll),
   cameraPOV: createMazePath(pathPoints.cameraPOV),
   ghost1POV: createMazePath(pathPoints.ghost1POV),
   ghost2POV: createMazePath(pathPoints.ghost2POV),
