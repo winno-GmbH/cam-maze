@@ -19,12 +19,10 @@ let scrollAnimationCurves: Record<
 > = {};
 let isScrollActive = false;
 let lastAnimatedT: number = 0;
-let isScrubCatchingUp = false;
-let targetT: number = 0;
+let previousT: number = 0;
 
 export function startHomeScrollAnimation() {
   isScrollActive = true;
-  isScrubCatchingUp = false;
   scrollAnimationCurves = {};
   ghostOrder.forEach((key, i) => {
     const obj = key === "pacman" ? pacman : ghosts[key];
@@ -53,28 +51,18 @@ export function startHomeScrollAnimation() {
     };
   });
   lastAnimatedT = 0;
-  targetT = 0;
+  previousT = 0;
 }
 
 export function updateHomeScrollAnimation(animatedT: number) {
   if (!isScrollActive) return;
 
-  // Handle GSAP scrub delay
-  if (animatedT < lastAnimatedT) {
-    // GSAP is catching up (scrub delay), pause animation
-    isScrubCatchingUp = true;
-    targetT = animatedT;
-    return;
-  } else if (isScrubCatchingUp && animatedT >= targetT) {
-    // Scrub has caught up, resume animation
-    isScrubCatchingUp = false;
-  }
-
-  // Only update if we're moving forward or at the target
-  if (isScrubCatchingUp && animatedT < targetT) {
+  // Only update if we're moving forward (handles scrub delay)
+  if (animatedT < previousT) {
     return;
   }
 
+  previousT = animatedT;
   lastAnimatedT = animatedT;
 
   ghostOrder.forEach((key) => {
@@ -87,15 +75,14 @@ export function updateHomeScrollAnimation(animatedT: number) {
     t = Math.max(0, Math.min(1, t));
 
     let pos: THREE.Vector3;
-    // Always use the forward direction curve, but handle both directions
-    // by using t for forward and (1-t) for backward
-    if (t <= 0.5) {
-      // First half: moving to center
-      pos = anim.curveToCenter.getPoint(t * 2);
+    // Use the appropriate curve based on whether we're going to or from center
+    if (t <= 1) {
+      // Moving to center
+      pos = anim.curveToCenter.getPoint(t);
       obj.lookAt(MAZE_CENTER);
     } else {
-      // Second half: moving from center back to start
-      pos = anim.curveFromCenter.getPoint((t - 0.5) * 2);
+      // This shouldn't happen with current setup, but just in case
+      pos = anim.curveFromCenter.getPoint(1);
       obj.lookAt(anim.startPos);
     }
 
@@ -108,7 +95,6 @@ export function updateHomeScrollAnimation(animatedT: number) {
 
 export function stopHomeScrollAnimation() {
   isScrollActive = false;
-  isScrubCatchingUp = false;
   lastAnimatedT = 0;
-  targetT = 0;
+  previousT = 0;
 }
