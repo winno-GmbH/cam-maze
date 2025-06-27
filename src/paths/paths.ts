@@ -31,23 +31,22 @@ export function createHomeScrollPaths(
 ): Record<string, THREE.CurvePath<THREE.Vector3>> {
   const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 
+  // Helper function to create a line path
+  const createLinePath = (start: THREE.Vector3) => {
+    const path = new THREE.CurvePath<THREE.Vector3>();
+    path.add(new THREE.LineCurve3(start, MAZE_CENTER));
+    return path;
+  };
+
   // Create path for pacman
   if (pacman) {
-    const currentPos = pacman.position.clone();
-    const path = new THREE.CurvePath<THREE.Vector3>();
-    const line = new THREE.LineCurve3(currentPos, MAZE_CENTER);
-    path.add(line);
-    paths.pacman = path;
+    paths.pacman = createLinePath(pacman.position.clone());
   }
 
   // Create paths for ghosts
   Object.entries(ghosts).forEach(([key, ghost]) => {
     if (ghost) {
-      const currentPos = ghost.position.clone();
-      const path = new THREE.CurvePath<THREE.Vector3>();
-      const line = new THREE.LineCurve3(currentPos, MAZE_CENTER);
-      path.add(line);
-      paths[key] = path;
+      paths[key] = createLinePath(ghost.position.clone());
     }
   });
 
@@ -62,118 +61,55 @@ function createPath(pathPoints: PathPoint[]): THREE.CurvePath<THREE.Vector3> {
     const next = pathPoints[i + 1];
 
     if (current.type === "straight") {
-      const line = new THREE.LineCurve3(current.pos, next.pos);
-      path.add(line);
+      path.add(new THREE.LineCurve3(current.pos, next.pos));
     } else if (current.type === "curve") {
-      let midPoint: THREE.Vector3;
-
-      // Check if we have consecutive curves that might create an S-shape
       const hasPrevCurve = i > 0 && pathPoints[i - 1].type === "curve";
       const hasNextCurve =
         i < pathPoints.length - 2 && pathPoints[i + 1].type === "curve";
 
-      if (hasPrevCurve || hasNextCurve) {
-        // We have consecutive curves - create smoother transitions
-        midPoint = createSmoothMidPoint(
-          current,
-          next,
-          hasPrevCurve,
-          hasNextCurve,
-          pathPoints,
-          i
-        );
-      } else {
-        // Single curve - use original logic
-        if (current.curveType === "upperArc") {
-          midPoint = new THREE.Vector3(
-            current.pos.x,
-            current.pos.y,
-            next.pos.z
-          );
-        } else if (current.curveType === "lowerArc") {
-          midPoint = new THREE.Vector3(
-            next.pos.x,
-            current.pos.y,
-            current.pos.z
-          );
-        } else if (current.curveType === "forwardDownArc") {
-          midPoint = new THREE.Vector3(
-            current.pos.x,
-            next.pos.y,
-            current.pos.z
-          );
-        } else {
-          midPoint = new THREE.Vector3(
-            current.pos.x,
-            current.pos.y,
-            next.pos.z
-          );
-        }
-      }
+      const midPoint =
+        hasPrevCurve || hasNextCurve
+          ? createSmoothMidPoint(current, next, hasPrevCurve, hasNextCurve)
+          : createSimpleMidPoint(current, next);
 
-      const curve = new THREE.QuadraticBezierCurve3(
-        current.pos,
-        midPoint,
-        next.pos
+      path.add(
+        new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
       );
-      path.add(curve);
     }
   }
   return path;
+}
+
+function createSimpleMidPoint(
+  current: PathPoint,
+  next: PathPoint
+): THREE.Vector3 {
+  const { curveType } = current;
+
+  if (curveType === "upperArc") {
+    return new THREE.Vector3(current.pos.x, current.pos.y, next.pos.z);
+  } else if (curveType === "lowerArc") {
+    return new THREE.Vector3(next.pos.x, current.pos.y, current.pos.z);
+  } else if (curveType === "forwardDownArc") {
+    return new THREE.Vector3(current.pos.x, next.pos.y, current.pos.z);
+  } else {
+    return new THREE.Vector3(current.pos.x, current.pos.y, next.pos.z);
+  }
 }
 
 function createSmoothMidPoint(
   current: PathPoint,
   next: PathPoint,
   hasPrevCurve: boolean,
-  hasNextCurve: boolean,
-  pathPoints: PathPoint[],
-  currentIndex: number
+  hasNextCurve: boolean
 ): THREE.Vector3 {
-  const smoothingFactor = 0.3; // How much to stretch the curve (0 = original, 1 = very stretched)
-
-  // Calculate the original midpoint based on curve type
-  let originalMidPoint: THREE.Vector3;
-  if (current.curveType === "upperArc") {
-    originalMidPoint = new THREE.Vector3(
-      current.pos.x,
-      current.pos.y,
-      next.pos.z
-    );
-  } else if (current.curveType === "lowerArc") {
-    originalMidPoint = new THREE.Vector3(
-      next.pos.x,
-      current.pos.y,
-      current.pos.z
-    );
-  } else if (current.curveType === "forwardDownArc") {
-    originalMidPoint = new THREE.Vector3(
-      current.pos.x,
-      next.pos.y,
-      current.pos.z
-    );
-  } else {
-    originalMidPoint = new THREE.Vector3(
-      current.pos.x,
-      current.pos.y,
-      next.pos.z
-    );
-  }
-
-  // Calculate the straight line midpoint (for stretching)
+  const smoothingFactor = 0.3;
+  const originalMidPoint = createSimpleMidPoint(current, next);
   const straightMidPoint = current.pos.clone().lerp(next.pos, 0.5);
 
-  // If we have both previous and next curves, stretch more
-  if (hasPrevCurve && hasNextCurve) {
-    // This is a middle curve in a sequence - stretch it significantly
-    return originalMidPoint.clone().lerp(straightMidPoint, smoothingFactor * 2);
-  } else if (hasPrevCurve || hasNextCurve) {
-    // This is an end curve in a sequence - stretch it moderately
-    return originalMidPoint.clone().lerp(straightMidPoint, smoothingFactor);
-  }
-
-  // Fallback to original
-  return originalMidPoint;
+  const stretchFactor =
+    hasPrevCurve && hasNextCurve ? smoothingFactor * 2 : smoothingFactor;
+  return originalMidPoint.clone().lerp(straightMidPoint, stretchFactor);
 }
 
 export function getPathsForSection(section: string) {
