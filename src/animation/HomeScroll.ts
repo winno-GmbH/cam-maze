@@ -7,16 +7,40 @@ const ghostOrder = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5", "pacman"];
 
 let isScrollActive = false;
 let scrollPaths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
+let lastAnimatedT: number = 0;
+let isScrubCatchingUp = false;
+let targetT: number = 0;
 
 export function startHomeScrollAnimation() {
   isScrollActive = true;
+  isScrubCatchingUp = false;
+  lastAnimatedT = 0;
+  targetT = 0;
 
-  // Create paths dynamically using the function from pathpoints.ts
+  // Create paths dynamically using the function from paths.ts
   scrollPaths = createHomeScrollPaths(pacman, ghosts);
 }
 
 export function updateHomeScrollAnimation(animatedT: number) {
   if (!isScrollActive) return;
+
+  // Handle GSAP scrub delay
+  if (animatedT < lastAnimatedT) {
+    // GSAP is catching up (scrub delay), pause animation
+    isScrubCatchingUp = true;
+    targetT = animatedT;
+    return;
+  } else if (isScrubCatchingUp && animatedT >= targetT) {
+    // Scrub has caught up, resume animation
+    isScrubCatchingUp = false;
+  }
+
+  // Only update if we're moving forward or at the target
+  if (isScrubCatchingUp && animatedT < targetT) {
+    return;
+  }
+
+  lastAnimatedT = animatedT;
 
   ghostOrder.forEach((key) => {
     const obj = key === "pacman" ? pacman : ghosts[key];
@@ -45,9 +69,12 @@ export function updateHomeScrollAnimation(animatedT: number) {
 
 export function stopHomeScrollAnimation() {
   isScrollActive = false;
+  isScrubCatchingUp = false;
   scrollPaths = {};
+  lastAnimatedT = 0;
+  targetT = 0;
 }
 
 export function isScrubStillCatchingUp(): boolean {
-  return false;
+  return isScrubCatchingUp;
 }
