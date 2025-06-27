@@ -24,24 +24,19 @@ export function startHomeScrollAnimation() {
 export function updateHomeScrollAnimation(animatedT: number) {
   if (!isScrollActive) return;
 
-  // Handle GSAP scrub delay
+  // Track scrub delay state for home loop resume check
   if (animatedT < lastAnimatedT) {
-    // GSAP is catching up (scrub delay), pause animation
+    // GSAP is catching up (scrub delay)
     isScrubCatchingUp = true;
     targetT = animatedT;
-    return;
   } else if (isScrubCatchingUp && animatedT >= targetT) {
-    // Scrub has caught up, resume animation
+    // Scrub has caught up
     isScrubCatchingUp = false;
-  }
-
-  // Only update if we're moving forward or at the target
-  if (isScrubCatchingUp && animatedT < targetT) {
-    return;
   }
 
   lastAnimatedT = animatedT;
 
+  // Always update animation to follow GSAP timeline smoothly
   ghostOrder.forEach((key) => {
     const obj = key === "pacman" ? pacman : ghosts[key];
     if (!obj) return;
