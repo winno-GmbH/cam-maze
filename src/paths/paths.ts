@@ -31,17 +31,26 @@ export function createHomeScrollPaths(
 ): Record<string, THREE.CurvePath<THREE.Vector3>> {
   const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 
-  // Create simple line path from current position to center
-  const createLinePath = (start: THREE.Vector3) => {
+  // Create curved path from current position to center via a high midpoint
+  const createCurvedPath = (start: THREE.Vector3) => {
     const path = new THREE.CurvePath<THREE.Vector3>();
-    path.add(new THREE.LineCurve3(start, MAZE_CENTER));
+
+    // Create midpoint: x and z are halfway between start and center, y is 1
+    const midX = (start.x + MAZE_CENTER.x) / 2;
+    const midZ = (start.z + MAZE_CENTER.z) / 2;
+    const midPoint = new THREE.Vector3(midX, 1, midZ);
+
+    // Create quadratic bezier curve: start -> midpoint -> center
+    const curve = new THREE.QuadraticBezierCurve3(start, midPoint, MAZE_CENTER);
+    path.add(curve);
+
     return path;
   };
 
-  if (pacman) paths.pacman = createLinePath(pacman.position.clone());
+  if (pacman) paths.pacman = createCurvedPath(pacman.position.clone());
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    if (ghost) paths[key] = createLinePath(ghost.position.clone());
+    if (ghost) paths[key] = createCurvedPath(ghost.position.clone());
   });
 
   return paths;
