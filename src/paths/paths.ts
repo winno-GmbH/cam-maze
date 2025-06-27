@@ -1,29 +1,10 @@
 import * as THREE from "three";
 import { PathPoint } from "../types/types";
-import { startPosition, secondPosition } from "../config/config";
-import { MAZE_CENTER, pathPoints } from "./pathpoints";
-
-export const cameraHomePath = new THREE.CubicBezierCurve3(
-  startPosition,
-  secondPosition,
-  new THREE.Vector3(0.55675, 3, 0.45175),
-  new THREE.Vector3(0.55675, 0.5, 0.45175)
-);
-
-export const paths = {
-  pacmanHome: createPath(pathPoints.pacmanHome),
-  ghost1Home: createPath(pathPoints.ghost1Home),
-  ghost2Home: createPath(pathPoints.ghost2Home),
-  ghost3Home: createPath(pathPoints.ghost3Home),
-  ghost4Home: createPath(pathPoints.ghost4Home),
-  ghost5Home: createPath(pathPoints.ghost5Home),
-  cameraPOV: createPath(pathPoints.cameraPOV),
-  ghost1POV: createPath(pathPoints.ghost1POV),
-  ghost2POV: createPath(pathPoints.ghost2POV),
-  ghost3POV: createPath(pathPoints.ghost3POV),
-  ghost4POV: createPath(pathPoints.ghost4POV),
-  ghost5POV: createPath(pathPoints.ghost5POV),
-};
+import {
+  pathPoints,
+  cameraScrollPathPoints,
+  objectScrollPathPoints,
+} from "./pathpoints";
 
 export function createHomeScrollPaths(
   pacman: THREE.Object3D,
@@ -31,7 +12,6 @@ export function createHomeScrollPaths(
 ): Record<string, THREE.CurvePath<THREE.Vector3>> {
   const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 
-  // Create paths for each object
   const objects = { pacman, ...ghosts };
 
   Object.entries(objects).forEach(([key, obj]) => {
@@ -39,21 +19,18 @@ export function createHomeScrollPaths(
 
     const path = new THREE.CurvePath<THREE.Vector3>();
 
-    // Get current position
-    const startPos = obj.position.clone();
+    // Get the paused position for this object
+    const pausedPosition = objectScrollPathPoints.pausedPositions[key];
+    if (!pausedPosition) return;
 
-    // Create midpoint that arcs up to y=1
-    const midPoint = new THREE.Vector3(
-      (startPos.x + MAZE_CENTER.x) / 2,
-      1,
-      (startPos.z + MAZE_CENTER.z) / 2
-    );
+    // Get the arc point for this object
+    const arcPoint = objectScrollPathPoints.arcPoints[key];
+    if (!arcPoint) return;
 
-    // Create Bezier curve from current position through midpoint to maze center
     const curve = new THREE.QuadraticBezierCurve3(
-      startPos,
-      midPoint,
-      new THREE.Vector3(MAZE_CENTER.x, MAZE_CENTER.y, MAZE_CENTER.z)
+      pausedPosition,
+      arcPoint,
+      objectScrollPathPoints.mazeCenter
     );
 
     path.add(curve);
@@ -144,3 +121,25 @@ export function getPathsForSection(section: string) {
   }
   return {};
 }
+
+export const cameraHomePath = new THREE.CubicBezierCurve3(
+  cameraScrollPathPoints.start,
+  cameraScrollPathPoints.second,
+  cameraScrollPathPoints.highPoint,
+  cameraScrollPathPoints.end
+);
+
+export const paths = {
+  pacmanHome: createPath(pathPoints.pacmanHome),
+  ghost1Home: createPath(pathPoints.ghost1Home),
+  ghost2Home: createPath(pathPoints.ghost2Home),
+  ghost3Home: createPath(pathPoints.ghost3Home),
+  ghost4Home: createPath(pathPoints.ghost4Home),
+  ghost5Home: createPath(pathPoints.ghost5Home),
+  cameraPOV: createPath(pathPoints.cameraPOV),
+  ghost1POV: createPath(pathPoints.ghost1POV),
+  ghost2POV: createPath(pathPoints.ghost2POV),
+  ghost3POV: createPath(pathPoints.ghost3POV),
+  ghost4POV: createPath(pathPoints.ghost4POV),
+  ghost5POV: createPath(pathPoints.ghost5POV),
+};

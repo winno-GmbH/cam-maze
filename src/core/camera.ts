@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { CAMERA_CONFIG } from "../config/config";
 import { cameraHomePath } from "../paths/paths";
-import { startPosition, lookAtPosition } from "../paths/pathpoints";
+import { cameraPositions } from "../paths/pathpoints";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 
@@ -15,8 +15,8 @@ export const camera = new THREE.PerspectiveCamera(
 );
 
 export function initCamera(): void {
-  camera.position.copy(startPosition);
-  camera.lookAt(lookAtPosition);
+  camera.position.copy(cameraPositions.startPosition);
+  camera.lookAt(cameraPositions.lookAtPosition);
 }
 
 export const startQuaternion = camera.quaternion.clone();
@@ -42,7 +42,6 @@ export function setupCameraResize(): void {
 }
 
 export function setupCameraAnimation(): void {
-  // Initialize camera quaternions for animation
   const startQuat = camera.quaternion.clone();
   const endPos = cameraHomePath.getPoint(1);
   const endTangent = cameraHomePath.getTangent(1);

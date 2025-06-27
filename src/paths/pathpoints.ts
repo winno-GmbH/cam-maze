@@ -1,9 +1,10 @@
 import * as THREE from "three";
 import { PathPoint } from "../types/types";
+import { isMobile } from "../config/config";
 
-export const MAZE_CENTER = new THREE.Vector3(0.45175, 0.5, 0.55675);
+const mazeCenterPathPoint = new THREE.Vector3(0.45175, 0.5, 0.55675);
 
-export const CAMERA_POSITIONS = {
+const cameraStartPoints = {
   startMobile: new THREE.Vector3(0.5, 2.5, 2.5),
   startDesktop: new THREE.Vector3(-2, 2.5, 2),
   secondMobile: new THREE.Vector3(0.5, 2.5, 2),
@@ -12,15 +13,36 @@ export const CAMERA_POSITIONS = {
   desktopLookAt: new THREE.Vector3(-1.25, 0.5, 0.25),
 };
 
-export const POV_POSITIONS = {
-  ghost1: new THREE.Vector3(0.65725, 0.55, 0.75325),
-  ghost2: new THREE.Vector3(0.9085, 0.55, 0.8035),
-  ghost3: new THREE.Vector3(0.75775, 0.55, 1.05475),
-  ghost4: new THREE.Vector3(0.65725, 0.55, 1.0045),
-  ghost5: new THREE.Vector3(0.15475, 0.55, 1.15525),
+const startPosition = isMobile
+  ? cameraStartPoints.startMobile
+  : cameraStartPoints.startDesktop;
+const secondPosition = isMobile
+  ? cameraStartPoints.secondMobile
+  : cameraStartPoints.secondDesktop;
+const lookAtPosition = isMobile
+  ? cameraStartPoints.mobileLookAt
+  : cameraStartPoints.desktopLookAt;
+
+export const cameraScrollPathPoints = {
+  start: startPosition,
+  second: secondPosition,
+  highPoint: new THREE.Vector3(0.55675, 3, 0.45175),
+  end: mazeCenterPathPoint,
 };
 
-export const pacmanHomePathPoints: PathPoint[] = [
+export const objectScrollPathPoints = {
+  pausedPositions: {} as Record<string, THREE.Vector3>,
+  arcPoints: {} as Record<string, THREE.Vector3>,
+  mazeCenter: mazeCenterPathPoint,
+};
+
+export const cameraPositions = {
+  startPosition,
+  secondPosition,
+  lookAtPosition,
+};
+
+const pacmanHomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.25525, 0.55, 0.6025), type: "straight" },
   {
     pos: new THREE.Vector3(0.25525, 0.55, 0.301),
@@ -211,7 +233,7 @@ export const pacmanHomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.25525, 0.55, 0.6025), type: "straight" },
 ];
 
-export const ghost1HomePathPoints: PathPoint[] = [
+const ghost1HomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(-0.44825, 0.55, 0.703), type: "straight" },
   {
     pos: new THREE.Vector3(-0.44825, 0.55, 0.301),
@@ -375,7 +397,7 @@ export const ghost1HomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(-0.44825, 0.55, 0.703), type: "straight" },
 ];
 
-export const ghost2HomePathPoints: PathPoint[] = [
+const ghost2HomePathPoints: PathPoint[] = [
   {
     pos: new THREE.Vector3(-0.04625, 0.55, 0.904),
     type: "curve",
@@ -543,7 +565,7 @@ export const ghost2HomePathPoints: PathPoint[] = [
   },
 ];
 
-export const ghost3HomePathPoints: PathPoint[] = [
+const ghost3HomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.85825, 0.55, 0.75325), type: "straight" },
   {
     pos: new THREE.Vector3(0.85825, 0.55, -0.101),
@@ -715,7 +737,7 @@ export const ghost3HomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.85825, 0.55, 0.75325), type: "straight" },
 ];
 
-export const ghost4HomePathPoints: PathPoint[] = [
+const ghost4HomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(1.05925, 0.55, 0.4015), type: "straight" },
   {
     pos: new THREE.Vector3(1.05925, 0.55, 0.703),
@@ -870,7 +892,7 @@ export const ghost4HomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(1.05925, 0.55, 0.4015), type: "straight" },
 ];
 
-export const ghost5HomePathPoints: PathPoint[] = [
+const ghost5HomePathPoints: PathPoint[] = [
   {
     pos: new THREE.Vector3(0.45625, 0.55, -0.04975),
     type: "curve",
@@ -1034,7 +1056,7 @@ export const ghost5HomePathPoints: PathPoint[] = [
   },
 ];
 
-export const cameraPOVPathPoints: PathPoint[] = [
+const cameraPOVPathPoints: PathPoint[] = [
   {
     pos: new THREE.Vector3(0.55675, -0.5, 0.45175),
     type: "curve",
@@ -1105,7 +1127,7 @@ export const cameraPOVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(-0.44825, 1, 2.0095), type: "straight" },
 ];
 
-export const ghost1POVPathPoints: PathPoint[] = [
+const ghost1POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(1.05925, 0.55, 0.703), type: "straight" },
   {
     pos: new THREE.Vector3(1.05925, 0.55, 0.75325),
@@ -1116,7 +1138,7 @@ export const ghost1POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.9085, 0.55, 0.8035), type: "straight" },
 ];
 
-export const ghost2POVPathPoints: PathPoint[] = [
+const ghost2POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(1.05925, 0.55, 1.2055), type: "straight" },
   {
     pos: new THREE.Vector3(1.009, 0.55, 1.2055),
@@ -1127,7 +1149,7 @@ export const ghost2POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.95875, 0.55, 1.05475), type: "straight" },
 ];
 
-export const ghost3POVPathPoints: PathPoint[] = [
+const ghost3POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.35575, 0.55, 0.904), type: "straight" },
   {
     pos: new THREE.Vector3(0.35575, 0.55, 0.95425),
@@ -1138,7 +1160,7 @@ export const ghost3POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.5065, 0.55, 1.0045), type: "straight" },
 ];
 
-export const ghost4POVPathPoints: PathPoint[] = [
+const ghost4POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.15475, 0.55, 1.105), type: "straight" },
   {
     pos: new THREE.Vector3(0.15475, 0.55, 1.05475),
@@ -1149,7 +1171,7 @@ export const ghost4POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.3055, 0.55, 1.0045), type: "straight" },
 ];
 
-export const ghost5POVPathPoints: PathPoint[] = [
+const ghost5POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.55675, 0.55, 1.306), type: "straight" },
   {
     pos: new THREE.Vector3(0.55675, 0.55, 1.25575),
@@ -1174,3 +1196,46 @@ export const pathPoints = {
   ghost4POV: ghost4POVPathPoints,
   ghost5POV: ghost5POVPathPoints,
 };
+
+export function getPausedPositions(
+  pacman: THREE.Object3D,
+  ghosts: Record<string, THREE.Object3D>
+): Record<string, THREE.Vector3> {
+  const pausedPositions: Record<string, THREE.Vector3> = {};
+  const objects = { pacman, ...ghosts };
+
+  Object.entries(objects).forEach(([key, obj]) => {
+    if (obj) {
+      pausedPositions[key] = obj.position.clone();
+    }
+  });
+
+  return pausedPositions;
+}
+
+export function generateArcPoints(
+  pausedPositions: Record<string, THREE.Vector3>,
+  arcHeight: number = 1
+): Record<string, THREE.Vector3> {
+  const arcPoints: Record<string, THREE.Vector3> = {};
+
+  Object.entries(pausedPositions).forEach(([key, pausedPos]) => {
+    arcPoints[key] = new THREE.Vector3(
+      (pausedPos.x + objectScrollPathPoints.mazeCenter.x) / 2,
+      arcHeight,
+      (pausedPos.z + objectScrollPathPoints.mazeCenter.z) / 2
+    );
+  });
+
+  return arcPoints;
+}
+
+export function setupObjectScrollPathPoints(
+  pacman: THREE.Object3D,
+  ghosts: Record<string, THREE.Object3D>
+): void {
+  objectScrollPathPoints.pausedPositions = getPausedPositions(pacman, ghosts);
+  objectScrollPathPoints.arcPoints = generateArcPoints(
+    objectScrollPathPoints.pausedPositions
+  );
+}
