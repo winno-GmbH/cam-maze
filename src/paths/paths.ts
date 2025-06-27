@@ -3,12 +3,9 @@ import { PathPoint } from "../types/types";
 import { startPosition, secondPosition } from "../config/config";
 import { MAZE_CENTER, pathPoints } from "./pathpoints";
 
-export const cameraHomePath = new THREE.CubicBezierCurve3(
-  startPosition,
-  secondPosition,
-  new THREE.Vector3(0.55675, 3, 0.45175),
-  new THREE.Vector3(0.55675, 0.5, 0.45175)
-);
+// Convert PathPoint[] to Vector3[] for camera path
+const cameraPathPoints = pathPoints.cameraPOV.map((point) => point.pos);
+export const cameraHomePath = new THREE.CatmullRomCurve3(cameraPathPoints);
 
 export const paths = {
   pacmanHome: createPath(pathPoints.pacmanHome),
@@ -31,27 +28,33 @@ export function createHomeScrollPaths(
 ): Record<string, THREE.CurvePath<THREE.Vector3>> {
   const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 
-  // Create curved path from current position to center via a high midpoint
-  const createCurvedPath = (start: THREE.Vector3) => {
+  // Create paths for each object
+  const objects = { pacman, ...ghosts };
+
+  Object.entries(objects).forEach(([key, obj]) => {
+    if (!obj) return;
+
     const path = new THREE.CurvePath<THREE.Vector3>();
 
-    // Create midpoint: x and z are halfway between start and center, y is 1
-    const midX = (start.x + MAZE_CENTER.x) / 2;
-    const midZ = (start.z + MAZE_CENTER.z) / 2;
-    const midPoint = new THREE.Vector3(midX, 1, midZ);
+    // Get current position
+    const startPos = obj.position.clone();
 
-    // Create quadratic bezier curve: start -> midpoint -> center
-    // This curve works in both directions: t=0 is start, t=1 is center
-    const curve = new THREE.QuadraticBezierCurve3(start, midPoint, MAZE_CENTER);
+    // Create midpoint that arcs up to y=1
+    const midPoint = new THREE.Vector3(
+      (startPos.x + MAZE_CENTER.x) / 2,
+      1,
+      (startPos.z + MAZE_CENTER.z) / 2
+    );
+
+    // Create Bezier curve from current position through midpoint to maze center
+    const curve = new THREE.QuadraticBezierCurve3(
+      startPos,
+      midPoint,
+      new THREE.Vector3(MAZE_CENTER.x, MAZE_CENTER.y, MAZE_CENTER.z)
+    );
+
     path.add(curve);
-
-    return path;
-  };
-
-  if (pacman) paths.pacman = createCurvedPath(pacman.position.clone());
-
-  Object.entries(ghosts).forEach(([key, ghost]) => {
-    if (ghost) paths[key] = createCurvedPath(ghost.position.clone());
+    paths[key] = path;
   });
 
   return paths;
