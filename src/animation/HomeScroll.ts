@@ -7,36 +7,15 @@ const ghostOrder = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5", "pacman"];
 
 let isScrollActive = false;
 let scrollPaths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
-let lastAnimatedT: number = 0;
-let isScrubCatchingUp = false;
-let targetT: number = 0;
 
 export function startHomeScrollAnimation() {
   isScrollActive = true;
-  isScrubCatchingUp = false;
-  lastAnimatedT = 0;
-  targetT = 0;
-
-  // Create paths dynamically using the function from paths.ts
   scrollPaths = createHomeScrollPaths(pacman, ghosts);
 }
 
 export function updateHomeScrollAnimation(animatedT: number) {
   if (!isScrollActive) return;
 
-  // Track scrub delay state for home loop resume check
-  if (animatedT < lastAnimatedT) {
-    // GSAP is catching up (scrub delay)
-    isScrubCatchingUp = true;
-    targetT = animatedT;
-  } else if (isScrubCatchingUp && animatedT >= targetT) {
-    // Scrub has caught up
-    isScrubCatchingUp = false;
-  }
-
-  lastAnimatedT = animatedT;
-
-  // Always update animation to follow GSAP timeline smoothly
   ghostOrder.forEach((key) => {
     const obj = key === "pacman" ? pacman : ghosts[key];
     if (!obj) return;
@@ -64,12 +43,11 @@ export function updateHomeScrollAnimation(animatedT: number) {
 
 export function stopHomeScrollAnimation() {
   isScrollActive = false;
-  isScrubCatchingUp = false;
   scrollPaths = {};
-  lastAnimatedT = 0;
-  targetT = 0;
 }
 
 export function isScrubStillCatchingUp(): boolean {
-  return isScrubCatchingUp;
+  // Only return true if we're still in the scroll animation
+  // This prevents home loop from resuming until scroll animation is completely done
+  return isScrollActive;
 }

@@ -20,6 +20,8 @@ gsap.registerPlugin(ScrollTrigger);
 
 let startQuaternion: THREE.Quaternion | null = null;
 let endQuaternion: THREE.Quaternion | null = null;
+let isScrubCatchingUp = false;
+let lastTimelineProgress = 0;
 
 async function init() {
   try {
@@ -58,8 +60,13 @@ function setupScrollHandling() {
 
     if (wasAtTop && !isAtTop) {
       stopHomeLoop();
-    } else if (!wasAtTop && isAtTop && !isScrubStillCatchingUp()) {
-      startHomeLoop();
+    } else if (!wasAtTop && isAtTop) {
+      // Check if GSAP timeline has caught up to the beginning
+      if (lastTimelineProgress <= 0.01) {
+        // Allow small tolerance
+        startHomeLoop();
+      }
+      // If timeline hasn't caught up yet, wait for it in the onUpdate callback
     }
     wasAtTop = isAtTop;
   });
@@ -72,11 +79,23 @@ function setupCameraAndObjectAnimation() {
         trigger: ".sc--home",
         start: "top top",
         end: "bottom top",
-        scrub: 5,
-        onEnter: () => startHomeScrollAnimation(),
-        onLeave: () => stopHomeScrollAnimation(),
-        onEnterBack: () => startHomeScrollAnimation(),
-        onLeaveBack: () => stopHomeScrollAnimation(),
+        scrub: 1,
+        onEnter: () => {
+          startHomeScrollAnimation();
+          isScrubCatchingUp = false;
+        },
+        onLeave: () => {
+          stopHomeScrollAnimation();
+          isScrubCatchingUp = false;
+        },
+        onEnterBack: () => {
+          startHomeScrollAnimation();
+          isScrubCatchingUp = false;
+        },
+        onLeaveBack: () => {
+          stopHomeScrollAnimation();
+          isScrubCatchingUp = false;
+        },
       },
     })
     .to(
@@ -86,6 +105,21 @@ function setupCameraAndObjectAnimation() {
         immediateRender: false,
         onUpdate: function () {
           const t = this.targets()[0].t;
+
+          // Detect if timeline is catching up (scrub delay)
+          if (t < lastTimelineProgress) {
+            isScrubCatchingUp = true;
+          } else if (isScrubCatchingUp && t >= lastTimelineProgress) {
+            isScrubCatchingUp = false;
+          }
+
+          lastTimelineProgress = t;
+
+          // If we're at the top and timeline has caught up to beginning, start home loop
+          if (window.scrollY === 0 && t <= 0.01 && !isScrubCatchingUp) {
+            startHomeLoop();
+          }
+
           const position = cameraHomePath.getPoint(t);
           camera.position.copy(position);
           if (startQuaternion && endQuaternion) {
