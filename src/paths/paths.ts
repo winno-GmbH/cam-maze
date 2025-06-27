@@ -41,6 +41,7 @@ export function createHomeScrollPaths(
     const midPoint = new THREE.Vector3(midX, 1, midZ);
 
     // Create quadratic bezier curve: start -> midpoint -> center
+    // This curve works in both directions: t=0 is start, t=1 is center
     const curve = new THREE.QuadraticBezierCurve3(start, midPoint, MAZE_CENTER);
     path.add(curve);
 

@@ -27,6 +27,11 @@ export function startHomeScrollAnimation() {
 export function updateHomeScrollAnimation(animatedT: number) {
   if (!isScrollActive) return;
 
+  // Debug: log animatedT to see the values
+  if (Math.abs(animatedT - 0.5) < 0.01) {
+    console.log("animatedT at midpoint:", animatedT);
+  }
+
   ghostOrder.forEach((key) => {
     const obj = key === "pacman" ? pacman : ghosts[key];
     if (!obj) return;
@@ -35,6 +40,7 @@ export function updateHomeScrollAnimation(animatedT: number) {
     if (!path) return;
 
     // Use the path to get position at the current time
+    // animatedT goes from 0 to 1 when scrolling down, 1 to 0 when scrolling up
     const position = path.getPointAt(animatedT);
     if (!position) return;
 
