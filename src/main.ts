@@ -6,11 +6,6 @@ import {
   stopHomeLoop,
   startHomeLoop,
 } from "./animation/HomeLoop";
-import {
-  updateHomeScrollAnimation,
-  stopHomeScrollAnimation,
-  haveObjectsReturnedToPausedPositions,
-} from "./animation/HomeScroll";
 import { cameraHomePath } from "./paths/paths";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
@@ -92,12 +87,6 @@ function setupCameraAndObjectAnimation() {
             camera.quaternion.copy(currentQuaternion);
           }
           camera.updateProjectionMatrix();
-          updateHomeScrollAnimation(t);
-
-          // Check if objects have returned to paused positions and resume HomeLoop
-          if (window.scrollY === 0 && haveObjectsReturnedToPausedPositions()) {
-            startHomeLoop();
-          }
         },
       }
     );
