@@ -2,6 +2,7 @@ import { pacman, ghosts, pacmanMixer } from "../core/objects";
 import * as THREE from "three";
 import { clock } from "../core/scene";
 import { MAZE_CENTER } from "../config/config";
+import gsap from "gsap";
 
 const curveHeight = 0.75;
 const ghostOrder = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5", "pacman"];
@@ -15,19 +16,12 @@ let scrollAnimationCurves: Record<
   }
 > = {};
 let isScrollActive = false;
-let lastAnimatedT: number = 0;
-let previousT: number = 0;
-let isScrubCatchingUp = false;
-let targetT: number = 0;
-let lastDirection: "forward" | "backward" = "forward";
 
 export function startHomeScrollAnimation() {
   isScrollActive = true;
-  isScrubCatchingUp = false;
-  lastDirection = "forward";
   scrollAnimationCurves = {};
 
-  ghostOrder.forEach((key) => {
+  ghostOrder.forEach((key, index) => {
     const obj = key === "pacman" ? pacman : ghosts[key];
     if (!obj) return;
 
@@ -57,54 +51,33 @@ export function startHomeScrollAnimation() {
       startPos,
     };
   });
-
-  lastAnimatedT = 0;
-  previousT = 0;
-  targetT = 0;
 }
 
 export function updateHomeScrollAnimation(animatedT: number) {
   if (!isScrollActive) return;
 
-  // Handle GSAP scrub delay
-  if (animatedT < previousT) {
-    isScrubCatchingUp = true;
-    targetT = animatedT;
-    return;
-  } else if (isScrubCatchingUp && animatedT >= targetT) {
-    isScrubCatchingUp = false;
-  }
-
-  if (isScrubCatchingUp && animatedT < targetT) {
-    return;
-  }
-
-  // Determine direction
-  if (animatedT > lastAnimatedT) {
-    lastDirection = "forward";
-  } else if (animatedT < lastAnimatedT) {
-    lastDirection = "backward";
-  }
-
-  previousT = animatedT;
-  lastAnimatedT = animatedT;
-
-  ghostOrder.forEach((key) => {
+  ghostOrder.forEach((key, index) => {
     const obj = key === "pacman" ? pacman : ghosts[key];
     if (!obj) return;
     const anim = scrollAnimationCurves[key];
     if (!anim) return;
 
-    let t = Math.max(0, Math.min(1, animatedT));
+    // Add offset based on index (ghost1 starts first, pacman last)
+    const offset = index * 0.1; // 0.1 second offset between each object
+    const adjustedT = Math.max(0, Math.min(1, animatedT + offset));
+
+    let t = Math.max(0, Math.min(1, adjustedT));
     let pos: THREE.Vector3;
 
-    if (lastDirection === "forward") {
-      // Moving forward: from start to center
-      pos = anim.curveToCenter.getPoint(t);
+    if (t <= 0.5) {
+      // First half: to center
+      const curveT = t * 2;
+      pos = anim.curveToCenter.getPoint(curveT);
       obj.lookAt(MAZE_CENTER);
     } else {
-      // Moving backward: from center back to start
-      pos = anim.curveFromCenter.getPoint(1 - t);
+      // Second half: from center back to start
+      const curveT = (t - 0.5) * 2;
+      pos = anim.curveFromCenter.getPoint(curveT);
       obj.lookAt(anim.startPos);
     }
 
@@ -117,14 +90,8 @@ export function updateHomeScrollAnimation(animatedT: number) {
 
 export function stopHomeScrollAnimation() {
   isScrollActive = false;
-  lastAnimatedT = 0;
-  previousT = 0;
-  isScrubCatchingUp = false;
-  targetT = 0;
-  lastDirection = "forward";
 }
 
-// Export the scrub state so main.ts can check it
 export function isScrubStillCatchingUp(): boolean {
-  return isScrubCatchingUp;
+  return false; // No longer needed with simplified approach
 }
