@@ -37,6 +37,19 @@ export function stopHomeLoop() {
   pauseStartTime = performance.now() / 1000;
 }
 
+export function setupScrollHandling() {
+  let wasAtTop = true;
+
+  window.addEventListener("scroll", () => {
+    const isAtTop = window.scrollY === 0;
+
+    if (wasAtTop && !isAtTop) {
+      stopHomeLoop();
+    }
+    wasAtTop = isAtTop;
+  });
+}
+
 export function updateHomeLoop() {
   if (!isHomeLoopActive) return;
   const currentTime = performance.now() / 1000;
