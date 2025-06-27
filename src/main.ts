@@ -10,7 +10,7 @@ import {
   startHomeScrollAnimation,
   updateHomeScrollAnimation,
   stopHomeScrollAnimation,
-  isScrubStillCatchingUp,
+  haveObjectsReturnedToOriginalPositions,
 } from "./animation/HomeScroll";
 import { cameraHomePath } from "./paths/paths";
 import gsap from "gsap";
@@ -60,7 +60,11 @@ function setupScrollHandling() {
 
     if (wasAtTop && !isAtTop) {
       stopHomeLoop();
-    } else if (!wasAtTop && isAtTop && !isScrubCatchingUp) {
+    } else if (
+      !wasAtTop &&
+      isAtTop &&
+      haveObjectsReturnedToOriginalPositions()
+    ) {
       startHomeLoop();
     }
     wasAtTop = isAtTop;

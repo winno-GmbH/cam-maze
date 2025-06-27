@@ -7,9 +7,20 @@ const ghostOrder = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5", "pacman"];
 
 let isScrollActive = false;
 let scrollPaths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
+let originalPositions: Record<string, THREE.Vector3> = {};
 
 export function startHomeScrollAnimation() {
   isScrollActive = true;
+
+  // Store original positions
+  originalPositions = {};
+  ghostOrder.forEach((key) => {
+    const obj = key === "pacman" ? pacman : ghosts[key];
+    if (obj) {
+      originalPositions[key] = obj.position.clone();
+    }
+  });
+
   scrollPaths = createHomeScrollPaths(pacman, ghosts);
 }
 
@@ -28,13 +39,7 @@ export function updateHomeScrollAnimation(animatedT: number) {
     if (!position) return;
 
     obj.position.copy(position);
-
-    // Look at the next point on the path for orientation
-    const nextT = Math.min(1, animatedT + 0.01);
-    const nextPosition = path.getPointAt(nextT);
-    if (nextPosition) {
-      obj.lookAt(nextPosition);
-    }
+    // Don't change rotation - objects maintain their original orientation
   });
 
   const delta = clock.getDelta();
@@ -47,7 +52,25 @@ export function stopHomeScrollAnimation() {
 }
 
 export function isScrubStillCatchingUp(): boolean {
-  // Only return true if we're still in the scroll animation
-  // This prevents home loop from resuming until scroll animation is completely done
   return isScrollActive;
+}
+
+export function haveObjectsReturnedToOriginalPositions(): boolean {
+  if (!isScrollActive) return false;
+
+  const tolerance = 0.01; // How close objects need to be to their original positions
+
+  for (const key of ghostOrder) {
+    const obj = key === "pacman" ? pacman : ghosts[key];
+    const originalPos = originalPositions[key];
+
+    if (!obj || !originalPos) continue;
+
+    const distance = obj.position.distanceTo(originalPos);
+    if (distance > tolerance) {
+      return false; // At least one object hasn't returned
+    }
+  }
+
+  return true; // All objects have returned to their original positions
 }
