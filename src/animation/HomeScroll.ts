@@ -1,23 +1,18 @@
 import { pacman, ghosts, pacmanMixer } from "../core/objects";
 import * as THREE from "three";
 import { clock } from "../core/scene";
-import { MAZE_CENTER } from "../config/config";
+import { createHomeScrollPaths } from "../paths/paths";
 
 const ghostOrder = ["ghost1", "ghost2", "ghost3", "ghost4", "ghost5", "pacman"];
 
-let originalPositions: Record<string, THREE.Vector3> = {};
 let isScrollActive = false;
+let scrollPaths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 
 export function startHomeScrollAnimation() {
   isScrollActive = true;
-  originalPositions = {};
 
-  // Store original positions
-  ghostOrder.forEach((key) => {
-    const obj = key === "pacman" ? pacman : ghosts[key];
-    if (!obj) return;
-    originalPositions[key] = obj.position.clone();
-  });
+  // Create paths dynamically using the function from pathpoints.ts
+  scrollPaths = createHomeScrollPaths(pacman, ghosts);
 }
 
 export function updateHomeScrollAnimation(animatedT: number) {
@@ -26,17 +21,21 @@ export function updateHomeScrollAnimation(animatedT: number) {
   ghostOrder.forEach((key) => {
     const obj = key === "pacman" ? pacman : ghosts[key];
     if (!obj) return;
-    const originalPos = originalPositions[key];
-    if (!originalPos) return;
 
-    // Simple lerp between original position and center
-    obj.position.lerpVectors(originalPos, MAZE_CENTER, animatedT);
+    const path = scrollPaths[key];
+    if (!path) return;
 
-    // Look at center when moving to center, look at original position when moving back
-    if (animatedT > 0.5) {
-      obj.lookAt(MAZE_CENTER);
-    } else {
-      obj.lookAt(originalPos);
+    // Use the path to get position at the current time
+    const position = path.getPointAt(animatedT);
+    if (!position) return;
+
+    obj.position.copy(position);
+
+    // Look at the next point on the path for orientation
+    const nextT = Math.min(1, animatedT + 0.01);
+    const nextPosition = path.getPointAt(nextT);
+    if (nextPosition) {
+      obj.lookAt(nextPosition);
     }
   });
 
@@ -46,6 +45,7 @@ export function updateHomeScrollAnimation(animatedT: number) {
 
 export function stopHomeScrollAnimation() {
   isScrollActive = false;
+  scrollPaths = {};
 }
 
 export function isScrubStillCatchingUp(): boolean {

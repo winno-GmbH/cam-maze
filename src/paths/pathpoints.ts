@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { PathPoint } from "../types/types";
 
+export const MAZE_CENTER = new THREE.Vector3(0.45175, 0.5, 0.55675);
+
 export const pacmanHomePathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.25525, 0.55, 0.6025), type: "straight" },
   {
@@ -1140,3 +1142,18 @@ export const ghost5POVPathPoints: PathPoint[] = [
   { pos: new THREE.Vector3(0.5065, 0.55, 1.2055), type: "straight" },
   { pos: new THREE.Vector3(0.406, 0.55, 1.2055), type: "straight" },
 ];
+
+export const pathPoints = {
+  pacmanHome: pacmanHomePathPoints,
+  ghost1Home: ghost1HomePathPoints,
+  ghost2Home: ghost2HomePathPoints,
+  ghost3Home: ghost3HomePathPoints,
+  ghost4Home: ghost4HomePathPoints,
+  ghost5Home: ghost5HomePathPoints,
+  cameraPOV: cameraPOVPathPoints,
+  ghost1POV: ghost1POVPathPoints,
+  ghost2POV: ghost2POVPathPoints,
+  ghost3POV: ghost3POVPathPoints,
+  ghost4POV: ghost4POVPathPoints,
+  ghost5POV: ghost5POVPathPoints,
+};

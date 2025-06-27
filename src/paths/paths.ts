@@ -1,20 +1,7 @@
 import * as THREE from "three";
 import { PathPoint } from "../types/types";
 import { startPosition, secondPosition } from "../config/config";
-import {
-  pacmanHomePathPoints,
-  ghost1HomePathPoints,
-  ghost2HomePathPoints,
-  ghost3HomePathPoints,
-  ghost4HomePathPoints,
-  ghost5HomePathPoints,
-  cameraPOVPathPoints,
-  ghost1POVPathPoints,
-  ghost2POVPathPoints,
-  ghost3POVPathPoints,
-  ghost4POVPathPoints,
-  ghost5POVPathPoints,
-} from "./pathpoints";
+import { MAZE_CENTER, pathPoints } from "./pathpoints";
 
 export const cameraHomePath = new THREE.CubicBezierCurve3(
   startPosition,
@@ -24,19 +11,48 @@ export const cameraHomePath = new THREE.CubicBezierCurve3(
 );
 
 export const paths = {
-  pacmanHome: createPath(pacmanHomePathPoints),
-  ghost1Home: createPath(ghost1HomePathPoints),
-  ghost2Home: createPath(ghost2HomePathPoints),
-  ghost3Home: createPath(ghost3HomePathPoints),
-  ghost4Home: createPath(ghost4HomePathPoints),
-  ghost5Home: createPath(ghost5HomePathPoints),
-  cameraPOV: createPath(cameraPOVPathPoints),
-  ghost1POV: createPath(ghost1POVPathPoints),
-  ghost2POV: createPath(ghost2POVPathPoints),
-  ghost3POV: createPath(ghost3POVPathPoints),
-  ghost4POV: createPath(ghost4POVPathPoints),
-  ghost5POV: createPath(ghost5POVPathPoints),
+  pacmanHome: createPath(pathPoints.pacmanHome),
+  ghost1Home: createPath(pathPoints.ghost1Home),
+  ghost2Home: createPath(pathPoints.ghost2Home),
+  ghost3Home: createPath(pathPoints.ghost3Home),
+  ghost4Home: createPath(pathPoints.ghost4Home),
+  ghost5Home: createPath(pathPoints.ghost5Home),
+  cameraPOV: createPath(pathPoints.cameraPOV),
+  ghost1POV: createPath(pathPoints.ghost1POV),
+  ghost2POV: createPath(pathPoints.ghost2POV),
+  ghost3POV: createPath(pathPoints.ghost3POV),
+  ghost4POV: createPath(pathPoints.ghost4POV),
+  ghost5POV: createPath(pathPoints.ghost5POV),
 };
+
+export function createHomeScrollPaths(
+  pacman: THREE.Object3D,
+  ghosts: Record<string, THREE.Object3D>
+): Record<string, THREE.CurvePath<THREE.Vector3>> {
+  const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
+
+  // Create path for pacman
+  if (pacman) {
+    const currentPos = pacman.position.clone();
+    const path = new THREE.CurvePath<THREE.Vector3>();
+    const line = new THREE.LineCurve3(currentPos, MAZE_CENTER);
+    path.add(line);
+    paths.pacman = path;
+  }
+
+  // Create paths for ghosts
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    if (ghost) {
+      const currentPos = ghost.position.clone();
+      const path = new THREE.CurvePath<THREE.Vector3>();
+      const line = new THREE.LineCurve3(currentPos, MAZE_CENTER);
+      path.add(line);
+      paths[key] = path;
+    }
+  });
+
+  return paths;
+}
 
 function createPath(pathPoints: PathPoint[]): THREE.CurvePath<THREE.Vector3> {
   const path = new THREE.CurvePath<THREE.Vector3>();
