@@ -19,11 +19,14 @@ let lastAnimatedT: number = 0;
 let previousT: number = 0;
 let isScrubCatchingUp = false;
 let targetT: number = 0;
+let lastDirection: "forward" | "backward" = "forward";
 
 export function startHomeScrollAnimation() {
   isScrollActive = true;
   isScrubCatchingUp = false;
+  lastDirection = "forward";
   scrollAnimationCurves = {};
+
   ghostOrder.forEach((key) => {
     const obj = key === "pacman" ? pacman : ghosts[key];
     if (!obj) return;
@@ -54,6 +57,7 @@ export function startHomeScrollAnimation() {
       startPos,
     };
   });
+
   lastAnimatedT = 0;
   previousT = 0;
   targetT = 0;
@@ -64,18 +68,22 @@ export function updateHomeScrollAnimation(animatedT: number) {
 
   // Handle GSAP scrub delay
   if (animatedT < previousT) {
-    // GSAP is catching up (scrub delay), pause animation
     isScrubCatchingUp = true;
     targetT = animatedT;
     return;
   } else if (isScrubCatchingUp && animatedT >= targetT) {
-    // Scrub has caught up, resume animation
     isScrubCatchingUp = false;
   }
 
-  // Only update if we're moving forward or at the target
   if (isScrubCatchingUp && animatedT < targetT) {
     return;
+  }
+
+  // Determine direction
+  if (animatedT > lastAnimatedT) {
+    lastDirection = "forward";
+  } else if (animatedT < lastAnimatedT) {
+    lastDirection = "backward";
   }
 
   previousT = animatedT;
@@ -87,21 +95,16 @@ export function updateHomeScrollAnimation(animatedT: number) {
     const anim = scrollAnimationCurves[key];
     if (!anim) return;
 
-    // Use animatedT directly (0 to 1) without duration scaling
-    let t = animatedT;
-    t = Math.max(0, Math.min(1, t));
-
+    let t = Math.max(0, Math.min(1, animatedT));
     let pos: THREE.Vector3;
-    // Use different curves for different parts of the animation
-    if (t <= 0.5) {
-      // First half: moving to center (t goes from 0 to 0.5, map to 0 to 1)
-      const curveT = t * 2;
-      pos = anim.curveToCenter.getPoint(curveT);
+
+    if (lastDirection === "forward") {
+      // Moving forward: from start to center
+      pos = anim.curveToCenter.getPoint(t);
       obj.lookAt(MAZE_CENTER);
     } else {
-      // Second half: moving from center back to start (t goes from 0.5 to 1, map to 0 to 1)
-      const curveT = (t - 0.5) * 2;
-      pos = anim.curveFromCenter.getPoint(curveT);
+      // Moving backward: from center back to start
+      pos = anim.curveFromCenter.getPoint(1 - t);
       obj.lookAt(anim.startPos);
     }
 
@@ -118,6 +121,7 @@ export function stopHomeScrollAnimation() {
   previousT = 0;
   isScrubCatchingUp = false;
   targetT = 0;
+  lastDirection = "forward";
 }
 
 // Export the scrub state so main.ts can check it
