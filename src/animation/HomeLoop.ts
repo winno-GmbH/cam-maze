@@ -44,6 +44,9 @@ export function setupScrollHandling() {
     const isAtTop = window.scrollY === 0;
 
     if (wasAtTop && !isAtTop) {
+      const pausedPositions = getPausedPositions();
+      console.log("Paused positions:", pausedPositions);
+
       stopHomeLoop();
     }
     wasAtTop = isAtTop;
@@ -94,4 +97,15 @@ export function updateHomeLoop() {
   if (pacmanMixer) {
     pacmanMixer.update(delta);
   }
+}
+
+export function getPausedPositions(): Record<string, THREE.Vector3> {
+  return {
+    pacman: pacman.position.clone(),
+    ghost1: ghosts.ghost1.position.clone(),
+    ghost2: ghosts.ghost2.position.clone(),
+    ghost3: ghosts.ghost3.position.clone(),
+    ghost4: ghosts.ghost4.position.clone(),
+    ghost5: ghosts.ghost5.position.clone(),
+  };
 }

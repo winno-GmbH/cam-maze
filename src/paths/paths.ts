@@ -1,6 +1,10 @@
 import * as THREE from "three";
 import { MazePathPoint, PathPoint } from "../types/types";
-import { pathPoints, cameraScrollPathPoints } from "./pathpoints";
+import {
+  pathPoints,
+  cameraScrollPathPoints,
+  createScrollPathPoints,
+} from "./pathpoints";
 
 export function createHomeScrollPaths(
   pacman: THREE.Object3D,
@@ -131,12 +135,6 @@ export const paths = {
   ghost3Home: createMazePath(pathPoints.ghost3Home),
   ghost4Home: createMazePath(pathPoints.ghost4Home),
   ghost5Home: createMazePath(pathPoints.ghost5Home),
-  pacmanHomeScroll: createPath(pathPoints.pacmanHomeScroll),
-  ghost1HomeScroll: createPath(pathPoints.ghost1HomeScroll),
-  ghost2HomeScroll: createPath(pathPoints.ghost2HomeScroll),
-  ghost3HomeScroll: createPath(pathPoints.ghost3HomeScroll),
-  ghost4HomeScroll: createPath(pathPoints.ghost4HomeScroll),
-  ghost5HomeScroll: createPath(pathPoints.ghost5HomeScroll),
   cameraPOV: createMazePath(pathPoints.cameraPOV),
   ghost1POV: createMazePath(pathPoints.ghost1POV),
   ghost2POV: createMazePath(pathPoints.ghost2POV),
@@ -144,3 +142,20 @@ export const paths = {
   ghost4POV: createMazePath(pathPoints.ghost4POV),
   ghost5POV: createMazePath(pathPoints.ghost5POV),
 };
+
+export function createScrollPaths(
+  pausedPositions: Record<string, THREE.Vector3>
+): Record<string, THREE.CurvePath<THREE.Vector3>> {
+  const scrollPathPoints = createScrollPathPoints(pausedPositions);
+  const scrollPaths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
+
+  // Create paths like the original structure
+  scrollPaths.pacmanHomeScroll = createPath(scrollPathPoints.pacmanHomeScroll);
+  scrollPaths.ghost1HomeScroll = createPath(scrollPathPoints.ghost1HomeScroll);
+  scrollPaths.ghost2HomeScroll = createPath(scrollPathPoints.ghost2HomeScroll);
+  scrollPaths.ghost3HomeScroll = createPath(scrollPathPoints.ghost3HomeScroll);
+  scrollPaths.ghost4HomeScroll = createPath(scrollPathPoints.ghost4HomeScroll);
+  scrollPaths.ghost5HomeScroll = createPath(scrollPathPoints.ghost5HomeScroll);
+
+  return scrollPaths;
+}
