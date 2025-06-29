@@ -1,22 +1,20 @@
 import * as THREE from "three";
-import { CAMERA_CONFIG } from "../config/config";
-import { cameraHomePath } from "../paths/paths";
-import { cameraPositions } from "../paths/pathpoints";
+
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export const camera = new THREE.PerspectiveCamera(
-  CAMERA_CONFIG.originalFOV,
+  75,
   window.innerWidth / window.innerHeight,
-  CAMERA_CONFIG.near,
-  CAMERA_CONFIG.far
+  0.1,
+  1000
 );
 
-export function initCamera(): void {
-  camera.position.copy(cameraPositions.startPosition);
-  camera.lookAt(cameraPositions.lookAtPosition);
+export function setupCamera(): void {
+  camera.position.copy(new THREE.Vector3(0.5, 2.5, 2.5)); // startPosition
+  camera.lookAt(new THREE.Vector3(0.5, 0.5, -1.5)); // lookAtPosition
 }
 
 export const startQuaternion = camera.quaternion.clone();
@@ -43,8 +41,8 @@ export function setupCameraResize(): void {
 
 export function setupCameraAnimation(): void {
   const startQuat = camera.quaternion.clone();
-  const endPos = cameraHomePath.getPoint(1);
-  const endTangent = cameraHomePath.getTangent(1);
+  const endPos = new THREE.Vector3(-1.5, 3, 2);
+  const endTangent = new THREE.Vector3(-1.5, 3, 2);
   let endQuat: THREE.Quaternion | null = null;
 
   if (endPos && endTangent) {
@@ -54,7 +52,7 @@ export function setupCameraAnimation(): void {
     endQuat = camera.quaternion.clone();
   }
 
-  camera.position.copy(cameraHomePath.getPoint(0));
+  camera.position.copy(new THREE.Vector3(-2, 2.5, 2));
   camera.quaternion.copy(startQuat);
 
   gsap
@@ -74,7 +72,7 @@ export function setupCameraAnimation(): void {
         onUpdate: function () {
           const t = this.targets()[0].t;
 
-          const position = cameraHomePath.getPoint(t);
+          const position = new THREE.Vector3(-2, 2.5, 2);
           camera.position.copy(position);
           if (startQuat && endQuat) {
             const currentQuaternion = new THREE.Quaternion();

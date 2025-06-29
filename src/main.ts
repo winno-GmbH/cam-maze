@@ -1,14 +1,10 @@
-import { initRenderer, setupLighting, renderer, scene } from "./core/scene";
-import { loadModel } from "./core/objects";
-import { initCamera, setupCameraAnimation, camera } from "./core/camera";
+import { renderer, scene, setupScene } from "./core/scene";
+import { setupCameraAnimation, camera } from "./core/camera";
 import { updateHomeLoop, setupScrollHandling } from "./animation/HomeLoop";
 
 async function init() {
   try {
-    initCamera();
-    await loadModel();
-    setupLighting();
-    initRenderer();
+    await setupScene();
 
     setupScrollHandling();
     setupCameraAnimation();

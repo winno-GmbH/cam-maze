@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { MazePathPoint, PathPoint } from "../types/types";
+import { MazePathPoint, PathPoint, CameraPathPoint } from "../types/types";
 import { isMobile } from "../config/config";
 
 const mazeCenterPathPoint = new THREE.Vector3(0.45175, 0.5, 0.55675);
@@ -545,8 +545,16 @@ const ghost2HomePathPoints: MazePathPoint[] = [
   },
   {
     pos: new THREE.Vector3(-0.04625, 0.55, 0.904),
-    type: "straight",
+    type: "curve",
+    curveType: "upperArc",
   },
+  { pos: new THREE.Vector3(-0.14675, 0.55, 0.8035), type: "straight" },
+  {
+    pos: new THREE.Vector3(-0.34775, 0.55, 0.8035),
+    type: "curve",
+    curveType: "lowerArc",
+  },
+  { pos: new THREE.Vector3(-0.44825, 0.55, 0.703), type: "straight" },
 ];
 
 const ghost3HomePathPoints: MazePathPoint[] = [
@@ -1040,7 +1048,14 @@ const ghost5HomePathPoints: MazePathPoint[] = [
   },
 ];
 
-const cameraPOVPathPoints: MazePathPoint[] = [
+const cameraHomeScrollPathPoints: CameraPathPoint[] = [
+  { pos: startPosition, lookAt: lookAtPosition },
+  { pos: secondPosition, lookAt: lookAtPosition },
+  { pos: new THREE.Vector3(0.55675, 3, 0.45175), lookAt: lookAtPosition },
+  { pos: mazeCenterPathPoint, lookAt: lookAtPosition },
+];
+
+const cameraPOVPathPoints: CameraPathPoint[] = [
   {
     pos: new THREE.Vector3(0.55675, -0.5, 0.45175),
     type: "curve",
@@ -1061,43 +1076,64 @@ const cameraPOVPathPoints: MazePathPoint[] = [
     type: "curve",
     curveType: "upperArc",
   },
-  { pos: new THREE.Vector3(0.7075, 0.55, 0.8035), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.7075, 0.55, 0.8035),
+    type: "straight",
+  },
   {
     pos: new THREE.Vector3(0.9085, 0.55, 0.8035),
     type: "curve",
     curveType: "lowerArc",
   },
-  { pos: new THREE.Vector3(0.95875, 0.55, 0.85375), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.95875, 0.55, 0.85375),
+    type: "straight",
+  },
   {
     pos: new THREE.Vector3(0.95875, 0.55, 1.15525),
     type: "curve",
     curveType: "upperArc",
   },
-  { pos: new THREE.Vector3(0.9085, 0.55, 1.2055), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.9085, 0.55, 1.2055),
+    type: "straight",
+  },
   {
     pos: new THREE.Vector3(0.808, 0.55, 1.2055),
     type: "curve",
     curveType: "lowerArc",
   },
-  { pos: new THREE.Vector3(0.75775, 0.55, 1.15525), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.75775, 0.55, 1.15525),
+    type: "straight",
+  },
   {
     pos: new THREE.Vector3(0.75775, 0.55, 1.05475),
     type: "curve",
     curveType: "upperArc",
   },
-  { pos: new THREE.Vector3(0.7075, 0.55, 1.0045), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.7075, 0.55, 1.0045),
+    type: "straight",
+  },
   {
     pos: new THREE.Vector3(0.205, 0.55, 1.0045),
     type: "curve",
     curveType: "lowerArc",
   },
-  { pos: new THREE.Vector3(0.15475, 0.55, 1.05475), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.15475, 0.55, 1.05475),
+    type: "straight",
+  },
   {
     pos: new THREE.Vector3(0.15475, 0.55, 1.15525),
     type: "curve",
     curveType: "upperArc",
   },
-  { pos: new THREE.Vector3(0.205, 0.55, 1.2055), type: "straight" },
+  {
+    pos: new THREE.Vector3(0.205, 0.55, 1.2055),
+    type: "straight",
+  },
   {
     pos: new THREE.Vector3(0.5065, 0.55, 1.2055),
     type: "curve",
@@ -1108,7 +1144,10 @@ const cameraPOVPathPoints: MazePathPoint[] = [
     type: "curve",
     curveType: "upperArc",
   },
-  { pos: new THREE.Vector3(-0.44825, 1, 2.0095), type: "straight" },
+  {
+    pos: new THREE.Vector3(-0.44825, 1, 2.0095),
+    type: "straight",
+  },
 ];
 
 const ghost1POVPathPoints: MazePathPoint[] = [
@@ -1166,13 +1205,14 @@ const ghost5POVPathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(0.406, 0.55, 1.2055), type: "straight" },
 ];
 
-export const pathPoints = {
+const staticPathPoints = {
   pacmanHome: pacmanHomePathPoints,
   ghost1Home: ghost1HomePathPoints,
   ghost2Home: ghost2HomePathPoints,
   ghost3Home: ghost3HomePathPoints,
   ghost4Home: ghost4HomePathPoints,
   ghost5Home: ghost5HomePathPoints,
+  cameraHomeScroll: cameraHomeScrollPathPoints,
   cameraPOV: cameraPOVPathPoints,
   ghost1POV: ghost1POVPathPoints,
   ghost2POV: ghost2POVPathPoints,
@@ -1181,70 +1221,29 @@ export const pathPoints = {
   ghost5POV: ghost5POVPathPoints,
 };
 
-export const cameraScrollPathPoints = {
-  start: startPosition,
-  second: secondPosition,
-  highPoint: new THREE.Vector3(0.55675, 3, 0.45175),
-  end: mazeCenterPathPoint,
-};
+export function getPathPointsWithScroll(
+  pacman: THREE.Object3D,
+  ghosts: Record<string, THREE.Object3D>
+) {
+  const scrollPathPoints: Record<string, PathPoint[]> = {};
 
-export const cameraPositions = {
-  startPosition,
-  secondPosition,
-  lookAtPosition,
-};
-
-export function createScrollPathPoints(
-  pausedPositions: Record<string, THREE.Vector3>
-): Record<string, PathPoint[]> {
-  const arcPoints = generateArcPathPoints(pausedPositions);
-
-  return {
-    pacmanHomeScroll: [
-      { pos: pausedPositions.pacman },
-      { pos: arcPoints.pacman },
-      { pos: mazeCenterPathPoint },
-    ],
-    ghost1HomeScroll: [
-      { pos: pausedPositions.ghost1 },
-      { pos: arcPoints.ghost1 },
-      { pos: mazeCenterPathPoint },
-    ],
-    ghost2HomeScroll: [
-      { pos: pausedPositions.ghost2 },
-      { pos: arcPoints.ghost2 },
-      { pos: mazeCenterPathPoint },
-    ],
-    ghost3HomeScroll: [
-      { pos: pausedPositions.ghost3 },
-      { pos: arcPoints.ghost3 },
-      { pos: mazeCenterPathPoint },
-    ],
-    ghost4HomeScroll: [
-      { pos: pausedPositions.ghost4 },
-      { pos: arcPoints.ghost4 },
-      { pos: mazeCenterPathPoint },
-    ],
-    ghost5HomeScroll: [
-      { pos: pausedPositions.ghost5 },
-      { pos: arcPoints.ghost5 },
-      { pos: mazeCenterPathPoint },
-    ],
-  };
-}
-
-function generateArcPathPoints(
-  pausedPositions: Record<string, THREE.Vector3>
-): Record<string, THREE.Vector3> {
-  const arcPathPoints: Record<string, THREE.Vector3> = {};
-
-  Object.entries(pausedPositions).forEach(([key, pausedPos]) => {
-    arcPathPoints[key] = new THREE.Vector3(
+  Object.entries({ pacman, ...ghosts }).forEach(([key, obj]) => {
+    const pausedPos = obj.position.clone();
+    const arcPoint = new THREE.Vector3(
       (pausedPos.x + mazeCenterPathPoint.x) / 2,
       1,
       (pausedPos.z + mazeCenterPathPoint.z) / 2
     );
+
+    scrollPathPoints[`${key}HomeScroll`] = [
+      { pos: pausedPos },
+      { pos: arcPoint },
+      { pos: mazeCenterPathPoint },
+    ];
   });
 
-  return arcPathPoints;
+  return {
+    ...staticPathPoints,
+    ...scrollPathPoints,
+  };
 }

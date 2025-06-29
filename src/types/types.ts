@@ -9,6 +9,21 @@ export interface MazePathPoint extends PathPoint {
   curveType?: "upperArc" | "lowerArc" | "forwardDownArc";
 }
 
+export type CameraPathPoint =
+  | {
+      pos: THREE.Vector3;
+      type: "straight" | "curve";
+      curveType?: "upperArc" | "lowerArc" | "forwardDownArc";
+    }
+  | {
+      pos: THREE.Vector3;
+      lookAt: THREE.Vector3;
+    }
+  | {
+      pos: THREE.Vector3;
+      rotation: THREE.Euler;
+    };
+
 export interface PathData {
   points: MazePathPoint[];
   color: number;
