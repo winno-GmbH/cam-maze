@@ -121,7 +121,11 @@ export async function loadModel(): Promise<void> {
               ghostGroup.add(item);
             });
 
-            ghostContainer.add(ghostGroup);
+            if (ghostContainer) {
+              ghostContainer.add(ghostGroup);
+            } else {
+              console.warn(`ghostContainer for ${child.name} is undefined!`);
+            }
           }
 
           if ((child as any).isMesh) {
