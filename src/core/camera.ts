@@ -6,7 +6,7 @@ import ScrollTrigger from "gsap/ScrollTrigger";
 gsap.registerPlugin(ScrollTrigger);
 
 export const camera = new THREE.PerspectiveCamera(
-  60,
+  50,
   window.innerWidth / window.innerHeight,
   0.1,
   1000
