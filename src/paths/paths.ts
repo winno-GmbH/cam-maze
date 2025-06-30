@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { MazePathPoint, PathPoint, CameraPathPoint } from "../types/types";
-import { getPathPointsWithScroll } from "./pathpoints";
+import { getPathPoints } from "./pathpoints";
 
 export function createHomeScrollPaths(
   pacman: THREE.Object3D,
@@ -98,10 +98,7 @@ export function updateObjectHomeScrollPaths(
   pacman: THREE.Object3D,
   ghosts: Record<string, THREE.Object3D>
 ): Record<string, THREE.CurvePath<THREE.Vector3>> {
-  const allPathPoints = getPathPointsWithScroll(pacman, ghosts) as Record<
-    string,
-    any
-  >;
+  const allPathPoints = getPathPoints(pacman, ghosts) as Record<string, any>;
 
   const scrollPaths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 
@@ -177,10 +174,7 @@ export function getAllPaths(
   pacman: THREE.Object3D,
   ghosts: Record<string, THREE.Object3D>
 ): Record<string, THREE.CurvePath<THREE.Vector3>> {
-  const allPathPoints = getPathPointsWithScroll(pacman, ghosts) as Record<
-    string,
-    any
-  >;
+  const allPathPoints = getPathPoints(pacman, ghosts) as Record<string, any>;
 
   return {
     pacmanHome: createMazePath(allPathPoints.pacmanHome),

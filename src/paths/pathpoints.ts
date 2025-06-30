@@ -1221,7 +1221,7 @@ const staticPathPoints = {
   ghost5POV: ghost5POVPathPoints,
 };
 
-export function getPathPointsWithScroll(
+export function getPathPoints(
   pacman: THREE.Object3D,
   ghosts: Record<string, THREE.Object3D>
 ) {

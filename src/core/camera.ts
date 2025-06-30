@@ -14,7 +14,7 @@ export const camera = new THREE.PerspectiveCamera(
 
 export function setupCamera(): void {
   camera.position.set(-2, 2.5, 2);
-  camera.lookAt(new THREE.Vector3(0.5, 0.5, 0.5));
+  camera.lookAt(new THREE.Vector3(-1.25, 0.5, 0.25));
 }
 
 export const startQuaternion = camera.quaternion.clone();
