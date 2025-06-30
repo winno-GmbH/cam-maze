@@ -48,7 +48,7 @@ function setupLighting(): void {
   directionalLight.castShadow = true;
 }
 
-const scene = new THREE.Scene();
+export const scene = new THREE.Scene();
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
@@ -89,4 +89,4 @@ async function setupScene() {
   await loadModel();
 }
 
-export { scene, renderer, clock, setupScene };
+export { renderer, clock, setupScene };
