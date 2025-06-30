@@ -1,26 +1,18 @@
-import { renderer, scene, setupScene } from "./core/scene";
-import { setupCameraAnimation, camera } from "./core/camera";
-import { updateHomeLoop, setupScrollHandling } from "./animation/HomeLoop";
+import { setupScene } from "./core/scene";
+import { updateHomeLoop } from "./animation/HomeLoop";
 
-async function init() {
-  try {
-    await setupScene();
-
-    setupScrollHandling();
-    setupCameraAnimation();
-    startRenderLoop();
-  } catch (error) {
-    console.error("Initialization error:", error);
-  }
+async function main() {
+  await setupScene();
+  startRenderLoop();
 }
 
 function startRenderLoop(): void {
   const render = () => {
     updateHomeLoop();
-    renderer.render(scene, camera);
+    // Rendering is now handled by the scene module's render loop
     requestAnimationFrame(render);
   };
   render();
 }
 
-init();
+main();

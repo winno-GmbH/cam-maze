@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { ASSETS } from "../config/config";
 import { GhostContainer } from "../types/types";
-import { scene, clock } from "./scene";
+import { clock } from "./scene";
 import {
   mazeMaterial,
   topMaterial,
@@ -17,7 +17,6 @@ const loader = new THREE.GLTFLoader();
 export let pacmanMixer: THREE.AnimationMixer;
 
 export const pacman = new THREE.Group();
-scene.add(pacman);
 
 export const ghosts: GhostContainer = {
   pacman: pacman,
@@ -36,9 +35,9 @@ const ghostContainers = {
   Ghost_GBP: ghosts.ghost5,
 };
 
-Object.values(ghosts).forEach((ghost) => scene.add(ghost));
-
-export async function loadModel(): Promise<void> {
+export async function loadModel(scene: THREE.Scene): Promise<void> {
+  Object.values(ghosts).forEach((ghost) => scene.add(ghost));
+  scene.add(pacman);
   return new Promise((resolve, reject) => {
     loader.load(
       ASSETS.mazeModel,

@@ -83,10 +83,10 @@ function initRenderer(): void {
   renderer.render(scene, camera);
 }
 
-async function setupScene() {
+export async function setupScene() {
   initRenderer();
   setupLighting();
-  await loadModel();
+  await loadModel(scene);
 }
 
-export { renderer, clock, setupScene };
+export { renderer, clock };
