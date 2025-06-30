@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { isMobile } from "../config/config";
 import { DOM_ELEMENTS } from "../config/selectors";
-import { camera } from "./camera";
+import { camera, setupCamera } from "./camera";
 import { loadModel } from "./objects";
 
 function enhanceAntiAliasing(): void {
@@ -87,6 +87,7 @@ function initRenderer(): void {
 export async function setupScene() {
   initRenderer();
   setupLighting();
+  setupCamera();
   await loadModel(scene);
 }
 

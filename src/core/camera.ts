@@ -13,8 +13,8 @@ export const camera = new THREE.PerspectiveCamera(
 );
 
 export function setupCamera(): void {
-  camera.position.copy(new THREE.Vector3(0.5, 2.5, 2.5)); // startPosition
-  camera.lookAt(new THREE.Vector3(0.5, 0.5, -1.5)); // lookAtPosition
+  camera.position.set(0.5, 3, 3); // Position camera above and in front of the maze
+  camera.lookAt(new THREE.Vector3(0.5, 0.5, 0.5)); // Look at the maze center
 }
 
 export const startQuaternion = camera.quaternion.clone();
