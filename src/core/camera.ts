@@ -1,7 +1,7 @@
 import * as THREE from "three";
-
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
+import { getLookAtPosition, getStartPosition } from "../paths/pathpoints";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -13,8 +13,10 @@ export const camera = new THREE.PerspectiveCamera(
 );
 
 export function setupCamera(): void {
-  camera.position.set(-2, 2.5, 2);
-  camera.lookAt(new THREE.Vector3(-1.25, 0.5, 0.25));
+  const startPosition = getStartPosition();
+  const lookAtPosition = getLookAtPosition();
+  camera.position.set(startPosition.x, startPosition.y, startPosition.z);
+  camera.lookAt(lookAtPosition.x, lookAtPosition.y, lookAtPosition.z);
 }
 
 export const startQuaternion = camera.quaternion.clone();

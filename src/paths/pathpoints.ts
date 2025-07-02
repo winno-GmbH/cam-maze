@@ -1205,27 +1205,74 @@ const ghost5POVPathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(0.406, 0.55, 1.2055), type: "straight" },
 ];
 
-const staticPathPoints = {
-  pacmanHome: pacmanHomePathPoints,
-  ghost1Home: ghost1HomePathPoints,
-  ghost2Home: ghost2HomePathPoints,
-  ghost3Home: ghost3HomePathPoints,
-  ghost4Home: ghost4HomePathPoints,
-  ghost5Home: ghost5HomePathPoints,
-  cameraHomeScroll: cameraHomeScrollPathPoints,
-  cameraPOV: cameraPOVPathPoints,
-  ghost1POV: ghost1POVPathPoints,
-  ghost2POV: ghost2POVPathPoints,
-  ghost3POV: ghost3POVPathPoints,
-  ghost4POV: ghost4POVPathPoints,
-  ghost5POV: ghost5POVPathPoints,
+export const povTriggerPositions = {
+  ghost1: {
+    triggerPos: new THREE.Vector3(0.65725, 0.55, 0.75325),
+    ghostTextPos: new THREE.Vector3(0.7075, 0.55, 0.8035),
+    camTextPos: new THREE.Vector3(0.75775, 0.55, 0.8035),
+    endPosition: new THREE.Vector3(0.85825, 0.55, 0.8035),
+  },
+  ghost2: {
+    triggerPos: new THREE.Vector3(0.9085, 0.55, 0.8035),
+    ghostTextPos: new THREE.Vector3(0.95875, 0.55, 0.85375),
+    camTextPos: new THREE.Vector3(0.95875, 0.55, 0.904),
+    endPosition: new THREE.Vector3(0.95875, 0.55, 1.0045),
+  },
+  ghost3: {
+    triggerPos: new THREE.Vector3(0.75775, 0.55, 1.05475),
+    ghostTextPos: new THREE.Vector3(0.7075, 0.55, 1.0045),
+    camTextPos: new THREE.Vector3(0.65725, 0.55, 1.0045),
+    endPosition: new THREE.Vector3(0.55675, 0.55, 1.0045),
+  },
+  ghost4: {
+    triggerPos: new THREE.Vector3(0.65725, 0.55, 1.0045),
+    ghostTextPos: new THREE.Vector3(0.5065, 0.55, 1.0045),
+    camTextPos: new THREE.Vector3(0.45625, 0.55, 1.0045),
+    endPosition: new THREE.Vector3(0.35575, 0.55, 1.0045),
+  },
+  ghost5: {
+    triggerPos: new THREE.Vector3(0.15475, 0.55, 1.15525),
+    ghostTextPos: new THREE.Vector3(0.205, 0.55, 1.2055),
+    camTextPos: new THREE.Vector3(0.25525, 0.55, 1.2055),
+    endPosition: new THREE.Vector3(0.35575, 0.55, 1.2055),
+  },
 };
 
-export function getPathPoints(
+export function getStartPosition() {
+  return startPosition;
+}
+
+export function getSecondPosition() {
+  return secondPosition;
+}
+
+export function getLookAtPosition() {
+  return lookAtPosition;
+}
+
+export const homePaths = {
+  pacman: pacmanHomePathPoints,
+  ghost1: ghost1HomePathPoints,
+  ghost2: ghost2HomePathPoints,
+  ghost3: ghost3HomePathPoints,
+  ghost4: ghost4HomePathPoints,
+  ghost5: ghost5HomePathPoints,
+} as const;
+
+export const povPaths = {
+  camera: cameraPOVPathPoints,
+  ghost1: ghost1POVPathPoints,
+  ghost2: ghost2POVPathPoints,
+  ghost3: ghost3POVPathPoints,
+  ghost4: ghost4POVPathPoints,
+  ghost5: ghost5POVPathPoints,
+} as const;
+
+export function createHomeScrollPathPoints(
   pacman: THREE.Object3D,
   ghosts: Record<string, THREE.Object3D>
-) {
-  const scrollPathPoints: Record<string, PathPoint[]> = {};
+): Record<string, PathPoint[]> {
+  const scrollPaths: Record<string, PathPoint[]> = {};
 
   Object.entries({ pacman, ...ghosts }).forEach(([key, obj]) => {
     const pausedPos = obj.position.clone();
@@ -1235,15 +1282,24 @@ export function getPathPoints(
       (pausedPos.z + mazeCenterPathPoint.z) / 2
     );
 
-    scrollPathPoints[`${key}HomeScroll`] = [
+    scrollPaths[key] = [
       { pos: pausedPos },
       { pos: arcPoint },
       { pos: mazeCenterPathPoint },
     ];
   });
 
-  return {
-    ...staticPathPoints,
-    ...scrollPathPoints,
-  };
+  return scrollPaths;
+}
+
+export function getCameraHomeScrollPathPoints(): CameraPathPoint[] {
+  return cameraHomeScrollPathPoints;
+}
+
+export function getInitialCameraSetup() {
+  return { pos: startPosition, lookAt: lookAtPosition };
+}
+
+export function getCurrentCameraPositions() {
+  return { startPosition, secondPosition, lookAtPosition };
 }
