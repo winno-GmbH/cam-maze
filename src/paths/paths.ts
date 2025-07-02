@@ -35,7 +35,7 @@ function createMazePath(
       const midPoint =
         hasPrevCurve || hasNextCurve
           ? createDoubleCurveMidPoint(current, next, hasPrevCurve, hasNextCurve)
-          : createCurveMidPoint(current, next);
+          : createSingleCurveMidPoint(current, next);
 
       path.add(
         new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
@@ -45,7 +45,7 @@ function createMazePath(
   return path;
 }
 
-function createCurveMidPoint(
+function createSingleCurveMidPoint(
   current: { pos: THREE.Vector3; curveType?: string },
   next: { pos: THREE.Vector3; curveType?: string }
 ): THREE.Vector3 {
@@ -71,7 +71,7 @@ function createDoubleCurveMidPoint(
   hasNextCurve: boolean
 ): THREE.Vector3 {
   const smoothingFactor = 0.3;
-  const originalMidPoint = createCurveMidPoint(current, next);
+  const originalMidPoint = createSingleCurveMidPoint(current, next);
   const straightMidPoint = current.pos.clone().lerp(next.pos, 0.5);
 
   const stretchFactor =
