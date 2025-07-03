@@ -1,4 +1,4 @@
-import { ghosts, pacmanMixer } from "../core/objects";
+import { ghosts, pacman, pacmanMixer } from "../core/objects";
 import { getHomePaths } from "../paths/paths";
 import { clock } from "../core/scene";
 import { calculateObjectOrientation } from "./util";
@@ -74,5 +74,17 @@ export function updateHomeLoop() {
   const delta = clock.getDelta();
   if (pacmanMixer) {
     pacmanMixer.update(delta);
+  }
+
+  // Debug: Log object positions every 60 frames (once per second at 60fps)
+  if (Math.floor(currentTime * 60) % 60 === 0) {
+    console.log("Home loop - Object positions:", {
+      pacman: pacman.position,
+      ghost1: ghosts.ghost1.position,
+      ghost2: ghosts.ghost2.position,
+      ghost3: ghosts.ghost3.position,
+      ghost4: ghosts.ghost4.position,
+      ghost5: ghosts.ghost5.position,
+    });
   }
 }

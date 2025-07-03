@@ -89,6 +89,11 @@ export async function setupScene() {
   setupLighting();
   setupCamera();
   await loadModel(scene);
+
+  // Debug: Log scene setup
+  console.log("Scene setup complete");
+  console.log("Scene children count:", scene.children.length);
+  console.log("Camera position after setup:", camera.position);
 }
 
 export function startRenderLoop(): void {

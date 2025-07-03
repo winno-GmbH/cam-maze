@@ -17,6 +17,11 @@ export function setupCamera(): void {
   const lookAtPosition = getLookAtPosition();
   camera.position.set(startPosition.x, startPosition.y, startPosition.z);
   camera.lookAt(lookAtPosition.x, lookAtPosition.y, lookAtPosition.z);
+
+  // Debug: Log camera setup
+  console.log("Camera position:", camera.position);
+  console.log("Camera lookAt:", lookAtPosition);
+  console.log("Camera FOV:", camera.fov);
 }
 
 export const startQuaternion = camera.quaternion.clone();

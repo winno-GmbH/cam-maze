@@ -5,13 +5,10 @@ import { initHomeScrollAnimation } from "./animation/HomeScroll";
 async function main() {
   await setupScene();
 
-  // Register frame callbacks
   onFrame(updateHomeLoop);
 
-  // Initialize home scroll animation
   initHomeScrollAnimation();
 
-  // Start the render loop
   startRenderLoop();
 }
 
