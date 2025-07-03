@@ -13,14 +13,13 @@ export const camera = new THREE.PerspectiveCamera(
 );
 
 export function setupCamera(): void {
-  const startPosition = getStartPosition();
-  const lookAtPosition = getLookAtPosition();
-  camera.position.set(startPosition.x, startPosition.y, startPosition.z);
-  camera.lookAt(lookAtPosition.x, lookAtPosition.y, lookAtPosition.z);
+  // Position camera to look at the maze center
+  camera.position.set(0.5, 3, 2); // Above and behind the maze
+  camera.lookAt(0.5, 0.5, 0.5); // Look at maze center
 
   // Debug: Log camera setup
   console.log("Camera position:", camera.position);
-  console.log("Camera lookAt:", lookAtPosition);
+  console.log("Camera lookAt: (0.5, 0.5, 0.5)");
   console.log("Camera FOV:", camera.fov);
 }
 

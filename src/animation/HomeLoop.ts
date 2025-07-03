@@ -2,6 +2,7 @@ import { ghosts, pacman, pacmanMixer } from "../core/objects";
 import { getHomePaths } from "../paths/paths";
 import { clock } from "../core/scene";
 import { calculateObjectOrientation } from "./util";
+import { camera } from "../core/camera";
 
 const pathMapping = {
   pacman: "pacmanHome",
@@ -86,5 +87,21 @@ export function updateHomeLoop() {
       ghost4: ghosts.ghost4.position,
       ghost5: ghosts.ghost5.position,
     });
+    console.log("Camera position:", camera.position);
+    console.log(
+      "Camera target:",
+      camera.getWorldDirection(new THREE.Vector3())
+    );
+  }
+
+  // Temporary: Force objects to visible positions for testing
+  if (currentTime < 5) {
+    // Only for first 5 seconds
+    pacman.position.set(0.5, 0.55, 0.5);
+    ghosts.ghost1.position.set(0.6, 0.55, 0.5);
+    ghosts.ghost2.position.set(0.4, 0.55, 0.5);
+    ghosts.ghost3.position.set(0.5, 0.55, 0.6);
+    ghosts.ghost4.position.set(0.5, 0.55, 0.4);
+    ghosts.ghost5.position.set(0.5, 0.55, 0.5);
   }
 }
