@@ -1295,11 +1295,3 @@ export function createHomeScrollPathPoints(
 export function getCameraHomeScrollPathPoints(): CameraPathPoint[] {
   return cameraHomeScrollPathPoints;
 }
-
-export function getInitialCameraSetup() {
-  return { pos: startPosition, lookAt: lookAtPosition };
-}
-
-export function getCurrentCameraPositions() {
-  return { startPosition, secondPosition, lookAtPosition };
-}

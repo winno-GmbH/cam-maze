@@ -124,16 +124,6 @@ export function getHomePaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
   return paths;
 }
 
-export function getPOVPaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
-  const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
-
-  Object.entries(povPaths).forEach(([key, pathPoints]) => {
-    paths[key] = createMazePath(pathPoints);
-  });
-
-  return paths;
-}
-
 export function getHomeScrollPaths(
   pacman: THREE.Object3D,
   ghosts: Record<string, THREE.Object3D>
@@ -147,6 +137,16 @@ export function getHomeScrollPaths(
 
   Object.entries(scrollPathPoints).forEach(([key, pathPoints]) => {
     paths[key] = createHomeScrollPath(pathPoints);
+  });
+
+  return paths;
+}
+
+export function getPOVPaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
+  const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
+
+  Object.entries(povPaths).forEach(([key, pathPoints]) => {
+    paths[key] = createMazePath(pathPoints);
   });
 
   return paths;

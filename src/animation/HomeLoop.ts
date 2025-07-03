@@ -1,7 +1,7 @@
-import * as THREE from "three";
-import { pacman, ghosts, pacmanMixer } from "../core/objects";
-import { getAllPaths } from "../paths/paths";
+import { ghosts, pacmanMixer } from "../core/objects";
+import { getHomePaths } from "../paths/paths";
 import { clock } from "../core/scene";
+import { calculateObjectOrientation } from "./util";
 
 const pathMapping = {
   pacman: "pacmanHome",
@@ -54,11 +54,11 @@ export function updateHomeLoop() {
   const globalTime = adjustedTime % LOOP_DURATION;
   const t = globalTime / LOOP_DURATION;
 
-  const allPaths = getAllPaths(pacman, ghosts);
+  const homePaths = getHomePaths();
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const pathKey = pathMapping[key as keyof typeof pathMapping];
-    const path = (allPaths as any)[pathKey];
+    const path = homePaths[pathKey];
     if (!path) return;
     const position = path.getPointAt(t);
     if (!position) return;
@@ -74,24 +74,5 @@ export function updateHomeLoop() {
   const delta = clock.getDelta();
   if (pacmanMixer) {
     pacmanMixer.update(delta);
-  }
-}
-
-export function calculateObjectOrientation(
-  object: THREE.Object3D,
-  tangent: THREE.Vector3,
-  objectType: "pacman" | "ghost" | "camera" = "ghost"
-): void {
-  if (!tangent || tangent.length() === 0) return;
-
-  const targetRotation = Math.atan2(tangent.x, tangent.z);
-
-  if (objectType === "pacman") {
-    object.rotation.set(Math.PI / 2, Math.PI, targetRotation + Math.PI / 2);
-  } else if (objectType === "ghost") {
-    object.rotation.set(0, targetRotation, 0);
-  } else if (objectType === "camera") {
-    const lookAtPoint = object.position.clone().add(tangent);
-    object.lookAt(lookAtPoint);
   }
 }
