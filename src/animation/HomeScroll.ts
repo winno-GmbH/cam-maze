@@ -6,44 +6,19 @@ import { stopHomeLoop } from "./HomeLoop";
 import gsap from "gsap";
 
 export function initHomeScrollAnimation() {
-  // Wait for the scene to be fully loaded
-  const checkSceneReady = () => {
-    // Check if objects are loaded and have valid positions
-    if (!pacman || !ghosts || Object.keys(ghosts).length === 0) {
-      console.log("Scene not ready, retrying in 100ms...");
-      setTimeout(checkSceneReady, 100);
-      return;
-    }
-
-    // Check if objects have been positioned (not at origin)
-    const objectsReady = Object.values(ghosts).every(
-      (ghost) => ghost.position.length() > 0 || ghost.children.length > 0
-    );
-
-    if (!objectsReady) {
-      console.log("Objects not positioned yet, retrying in 100ms...");
-      setTimeout(checkSceneReady, 100);
-      return;
-    }
-
-    console.log("Scene is ready, initializing scroll animation...");
-    setupScrollAnimation();
-  };
-
-  checkSceneReady();
-}
-
-function setupScrollAnimation() {
   const scrollPaths = getHomeScrollPaths(pacman, ghosts);
 
+  // Debug: Log the paths to see what we're working with
   console.log("Scroll paths created:", Object.keys(scrollPaths));
-  console.log("Pacman position:", pacman.position);
+  console.log("Pacman position before:", pacman.position);
   console.log(
-    "Ghost positions:",
-    Object.entries(ghosts).map(([key, ghost]) => ({
-      key,
-      position: ghost.position,
-    }))
+    "Ghosts positions before:",
+    Object.fromEntries(
+      Object.entries(ghosts).map(([key, ghost]) => [
+        key,
+        ghost.position.clone(),
+      ])
+    )
   );
 
   stopHomeLoop();
@@ -80,6 +55,11 @@ function updateScrollAnimation(
   progress: number,
   paths: Record<string, THREE.CurvePath<THREE.Vector3>>
 ) {
+  // Debug: Log progress occasionally
+  if (progress % 0.1 < 0.01) {
+    console.log("Scroll progress:", progress);
+  }
+
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
     camera.position.copy(cameraPoint);
@@ -88,36 +68,38 @@ function updateScrollAnimation(
 
   if (paths.pacman && pacman) {
     const pacmanPoint = paths.pacman.getPointAt(progress);
-    pacman.position.copy(pacmanPoint);
+    if (pacmanPoint) {
+      pacman.position.copy(pacmanPoint);
+      console.log("Pacman moved to:", pacmanPoint);
 
-    // Debug: Log pacman position updates
-    if (progress === 0 || progress === 0.5 || progress === 1) {
-      console.log(`Pacman at progress ${progress}:`, pacmanPoint);
-    }
-
-    const tangent = paths.pacman.getTangentAt(progress);
-    if (tangent && tangent.length() > 0) {
-      pacman.lookAt(pacmanPoint.clone().add(tangent.normalize()));
+      const tangent = paths.pacman.getTangentAt(progress);
+      if (tangent && tangent.length() > 0) {
+        pacman.lookAt(pacmanPoint.clone().add(tangent.normalize()));
+      }
+    } else {
+      console.warn("No pacman point at progress:", progress);
     }
   }
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    // The paths are named with the same keys as the ghosts object
-    const path = paths[key];
+    const pathKey = `ghost${key.replace("ghost", "")}Scroll`;
+    const path = paths[pathKey];
 
     if (path) {
       const ghostPoint = path.getPointAt(progress);
-      ghost.position.copy(ghostPoint);
+      if (ghostPoint) {
+        ghost.position.copy(ghostPoint);
+        console.log(`Ghost ${key} moved to:`, ghostPoint);
 
-      // Debug: Log ghost position updates
-      if (progress === 0 || progress === 0.5 || progress === 1) {
-        console.log(`Ghost ${key} at progress ${progress}:`, ghostPoint);
+        const tangent = path.getTangentAt(progress);
+        if (tangent && tangent.length() > 0) {
+          ghost.lookAt(ghostPoint.clone().add(tangent.normalize()));
+        }
+      } else {
+        console.warn(`No ghost point for ${key} at progress:`, progress);
       }
-
-      const tangent = path.getTangentAt(progress);
-      if (tangent && tangent.length() > 0) {
-        ghost.lookAt(ghostPoint.clone().add(tangent.normalize()));
-      }
+    } else {
+      console.warn(`No path found for ghost ${key}, pathKey: ${pathKey}`);
     }
   });
 }
