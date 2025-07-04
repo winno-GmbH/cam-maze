@@ -5,15 +5,6 @@ import { calculateObjectOrientation } from "./util";
 import * as THREE from "three";
 import { initHomeScrollAnimation } from "./HomeScroll";
 
-const pathMapping = {
-  pacman: "pacmanHome",
-  ghost1: "ghost1Home",
-  ghost2: "ghost2Home",
-  ghost3: "ghost3Home",
-  ghost4: "ghost4Home",
-  ghost5: "ghost5Home",
-} as const;
-
 const LOOP_DURATION = 40;
 const POSITION_THRESHOLD = 0.01;
 
@@ -120,12 +111,9 @@ export function updateHomeLoop() {
   console.log("[HomeLoop] t:", t, "homePaths keys:", Object.keys(homePaths));
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    const pathKey = pathMapping[key as keyof typeof pathMapping];
-    const path = homePaths[pathKey];
+    const path = homePaths[key];
     if (!path) {
-      console.warn(
-        `[HomeLoop] No path found for key: ${key} (pathKey: ${pathKey})`
-      );
+      console.warn(`[HomeLoop] No path found for key: ${key}`);
       return;
     }
     const position = path.getPointAt(t);
