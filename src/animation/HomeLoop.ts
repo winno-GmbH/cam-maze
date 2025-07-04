@@ -47,14 +47,23 @@ export function setupScrollHandling() {
     if (wasAtTop && !isAtTop) {
       stopHomeLoop();
     } else if (!wasAtTop && isAtTop) {
-      startHomeLoop();
+      if (areObjectsAtPausedPositions()) {
+        isWaitingForResume = false;
+        isHomeLoopActive = true;
+        isPaused = false;
+        const currentTime = performance.now() / 1000;
+        totalPausedTime += currentTime - pauseStartTime;
+      } else {
+        isWaitingForResume = true;
+        isHomeLoopActive = true;
+      }
     }
     wasAtTop = isAtTop;
   });
 }
 
 function areObjectsAtPausedPositions(): boolean {
-  if (!isWaitingForResume || Object.keys(pausedPositions).length === 0) {
+  if (Object.keys(pausedPositions).length === 0) {
     return true;
   }
   return Object.entries(ghosts).every(([key, ghost]) => {
@@ -69,8 +78,11 @@ export function updateHomeLoop() {
   if (!isHomeLoopActive) return;
 
   if (isWaitingForResume) {
-    if (areObjectsAtPausedPositions()) {
+    if (window.scrollY === 0 && areObjectsAtPausedPositions()) {
       isWaitingForResume = false;
+      isPaused = false;
+      const currentTime = performance.now() / 1000;
+      totalPausedTime += currentTime - pauseStartTime;
     } else {
       return;
     }
