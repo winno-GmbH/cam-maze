@@ -22,8 +22,6 @@ export function initHomeScrollAnimation(
     )
   );
 
-  stopHomeLoop();
-
   gsap
     .timeline({
       scrollTrigger: {
