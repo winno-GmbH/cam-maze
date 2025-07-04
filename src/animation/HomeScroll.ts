@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { camera } from "../core/camera";
 import { getHomeScrollPaths } from "../paths/paths";
 import { pacman, ghosts } from "../core/objects";
-import { stopHomeLoop } from "./HomeLoop";
+import { stopHomeLoop, startHomeLoop } from "./HomeLoop";
 import gsap from "gsap";
 
 export function initHomeScrollAnimation() {
@@ -35,6 +35,15 @@ export function initHomeScrollAnimation() {
         },
         onLeave: () => {
           console.log("Home scroll animation ended");
+          startHomeLoop();
+        },
+        onEnterBack: () => {
+          console.log("Home scroll animation entered back");
+          stopHomeLoop();
+        },
+        onLeaveBack: () => {
+          console.log("Home scroll animation left back");
+          startHomeLoop();
         },
       },
     })

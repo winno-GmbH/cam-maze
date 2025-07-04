@@ -5,7 +5,7 @@ import {
   setupLighting,
   scene,
 } from "./core/scene";
-import { updateHomeLoop } from "./animation/HomeLoop";
+import { updateHomeLoop, setupScrollHandling } from "./animation/HomeLoop";
 import { initHomeScrollAnimation } from "./animation/HomeScroll";
 import { loadModel } from "./core/objects";
 import { setupCamera } from "./core/camera";
@@ -16,9 +16,11 @@ async function main() {
   setupCamera();
   await loadModel(scene);
 
-  onFrame(updateHomeLoop);
+  setupScrollHandling();
 
   initHomeScrollAnimation();
+
+  onFrame(updateHomeLoop);
 
   startRenderLoop();
 }
