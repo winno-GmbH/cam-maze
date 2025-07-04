@@ -16,13 +16,13 @@ let pausedPositions: Record<string, THREE.Vector3> = {};
 let isWaitingForResume = false;
 
 export function startHomeLoop() {
-  isHomeLoopActive = true;
   if (isPaused) {
     const currentTime = performance.now() / 1000;
     totalPausedTime += currentTime - pauseStartTime;
     isPaused = false;
     isWaitingForResume = true;
   }
+  isHomeLoopActive = true;
 }
 
 export function stopHomeLoop() {
