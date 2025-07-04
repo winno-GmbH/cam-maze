@@ -3,7 +3,7 @@ import { ASSETS } from "../config/config";
 
 const textureLoader = new THREE.TextureLoader();
 
-export const mazeTexture = textureLoader.load(ASSETS.mazeTexture);
+const mazeTexture = textureLoader.load(ASSETS.mazeTexture);
 
 export const mazeMaterial = new THREE.MeshMatcapMaterial({
   matcap: mazeTexture,
@@ -72,5 +72,3 @@ export const materialMap = {
   "CAM-Pacman_Top_Text": pacmanMaterials.white,
   default: pacmanMaterials.blue,
 };
-
-export const ghostCoverMaterials = Array(5).fill(ghostMaterial);

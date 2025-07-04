@@ -28,7 +28,7 @@ function setPixelRatio(): void {
   }
 }
 
-function setupLighting(): void {
+export function setupLighting(): void {
   const ambientLight = new THREE.AmbientLight(0xffffff);
   scene.add(ambientLight);
 
@@ -60,7 +60,7 @@ const renderer = new THREE.WebGLRenderer({
 const clock = new THREE.Clock();
 const frameCallbacks: (() => void)[] = [];
 
-function initRenderer(): void {
+export function initRenderer(): void {
   enhanceAntiAliasing();
 
   if (DOM_ELEMENTS.mazeContainer) {
@@ -85,8 +85,6 @@ function initRenderer(): void {
 }
 
 export async function setupScene() {
-  initRenderer();
-  setupLighting();
   setupCamera();
   await loadModel(scene);
 }
