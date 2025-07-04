@@ -3,6 +3,7 @@ import { getHomePaths } from "../paths/paths";
 import { clock } from "../core/scene";
 import { calculateObjectOrientation } from "./util";
 import * as THREE from "three";
+import { initHomeScrollAnimation } from "./HomeScroll";
 
 const pathMapping = {
   pacman: "pacmanHome",
@@ -42,6 +43,8 @@ export function stopHomeLoop() {
   Object.entries(ghosts).forEach(([key, ghost]) => {
     pausedPositions[key] = ghost.position.clone();
   });
+
+  initHomeScrollAnimation(pausedPositions);
 }
 
 export function setupScrollHandling() {

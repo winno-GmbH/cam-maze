@@ -5,10 +5,11 @@ import { pacman, ghosts } from "../core/objects";
 import { stopHomeLoop, startHomeLoop } from "./HomeLoop";
 import gsap from "gsap";
 
-export function initHomeScrollAnimation() {
-  const scrollPaths = getHomeScrollPaths(pacman, ghosts);
+export function initHomeScrollAnimation(
+  pausedPositions: Record<string, THREE.Vector3>
+) {
+  const scrollPaths = getHomeScrollPaths(pausedPositions);
 
-  // Debug: Log the paths to see what we're working with
   console.log("Scroll paths created:", Object.keys(scrollPaths));
   console.log("Pacman position before:", pacman.position);
   console.log(
@@ -64,7 +65,6 @@ function updateScrollAnimation(
   progress: number,
   paths: Record<string, THREE.CurvePath<THREE.Vector3>>
 ) {
-  // Debug: Log progress occasionally
   if (progress % 0.1 < 0.01) {
     console.log("Scroll progress:", progress);
   }

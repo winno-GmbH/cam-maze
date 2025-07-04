@@ -125,10 +125,9 @@ export function getHomePaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
 }
 
 export function getHomeScrollPaths(
-  pacman: THREE.Object3D,
-  ghosts: Record<string, THREE.Object3D>
+  pausedPositions: Record<string, THREE.Vector3>
 ): Record<string, THREE.CurvePath<THREE.Vector3>> {
-  const scrollPathPoints = createHomeScrollPathPoints(pacman, ghosts);
+  const scrollPathPoints = createHomeScrollPathPoints(pausedPositions);
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
   const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {
@@ -150,15 +149,4 @@ export function getPOVPaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
   });
 
   return paths;
-}
-
-export function getAllPaths(
-  pacman: THREE.Object3D,
-  ghosts: Record<string, THREE.Object3D>
-): Record<string, THREE.CurvePath<THREE.Vector3>> {
-  return {
-    ...getHomePaths(),
-    ...getPOVPaths(),
-    ...getHomeScrollPaths(pacman, ghosts),
-  };
 }

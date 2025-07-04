@@ -1269,13 +1269,11 @@ export const povPaths = {
 } as const;
 
 export function createHomeScrollPathPoints(
-  pacman: THREE.Object3D,
-  ghosts: Record<string, THREE.Object3D>
+  pausedPositions: Record<string, THREE.Vector3>
 ): Record<string, PathPoint[]> {
   const scrollPaths: Record<string, PathPoint[]> = {};
 
-  Object.entries({ pacman, ...ghosts }).forEach(([key, obj]) => {
-    const pausedPos = obj.position.clone();
+  Object.entries(pausedPositions).forEach(([key, pausedPos]) => {
     const arcPoint = new THREE.Vector3(
       (pausedPos.x + mazeCenterPathPoint.x) / 2,
       1,
@@ -1283,7 +1281,7 @@ export function createHomeScrollPathPoints(
     );
 
     scrollPaths[key] = [
-      { pos: pausedPos },
+      { pos: pausedPos.clone() },
       { pos: arcPoint },
       { pos: mazeCenterPathPoint },
     ];
