@@ -117,16 +117,29 @@ export function updateHomeLoop() {
   const t = globalTime / LOOP_DURATION;
 
   const homePaths = getHomePaths();
+  console.log("[HomeLoop] t:", t, "homePaths keys:", Object.keys(homePaths));
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const pathKey = pathMapping[key as keyof typeof pathMapping];
     const path = homePaths[pathKey];
-    if (!path) return;
+    if (!path) {
+      console.warn(
+        `[HomeLoop] No path found for key: ${key} (pathKey: ${pathKey})`
+      );
+      return;
+    }
     const position = path.getPointAt(t);
-    if (!position) return;
+    if (!position) {
+      console.warn(`[HomeLoop] No position found for key: ${key} at t: ${t}`);
+      return;
+    }
     const tangent = path.getTangentAt(t);
-    if (!tangent || tangent.length() === 0) return;
+    if (!tangent || tangent.length() === 0) {
+      console.warn(`[HomeLoop] No valid tangent for key: ${key} at t: ${t}`);
+      return;
+    }
 
+    console.log(`[HomeLoop] Moving ${key} to`, position);
     ghost.position.copy(position);
 
     const objectType = key === "pacman" ? "pacman" : "ghost";
