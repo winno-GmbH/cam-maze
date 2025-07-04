@@ -25,25 +25,38 @@ let pausedPositions: Record<string, THREE.Vector3> = {};
 let isWaitingForResume = false;
 
 export function startHomeLoop() {
+  console.log(
+    "[HomeLoop] startHomeLoop called. isPaused:",
+    isPaused,
+    "isHomeLoopActive:",
+    isHomeLoopActive
+  );
   isHomeLoopActive = true;
   if (isPaused) {
     const currentTime = performance.now() / 1000;
     totalPausedTime += currentTime - pauseStartTime;
     isPaused = false;
     isWaitingForResume = true;
+    console.log(
+      "[HomeLoop] Resuming, waiting for objects to reach paused positions."
+    );
   }
 }
 
 export function stopHomeLoop() {
+  console.log("[HomeLoop] stopHomeLoop called.");
   isHomeLoopActive = false;
   isPaused = true;
   pauseStartTime = performance.now() / 1000;
 
+  // Store the current positions of all objects when pausing
   pausedPositions = {};
   Object.entries(ghosts).forEach(([key, ghost]) => {
     pausedPositions[key] = ghost.position.clone();
   });
+  console.log("[HomeLoop] Paused positions:", pausedPositions);
 
+  // Now that we have pausedPositions, initialize the HomeScroll animation
   initHomeScrollAnimation(pausedPositions);
 }
 
@@ -66,23 +79,34 @@ function areObjectsAtPausedPositions(): boolean {
   if (!isWaitingForResume || Object.keys(pausedPositions).length === 0) {
     return true;
   }
-
-  return Object.entries(ghosts).every(([key, ghost]) => {
+  const result = Object.entries(ghosts).every(([key, ghost]) => {
     const pausedPos = pausedPositions[key];
     if (!pausedPos) return true;
-
     const distance = ghost.position.distanceTo(pausedPos);
     return distance <= POSITION_THRESHOLD;
   });
+  console.log("[HomeLoop] areObjectsAtPausedPositions:", result);
+  return result;
 }
 
 export function updateHomeLoop() {
+  console.log(
+    "[HomeLoop] updateHomeLoop called. isHomeLoopActive:",
+    isHomeLoopActive,
+    "isWaitingForResume:",
+    isWaitingForResume
+  );
   if (!isHomeLoopActive) return;
 
+  // If we're waiting for resume, check if objects are at their paused positions
   if (isWaitingForResume) {
     if (areObjectsAtPausedPositions()) {
       isWaitingForResume = false;
+      console.log(
+        "[HomeLoop] All objects reached paused positions, resuming animation"
+      );
     } else {
+      // Don't update animation until objects reach their paused positions
       return;
     }
   }
