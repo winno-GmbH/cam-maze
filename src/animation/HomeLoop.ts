@@ -72,6 +72,8 @@ function clearSavedState() {
   pausedT = 0;
   pausedPositions = {};
   pausedRotations = {};
+  isWaitingForResume = false;
+  isPaused = false;
   console.log("[HomeLoop] Cleared saved state - HomeLoop running normally");
 }
 
