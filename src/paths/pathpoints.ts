@@ -1276,7 +1276,7 @@ export function createHomeScrollPathPoints(
   Object.entries(pausedPositions).forEach(([key, pausedPos]) => {
     const arcPoint = new THREE.Vector3(
       (pausedPos.x + mazeCenterPathPoint.x) / 2,
-      1,
+      2,
       (pausedPos.z + mazeCenterPathPoint.z) / 2
     );
 
