@@ -63,6 +63,8 @@ function updateTransition(deltaTime: number) {
   });
   if (t >= 1) {
     isTransitioning = false;
+    // Reset pausedT to 0 so the HomeLoop continues from current animationTime
+    pausedT = 0;
   }
 }
 
