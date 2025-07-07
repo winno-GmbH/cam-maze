@@ -1,5 +1,4 @@
 import { ghosts } from "../core/objects";
-import { initHomeScrollAnimation } from "./HomeScroll";
 import { getHomePaths } from "../paths/paths";
 import { onFrame, clock } from "../core/scene";
 import * as THREE from "three";
@@ -22,7 +21,6 @@ function stopHomeLoop() {
     pausedPositions[key] = ghost.position.clone();
     pausedRotations[key] = ghost.quaternion.clone();
   });
-  initHomeScrollAnimation(pausedPositions, pausedRotations);
 }
 
 function startHomeLoop() {
