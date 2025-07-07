@@ -71,6 +71,8 @@ export function startHomeLoop() {
     isWaitingForResume = true;
   }
   isHomeLoopActive = true;
+  // Debug: Log pausedT when resuming
+  console.log("[HomeLoop] startHomeLoop", "pausedT:", pausedT);
 }
 
 export function stopHomeLoop() {
