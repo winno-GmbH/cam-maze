@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { camera } from "../core/camera";
 import { getHomeScrollPaths } from "../paths/paths";
 import { pacman, ghosts } from "../core/objects";
-import { stopHomeLoop, startHomeLoop } from "./HomeLoop";
 import gsap from "gsap";
 import { slerpToLayDown } from "./util";
 
@@ -19,15 +18,6 @@ export function initHomeScrollAnimation(
         start: "top top",
         end: "bottom top",
         scrub: 5,
-        onLeave: () => {
-          startHomeLoop();
-        },
-        onEnterBack: () => {
-          stopHomeLoop();
-        },
-        onLeaveBack: () => {
-          startHomeLoop();
-        },
       },
     })
     .to(
