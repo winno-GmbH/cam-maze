@@ -7,12 +7,13 @@ const LOOP_DURATION = 40;
 let isHomeLoopActive = false;
 let animationTime = 0;
 let pausedT = 0;
-let pausedPositions: Record<string, THREE.Vector3> = {};
-let pausedRotations: Record<string, THREE.Quaternion> = {};
+export let pausedPositions: Record<string, THREE.Vector3> = {};
+export let pausedRotations: Record<string, THREE.Quaternion> = {};
 let homeLoopFrameRegistered = false;
 const POSITION_THRESHOLD = 0.001;
 
 function stopHomeLoop() {
+  console.log("[HomeLoop] stopHomeLoop called");
   isHomeLoopActive = false;
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   pausedPositions = {};
@@ -21,9 +22,18 @@ function stopHomeLoop() {
     pausedPositions[key] = ghost.position.clone();
     pausedRotations[key] = ghost.quaternion.clone();
   });
+  console.log("[HomeLoop] Paused positions:");
+  Object.entries(pausedPositions).forEach(([key, pos]) => {
+    console.log(`  [${key}]:`, pos.toArray());
+  });
+  console.log("[HomeLoop] Paused rotations:");
+  Object.entries(pausedRotations).forEach(([key, rot]) => {
+    console.log(`  [${key}]:`, rot.toArray());
+  });
 }
 
 function startHomeLoop() {
+  console.log("[HomeLoop] startHomeLoop called");
   isHomeLoopActive = true;
   animationTime = pausedT * LOOP_DURATION;
   if (!homeLoopFrameRegistered) {
@@ -43,6 +53,11 @@ function updateHomeLoop(delta: number) {
       const position = path.getPointAt(t);
       if (position) ghost.position.copy(position);
     }
+  });
+  // Debug: Log all ghost positions after update
+  console.log(`[HomeLoop] updateHomeLoop t=${t}`);
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    console.log(`  [${key}] position:`, ghost.position.toArray());
   });
 }
 
