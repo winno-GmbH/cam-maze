@@ -38,10 +38,10 @@ export function slerpToLayDown(
   progress: number
 ) {
   const layDownQuat1 = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(0, Math.PI / 2, 0)
+    new THREE.Euler(Math.PI / 2, 0, 0)
   );
   const layDownQuat2 = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(0, -Math.PI / 2, 0)
+    new THREE.Euler(-Math.PI / 2, 0, 0)
   );
 
   const d1 = startQuat.angleTo(layDownQuat1);
