@@ -77,4 +77,11 @@ export function setupHomeLoopScrollHandler() {
       stopHomeLoop();
     }
   });
+
+  // Initial check on page load: if at top, start HomeLoop unconditionally
+  if (window.scrollY === 0) {
+    startHomeLoop();
+  } else {
+    stopHomeLoop();
+  }
 }

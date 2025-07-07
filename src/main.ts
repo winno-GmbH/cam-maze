@@ -19,11 +19,9 @@ async function main() {
   setupLighting();
   setupCamera();
   await loadModel(scene);
-
-  // Initialize scroll animation ONCE
+  setupHomeLoopScrollHandler();
   initHomeScrollAnimation(pausedPositions, pausedRotations);
 
-  setupHomeLoopScrollHandler();
   startRenderLoop();
 }
 
