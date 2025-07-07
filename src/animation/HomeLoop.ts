@@ -12,10 +12,10 @@ let isHomeLoopActive = true;
 let isPaused = false;
 let pauseStartTime = 0;
 let totalPausedTime = 0;
+let lastActiveTime = 0;
 let pausedPositions: Record<string, THREE.Vector3> = {};
 let pausedRotations: Record<string, THREE.Quaternion> = {};
 let isWaitingForResume = false;
-let pausedLoopTime = 0;
 
 export function startHomeLoop() {
   if (isPaused) {
@@ -32,17 +32,15 @@ export function stopHomeLoop() {
   isPaused = true;
   pauseStartTime = performance.now() / 1000;
 
+  const currentTime = performance.now() / 1000;
+  lastActiveTime = currentTime - totalPausedTime;
+
   pausedPositions = {};
   pausedRotations = {};
   Object.entries(ghosts).forEach(([key, ghost]) => {
     pausedPositions[key] = ghost.position.clone();
     pausedRotations[key] = ghost.quaternion.clone();
   });
-
-  const currentTime = performance.now() / 1000;
-  const adjustedTime = currentTime - totalPausedTime;
-  const globalTime = adjustedTime % LOOP_DURATION;
-  pausedLoopTime = globalTime / LOOP_DURATION;
 
   initHomeScrollAnimation(pausedPositions, pausedRotations);
 }
@@ -87,21 +85,26 @@ export function updateHomeLoop() {
   if (!isHomeLoopActive) return;
 
   let t: number;
+  let animationTime: number;
+  if (isPaused || isWaitingForResume) {
+    animationTime = lastActiveTime;
+  } else {
+    const currentTime = performance.now() / 1000;
+    animationTime = currentTime - totalPausedTime;
+    lastActiveTime = animationTime;
+  }
+  const globalTime = animationTime % LOOP_DURATION;
+  t = globalTime / LOOP_DURATION;
+
   if (isWaitingForResume) {
     if (window.scrollY === 0 && areObjectsAtPausedPositions()) {
       isWaitingForResume = false;
       isPaused = false;
       const currentTime = performance.now() / 1000;
       totalPausedTime += currentTime - pauseStartTime;
-      t = pausedLoopTime;
     } else {
-      t = pausedLoopTime;
+      return;
     }
-  } else {
-    const currentTime = performance.now() / 1000;
-    const adjustedTime = currentTime - totalPausedTime;
-    const globalTime = adjustedTime % LOOP_DURATION;
-    t = globalTime / LOOP_DURATION;
   }
 
   const homePaths = getHomePaths();
