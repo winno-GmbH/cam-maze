@@ -17,6 +17,56 @@ let pausedPositions: Record<string, THREE.Vector3> = {};
 let pausedRotations: Record<string, THREE.Quaternion> = {};
 let isWaitingForResume = false;
 
+// Transition state
+let isTransitioning = false;
+let transitionStart: Record<
+  string,
+  { pos: THREE.Vector3; quat: THREE.Quaternion }
+> = {};
+let transitionEnd: Record<
+  string,
+  { pos: THREE.Vector3; quat: THREE.Quaternion }
+> = {};
+let transitionProgress = 0;
+const TRANSITION_DURATION = 0.4; // seconds
+
+function startTransition(
+  targetPositions: Record<string, THREE.Vector3>,
+  targetRotations: Record<string, THREE.Quaternion>
+) {
+  isTransitioning = true;
+  transitionProgress = 0;
+  transitionStart = {};
+  transitionEnd = {};
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    transitionStart[key] = {
+      pos: ghost.position.clone(),
+      quat: ghost.quaternion.clone(),
+    };
+    transitionEnd[key] = {
+      pos: targetPositions[key].clone(),
+      quat: targetRotations[key].clone(),
+    };
+  });
+}
+
+function updateTransition(deltaTime: number) {
+  if (!isTransitioning) return;
+  transitionProgress += deltaTime / TRANSITION_DURATION;
+  const t = Math.min(transitionProgress, 1);
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    const start = transitionStart[key];
+    const end = transitionEnd[key];
+    if (start && end) {
+      ghost.position.lerpVectors(start.pos, end.pos, t);
+      ghost.quaternion.slerpQuaternions(start.quat, end.quat, t);
+    }
+  });
+  if (t >= 1) {
+    isTransitioning = false;
+  }
+}
+
 export function startHomeLoop() {
   if (isPaused) {
     const currentTime = performance.now() / 1000;
@@ -54,12 +104,41 @@ export function setupScrollHandling() {
     if (wasAtTop && !isAtTop) {
       stopHomeLoop();
     } else if (!wasAtTop && isAtTop) {
+      // Only resume HomeLoop if objects are at their paused positions
       if (areObjectsAtPausedPositions()) {
         isWaitingForResume = false;
         isHomeLoopActive = true;
         isPaused = false;
         const currentTime = performance.now() / 1000;
         totalPausedTime += currentTime - pauseStartTime;
+        // Start transition from current (scroll) pos/rot to HomeLoop pos/rot
+        const homePaths = getHomePaths();
+        const targetPositions: Record<string, THREE.Vector3> = {};
+        const targetRotations: Record<string, THREE.Quaternion> = {};
+        let t: number;
+        // Use the lastActiveTime to get the correct t
+        const globalTime = lastActiveTime % LOOP_DURATION;
+        t = globalTime / LOOP_DURATION;
+        Object.entries(ghosts).forEach(([key, ghost]) => {
+          const path = homePaths[key];
+          if (path) {
+            const position = path.getPointAt(t);
+            const tangent = path.getTangentAt(t);
+            targetPositions[key] = position.clone();
+            // Use the same orientation logic as HomeLoop
+            const tempObj = new THREE.Object3D();
+            tempObj.position.copy(position);
+            if (tangent && tangent.length() > 0) {
+              const objectType = key === "pacman" ? "pacman" : "ghost";
+              calculateObjectOrientation(tempObj, tangent, objectType);
+            }
+            targetRotations[key] = tempObj.quaternion.clone();
+          } else {
+            targetPositions[key] = ghost.position.clone();
+            targetRotations[key] = ghost.quaternion.clone();
+          }
+        });
+        startTransition(targetPositions, targetRotations);
       } else {
         isWaitingForResume = true;
         isHomeLoopActive = true;
@@ -84,6 +163,16 @@ function areObjectsAtPausedPositions(): boolean {
 export function updateHomeLoop() {
   if (!isHomeLoopActive) return;
 
+  // Handle transition
+  const delta = clock.getDelta();
+  if (isTransitioning) {
+    updateTransition(delta);
+    if (pacmanMixer) {
+      pacmanMixer.update(delta);
+    }
+    return;
+  }
+
   let t: number;
   let animationTime: number;
   if (isPaused || isWaitingForResume) {
@@ -102,6 +191,31 @@ export function updateHomeLoop() {
       isPaused = false;
       const currentTime = performance.now() / 1000;
       totalPausedTime += currentTime - pauseStartTime;
+      // Start transition from current (scroll) pos/rot to HomeLoop pos/rot
+      const homePaths = getHomePaths();
+      const targetPositions: Record<string, THREE.Vector3> = {};
+      const targetRotations: Record<string, THREE.Quaternion> = {};
+      Object.entries(ghosts).forEach(([key, ghost]) => {
+        const path = homePaths[key];
+        if (path) {
+          const position = path.getPointAt(t);
+          const tangent = path.getTangentAt(t);
+          targetPositions[key] = position.clone();
+          // Use the same orientation logic as HomeLoop
+          const tempObj = new THREE.Object3D();
+          tempObj.position.copy(position);
+          if (tangent && tangent.length() > 0) {
+            const objectType = key === "pacman" ? "pacman" : "ghost";
+            calculateObjectOrientation(tempObj, tangent, objectType);
+          }
+          targetRotations[key] = tempObj.quaternion.clone();
+        } else {
+          targetPositions[key] = ghost.position.clone();
+          targetRotations[key] = ghost.quaternion.clone();
+        }
+      });
+      startTransition(targetPositions, targetRotations);
+      return;
     } else {
       return;
     }
@@ -129,7 +243,6 @@ export function updateHomeLoop() {
     calculateObjectOrientation(ghost, tangent, objectType);
   });
 
-  const delta = clock.getDelta();
   if (pacmanMixer) {
     pacmanMixer.update(delta);
   }
