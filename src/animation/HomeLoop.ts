@@ -95,6 +95,8 @@ export function stopHomeLoop() {
     console.log(`  pausedPositions[${key}]:`, pos.toArray());
   });
 
+  // Immediately stop updating objects to prevent any movement
+  // The scroll animation will take over from the current positions
   initHomeScrollAnimation(pausedPositions, pausedRotations);
 }
 
@@ -169,8 +171,16 @@ export function updateHomeLoop() {
     return;
   }
 
+  // If paused, don't update object positions at all
+  if (isPaused) {
+    if (pacmanMixer) {
+      pacmanMixer.update(delta);
+    }
+    return;
+  }
+
   let t: number;
-  if (isPaused || isWaitingForResume) {
+  if (isWaitingForResume) {
     t = pausedT;
   } else {
     animationTime += delta;
