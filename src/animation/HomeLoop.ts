@@ -15,7 +15,8 @@ let pausedPositions: Record<string, THREE.Vector3> = {};
 let pausedRotations: Record<string, THREE.Quaternion> = {};
 let isWaitingForResume = false;
 
-// Transition state
+let animationTime = 0;
+
 let isTransitioning = false;
 let transitionStart: Record<
   string,
@@ -26,7 +27,7 @@ let transitionEnd: Record<
   { pos: THREE.Vector3; quat: THREE.Quaternion }
 > = {};
 let transitionProgress = 0;
-const TRANSITION_DURATION = 0.4; // seconds
+const TRANSITION_DURATION = 0.4;
 
 function startTransition(
   targetPositions: Record<string, THREE.Vector3>,
@@ -71,7 +72,6 @@ export function startHomeLoop() {
     isWaitingForResume = true;
   }
   isHomeLoopActive = true;
-  // Debug: Log pausedT when resuming
   console.log("[HomeLoop] startHomeLoop", "pausedT:", pausedT);
 }
 
@@ -79,9 +79,8 @@ export function stopHomeLoop() {
   isHomeLoopActive = false;
   isPaused = true;
 
-  const currentTime = performance.now() / 1000;
-  const animationTime = ((currentTime / LOOP_DURATION) % 1) * LOOP_DURATION; // time in seconds since start, modulo loop
-  pausedT = animationTime / LOOP_DURATION;
+  // Calculate t at pause based on animationTime
+  pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
 
   pausedPositions = {};
   pausedRotations = {};
@@ -172,13 +171,10 @@ export function updateHomeLoop() {
 
   let t: number;
   if (isPaused || isWaitingForResume) {
-    // Use pausedT for t, do not advance time
     t = pausedT;
   } else {
-    // Advance t based on animation frame time
-    const currentTime = performance.now() / 1000;
-    const animationTime = ((currentTime / LOOP_DURATION) % 1) * LOOP_DURATION;
-    t = animationTime / LOOP_DURATION;
+    animationTime += delta;
+    t = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   }
 
   if (isWaitingForResume) {
