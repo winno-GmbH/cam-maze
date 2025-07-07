@@ -15,6 +15,7 @@ let totalPausedTime = 0;
 let pausedPositions: Record<string, THREE.Vector3> = {};
 let pausedRotations: Record<string, THREE.Quaternion> = {};
 let isWaitingForResume = false;
+let pausedLoopTime = 0;
 
 export function startHomeLoop() {
   if (isPaused) {
@@ -37,6 +38,11 @@ export function stopHomeLoop() {
     pausedPositions[key] = ghost.position.clone();
     pausedRotations[key] = ghost.quaternion.clone();
   });
+
+  const currentTime = performance.now() / 1000;
+  const adjustedTime = currentTime - totalPausedTime;
+  const globalTime = adjustedTime % LOOP_DURATION;
+  pausedLoopTime = globalTime / LOOP_DURATION;
 
   initHomeScrollAnimation(pausedPositions, pausedRotations);
 }
@@ -80,21 +86,23 @@ function areObjectsAtPausedPositions(): boolean {
 export function updateHomeLoop() {
   if (!isHomeLoopActive) return;
 
+  let t: number;
   if (isWaitingForResume) {
     if (window.scrollY === 0 && areObjectsAtPausedPositions()) {
       isWaitingForResume = false;
       isPaused = false;
       const currentTime = performance.now() / 1000;
       totalPausedTime += currentTime - pauseStartTime;
+      t = pausedLoopTime;
     } else {
-      return;
+      t = pausedLoopTime;
     }
+  } else {
+    const currentTime = performance.now() / 1000;
+    const adjustedTime = currentTime - totalPausedTime;
+    const globalTime = adjustedTime % LOOP_DURATION;
+    t = globalTime / LOOP_DURATION;
   }
-
-  const currentTime = performance.now() / 1000;
-  const adjustedTime = currentTime - totalPausedTime;
-  const globalTime = adjustedTime % LOOP_DURATION;
-  const t = globalTime / LOOP_DURATION;
 
   const homePaths = getHomePaths();
 
