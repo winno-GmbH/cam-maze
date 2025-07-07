@@ -10,8 +10,6 @@ const POSITION_THRESHOLD = 0.01;
 
 let isHomeLoopActive = true;
 let isPaused = false;
-let pauseStartTime = 0;
-let totalPausedTime = 0;
 let pausedT = 0;
 let pausedPositions: Record<string, THREE.Vector3> = {};
 let pausedRotations: Record<string, THREE.Quaternion> = {};
@@ -69,8 +67,6 @@ function updateTransition(deltaTime: number) {
 
 export function startHomeLoop() {
   if (isPaused) {
-    const currentTime = performance.now() / 1000;
-    totalPausedTime += currentTime - pauseStartTime;
     isPaused = false;
     isWaitingForResume = true;
   }
@@ -80,19 +76,22 @@ export function startHomeLoop() {
 export function stopHomeLoop() {
   isHomeLoopActive = false;
   isPaused = true;
-  pauseStartTime = performance.now() / 1000;
 
   const currentTime = performance.now() / 1000;
-  const animationTime = currentTime - totalPausedTime;
-  // Calculate t at pause
-  const globalTime = animationTime % LOOP_DURATION;
-  pausedT = globalTime / LOOP_DURATION;
+  const animationTime = ((currentTime / LOOP_DURATION) % 1) * LOOP_DURATION; // time in seconds since start, modulo loop
+  pausedT = animationTime / LOOP_DURATION;
 
   pausedPositions = {};
   pausedRotations = {};
   Object.entries(ghosts).forEach(([key, ghost]) => {
     pausedPositions[key] = ghost.position.clone();
     pausedRotations[key] = ghost.quaternion.clone();
+  });
+
+  console.log("[HomeLoop] stopHomeLoop");
+  console.log("  pausedT:", pausedT);
+  Object.entries(pausedPositions).forEach(([key, pos]) => {
+    console.log(`  pausedPositions[${key}]:`, pos.toArray());
   });
 
   initHomeScrollAnimation(pausedPositions, pausedRotations);
@@ -107,12 +106,10 @@ export function setupScrollHandling() {
     if (wasAtTop && !isAtTop) {
       stopHomeLoop();
     } else if (!wasAtTop && isAtTop) {
-      // Only resume HomeLoop if objects are at their paused positions
       if (areObjectsAtPausedPositions()) {
         isWaitingForResume = false;
         isHomeLoopActive = true;
         isPaused = false;
-        // Start transition from current (scroll) pos/rot to HomeLoop pos/rot at pausedT
         const homePaths = getHomePaths();
         const targetPositions: Record<string, THREE.Vector3> = {};
         const targetRotations: Record<string, THREE.Quaternion> = {};
@@ -176,10 +173,10 @@ export function updateHomeLoop() {
     // Use pausedT for t, do not advance time
     t = pausedT;
   } else {
+    // Advance t based on animation frame time
     const currentTime = performance.now() / 1000;
-    const animationTime = currentTime - totalPausedTime;
-    const globalTime = animationTime % LOOP_DURATION;
-    t = globalTime / LOOP_DURATION;
+    const animationTime = ((currentTime / LOOP_DURATION) % 1) * LOOP_DURATION;
+    t = animationTime / LOOP_DURATION;
   }
 
   if (isWaitingForResume) {
@@ -191,24 +188,40 @@ export function updateHomeLoop() {
       const targetPositions: Record<string, THREE.Vector3> = {};
       const targetRotations: Record<string, THREE.Quaternion> = {};
       const tTransition = pausedT;
+      // Debug: Log resume state
+      console.log("[HomeLoop] Resume HomeLoop");
+      console.log("  pausedT:", pausedT);
       Object.entries(ghosts).forEach(([key, ghost]) => {
         const path = homePaths[key];
+        let targetPos: THREE.Vector3;
         if (path) {
-          const position = path.getPointAt(tTransition);
+          targetPos = path.getPointAt(tTransition);
           const tangent = path.getTangentAt(tTransition);
-          targetPositions[key] = position.clone();
+          targetPositions[key] = targetPos.clone();
           // Use the same orientation logic as HomeLoop
           const tempObj = new THREE.Object3D();
-          tempObj.position.copy(position);
+          tempObj.position.copy(targetPos);
           if (tangent && tangent.length() > 0) {
             const objectType = key === "pacman" ? "pacman" : "ghost";
             calculateObjectOrientation(tempObj, tangent, objectType);
           }
           targetRotations[key] = tempObj.quaternion.clone();
         } else {
-          targetPositions[key] = ghost.position.clone();
+          targetPos = ghost.position.clone();
+          targetPositions[key] = targetPos.clone();
           targetRotations[key] = ghost.quaternion.clone();
         }
+        // Debug: Log current and target positions and distance
+        const currentPos = ghost.position;
+        const dist = currentPos.distanceTo(targetPos);
+        console.log(
+          `  [${key}] current:`,
+          currentPos.toArray(),
+          "target:",
+          targetPos.toArray(),
+          "dist:",
+          dist
+        );
       });
       startTransition(targetPositions, targetRotations);
       return;
