@@ -93,6 +93,7 @@ export function stopHomeLoop() {
   // Calculate t at pause based on animationTime
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
 
+  // Completely overwrite with fresh current positions and rotations
   pausedPositions = {};
   pausedRotations = {};
   Object.entries(ghosts).forEach(([key, ghost]) => {
