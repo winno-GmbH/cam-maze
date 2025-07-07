@@ -37,12 +37,11 @@ export function slerpToLayDown(
   startQuat: THREE.Quaternion,
   progress: number
 ) {
-  // Two possible targets: laying on left (Z = +90°) or right (Z = -90°)
   const layDownQuat1 = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(0, 0, Math.PI / 2)
+    new THREE.Euler(0, Math.PI / 2, 0)
   );
   const layDownQuat2 = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(0, 0, -Math.PI / 2)
+    new THREE.Euler(0, -Math.PI / 2, 0)
   );
 
   const d1 = startQuat.angleTo(layDownQuat1);
