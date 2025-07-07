@@ -12,7 +12,7 @@ let isHomeLoopActive = true;
 let isPaused = false;
 let pauseStartTime = 0;
 let totalPausedTime = 0;
-let lastActiveTime = 0;
+let pausedT = 0;
 let pausedPositions: Record<string, THREE.Vector3> = {};
 let pausedRotations: Record<string, THREE.Quaternion> = {};
 let isWaitingForResume = false;
@@ -83,7 +83,10 @@ export function stopHomeLoop() {
   pauseStartTime = performance.now() / 1000;
 
   const currentTime = performance.now() / 1000;
-  lastActiveTime = currentTime - totalPausedTime;
+  const animationTime = currentTime - totalPausedTime;
+  // Calculate t at pause
+  const globalTime = animationTime % LOOP_DURATION;
+  pausedT = globalTime / LOOP_DURATION;
 
   pausedPositions = {};
   pausedRotations = {};
@@ -109,16 +112,11 @@ export function setupScrollHandling() {
         isWaitingForResume = false;
         isHomeLoopActive = true;
         isPaused = false;
-        const currentTime = performance.now() / 1000;
-        totalPausedTime += currentTime - pauseStartTime;
-        // Start transition from current (scroll) pos/rot to HomeLoop pos/rot
+        // Start transition from current (scroll) pos/rot to HomeLoop pos/rot at pausedT
         const homePaths = getHomePaths();
         const targetPositions: Record<string, THREE.Vector3> = {};
         const targetRotations: Record<string, THREE.Quaternion> = {};
-        let t: number;
-        // Use the lastActiveTime to get the correct t
-        const globalTime = lastActiveTime % LOOP_DURATION;
-        t = globalTime / LOOP_DURATION;
+        const t = pausedT;
         Object.entries(ghosts).forEach(([key, ghost]) => {
           const path = homePaths[key];
           if (path) {
@@ -174,32 +172,30 @@ export function updateHomeLoop() {
   }
 
   let t: number;
-  let animationTime: number;
   if (isPaused || isWaitingForResume) {
-    animationTime = lastActiveTime;
+    // Use pausedT for t, do not advance time
+    t = pausedT;
   } else {
     const currentTime = performance.now() / 1000;
-    animationTime = currentTime - totalPausedTime;
-    lastActiveTime = animationTime;
+    const animationTime = currentTime - totalPausedTime;
+    const globalTime = animationTime % LOOP_DURATION;
+    t = globalTime / LOOP_DURATION;
   }
-  const globalTime = animationTime % LOOP_DURATION;
-  t = globalTime / LOOP_DURATION;
 
   if (isWaitingForResume) {
     if (window.scrollY === 0 && areObjectsAtPausedPositions()) {
       isWaitingForResume = false;
       isPaused = false;
-      const currentTime = performance.now() / 1000;
-      totalPausedTime += currentTime - pauseStartTime;
-      // Start transition from current (scroll) pos/rot to HomeLoop pos/rot
+      // Start transition from current (scroll) pos/rot to HomeLoop pos/rot at pausedT
       const homePaths = getHomePaths();
       const targetPositions: Record<string, THREE.Vector3> = {};
       const targetRotations: Record<string, THREE.Quaternion> = {};
+      const tTransition = pausedT;
       Object.entries(ghosts).forEach(([key, ghost]) => {
         const path = homePaths[key];
         if (path) {
-          const position = path.getPointAt(t);
-          const tangent = path.getTangentAt(t);
+          const position = path.getPointAt(tTransition);
+          const tangent = path.getTangentAt(tTransition);
           targetPositions[key] = position.clone();
           // Use the same orientation logic as HomeLoop
           const tempObj = new THREE.Object3D();
