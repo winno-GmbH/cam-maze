@@ -70,13 +70,11 @@ function createDoubleCurveMidPoint(
   hasPrevCurve: boolean,
   hasNextCurve: boolean
 ): THREE.Vector3 {
-  const smoothingFactor = 0.3;
+  const smoothingFactor = 0.12;
   const originalMidPoint = createSingleCurveMidPoint(current, next);
   const straightMidPoint = current.pos.clone().lerp(next.pos, 0.5);
 
-  const stretchFactor =
-    hasPrevCurve && hasNextCurve ? smoothingFactor * 2 : smoothingFactor;
-  return originalMidPoint.clone().lerp(straightMidPoint, stretchFactor);
+  return originalMidPoint.clone().lerp(straightMidPoint, smoothingFactor);
 }
 
 function createHomeScrollPath(

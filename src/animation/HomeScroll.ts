@@ -63,10 +63,6 @@ function updateScrollAnimation(
   progress: number,
   paths: Record<string, THREE.CurvePath<THREE.Vector3>>
 ) {
-  if (progress % 0.1 < 0.01) {
-    console.log("Scroll progress:", progress);
-  }
-
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
     camera.position.copy(cameraPoint);
@@ -77,14 +73,11 @@ function updateScrollAnimation(
     const pacmanPoint = paths.pacman.getPointAt(progress);
     if (pacmanPoint) {
       pacman.position.copy(pacmanPoint);
-      console.log("Pacman moved to:", pacmanPoint);
 
       const tangent = paths.pacman.getTangentAt(progress);
       if (tangent && tangent.length() > 0) {
         pacman.lookAt(pacmanPoint.clone().add(tangent.normalize()));
       }
-    } else {
-      console.warn("No pacman point at progress:", progress);
     }
   }
 
@@ -95,17 +88,12 @@ function updateScrollAnimation(
       const ghostPoint = path.getPointAt(progress);
       if (ghostPoint) {
         ghost.position.copy(ghostPoint);
-        console.log(`Ghost ${key} moved to:`, ghostPoint);
 
         const tangent = path.getTangentAt(progress);
         if (tangent && tangent.length() > 0) {
           ghost.lookAt(ghostPoint.clone().add(tangent.normalize()));
         }
-      } else {
-        console.warn(`No ghost point for ${key} at progress:`, progress);
       }
-    } else {
-      console.warn(`No path found for ghost ${key}`);
     }
   });
 }
