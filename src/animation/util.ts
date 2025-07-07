@@ -1,3 +1,5 @@
+import * as THREE from "three";
+
 export function calculateObjectOrientation(
   object: THREE.Object3D,
   tangent: THREE.Vector3,
@@ -15,4 +17,17 @@ export function calculateObjectOrientation(
     const lookAtPoint = object.position.clone().add(tangent);
     object.lookAt(lookAtPoint);
   }
+}
+
+export function rotateObjectToLayDown(
+  object: THREE.Object3D,
+  progress: number
+) {
+  const startQuat = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(0, 0, 0)
+  );
+  const endQuat = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(-Math.PI / 2, 0, 0)
+  );
+  object.quaternion.slerpQuaternions(startQuat, endQuat, progress);
 }

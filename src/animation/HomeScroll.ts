@@ -4,6 +4,7 @@ import { getHomeScrollPaths } from "../paths/paths";
 import { pacman, ghosts } from "../core/objects";
 import { stopHomeLoop, startHomeLoop } from "./HomeLoop";
 import gsap from "gsap";
+import { rotateObjectToLayDown } from "./util";
 
 export function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>
@@ -73,26 +74,17 @@ function updateScrollAnimation(
     const pacmanPoint = paths.pacman.getPointAt(progress);
     if (pacmanPoint) {
       pacman.position.copy(pacmanPoint);
-
-      const tangent = paths.pacman.getTangentAt(progress);
-      if (tangent && tangent.length() > 0) {
-        pacman.lookAt(pacmanPoint.clone().add(tangent.normalize()));
-      }
+      rotateObjectToLayDown(pacman, progress);
     }
   }
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = paths[key];
-
     if (path) {
       const ghostPoint = path.getPointAt(progress);
       if (ghostPoint) {
         ghost.position.copy(ghostPoint);
-
-        const tangent = path.getTangentAt(progress);
-        if (tangent && tangent.length() > 0) {
-          ghost.lookAt(ghostPoint.clone().add(tangent.normalize()));
-        }
+        rotateObjectToLayDown(ghost, progress);
       }
     }
   });
