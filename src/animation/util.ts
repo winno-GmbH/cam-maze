@@ -31,3 +31,22 @@ export function rotateObjectToLayDown(
   );
   object.quaternion.slerpQuaternions(startQuat, endQuat, progress);
 }
+
+export function slerpToLayDown(
+  object: THREE.Object3D,
+  startQuat: THREE.Quaternion,
+  progress: number
+) {
+  const layDownQuat1 = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(-Math.PI / 2, 0, 0)
+  );
+  const layDownQuat2 = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(Math.PI / 2, 0, 0)
+  );
+
+  const d1 = startQuat.angleTo(layDownQuat1);
+  const d2 = startQuat.angleTo(layDownQuat2);
+  const targetQuat = d1 < d2 ? layDownQuat1 : layDownQuat2;
+
+  object.quaternion.copy(startQuat.clone().slerp(targetQuat, progress));
+}

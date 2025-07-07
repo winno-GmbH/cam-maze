@@ -13,6 +13,7 @@ let isPaused = false;
 let pauseStartTime = 0;
 let totalPausedTime = 0;
 let pausedPositions: Record<string, THREE.Vector3> = {};
+let pausedRotations: Record<string, THREE.Quaternion> = {};
 let isWaitingForResume = false;
 
 export function startHomeLoop() {
@@ -31,11 +32,13 @@ export function stopHomeLoop() {
   pauseStartTime = performance.now() / 1000;
 
   pausedPositions = {};
+  pausedRotations = {};
   Object.entries(ghosts).forEach(([key, ghost]) => {
     pausedPositions[key] = ghost.position.clone();
+    pausedRotations[key] = ghost.quaternion.clone();
   });
 
-  initHomeScrollAnimation(pausedPositions);
+  initHomeScrollAnimation(pausedPositions, pausedRotations);
 }
 
 export function setupScrollHandling() {

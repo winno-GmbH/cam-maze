@@ -4,10 +4,11 @@ import { getHomeScrollPaths } from "../paths/paths";
 import { pacman, ghosts } from "../core/objects";
 import { stopHomeLoop, startHomeLoop } from "./HomeLoop";
 import gsap from "gsap";
-import { rotateObjectToLayDown } from "./util";
+import { rotateObjectToLayDown, slerpToLayDown } from "./util";
 
 export function initHomeScrollAnimation(
-  pausedPositions: Record<string, THREE.Vector3>
+  pausedPositions: Record<string, THREE.Vector3>,
+  pausedRotations: Record<string, THREE.Quaternion>
 ) {
   const scrollPaths = getHomeScrollPaths(pausedPositions);
 
@@ -54,7 +55,7 @@ export function initHomeScrollAnimation(
         immediateRender: false,
         onUpdate: function () {
           const progress = this.targets()[0].progress;
-          updateScrollAnimation(progress, scrollPaths);
+          updateScrollAnimation(progress, scrollPaths, pausedRotations);
         },
       }
     );
@@ -62,7 +63,8 @@ export function initHomeScrollAnimation(
 
 function updateScrollAnimation(
   progress: number,
-  paths: Record<string, THREE.CurvePath<THREE.Vector3>>
+  paths: Record<string, THREE.CurvePath<THREE.Vector3>>,
+  pausedRotations: Record<string, THREE.Quaternion>
 ) {
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
@@ -74,7 +76,7 @@ function updateScrollAnimation(
     const pacmanPoint = paths.pacman.getPointAt(progress);
     if (pacmanPoint) {
       pacman.position.copy(pacmanPoint);
-      rotateObjectToLayDown(pacman, progress);
+      slerpToLayDown(pacman, pausedRotations["pacman"], progress);
     }
   }
 
@@ -84,7 +86,7 @@ function updateScrollAnimation(
       const ghostPoint = path.getPointAt(progress);
       if (ghostPoint) {
         ghost.position.copy(ghostPoint);
-        rotateObjectToLayDown(ghost, progress);
+        slerpToLayDown(ghost, pausedRotations[key], progress);
       }
     }
   });
