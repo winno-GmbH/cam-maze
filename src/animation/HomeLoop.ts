@@ -63,18 +63,7 @@ function updateTransition(deltaTime: number) {
   });
   if (t >= 1) {
     isTransitioning = false;
-    // Clear all saved state once transition is complete and HomeLoop is running normally
-    clearSavedState();
   }
-}
-
-function clearSavedState() {
-  pausedT = 0;
-  pausedPositions = {};
-  pausedRotations = {};
-  isWaitingForResume = false;
-  isPaused = false;
-  console.log("[HomeLoop] Cleared saved state - HomeLoop running normally");
 }
 
 export function startHomeLoop() {
