@@ -89,8 +89,7 @@ function updateScrollAnimation(
   }
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    const pathKey = `ghost${key.replace("ghost", "")}Scroll`;
-    const path = paths[pathKey];
+    const path = paths[key];
 
     if (path) {
       const ghostPoint = path.getPointAt(progress);
@@ -106,7 +105,7 @@ function updateScrollAnimation(
         console.warn(`No ghost point for ${key} at progress:`, progress);
       }
     } else {
-      console.warn(`No path found for ghost ${key}, pathKey: ${pathKey}`);
+      console.warn(`No path found for ghost ${key}`);
     }
   });
 }
