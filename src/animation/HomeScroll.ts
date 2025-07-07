@@ -4,25 +4,13 @@ import { getHomeScrollPaths } from "../paths/paths";
 import { pacman, ghosts } from "../core/objects";
 import { stopHomeLoop, startHomeLoop } from "./HomeLoop";
 import gsap from "gsap";
-import { rotateObjectToLayDown, slerpToLayDown } from "./util";
+import { slerpToLayDown } from "./util";
 
 export function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
   const scrollPaths = getHomeScrollPaths(pausedPositions);
-
-  console.log("Scroll paths created:", Object.keys(scrollPaths));
-  console.log("Pacman position before:", pacman.position);
-  console.log(
-    "Ghosts positions before:",
-    Object.fromEntries(
-      Object.entries(ghosts).map(([key, ghost]) => [
-        key,
-        ghost.position.clone(),
-      ])
-    )
-  );
 
   gsap
     .timeline({
@@ -31,19 +19,13 @@ export function initHomeScrollAnimation(
         start: "top top",
         end: "bottom top",
         scrub: 0.5,
-        onEnter: () => {
-          console.log("Home scroll animation started");
-        },
         onLeave: () => {
-          console.log("Home scroll animation ended");
           startHomeLoop();
         },
         onEnterBack: () => {
-          console.log("Home scroll animation entered back");
           stopHomeLoop();
         },
         onLeaveBack: () => {
-          console.log("Home scroll animation left back");
           startHomeLoop();
         },
       },

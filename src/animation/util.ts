@@ -19,19 +19,6 @@ export function calculateObjectOrientation(
   }
 }
 
-export function rotateObjectToLayDown(
-  object: THREE.Object3D,
-  progress: number
-) {
-  const startQuat = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(0, 0, 0)
-  );
-  const endQuat = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(-Math.PI / 2, 0, 0)
-  );
-  object.quaternion.slerpQuaternions(startQuat, endQuat, progress);
-}
-
 export function slerpToLayDown(
   object: THREE.Object3D,
   startQuat: THREE.Quaternion,
