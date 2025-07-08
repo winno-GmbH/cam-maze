@@ -60,7 +60,6 @@ function updateHomeLoop(delta: number) {
       }
     }
   });
-  // Debug: Log all ghost positions after update
   console.log(`[HomeLoop] updateHomeLoop t=${t}`);
   Object.entries(ghosts).forEach(([key, ghost]) => {
     console.log(`  [${key}] position:`, ghost.position.toArray());
