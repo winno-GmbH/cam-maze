@@ -4,7 +4,7 @@ import { getHomeScrollPaths } from "../paths/paths";
 import { pacman, ghosts } from "../core/objects";
 import gsap from "gsap";
 import { slerpToLayDown } from "./util";
-import { startHomeLoop } from "./HomeLoop";
+import { HomeLoopHandler } from "./HomeLoop";
 
 let homeScrollInitialized = false;
 
@@ -17,21 +17,11 @@ export function maybeInitHomeScrollAnimation(
   initHomeScrollAnimation(pausedPositions, pausedRotations);
 }
 
-function maybeStartHomeLoopAfterScroll() {
-  if (window.scrollY === 0) {
-    startHomeLoop();
-  }
-}
-
 function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
-  console.log("initHomeScrollAnimation called");
-  console.log("pausedPositions", pausedPositions);
-  console.log("pausedRotations", pausedRotations);
   const scrollPaths = getHomeScrollPaths(pausedPositions);
-  console.log("scrollPaths", scrollPaths);
 
   gsap
     .timeline({
@@ -41,7 +31,11 @@ function initHomeScrollAnimation(
         end: "bottom top",
         scrub: 5,
         onScrubComplete: () => {
-          maybeStartHomeLoopAfterScroll();
+          HomeLoopHandler();
+        },
+        onEnter: () => {
+          console.log("onEnter");
+          HomeLoopHandler();
         },
       },
     })
