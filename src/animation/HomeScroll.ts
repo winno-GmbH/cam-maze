@@ -4,34 +4,49 @@ import { getHomeScrollPaths } from "../paths/paths";
 import { pacman, ghosts } from "../core/objects";
 import gsap from "gsap";
 import { slerpToLayDown } from "./util";
-import { HomeLoopHandler } from "./HomeLoop";
+import {
+  startHomeLoop,
+  areObjectsAtPausedPositions,
+  stopHomeLoop,
+} from "./HomeLoop";
 
-let homeScrollInitialized = false;
+let homeScrollTimeline = null;
 
-export function maybeInitHomeScrollAnimation(
+export function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
-  if (homeScrollInitialized) return;
-  homeScrollInitialized = true;
-  initHomeScrollAnimation(pausedPositions, pausedRotations);
-}
+  // Kill previous timeline if it exists
+  if (homeScrollTimeline) {
+    homeScrollTimeline.kill();
+  }
 
-function initHomeScrollAnimation(
-  pausedPositions: Record<string, THREE.Vector3>,
-  pausedRotations: Record<string, THREE.Quaternion>
-) {
+  console.log("initHomeScrollAnimation called");
+  console.log("pausedPositions", pausedPositions);
+  console.log("pausedRotations", pausedRotations);
   const scrollPaths = getHomeScrollPaths(pausedPositions);
+  console.log("scrollPaths", scrollPaths);
 
-  gsap
+  homeScrollTimeline = gsap
     .timeline({
       scrollTrigger: {
         trigger: ".sc--home",
         start: "top top",
         end: "bottom top",
         scrub: 5,
-        onScrubComplete: () => {
-          HomeLoopHandler();
+        onLeave: () => {
+          stopHomeLoop();
+        },
+        onEnter: () => {
+          // Only fires if you scroll down into the section from above
+          // Optionally: maybeStartHomeLoopAfterScroll();
+        },
+        onEnterBack: () => {
+          // Fires if you scroll up into the section from below
+          // Optionally: maybeStartHomeLoopAfterScroll();
+        },
+        onUpdate: () => {
+          // Optionally: maybeStartHomeLoopAfterScroll();
         },
       },
     })
@@ -53,6 +68,7 @@ function updateScrollAnimation(
   paths: Record<string, THREE.CurvePath<THREE.Vector3>>,
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
+  console.log("updateScrollAnimation called", progress);
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
     camera.position.copy(cameraPoint);

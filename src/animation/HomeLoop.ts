@@ -3,7 +3,7 @@ import { getHomePaths } from "../paths/paths";
 import { onFrame, clock } from "../core/scene";
 import * as THREE from "three";
 import { calculateObjectOrientation } from "./util";
-import { maybeInitHomeScrollAnimation } from "./HomeScroll";
+import { initHomeScrollAnimation } from "./HomeScroll";
 
 const LOOP_DURATION = 40;
 let isHomeLoopActive = false;
@@ -12,8 +12,9 @@ let pausedT = 0;
 let pausedPositions: Record<string, THREE.Vector3> = {};
 let pausedRotations: Record<string, THREE.Quaternion> = {};
 let homeLoopFrameRegistered = false;
+const POSITION_THRESHOLD = 0.001;
 
-function stopHomeLoop() {
+export function stopHomeLoop() {
   isHomeLoopActive = false;
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   pausedPositions = {};
@@ -22,7 +23,15 @@ function stopHomeLoop() {
     pausedPositions[key] = ghost.position.clone();
     pausedRotations[key] = ghost.quaternion.clone();
   });
-  maybeInitHomeScrollAnimation(pausedPositions, pausedRotations);
+  initHomeScrollAnimation(pausedPositions, pausedRotations);
+}
+
+export function areObjectsAtPausedPositions(): boolean {
+  return Object.entries(ghosts).every(([key, ghost]) => {
+    const pausedPos = pausedPositions[key];
+    if (!pausedPos) return false;
+    return ghost.position.distanceTo(pausedPos) < POSITION_THRESHOLD;
+  });
 }
 
 function startHomeLoop() {
@@ -53,17 +62,18 @@ function updateHomeLoop(delta: number) {
   });
 }
 
-export function HomeLoopHandler() {
-  if (window.scrollY === 0) {
-    console.log("startHomeLoop def");
-    startHomeLoop();
-  }
-}
 export function setupHomeLoopScrollHandler() {
   window.addEventListener("scroll", () => {
-    if (window.scrollY !== 0) {
-      console.log("stopHomeLoop");
+    if (window.scrollY === 0 && areObjectsAtPausedPositions()) {
+      startHomeLoop();
+    } else {
       stopHomeLoop();
     }
   });
+
+  if (window.scrollY === 0) {
+    startHomeLoop();
+  } else {
+    stopHomeLoop();
+  }
 }
