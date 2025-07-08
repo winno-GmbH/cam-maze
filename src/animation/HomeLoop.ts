@@ -55,25 +55,44 @@ function updateHomeLoop(delta: number) {
 }
 
 function areObjectsAtPausedPositions(): boolean {
-  return Object.entries(ghosts).every(([key, ghost]) => {
+  const result = Object.entries(ghosts).every(([key, ghost]) => {
     const pausedPos = pausedPositions[key];
     if (!pausedPos) return false;
     return ghost.position.distanceTo(pausedPos) < POSITION_THRESHOLD;
   });
+  console.log("areObjectsAtPausedPositions:", result);
+  return result;
 }
 
 export function setupHomeLoopScrollHandler() {
+  console.log(
+    "setupHomeLoopScrollHandler initialized, scrollY:",
+    window.scrollY
+  );
   window.addEventListener("scroll", () => {
-    if (window.scrollY === 0 && areObjectsAtPausedPositions()) {
+    const atTop = window.scrollY === 0;
+    const atPaused = areObjectsAtPausedPositions();
+    console.log(
+      "Scroll event: scrollY =",
+      window.scrollY,
+      "atPausedPositions =",
+      atPaused
+    );
+    if (atTop && atPaused) {
+      console.log("Calling startHomeLoop from scroll event");
       startHomeLoop();
     } else {
+      console.log("Calling stopHomeLoop from scroll event");
       stopHomeLoop();
     }
   });
 
+  // Initial check on page load: if at top, start HomeLoop unconditionally
   if (window.scrollY === 0) {
+    console.log("Calling startHomeLoop from initial load");
     startHomeLoop();
   } else {
+    console.log("Calling stopHomeLoop from initial load");
     stopHomeLoop();
   }
 }
