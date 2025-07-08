@@ -9,7 +9,11 @@ export function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
+  console.log("initHomeScrollAnimation called");
+  console.log("pausedPositions", pausedPositions);
+  console.log("pausedRotations", pausedRotations);
   const scrollPaths = getHomeScrollPaths(pausedPositions);
+  console.log("scrollPaths", scrollPaths);
 
   gsap
     .timeline({
@@ -38,6 +42,7 @@ function updateScrollAnimation(
   paths: Record<string, THREE.CurvePath<THREE.Vector3>>,
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
+  console.log("updateScrollAnimation called", progress);
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
     camera.position.copy(cameraPoint);
