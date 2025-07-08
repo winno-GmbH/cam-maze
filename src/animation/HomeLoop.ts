@@ -61,13 +61,4 @@ export function HomeLoopHandler() {
     console.log("stopHomeLoop def");
     stopHomeLoop();
   }
-  window.addEventListener("scroll", () => {
-    if (window.scrollY === 0) {
-      console.log("startHomeLoop scroll");
-      startHomeLoop();
-    } else {
-      console.log("stopHomeLoop scroll");
-      stopHomeLoop();
-    }
-  });
 }
