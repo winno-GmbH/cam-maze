@@ -55,14 +55,18 @@ function updateHomeLoop(delta: number) {
 
 export function HomeLoopHandler() {
   if (window.scrollY === 0) {
+    console.log("startHomeLoop def");
     startHomeLoop();
   } else {
+    console.log("stopHomeLoop def");
     stopHomeLoop();
   }
   window.addEventListener("scroll", () => {
     if (window.scrollY === 0) {
+      console.log("startHomeLoop scroll");
       startHomeLoop();
     } else {
+      console.log("stopHomeLoop scroll");
       stopHomeLoop();
     }
   });

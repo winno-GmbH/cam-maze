@@ -31,6 +31,7 @@ function initHomeScrollAnimation(
         end: "bottom top",
         scrub: 5,
         onScrubComplete: () => {
+          console.log("onScrubComplete");
           HomeLoopHandler();
         },
         onEnter: () => {
@@ -57,7 +58,6 @@ function updateScrollAnimation(
   paths: Record<string, THREE.CurvePath<THREE.Vector3>>,
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
-  console.log("updateScrollAnimation called", progress);
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
     camera.position.copy(cameraPoint);
