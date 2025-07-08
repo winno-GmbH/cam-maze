@@ -31,11 +31,6 @@ function initHomeScrollAnimation(
         end: "bottom top",
         scrub: 5,
         onScrubComplete: () => {
-          console.log("onScrubComplete");
-          HomeLoopHandler();
-        },
-        onEnter: () => {
-          console.log("onEnter");
           HomeLoopHandler();
         },
       },
