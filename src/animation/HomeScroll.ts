@@ -4,6 +4,7 @@ import { getHomeScrollPaths } from "../paths/paths";
 import { pacman, ghosts } from "../core/objects";
 import gsap from "gsap";
 import { slerpToLayDown } from "./util";
+import { startHomeLoop } from "./HomeLoop";
 
 let homeScrollInitialized = false;
 
@@ -14,6 +15,12 @@ export function maybeInitHomeScrollAnimation(
   if (homeScrollInitialized) return;
   homeScrollInitialized = true;
   initHomeScrollAnimation(pausedPositions, pausedRotations);
+}
+
+function maybeStartHomeLoopAfterScroll() {
+  if (window.scrollY === 0) {
+    startHomeLoop();
+  }
 }
 
 function initHomeScrollAnimation(
@@ -33,6 +40,9 @@ function initHomeScrollAnimation(
         start: "top top",
         end: "bottom top",
         scrub: 5,
+        onScrubComplete: () => {
+          maybeStartHomeLoopAfterScroll();
+        },
       },
     })
     .to(

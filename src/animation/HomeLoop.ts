@@ -26,7 +26,7 @@ function stopHomeLoop() {
   maybeInitHomeScrollAnimation(pausedPositions, pausedRotations);
 }
 
-function startHomeLoop() {
+export function startHomeLoop() {
   isHomeLoopActive = true;
   animationTime = pausedT * LOOP_DURATION;
   if (!homeLoopFrameRegistered) {
