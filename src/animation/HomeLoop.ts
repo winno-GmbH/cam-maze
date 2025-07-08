@@ -119,10 +119,10 @@ export function setupHomeLoopScrollHandler() {
       "isHomeLoopActive =",
       isHomeLoopActive
     );
-    if (atTop && atPaused) {
+    if (atTop && atPaused && !isHomeLoopActive) {
       console.log("Calling startHomeLoop from scroll event");
       startHomeLoop();
-    } else {
+    } else if (!atTop || !atPaused) {
       console.log("Calling stopHomeLoop from scroll event");
       stopHomeLoop();
     }
@@ -136,4 +136,12 @@ export function setupHomeLoopScrollHandler() {
     console.log("Calling stopHomeLoop from initial load");
     stopHomeLoop();
   }
+
+  // Add a small delay to ensure the initial state is properly set
+  setTimeout(() => {
+    if (window.scrollY === 0 && !isHomeLoopActive) {
+      console.log("Delayed startHomeLoop check");
+      startHomeLoop();
+    }
+  }, 100);
 }
