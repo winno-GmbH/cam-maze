@@ -59,4 +59,11 @@ export function HomeLoopHandler() {
   } else {
     stopHomeLoop();
   }
+  window.addEventListener("scroll", () => {
+    if (window.scrollY === 0) {
+      startHomeLoop();
+    } else {
+      stopHomeLoop();
+    }
+  });
 }
