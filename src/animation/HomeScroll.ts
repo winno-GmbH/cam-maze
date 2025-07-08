@@ -4,49 +4,23 @@ import { getHomeScrollPaths } from "../paths/paths";
 import { pacman, ghosts } from "../core/objects";
 import gsap from "gsap";
 import { slerpToLayDown } from "./util";
-import {
-  startHomeLoop,
-  areObjectsAtPausedPositions,
-  stopHomeLoop,
-} from "./HomeLoop";
-
-let homeScrollTimeline = null;
+import { HomeLoopHandler } from "./HomeLoop";
 
 export function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
-  // Kill previous timeline if it exists
-  if (homeScrollTimeline) {
-    homeScrollTimeline.kill();
-  }
-
-  console.log("initHomeScrollAnimation called");
-  console.log("pausedPositions", pausedPositions);
-  console.log("pausedRotations", pausedRotations);
   const scrollPaths = getHomeScrollPaths(pausedPositions);
-  console.log("scrollPaths", scrollPaths);
 
-  homeScrollTimeline = gsap
+  gsap
     .timeline({
       scrollTrigger: {
         trigger: ".sc--home",
         start: "top top",
         end: "bottom top",
         scrub: 5,
-        onLeave: () => {
-          stopHomeLoop();
-        },
-        onEnter: () => {
-          // Only fires if you scroll down into the section from above
-          // Optionally: maybeStartHomeLoopAfterScroll();
-        },
-        onEnterBack: () => {
-          // Fires if you scroll up into the section from below
-          // Optionally: maybeStartHomeLoopAfterScroll();
-        },
-        onUpdate: () => {
-          // Optionally: maybeStartHomeLoopAfterScroll();
+        onScrubComplete: () => {
+          HomeLoopHandler();
         },
       },
     })
@@ -68,7 +42,6 @@ function updateScrollAnimation(
   paths: Record<string, THREE.CurvePath<THREE.Vector3>>,
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
-  console.log("updateScrollAnimation called", progress);
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
     camera.position.copy(cameraPoint);
