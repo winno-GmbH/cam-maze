@@ -3,13 +3,14 @@ import { getHomePaths } from "../paths/paths";
 import { onFrame, clock } from "../core/scene";
 import * as THREE from "three";
 import { calculateObjectOrientation } from "./util";
+import { maybeInitHomeScrollAnimation } from "./HomeScroll";
 
 const LOOP_DURATION = 40;
 let isHomeLoopActive = false;
 let animationTime = 0;
 let pausedT = 0;
-export let pausedPositions: Record<string, THREE.Vector3> = {};
-export let pausedRotations: Record<string, THREE.Quaternion> = {};
+let pausedPositions: Record<string, THREE.Vector3> = {};
+let pausedRotations: Record<string, THREE.Quaternion> = {};
 let homeLoopFrameRegistered = false;
 const POSITION_THRESHOLD = 0.001;
 
@@ -22,6 +23,7 @@ function stopHomeLoop() {
     pausedPositions[key] = ghost.position.clone();
     pausedRotations[key] = ghost.quaternion.clone();
   });
+  maybeInitHomeScrollAnimation(pausedPositions, pausedRotations);
 }
 
 function startHomeLoop() {

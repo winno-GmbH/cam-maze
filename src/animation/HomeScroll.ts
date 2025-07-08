@@ -5,7 +5,18 @@ import { pacman, ghosts } from "../core/objects";
 import gsap from "gsap";
 import { slerpToLayDown } from "./util";
 
-export function initHomeScrollAnimation(
+let homeScrollInitialized = false;
+
+export function maybeInitHomeScrollAnimation(
+  pausedPositions: Record<string, THREE.Vector3>,
+  pausedRotations: Record<string, THREE.Quaternion>
+) {
+  if (homeScrollInitialized) return;
+  homeScrollInitialized = true;
+  initHomeScrollAnimation(pausedPositions, pausedRotations);
+}
+
+function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
