@@ -2,6 +2,7 @@ import { ghosts } from "../core/objects";
 import { getHomePaths } from "../paths/paths";
 import { onFrame, clock } from "../core/scene";
 import * as THREE from "three";
+import { calculateObjectOrientation } from "./util";
 
 const LOOP_DURATION = 40;
 let isHomeLoopActive = false;
@@ -51,7 +52,12 @@ function updateHomeLoop(delta: number) {
     const path = homePaths[key];
     if (path) {
       const position = path.getPointAt(t);
+      const tangent = path.getTangentAt(t);
       if (position) ghost.position.copy(position);
+      if (tangent && tangent.length() > 0) {
+        const objectType = key === "pacman" ? "pacman" : "ghost";
+        calculateObjectOrientation(ghost, tangent, objectType);
+      }
     }
   });
   // Debug: Log all ghost positions after update
@@ -78,7 +84,6 @@ export function setupHomeLoopScrollHandler() {
     }
   });
 
-  // Initial check on page load: if at top, start HomeLoop unconditionally
   if (window.scrollY === 0) {
     startHomeLoop();
   } else {
