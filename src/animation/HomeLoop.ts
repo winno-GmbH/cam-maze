@@ -57,9 +57,6 @@ export function HomeLoopHandler() {
   if (window.scrollY === 0) {
     console.log("startHomeLoop def");
     startHomeLoop();
-  } else {
-    console.log("stopHomeLoop def");
-    stopHomeLoop();
   }
 }
 export function setupHomeLoopScrollHandler() {
