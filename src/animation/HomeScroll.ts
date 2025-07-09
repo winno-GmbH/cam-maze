@@ -54,11 +54,7 @@ function updateScrollAnimation(
   const ghostPositions = Object.fromEntries(
     Object.entries(ghosts).map(([key, ghost]) => [key, ghost.position.clone()])
   );
-  console.log({
-    camera: camera.position.clone(),
-    pacman: pacman ? pacman.position.clone() : undefined,
-    ghosts: ghostPositions,
-  });
+  console.log(pacman.position.clone());
 
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
