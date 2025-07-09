@@ -6,7 +6,6 @@ import { calculateObjectOrientation } from "./util";
 import { initHomeScrollAnimation } from "./HomeScroll";
 
 const LOOP_DURATION = 40;
-let isStoppable = true;
 let isHomeLoopActive = false;
 let animationTime = 0;
 let pausedT = 0;
@@ -15,7 +14,7 @@ let pausedRotations: Record<string, THREE.Quaternion> = {};
 let homeLoopFrameRegistered = false;
 
 function stopHomeLoop() {
-  if (!isStoppable) return;
+  if (!isHomeLoopActive) return;
   isHomeLoopActive = false;
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   pausedPositions = {};
@@ -25,11 +24,9 @@ function stopHomeLoop() {
     pausedRotations[key] = ghost.quaternion.clone();
   });
   initHomeScrollAnimation(pausedPositions, pausedRotations);
-  isStoppable = false;
 }
 
 function startHomeLoop() {
-  isStoppable = true;
   isHomeLoopActive = true;
   animationTime = pausedT * LOOP_DURATION;
   if (!homeLoopFrameRegistered) {
