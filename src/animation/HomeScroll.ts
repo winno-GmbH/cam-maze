@@ -13,7 +13,6 @@ export function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
-  // Kill any previous timeline
   if (homeScrollTimeline) {
     homeScrollTimeline.kill();
     homeScrollTimeline = null;
@@ -21,7 +20,6 @@ export function initHomeScrollAnimation(
 
   const scrollPaths = getHomeScrollPaths(pausedPositions);
 
-  // Remove lookAtPoints and lookAtCurve creation
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
   homeScrollTimeline = gsap
