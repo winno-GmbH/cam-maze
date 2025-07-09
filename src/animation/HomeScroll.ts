@@ -50,18 +50,29 @@ function updateScrollAnimation(
   pausedRotations: Record<string, THREE.Quaternion>,
   lookAtPosition: THREE.Vector3
 ) {
+  // Print positions of camera, pacman, and ghosts
+  const ghostPositions = Object.fromEntries(
+    Object.entries(ghosts).map(([key, ghost]) => [key, ghost.position.clone()])
+  );
+  console.log({
+    camera: camera.position.clone(),
+    pacman: pacman ? pacman.position.clone() : undefined,
+    ghosts: ghostPositions,
+  });
+
+  if (paths.camera) {
+    const cameraPoint = paths.camera.getPointAt(progress);
+    camera.position.copy(cameraPoint);
+    camera.lookAt(lookAtPosition);
+    camera.updateProjectionMatrix();
+  }
+
   if (paths.pacman && pacman) {
     const pacmanPoint = paths.pacman.getPointAt(progress);
     if (pacmanPoint) {
       pacman.position.copy(pacmanPoint);
       slerpToLayDown(pacman, pausedRotations["pacman"], progress);
     }
-  }
-  if (paths.camera) {
-    const cameraPoint = paths.camera.getPointAt(progress);
-    camera.position.copy(cameraPoint);
-    camera.lookAt(getLookAtPosition());
-    camera.updateProjectionMatrix();
   }
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
