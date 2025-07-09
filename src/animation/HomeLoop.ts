@@ -24,6 +24,15 @@ function stopHomeLoop() {
     pausedPositions[key] = ghost.position.clone();
     pausedRotations[key] = ghost.quaternion.clone();
   });
+  // Sync scroll position to match pausedT
+  const section = document.querySelector(".sc--home");
+  if (section) {
+    const s = section as HTMLElement;
+    const scrollRange = s.offsetHeight - window.innerHeight;
+    const targetScrollY = s.offsetTop + pausedT * scrollRange;
+    window.scrollTo(0, targetScrollY);
+    console.log("[Sync] Set scrollY to", targetScrollY, "for pausedT", pausedT);
+  }
   initHomeScrollAnimation(pausedPositions, pausedRotations);
 }
 
