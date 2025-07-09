@@ -61,7 +61,7 @@ function updateScrollAnimation(
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
     camera.position.copy(cameraPoint);
-    camera.lookAt(lookAtPosition); // Always look at maze center
+    camera.lookAt(lookAtPosition);
     camera.updateProjectionMatrix();
   }
 
