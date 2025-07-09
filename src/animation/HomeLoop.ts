@@ -4,6 +4,7 @@ import { onFrame, clock } from "../core/scene";
 import * as THREE from "three";
 import { calculateObjectOrientation } from "./util";
 import { initHomeScrollAnimation } from "./HomeScroll";
+import ScrollTrigger from "gsap/ScrollTrigger";
 
 const LOOP_DURATION = 40;
 let isHomeLoopActive = false;
@@ -32,8 +33,12 @@ function stopHomeLoop() {
     const targetScrollY = s.offsetTop + pausedT * scrollRange;
     window.scrollTo(0, targetScrollY);
     console.log("[Sync] Set scrollY to", targetScrollY, "for pausedT", pausedT);
+    ScrollTrigger.refresh();
+    requestAnimationFrame(() => {
+      initHomeScrollAnimation(pausedPositions, pausedRotations);
+    });
+    return;
   }
-  initHomeScrollAnimation(pausedPositions, pausedRotations);
 }
 
 function startHomeLoop() {
