@@ -4,10 +4,9 @@ import { onFrame, clock } from "../core/scene";
 import * as THREE from "three";
 import { calculateObjectOrientation } from "./util";
 import { initHomeScrollAnimation } from "./HomeScroll";
-import ScrollTrigger from "gsap/ScrollTrigger";
 
-const LOOP_DURATION = 40;
-let isHomeLoopActive = false;
+const LOOP_DURATION = 50;
+let isHomeLoopActive = true;
 let animationTime = 0;
 let pausedT = 0;
 let pausedPositions: Record<string, THREE.Vector3> = {};
@@ -18,27 +17,13 @@ function stopHomeLoop() {
   if (!isHomeLoopActive) return;
   isHomeLoopActive = false;
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
-  console.log("[stopHomeLoop] pausedT:", pausedT);
   pausedPositions = {};
   pausedRotations = {};
   Object.entries(ghosts).forEach(([key, ghost]) => {
     pausedPositions[key] = ghost.position.clone();
     pausedRotations[key] = ghost.quaternion.clone();
   });
-  // Sync scroll position to match pausedT
-  const section = document.querySelector(".sc--home");
-  if (section) {
-    const s = section as HTMLElement;
-    const scrollRange = s.offsetHeight - window.innerHeight;
-    const targetScrollY = s.offsetTop + pausedT * scrollRange;
-    window.scrollTo(0, targetScrollY);
-    console.log("[Sync] Set scrollY to", targetScrollY, "for pausedT", pausedT);
-    ScrollTrigger.refresh();
-    requestAnimationFrame(() => {
-      initHomeScrollAnimation(pausedPositions, pausedRotations);
-    });
-    return;
-  }
+  initHomeScrollAnimation(pausedPositions, pausedRotations);
 }
 
 function startHomeLoop() {
@@ -71,28 +56,13 @@ function updateHomeLoop(delta: number) {
 
 export function HomeLoopHandler() {
   if (window.scrollY === 0) {
-    console.log("startHomeLoop def");
     startHomeLoop();
   }
 }
-
 export function setupHomeLoopScrollHandler() {
   window.addEventListener("scroll", () => {
     if (window.scrollY !== 0) {
-      // Debug: log camera position and animation progress before stopping
-      const { camera } = require("../core/camera");
-      console.log(
-        "[Before stopHomeLoop] Camera position:",
-        camera.position.toArray()
-      );
-      console.log("[Before stopHomeLoop] animationTime:", animationTime);
       stopHomeLoop();
-      // Debug: log camera position and animation progress after stopping
-      console.log(
-        "[After stopHomeLoop] Camera position:",
-        camera.position.toArray()
-      );
-      console.log("[After stopHomeLoop] pausedT:", pausedT);
     }
   });
 }

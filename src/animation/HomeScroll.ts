@@ -55,7 +55,6 @@ function updateScrollAnimation(
       slerpToLayDown(pacman, pausedRotations["pacman"], progress);
     }
   }
-  console.log("[HomeLoop] Camera position:", camera.position.toArray());
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = paths[key];
