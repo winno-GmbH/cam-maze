@@ -14,12 +14,22 @@ export function initHomeScrollAnimation(
   const scrollPaths = getHomeScrollPaths(pausedPositions);
   const lookAtPosition = getLookAtPosition();
 
+  // Store initial camera state when scroll animation starts
   const initialPosition = camera.position.clone();
   const initialQuaternion = camera.quaternion.clone();
 
-  const finalQuaternion = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(-Math.PI / 2, 0, 0)
+  // Calculate the final camera position (maze center)
+  const mazeCenterPathPoint = new THREE.Vector3(0.45175, 0.5, 0.55675);
+
+  // Calculate the final quaternion for looking down at the maze center
+  const tempCamera = new THREE.PerspectiveCamera();
+  tempCamera.position.copy(mazeCenterPathPoint);
+  tempCamera.lookAt(
+    mazeCenterPathPoint.x,
+    mazeCenterPathPoint.y - 1,
+    mazeCenterPathPoint.z
   );
+  const finalQuaternion = tempCamera.quaternion.clone();
 
   gsap
     .timeline({
@@ -46,7 +56,9 @@ export function initHomeScrollAnimation(
             pausedRotations,
             initialPosition,
             initialQuaternion,
-            finalQuaternion
+            finalQuaternion,
+            lookAtPosition,
+            mazeCenterPathPoint
           );
         },
       }
@@ -59,16 +71,36 @@ function updateScrollAnimation(
   pausedRotations: Record<string, THREE.Quaternion>,
   initialPosition: THREE.Vector3,
   initialQuaternion: THREE.Quaternion,
-  finalQuaternion: THREE.Quaternion
+  finalQuaternion: THREE.Quaternion,
+  lookAtPosition: THREE.Vector3,
+  mazeCenterPathPoint: THREE.Vector3
 ) {
+  // Update camera position and rotation
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
     camera.position.copy(cameraPoint);
 
-    camera.quaternion.copy(initialQuaternion).slerp(finalQuaternion, progress);
+    // Create a smooth transition from looking at the initial lookAt position
+    // to looking down at the maze center
+    if (progress < 0.7) {
+      // For the first 70% of the scroll, maintain the lookAt behavior
+      const currentLookAt = lookAtPosition
+        .clone()
+        .lerp(mazeCenterPathPoint, progress / 0.7);
+      camera.lookAt(currentLookAt);
+    } else {
+      // For the final 30%, transition to looking straight down
+      const rotationProgress = (progress - 0.7) / 0.3; // Normalize to 0-1
+      const currentQuat = camera.quaternion.clone();
+      camera.quaternion
+        .copy(currentQuat)
+        .slerp(finalQuaternion, rotationProgress);
+    }
+
     camera.updateProjectionMatrix();
   }
 
+  // Update pacman
   if (paths.pacman && pacman) {
     const pacmanPoint = paths.pacman.getPointAt(progress);
     if (pacmanPoint) {
@@ -77,6 +109,7 @@ function updateScrollAnimation(
     }
   }
 
+  // Update ghosts
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = paths[key];
     if (path) {
