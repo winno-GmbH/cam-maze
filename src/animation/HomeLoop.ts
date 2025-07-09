@@ -60,6 +60,7 @@ export function HomeLoopHandler() {
     startHomeLoop();
   }
 }
+
 export function setupHomeLoopScrollHandler() {
   window.addEventListener("scroll", () => {
     if (window.scrollY !== 0) {
