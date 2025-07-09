@@ -99,17 +99,8 @@ function createCameraHomeScrollPath(
 ): THREE.CurvePath<THREE.Vector3> {
   const path = new THREE.CurvePath<THREE.Vector3>();
 
-  console.log("createCameraHomeScrollPath - pathPoints:", pathPoints);
-
   if (pathPoints.length === 4) {
     const curve = new THREE.CubicBezierCurve3(
-      pathPoints[0].pos,
-      pathPoints[1].pos,
-      pathPoints[2].pos,
-      pathPoints[3].pos
-    );
-    console.log(
-      "createCameraHomeScrollPath - created curve with points:",
       pathPoints[0].pos,
       pathPoints[1].pos,
       pathPoints[2].pos,
@@ -136,8 +127,6 @@ export function getHomeScrollPaths(
 ): Record<string, THREE.CurvePath<THREE.Vector3>> {
   const scrollPathPoints = createHomeScrollPathPoints(pausedPositions);
   const cameraPathPoints = getCameraHomeScrollPathPoints();
-
-  console.log("getHomeScrollPaths - cameraPathPoints:", cameraPathPoints);
 
   const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {
     camera: createCameraHomeScrollPath(cameraPathPoints),
