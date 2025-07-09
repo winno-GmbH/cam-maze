@@ -63,6 +63,11 @@ function updateScrollAnimation(
     camera.position.copy(cameraPoint);
     camera.lookAt(lookAtPosition);
     camera.updateProjectionMatrix();
+    // Log camera position, rotation, and lookAt
+    console.log("CAMERA position:", camera.position.clone());
+    console.log("CAMERA rotation:", camera.rotation.clone());
+    console.log("CAMERA quaternion:", camera.quaternion.clone());
+    console.log("CAMERA lookAt target:", lookAtPosition.clone());
   }
 
   if (paths.pacman && pacman) {
