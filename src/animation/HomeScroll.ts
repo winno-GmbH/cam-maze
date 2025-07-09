@@ -21,16 +21,8 @@ export function initHomeScrollAnimation(
 
   const scrollPaths = getHomeScrollPaths(pausedPositions);
 
+  // Remove lookAtPoints and lookAtCurve creation
   const cameraPathPoints = getCameraHomeScrollPathPoints();
-  const lookAtPoints = cameraPathPoints.filter((p) => "lookAt" in p) as {
-    lookAt: THREE.Vector3;
-  }[];
-  const lookAtCurve = new THREE.CubicBezierCurve3(
-    lookAtPoints[0].lookAt,
-    lookAtPoints[1].lookAt,
-    lookAtPoints[2].lookAt,
-    lookAtPoints[3].lookAt
-  );
 
   homeScrollTimeline = gsap
     .timeline({
@@ -55,7 +47,7 @@ export function initHomeScrollAnimation(
             progress,
             scrollPaths,
             pausedRotations,
-            lookAtCurve
+            cameraPathPoints
           );
         },
       }
@@ -66,14 +58,22 @@ function updateScrollAnimation(
   progress: number,
   paths: Record<string, THREE.CurvePath<THREE.Vector3>>,
   pausedRotations: Record<string, THREE.Quaternion>,
-  lookAtCurve: THREE.CubicBezierCurve3
+  cameraPathPoints: any[]
 ) {
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
     camera.position.copy(cameraPoint);
+    // Interpolate lookAt using the 4 lookAt points as a cubic Bezier
+    const lookAtCurve = new THREE.CubicBezierCurve3(
+      cameraPathPoints[0].lookAt,
+      cameraPathPoints[1].lookAt,
+      cameraPathPoints[2].lookAt,
+      cameraPathPoints[3].lookAt
+    );
     const lookAtPoint = lookAtCurve.getPoint(progress);
     camera.lookAt(lookAtPoint);
     camera.updateProjectionMatrix();
+    console.log("Camera lookAt:", lookAtPoint.clone());
   }
 
   if (paths.pacman && pacman) {
