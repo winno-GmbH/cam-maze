@@ -1,4 +1,3 @@
-// src/animation/HomeScroll.ts - Debug version to identify camera jump
 import * as THREE from "three";
 import { camera } from "../core/camera";
 import { getHomeScrollPaths } from "../paths/paths";
@@ -8,23 +7,12 @@ import { slerpToLayDown } from "./util";
 import { HomeLoopHandler } from "./HomeLoop";
 import { getLookAtPosition } from "../paths/pathpoints";
 
-// Debug variables to track camera state
-let lastCameraQuaternion: THREE.Quaternion | null = null;
-let frameCount = 0;
-
 export function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
   const scrollPaths = getHomeScrollPaths(pausedPositions);
   const lookAtPosition = getLookAtPosition();
-
-  // Log initial state
-  console.log("🎬 HomeScroll Init:", {
-    initialCameraPos: camera.position.clone(),
-    initialCameraQuat: camera.quaternion.clone(),
-    lookAtPosition: lookAtPosition.clone(),
-  });
 
   gsap
     .timeline({
@@ -34,9 +22,6 @@ export function initHomeScrollAnimation(
         end: "bottom top",
         scrub: 5,
         onScrubComplete: () => {
-          console.log("✅ Scroll complete, resetting debug state");
-          lastCameraQuaternion = null;
-          frameCount = 0;
           HomeLoopHandler();
         },
       },
@@ -65,64 +50,21 @@ function updateScrollAnimation(
   pausedRotations: Record<string, THREE.Quaternion>,
   lookAtPosition: THREE.Vector3
 ) {
-  frameCount++;
-
-  // Update camera position and rotation
+  // Update camera with smooth rotation
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
-    const oldPosition = camera.position.clone();
-    const oldQuaternion = camera.quaternion.clone();
-
-    // Update position
     camera.position.copy(cameraPoint);
 
-    // Calculate what the quaternion should be with lookAt
-    const tempCamera = new THREE.PerspectiveCamera();
-    tempCamera.position.copy(cameraPoint);
-    tempCamera.lookAt(lookAtPosition);
-    const targetQuaternion = tempCamera.quaternion;
+    // Create a temporary camera to calculate the target rotation
+    const targetCamera = new THREE.PerspectiveCamera();
+    targetCamera.position.copy(cameraPoint);
+    targetCamera.lookAt(lookAtPosition);
 
-    // Check for large rotation jumps
-    if (lastCameraQuaternion) {
-      const angleDiff = oldQuaternion.angleTo(targetQuaternion);
-      if (angleDiff > 0.5) {
-        // More than ~28 degrees
-        console.warn(
-          `⚠️ Large rotation detected at progress ${progress.toFixed(3)}:`,
-          {
-            frame: frameCount,
-            angleDiff: ((angleDiff * 180) / Math.PI).toFixed(1) + "°",
-            oldQuat: oldQuaternion,
-            targetQuat: targetQuaternion,
-            positionDelta: oldPosition.distanceTo(cameraPoint),
-          }
-        );
-      }
-    }
+    // Smoothly interpolate to the target rotation
+    // This prevents sudden jumps by blending rotations
+    const smoothingFactor = 0.1; // Adjust between 0.05 (smoother) and 0.2 (more responsive)
+    camera.quaternion.slerp(targetCamera.quaternion, smoothingFactor);
 
-    // Apply rotation with optional smoothing
-    const SMOOTH_ROTATION = true; // Toggle this to test
-    if (SMOOTH_ROTATION && lastCameraQuaternion) {
-      // Smooth rotation to prevent jumps
-      camera.quaternion.slerp(targetQuaternion, 0.15);
-    } else {
-      // Direct lookAt (may cause jumps)
-      camera.lookAt(lookAtPosition);
-    }
-
-    // Log significant progress points
-    if (
-      progress === 0 ||
-      Math.abs(progress - 0.5) < 0.01 ||
-      Math.abs(progress - 1) < 0.01
-    ) {
-      console.log(`📍 Progress ${progress.toFixed(2)}:`, {
-        position: camera.position.clone(),
-        quaternion: camera.quaternion.clone(),
-      });
-    }
-
-    lastCameraQuaternion = camera.quaternion.clone();
     camera.updateProjectionMatrix();
   }
 
@@ -146,24 +88,4 @@ function updateScrollAnimation(
       }
     }
   });
-}
-
-// Utility function to visualize camera path (optional)
-export function debugVisualizeCameraPath(scene: THREE.Scene) {
-  const scrollPaths = getHomeScrollPaths({});
-  if (!scrollPaths.camera) return;
-
-  // Create line geometry for camera path
-  const points = [];
-  for (let i = 0; i <= 100; i++) {
-    const t = i / 100;
-    points.push(scrollPaths.camera.getPointAt(t));
-  }
-
-  const geometry = new THREE.BufferGeometry().setFromPoints(points);
-  const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
-  const line = new THREE.Line(geometry, material);
-  scene.add(line);
-
-  console.log("🔴 Camera path visualized in red");
 }
