@@ -169,18 +169,6 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
         scene.add(model);
         model.position.set(0.5, 0.5, 0.5);
 
-        // Add AxesHelper at the maze anchor
-        const axesHelper = new THREE.AxesHelper(0.1);
-        axesHelper.position.copy(model.position);
-        scene.add(axesHelper);
-
-        // Add a small red sphere at the maze anchor
-        const anchorGeometry = new THREE.SphereGeometry(0.02, 16, 16);
-        const anchorMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const anchorSphere = new THREE.Mesh(anchorGeometry, anchorMaterial);
-        anchorSphere.position.copy(model.position);
-        scene.add(anchorSphere);
-
         resolve();
       },
       function (progress: any) {},

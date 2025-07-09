@@ -69,7 +69,6 @@ function updateScrollAnimation(
       cameraPathPoints[3].lookAt
     );
     const lookAtPoint = lookAtCurve.getPoint(progress);
-    camera.up.set(0, 1, 0); // Lock up axis to Y
     camera.lookAt(lookAtPoint);
     camera.updateProjectionMatrix();
     console.log("Camera lookAt:", lookAtPoint.clone());
