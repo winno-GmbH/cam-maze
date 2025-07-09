@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { slerpToLayDown } from "./util";
 import { HomeLoopHandler } from "./HomeLoop";
 import { getLookAtPosition } from "../paths/pathpoints";
+import { camera } from "../core/camera";
 
 export function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
@@ -55,6 +56,12 @@ function updateScrollAnimation(
       pacman.position.copy(pacmanPoint);
       slerpToLayDown(pacman, pausedRotations["pacman"], progress);
     }
+  }
+  if (paths.camera) {
+    const cameraPoint = paths.camera.getPointAt(progress);
+    camera.position.copy(cameraPoint);
+    camera.lookAt(getLookAtPosition());
+    camera.updateProjectionMatrix();
   }
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
