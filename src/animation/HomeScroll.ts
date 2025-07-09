@@ -4,7 +4,7 @@ import { pacman, ghosts } from "../core/objects";
 import gsap from "gsap";
 import { slerpToLayDown } from "./util";
 import { HomeLoopHandler } from "./HomeLoop";
-import { getLookAtPosition } from "../paths/pathpoints";
+import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import { camera } from "../core/camera";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
@@ -20,7 +20,17 @@ export function initHomeScrollAnimation(
   }
 
   const scrollPaths = getHomeScrollPaths(pausedPositions);
-  const lookAtPosition = getLookAtPosition();
+
+  const cameraPathPoints = getCameraHomeScrollPathPoints();
+  const lookAtPoints = cameraPathPoints.filter((p) => "lookAt" in p) as {
+    lookAt: THREE.Vector3;
+  }[];
+  const lookAtCurve = new THREE.CubicBezierCurve3(
+    lookAtPoints[0].lookAt,
+    lookAtPoints[1].lookAt,
+    lookAtPoints[2].lookAt,
+    lookAtPoints[3].lookAt
+  );
 
   homeScrollTimeline = gsap
     .timeline({
@@ -45,7 +55,7 @@ export function initHomeScrollAnimation(
             progress,
             scrollPaths,
             pausedRotations,
-            lookAtPosition
+            lookAtCurve
           );
         },
       }
@@ -56,18 +66,14 @@ function updateScrollAnimation(
   progress: number,
   paths: Record<string, THREE.CurvePath<THREE.Vector3>>,
   pausedRotations: Record<string, THREE.Quaternion>,
-  lookAtPosition: THREE.Vector3
+  lookAtCurve: THREE.CubicBezierCurve3
 ) {
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
     camera.position.copy(cameraPoint);
-    camera.lookAt(lookAtPosition);
+    const lookAtPoint = lookAtCurve.getPoint(progress);
+    camera.lookAt(lookAtPoint);
     camera.updateProjectionMatrix();
-    // Log camera position, rotation, and lookAt
-    console.log("CAMERA position:", camera.position.clone());
-    console.log("CAMERA rotation:", camera.rotation.clone());
-    console.log("CAMERA quaternion:", camera.quaternion.clone());
-    console.log("CAMERA lookAt target:", lookAtPosition.clone());
   }
 
   if (paths.pacman && pacman) {

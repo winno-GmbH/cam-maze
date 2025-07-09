@@ -137,8 +137,6 @@ export function getHomeScrollPaths(
   const scrollPathPoints = createHomeScrollPathPoints(pausedPositions);
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
-  console.log("getHomeScrollPaths - cameraPathPoints:", cameraPathPoints);
-
   const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {
     camera: createCameraHomeScrollPath(cameraPathPoints),
   };
