@@ -56,7 +56,6 @@ function updateHomeLoop(delta: number) {
 
 export function HomeLoopHandler() {
   if (window.scrollY === 0) {
-    console.log("startHomeLoop def");
     startHomeLoop();
   }
 }
@@ -64,7 +63,6 @@ export function HomeLoopHandler() {
 export function setupHomeLoopScrollHandler() {
   window.addEventListener("scroll", () => {
     if (window.scrollY !== 0) {
-      console.log("stopHomeLoop");
       stopHomeLoop();
     }
   });
