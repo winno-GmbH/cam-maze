@@ -4,7 +4,6 @@ import { onFrame, clock } from "../core/scene";
 import * as THREE from "three";
 import { calculateObjectOrientation } from "./util";
 import { initHomeScrollAnimation } from "./HomeScroll";
-import { latestHomeScrollProgress } from "./HomeScroll";
 
 const LOOP_DURATION = 50;
 let isHomeLoopActive = true;
@@ -20,17 +19,9 @@ function stopHomeLoop() {
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   pausedPositions = {};
   pausedRotations = {};
-
-  // Use the latest GSAP/ScrollTrigger progress for scroll position
-  const scrollProgress = latestHomeScrollProgress;
-
-  const homePaths = getHomePaths();
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    const path = homePaths[key];
-    if (path) {
-      pausedPositions[key] = path.getPointAt(scrollProgress).clone();
-      pausedRotations[key] = ghost.quaternion.clone();
-    }
+    pausedPositions[key] = ghost.position.clone();
+    pausedRotations[key] = ghost.quaternion.clone();
   });
   initHomeScrollAnimation(pausedPositions, pausedRotations);
 }
