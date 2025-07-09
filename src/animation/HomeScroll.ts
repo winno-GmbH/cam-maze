@@ -20,7 +20,7 @@ export function initHomeScrollAnimation(
         trigger: ".sc--home",
         start: "top top",
         end: "bottom top",
-        scrub: 5,
+        scrub: 0.5,
         onScrubComplete: () => {
           HomeLoopHandler();
         },
