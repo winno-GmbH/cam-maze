@@ -17,6 +17,7 @@ function stopHomeLoop() {
   if (!isHomeLoopActive) return;
   isHomeLoopActive = false;
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
+  console.log("[stopHomeLoop] pausedT:", pausedT);
   pausedPositions = {};
   pausedRotations = {};
   Object.entries(ghosts).forEach(([key, ghost]) => {
@@ -64,8 +65,20 @@ export function HomeLoopHandler() {
 export function setupHomeLoopScrollHandler() {
   window.addEventListener("scroll", () => {
     if (window.scrollY !== 0) {
-      console.log("stopHomeLoop");
+      // Debug: log camera position and animation progress before stopping
+      const { camera } = require("../core/camera");
+      console.log(
+        "[Before stopHomeLoop] Camera position:",
+        camera.position.toArray()
+      );
+      console.log("[Before stopHomeLoop] animationTime:", animationTime);
       stopHomeLoop();
+      // Debug: log camera position and animation progress after stopping
+      console.log(
+        "[After stopHomeLoop] Camera position:",
+        camera.position.toArray()
+      );
+      console.log("[After stopHomeLoop] pausedT:", pausedT);
     }
   });
 }
