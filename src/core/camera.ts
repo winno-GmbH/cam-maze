@@ -15,8 +15,12 @@ export const camera = new THREE.PerspectiveCamera(
 export function setupCamera(): void {
   const startPosition = getStartPosition();
   const lookAtPosition = getLookAtPosition();
+  console.log("setupCamera - startPosition:", startPosition);
+  console.log("setupCamera - lookAtPosition:", lookAtPosition);
   camera.position.set(startPosition.x, startPosition.y, startPosition.z);
   camera.lookAt(lookAtPosition.x, lookAtPosition.y, lookAtPosition.z);
+  console.log("setupCamera - camera.position:", camera.position);
+  console.log("setupCamera - camera.quaternion:", camera.quaternion);
 }
 
 export const startQuaternion = camera.quaternion.clone();
@@ -42,6 +46,33 @@ export function setupCameraResize(): void {
 }
 
 export function setupCameraAnimation(): void {
+  const startQuat = camera.quaternion.clone();
+  console.log("setupCameraAnimation - startQuat:", startQuat);
+  const endPos = new THREE.Vector3(-1.5, 3, 2);
+  const endTangent = new THREE.Vector3(-1.5, 3, 2);
+  let endQuat: THREE.Quaternion | null = null;
+
+  if (endPos && endTangent) {
+    const lookAt = endPos.clone().add(endTangent);
+    camera.position.copy(endPos);
+    camera.lookAt(lookAt);
+    endQuat = camera.quaternion.clone();
+    console.log("setupCameraAnimation - endQuat:", endQuat);
+  }
+
+  const animationStartPos = new THREE.Vector3(-2, 2.5, 2);
+  console.log("setupCameraAnimation - animationStartPos:", animationStartPos);
+  console.log(
+    "setupCameraAnimation - current camera.position:",
+    camera.position
+  );
+  camera.position.copy(animationStartPos);
+  camera.quaternion.copy(startQuat);
+  console.log(
+    "setupCameraAnimation - after setting position:",
+    camera.position
+  );
+
   gsap
     .timeline({
       scrollTrigger: {
@@ -58,15 +89,20 @@ export function setupCameraAnimation(): void {
         immediateRender: false,
         onUpdate: function () {
           const t = this.targets()[0].t;
-          const startPos = getStartPosition();
-          const endPos = new THREE.Vector3(-1.5, 3, 2);
-          const position = startPos.clone().lerp(endPos, t);
-          camera.position.copy(position);
+          console.log(
+            "Animation onUpdate - t:",
+            t,
+            "camera.position:",
+            camera.position
+          );
 
-          const startLookAt = getLookAtPosition();
-          const endLookAt = new THREE.Vector3(-1.25, 0.5, 0.25);
-          const lookAt = startLookAt.clone().lerp(endLookAt, t);
-          camera.lookAt(lookAt);
+          const position = new THREE.Vector3(-2, 2.5, 2);
+          camera.position.copy(position);
+          if (startQuat && endQuat) {
+            const currentQuaternion = new THREE.Quaternion();
+            currentQuaternion.slerpQuaternions(startQuat, endQuat, t);
+            camera.quaternion.copy(currentQuaternion);
+          }
           camera.updateProjectionMatrix();
         },
       }
