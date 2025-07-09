@@ -29,6 +29,17 @@ function stopHomeLoop() {
 function startHomeLoop() {
   isHomeLoopActive = true;
   animationTime = pausedT * LOOP_DURATION;
+
+  // Immediately snap ghosts to the start of their home path
+  const homePaths = getHomePaths();
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    const path = homePaths[key];
+    if (path) {
+      const position = path.getPointAt(0);
+      if (position) ghost.position.copy(position);
+    }
+  });
+
   if (!homeLoopFrameRegistered) {
     onFrame(() => updateHomeLoop(clock.getDelta()));
     homeLoopFrameRegistered = true;
