@@ -12,6 +12,21 @@ export function initHomeScrollAnimation(
 ) {
   const scrollPaths = getHomeScrollPaths(pausedPositions);
 
+  console.log(
+    "initHomeScrollAnimation - camera path exists:",
+    !!scrollPaths.camera
+  );
+  if (scrollPaths.camera) {
+    console.log(
+      "initHomeScrollAnimation - camera path length:",
+      scrollPaths.camera.curves.length
+    );
+    console.log(
+      "initHomeScrollAnimation - current camera.position:",
+      camera.position
+    );
+  }
+
   gsap
     .timeline({
       scrollTrigger: {
@@ -44,6 +59,14 @@ function updateScrollAnimation(
 ) {
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
+    console.log(
+      "updateScrollAnimation - progress:",
+      progress,
+      "cameraPoint:",
+      cameraPoint,
+      "current camera.position:",
+      camera.position
+    );
     camera.position.copy(cameraPoint);
     camera.updateProjectionMatrix();
   }
