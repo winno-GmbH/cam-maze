@@ -124,37 +124,12 @@ export function getHomePaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
 
 export function getHomeScrollPaths(
   pausedPositions: Record<string, THREE.Vector3>
-): Record<string, THREE.CurvePath<THREE.Vector3>> & {
-  cameraLookAt: THREE.CurvePath<THREE.Vector3>;
-} {
+): Record<string, THREE.CurvePath<THREE.Vector3>> {
   const scrollPathPoints = createHomeScrollPathPoints(pausedPositions);
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
-  // Create lookAt path for camera
-  const cameraLookAtPath = new THREE.CurvePath<THREE.Vector3>();
-  if (cameraPathPoints.length === 4) {
-    // Filter to only get points with lookAt property
-    const lookAtPoints = cameraPathPoints.filter(
-      (point): point is { pos: THREE.Vector3; lookAt: THREE.Vector3 } =>
-        "lookAt" in point
-    );
-
-    if (lookAtPoints.length === 4) {
-      const lookAtCurve = new THREE.CubicBezierCurve3(
-        lookAtPoints[0].lookAt,
-        lookAtPoints[1].lookAt,
-        lookAtPoints[2].lookAt,
-        lookAtPoints[3].lookAt
-      );
-      cameraLookAtPath.add(lookAtCurve);
-    }
-  }
-
-  const paths: Record<string, THREE.CurvePath<THREE.Vector3>> & {
-    cameraLookAt: THREE.CurvePath<THREE.Vector3>;
-  } = {
+  const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {
     camera: createCameraHomeScrollPath(cameraPathPoints),
-    cameraLookAt: cameraLookAtPath,
   };
 
   Object.entries(scrollPathPoints).forEach(([key, pathPoints]) => {
