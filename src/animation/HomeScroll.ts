@@ -58,12 +58,6 @@ function updateScrollAnimation(
   pausedRotations: Record<string, THREE.Quaternion>,
   lookAtPosition: THREE.Vector3
 ) {
-  // Print positions of camera, pacman, and ghosts
-  const ghostPositions = Object.fromEntries(
-    Object.entries(ghosts).map(([key, ghost]) => [key, ghost.position.clone()])
-  );
-  console.log(pacman.position.clone());
-
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
     camera.position.copy(cameraPoint);
