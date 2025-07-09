@@ -1,4 +1,4 @@
-// src/animation/HomeScroll.ts - Fixed version
+// src/animation/HomeScroll.ts - Debug version to identify camera jump
 import * as THREE from "three";
 import { camera } from "../core/camera";
 import { getHomeScrollPaths } from "../paths/paths";
@@ -8,9 +8,9 @@ import { slerpToLayDown } from "./util";
 import { HomeLoopHandler } from "./HomeLoop";
 import { getLookAtPosition } from "../paths/pathpoints";
 
-// Store camera state to prevent jumps
-let cameraStartQuaternion: THREE.Quaternion | null = null;
-let cameraTargetQuaternion: THREE.Quaternion | null = null;
+// Debug variables to track camera state
+let lastCameraQuaternion: THREE.Quaternion | null = null;
+let frameCount = 0;
 
 export function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
@@ -19,15 +19,12 @@ export function initHomeScrollAnimation(
   const scrollPaths = getHomeScrollPaths(pausedPositions);
   const lookAtPosition = getLookAtPosition();
 
-  // Capture initial camera quaternion
-  cameraStartQuaternion = camera.quaternion.clone();
-
-  // Calculate target quaternion for the end position
-  const tempCamera = camera.clone();
-  const endCameraPos = scrollPaths.camera.getPointAt(1);
-  tempCamera.position.copy(endCameraPos);
-  tempCamera.lookAt(lookAtPosition);
-  cameraTargetQuaternion = tempCamera.quaternion.clone();
+  // Log initial state
+  console.log("🎬 HomeScroll Init:", {
+    initialCameraPos: camera.position.clone(),
+    initialCameraQuat: camera.quaternion.clone(),
+    lookAtPosition: lookAtPosition.clone(),
+  });
 
   gsap
     .timeline({
@@ -36,22 +33,10 @@ export function initHomeScrollAnimation(
         start: "top top",
         end: "bottom top",
         scrub: 5,
-        onStart: () => {
-          // Ensure we have the current camera state
-          if (!cameraStartQuaternion) {
-            cameraStartQuaternion = camera.quaternion.clone();
-          }
-        },
         onScrubComplete: () => {
-          // Reset camera state
-          cameraStartQuaternion = null;
-          cameraTargetQuaternion = null;
-          HomeLoopHandler();
-        },
-        onReverseComplete: () => {
-          // Handle reverse scroll completion
-          cameraStartQuaternion = null;
-          cameraTargetQuaternion = null;
+          console.log("✅ Scroll complete, resetting debug state");
+          lastCameraQuaternion = null;
+          frameCount = 0;
           HomeLoopHandler();
         },
       },
@@ -61,7 +46,6 @@ export function initHomeScrollAnimation(
       {
         progress: 1,
         immediateRender: false,
-        ease: "none", // Linear interpolation for smooth scroll
         onUpdate: function () {
           const progress = this.targets()[0].progress;
           updateScrollAnimation(
@@ -81,35 +65,68 @@ function updateScrollAnimation(
   pausedRotations: Record<string, THREE.Quaternion>,
   lookAtPosition: THREE.Vector3
 ) {
-  // Update camera with smooth quaternion interpolation
-  if (paths.camera && cameraStartQuaternion && cameraTargetQuaternion) {
-    // Update position along path
+  frameCount++;
+
+  // Update camera position and rotation
+  if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
+    const oldPosition = camera.position.clone();
+    const oldQuaternion = camera.quaternion.clone();
+
+    // Update position
     camera.position.copy(cameraPoint);
 
-    // Smoothly interpolate rotation using quaternion slerp
-    // This prevents the jump by maintaining continuous rotation
-    camera.quaternion.copy(
-      cameraStartQuaternion.clone().slerp(cameraTargetQuaternion, progress)
-    );
+    // Calculate what the quaternion should be with lookAt
+    const tempCamera = new THREE.PerspectiveCamera();
+    tempCamera.position.copy(cameraPoint);
+    tempCamera.lookAt(lookAtPosition);
+    const targetQuaternion = tempCamera.quaternion;
 
-    // Alternative approach: Use dynamic quaternion calculation with damping
-    // This provides even smoother transitions
-    /*
-    const dynamicTarget = new THREE.Quaternion();
-    const tempMatrix = new THREE.Matrix4();
-    tempMatrix.lookAt(cameraPoint, lookAtPosition, camera.up);
-    dynamicTarget.setFromRotationMatrix(tempMatrix);
-    
-    // Apply damping for smoother transition
-    const dampingFactor = 0.95; // Adjust for smoothness
-    camera.quaternion.slerp(dynamicTarget, 1 - Math.pow(dampingFactor, progress));
-    */
+    // Check for large rotation jumps
+    if (lastCameraQuaternion) {
+      const angleDiff = oldQuaternion.angleTo(targetQuaternion);
+      if (angleDiff > 0.5) {
+        // More than ~28 degrees
+        console.warn(
+          `⚠️ Large rotation detected at progress ${progress.toFixed(3)}:`,
+          {
+            frame: frameCount,
+            angleDiff: ((angleDiff * 180) / Math.PI).toFixed(1) + "°",
+            oldQuat: oldQuaternion,
+            targetQuat: targetQuaternion,
+            positionDelta: oldPosition.distanceTo(cameraPoint),
+          }
+        );
+      }
+    }
 
+    // Apply rotation with optional smoothing
+    const SMOOTH_ROTATION = true; // Toggle this to test
+    if (SMOOTH_ROTATION && lastCameraQuaternion) {
+      // Smooth rotation to prevent jumps
+      camera.quaternion.slerp(targetQuaternion, 0.15);
+    } else {
+      // Direct lookAt (may cause jumps)
+      camera.lookAt(lookAtPosition);
+    }
+
+    // Log significant progress points
+    if (
+      progress === 0 ||
+      Math.abs(progress - 0.5) < 0.01 ||
+      Math.abs(progress - 1) < 0.01
+    ) {
+      console.log(`📍 Progress ${progress.toFixed(2)}:`, {
+        position: camera.position.clone(),
+        quaternion: camera.quaternion.clone(),
+      });
+    }
+
+    lastCameraQuaternion = camera.quaternion.clone();
     camera.updateProjectionMatrix();
   }
 
-  // Update pacman with smooth rotation
+  // Update pacman
   if (paths.pacman && pacman) {
     const pacmanPoint = paths.pacman.getPointAt(progress);
     if (pacmanPoint) {
@@ -118,7 +135,7 @@ function updateScrollAnimation(
     }
   }
 
-  // Update ghosts with smooth rotation
+  // Update ghosts
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = paths[key];
     if (path) {
@@ -131,31 +148,22 @@ function updateScrollAnimation(
   });
 }
 
-// Helper function to smoothly transition camera between states
-export function smoothCameraTransition(
-  fromPos: THREE.Vector3,
-  toPos: THREE.Vector3,
-  fromQuat: THREE.Quaternion,
-  toQuat: THREE.Quaternion,
-  progress: number
-): { position: THREE.Vector3; quaternion: THREE.Quaternion } {
-  const position = new THREE.Vector3().lerpVectors(fromPos, toPos, progress);
-  const quaternion = new THREE.Quaternion()
-    .copy(fromQuat)
-    .slerp(toQuat, progress);
+// Utility function to visualize camera path (optional)
+export function debugVisualizeCameraPath(scene: THREE.Scene) {
+  const scrollPaths = getHomeScrollPaths({});
+  if (!scrollPaths.camera) return;
 
-  return { position, quaternion };
+  // Create line geometry for camera path
+  const points = [];
+  for (let i = 0; i <= 100; i++) {
+    const t = i / 100;
+    points.push(scrollPaths.camera.getPointAt(t));
+  }
+
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+  const line = new THREE.Line(geometry, material);
+  scene.add(line);
+
+  console.log("🔴 Camera path visualized in red");
 }
-
-// Optional: Add easing functions for smoother animations
-export const easingFunctions = {
-  easeInOutCubic: (t: number): number => {
-    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-  },
-  easeOutQuart: (t: number): number => {
-    return 1 - Math.pow(1 - t, 4);
-  },
-  smoothStep: (t: number): number => {
-    return t * t * (3 - 2 * t);
-  },
-};
