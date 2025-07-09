@@ -39,12 +39,30 @@ export function initHomeScrollAnimation(
 
 function updateScrollAnimation(
   progress: number,
-  paths: Record<string, THREE.CurvePath<THREE.Vector3>>,
+  paths: Record<string, THREE.CurvePath<THREE.Vector3>> & {
+    cameraLookAt: THREE.CurvePath<THREE.Vector3>;
+  },
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
     camera.position.copy(cameraPoint);
+
+    // Update camera lookAt target
+    if (paths.cameraLookAt) {
+      const lookAtPoint = paths.cameraLookAt.getPointAt(progress);
+      camera.lookAt(lookAtPoint);
+      console.log(
+        `Camera: pos=${camera.position
+          .toArray()
+          .map((v) => v.toFixed(2))
+          .join(",")}, lookAt=${lookAtPoint
+          .toArray()
+          .map((v) => v.toFixed(2))
+          .join(",")}, progress=${progress.toFixed(2)}`
+      );
+    }
+
     camera.updateProjectionMatrix();
   }
 
