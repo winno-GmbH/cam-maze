@@ -7,6 +7,8 @@ import { HomeLoopHandler } from "./HomeLoop";
 import { getLookAtPosition } from "../paths/pathpoints";
 import { camera } from "../core/camera";
 
+export let latestHomeScrollProgress = 0;
+
 export function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
   pausedRotations: Record<string, THREE.Quaternion>
@@ -33,6 +35,7 @@ export function initHomeScrollAnimation(
         immediateRender: false,
         onUpdate: function () {
           const progress = this.targets()[0].progress;
+          latestHomeScrollProgress = progress;
           updateScrollAnimation(
             progress,
             scrollPaths,
