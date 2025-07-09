@@ -61,17 +61,12 @@ function updateScrollAnimation(
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
     camera.position.copy(cameraPoint);
-    // Interpolate lookAt using the 4 lookAt points as a cubic Bezier
-    const lookAtCurve = new THREE.CubicBezierCurve3(
-      cameraPathPoints[0].lookAt,
-      cameraPathPoints[1].lookAt,
-      cameraPathPoints[2].lookAt,
-      cameraPathPoints[3].lookAt
-    );
-    const lookAtPoint = lookAtCurve.getPoint(progress);
+
+    const tangent = paths.camera.getTangentAt(progress).normalize();
+    const lookAtPoint = cameraPoint.clone().add(tangent);
     camera.lookAt(lookAtPoint);
     camera.updateProjectionMatrix();
-    console.log("Camera lookAt:", lookAtPoint.clone());
+    console.log("Camera lookAt (forward):", lookAtPoint.clone());
   }
 
   if (paths.pacman && pacman) {
