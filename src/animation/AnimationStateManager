@@ -1,0 +1,344 @@
+// src/animation/AnimationStateManager.ts - Centralized animation state management
+import * as THREE from "three";
+import { ghosts, pacman, pacmanMixer } from "../core/objects";
+import { onFrame } from "../core/scene";
+
+export enum AnimationState {
+  IDLE = "IDLE",
+  HOME_LOOP = "HOME_LOOP",
+  HOME_SCROLL = "HOME_SCROLL",
+  POV_ANIMATION = "POV_ANIMATION",
+  FINAL_ANIMATION = "FINAL_ANIMATION",
+}
+
+export interface AnimationContext {
+  state: AnimationState;
+  progress: number;
+  data: any;
+  timestamp: number;
+}
+
+export interface AnimationTransition {
+  from: AnimationState;
+  to: AnimationState;
+  duration: number;
+  onStart?: () => void;
+  onComplete?: () => void;
+  onUpdate?: (progress: number) => void;
+}
+
+/**
+ * Centralized animation state manager to prevent conflicts
+ * and ensure smooth transitions between animation states
+ */
+export class AnimationStateManager {
+  private static instance: AnimationStateManager;
+
+  private currentState: AnimationState = AnimationState.IDLE;
+  private previousState: AnimationState = AnimationState.IDLE;
+  private stateData: Map<AnimationState, any> = new Map();
+  private transitions: Map<string, AnimationTransition> = new Map();
+  private isTransitioning: boolean = false;
+  private transitionProgress: number = 0;
+  private currentTransition: AnimationTransition | null = null;
+
+  // Animation handlers
+  private animationHandlers: Map<
+    AnimationState,
+    (ctx: AnimationContext) => void
+  > = new Map();
+  private updateCallbacks: ((state: AnimationState) => void)[] = [];
+
+  // Frame tracking
+  private lastFrameTime: number = 0;
+  private deltaTime: number = 0;
+
+  private constructor() {
+    // Register frame update
+    onFrame(() => this.update());
+  }
+
+  static getInstance(): AnimationStateManager {
+    if (!AnimationStateManager.instance) {
+      AnimationStateManager.instance = new AnimationStateManager();
+    }
+    return AnimationStateManager.instance;
+  }
+
+  /**
+   * Register an animation handler for a specific state
+   */
+  registerHandler(
+    state: AnimationState,
+    handler: (ctx: AnimationContext) => void
+  ) {
+    this.animationHandlers.set(state, handler);
+  }
+
+  /**
+   * Register a transition between states
+   */
+  registerTransition(transition: AnimationTransition) {
+    const key = `${transition.from}_${transition.to}`;
+    this.transitions.set(key, transition);
+  }
+
+  /**
+   * Transition to a new animation state
+   */
+  async transitionTo(newState: AnimationState, data?: any): Promise<void> {
+    if (this.currentState === newState) {
+      console.warn(`Already in state ${newState}`);
+      return;
+    }
+
+    if (this.isTransitioning) {
+      console.warn(
+        `Already transitioning from ${this.currentState} to ${this.currentTransition?.to}`
+      );
+      return;
+    }
+
+    const transitionKey = `${this.currentState}_${newState}`;
+    const transition = this.transitions.get(transitionKey);
+
+    if (!transition) {
+      // Direct transition without animation
+      this.setStateImmediate(newState, data);
+      return;
+    }
+
+    // Start transition
+    this.isTransitioning = true;
+    this.currentTransition = transition;
+    this.transitionProgress = 0;
+
+    if (transition.onStart) {
+      transition.onStart();
+    }
+
+    // Store data for the new state
+    if (data) {
+      this.stateData.set(newState, data);
+    }
+
+    return new Promise((resolve) => {
+      const checkComplete = () => {
+        if (!this.isTransitioning) {
+          resolve();
+        } else {
+          requestAnimationFrame(checkComplete);
+        }
+      };
+      checkComplete();
+    });
+  }
+
+  /**
+   * Set state immediately without transition
+   */
+  private setStateImmediate(newState: AnimationState, data?: any) {
+    this.previousState = this.currentState;
+    this.currentState = newState;
+
+    if (data) {
+      this.stateData.set(newState, data);
+    }
+
+    // Notify listeners
+    this.updateCallbacks.forEach((callback) => callback(newState));
+  }
+
+  /**
+   * Main update loop
+   */
+  private update() {
+    const currentTime = performance.now();
+    this.deltaTime = (currentTime - this.lastFrameTime) / 1000;
+    this.lastFrameTime = currentTime;
+
+    // Handle transitions
+    if (this.isTransitioning && this.currentTransition) {
+      this.transitionProgress +=
+        this.deltaTime / this.currentTransition.duration;
+
+      if (this.transitionProgress >= 1) {
+        // Transition complete
+        this.transitionProgress = 1;
+
+        if (this.currentTransition.onUpdate) {
+          this.currentTransition.onUpdate(1);
+        }
+
+        if (this.currentTransition.onComplete) {
+          this.currentTransition.onComplete();
+        }
+
+        // Set new state
+        this.setStateImmediate(
+          this.currentTransition.to,
+          this.stateData.get(this.currentTransition.to)
+        );
+
+        // Clean up
+        this.isTransitioning = false;
+        this.currentTransition = null;
+      } else if (this.currentTransition.onUpdate) {
+        // Update transition
+        this.currentTransition.onUpdate(this.transitionProgress);
+      }
+    }
+
+    // Run current state handler
+    const handler = this.animationHandlers.get(this.currentState);
+    if (handler) {
+      const context: AnimationContext = {
+        state: this.currentState,
+        progress: this.isTransitioning ? this.transitionProgress : 1,
+        data: this.stateData.get(this.currentState),
+        timestamp: currentTime,
+      };
+      handler(context);
+    }
+
+    // Update Pac-Man mixer if it exists
+    if (pacmanMixer) {
+      pacmanMixer.update(this.deltaTime);
+    }
+  }
+
+  /**
+   * Get current animation state
+   */
+  getCurrentState(): AnimationState {
+    return this.currentState;
+  }
+
+  /**
+   * Get previous animation state
+   */
+  getPreviousState(): AnimationState {
+    return this.previousState;
+  }
+
+  /**
+   * Check if currently transitioning
+   */
+  isInTransition(): boolean {
+    return this.isTransitioning;
+  }
+
+  /**
+   * Get state data
+   */
+  getStateData(state: AnimationState): any {
+    return this.stateData.get(state);
+  }
+
+  /**
+   * Subscribe to state changes
+   */
+  onStateChange(callback: (state: AnimationState) => void) {
+    this.updateCallbacks.push(callback);
+
+    // Return unsubscribe function
+    return () => {
+      const index = this.updateCallbacks.indexOf(callback);
+      if (index > -1) {
+        this.updateCallbacks.splice(index, 1);
+      }
+    };
+  }
+
+  /**
+   * Reset to initial state
+   */
+  reset() {
+    this.currentState = AnimationState.IDLE;
+    this.previousState = AnimationState.IDLE;
+    this.stateData.clear();
+    this.isTransitioning = false;
+    this.currentTransition = null;
+    this.transitionProgress = 0;
+  }
+}
+
+/**
+ * Helper class to manage object animations
+ */
+export class ObjectAnimationController {
+  private objects: Map<string, THREE.Object3D> = new Map();
+  private animations: Map<
+    string,
+    { path: THREE.CurvePath<THREE.Vector3>; loop: boolean }
+  > = new Map();
+  private progress: Map<string, number> = new Map();
+
+  /**
+   * Register an object for animation
+   */
+  registerObject(name: string, object: THREE.Object3D) {
+    this.objects.set(name, object);
+    this.progress.set(name, 0);
+  }
+
+  /**
+   * Set animation path for an object
+   */
+  setAnimationPath(
+    name: string,
+    path: THREE.CurvePath<THREE.Vector3>,
+    loop: boolean = false
+  ) {
+    this.animations.set(name, { path, loop });
+  }
+
+  /**
+   * Update object animation
+   */
+  updateAnimation(name: string, deltaProgress: number) {
+    const object = this.objects.get(name);
+    const animation = this.animations.get(name);
+    let progress = this.progress.get(name) || 0;
+
+    if (!object || !animation) return;
+
+    progress += deltaProgress;
+
+    if (animation.loop) {
+      progress = progress % 1;
+    } else {
+      progress = Math.min(1, Math.max(0, progress));
+    }
+
+    this.progress.set(name, progress);
+
+    // Update object position
+    const position = animation.path.getPointAt(progress);
+    object.position.copy(position);
+
+    // Update object rotation based on path tangent
+    const tangent = animation.path.getTangentAt(progress);
+    if (tangent.length() > 0) {
+      const lookAtPoint = position.clone().add(tangent);
+      object.lookAt(lookAtPoint);
+    }
+  }
+
+  /**
+   * Set animation progress directly
+   */
+  setProgress(name: string, progress: number) {
+    this.progress.set(name, Math.min(1, Math.max(0, progress)));
+  }
+
+  /**
+   * Get current progress
+   */
+  getProgress(name: string): number {
+    return this.progress.get(name) || 0;
+  }
+}
+
+// Export singleton instance
+export const animationStateManager = AnimationStateManager.getInstance();
