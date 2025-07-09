@@ -7,14 +7,22 @@ import { HomeLoopHandler } from "./HomeLoop";
 import { getLookAtPosition } from "../paths/pathpoints";
 import { camera } from "../core/camera";
 
+let homeScrollTimeline: gsap.core.Timeline | null = null;
+
 export function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
+  // Kill any previous timeline
+  if (homeScrollTimeline) {
+    homeScrollTimeline.kill();
+    homeScrollTimeline = null;
+  }
+
   const scrollPaths = getHomeScrollPaths(pausedPositions);
   const lookAtPosition = getLookAtPosition();
 
-  gsap
+  homeScrollTimeline = gsap
     .timeline({
       scrollTrigger: {
         trigger: ".sc--home",
