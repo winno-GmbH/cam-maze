@@ -5,27 +5,21 @@ import { pacman, ghosts } from "../core/objects";
 import gsap from "gsap";
 import { slerpToLayDown } from "./util";
 import { HomeLoopHandler } from "./HomeLoop";
+import { getLookAtPosition } from "../paths/pathpoints";
 
 export function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
   pausedRotations: Record<string, THREE.Quaternion>
 ) {
   const scrollPaths = getHomeScrollPaths(pausedPositions);
+  const lookAtPosition = getLookAtPosition();
 
-  console.log(
-    "initHomeScrollAnimation - camera path exists:",
-    !!scrollPaths.camera
+  const initialPosition = camera.position.clone();
+  const initialQuaternion = camera.quaternion.clone();
+
+  const finalQuaternion = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(-Math.PI / 2, 0, 0)
   );
-  if (scrollPaths.camera) {
-    console.log(
-      "initHomeScrollAnimation - camera path length:",
-      scrollPaths.camera.curves.length
-    );
-    console.log(
-      "initHomeScrollAnimation - current camera.position:",
-      camera.position
-    );
-  }
 
   gsap
     .timeline({
@@ -46,7 +40,14 @@ export function initHomeScrollAnimation(
         immediateRender: false,
         onUpdate: function () {
           const progress = this.targets()[0].progress;
-          updateScrollAnimation(progress, scrollPaths, pausedRotations);
+          updateScrollAnimation(
+            progress,
+            scrollPaths,
+            pausedRotations,
+            initialPosition,
+            initialQuaternion,
+            finalQuaternion
+          );
         },
       }
     );
@@ -55,19 +56,16 @@ export function initHomeScrollAnimation(
 function updateScrollAnimation(
   progress: number,
   paths: Record<string, THREE.CurvePath<THREE.Vector3>>,
-  pausedRotations: Record<string, THREE.Quaternion>
+  pausedRotations: Record<string, THREE.Quaternion>,
+  initialPosition: THREE.Vector3,
+  initialQuaternion: THREE.Quaternion,
+  finalQuaternion: THREE.Quaternion
 ) {
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
-    console.log(
-      "updateScrollAnimation - progress:",
-      progress,
-      "cameraPoint:",
-      cameraPoint,
-      "current camera.position:",
-      camera.position
-    );
     camera.position.copy(cameraPoint);
+
+    camera.quaternion.copy(initialQuaternion).slerp(finalQuaternion, progress);
     camera.updateProjectionMatrix();
   }
 
