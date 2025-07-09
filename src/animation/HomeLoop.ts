@@ -13,15 +13,37 @@ let pausedPositions: Record<string, THREE.Vector3> = {};
 let pausedRotations: Record<string, THREE.Quaternion> = {};
 let homeLoopFrameRegistered = false;
 
+function getCurrentScrollProgress(): number {
+  // Get the .sc--home section
+  const section = document.querySelector(".sc--home") as HTMLElement;
+  if (!section) return 0;
+  const rect = section.getBoundingClientRect();
+  const windowHeight = window.innerHeight;
+  // Calculate progress: 0 at top, 1 at bottom
+  const totalScroll = rect.height - windowHeight;
+  if (totalScroll <= 0) return 0;
+  const scrolled = Math.min(Math.max(-rect.top, 0), totalScroll);
+  return scrolled / totalScroll;
+}
+
 function stopHomeLoop() {
   if (!isHomeLoopActive) return;
   isHomeLoopActive = false;
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   pausedPositions = {};
   pausedRotations = {};
+
+  // Get the current scroll progress (0 to 1)
+  const scrollProgress = getCurrentScrollProgress();
+
+  const homePaths = getHomePaths();
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    pausedPositions[key] = ghost.position.clone();
-    pausedRotations[key] = ghost.quaternion.clone();
+    const path = homePaths[key];
+    if (path) {
+      // Use the path to get the correct position for the current scroll progress
+      pausedPositions[key] = path.getPointAt(scrollProgress).clone();
+      pausedRotations[key] = ghost.quaternion.clone();
+    }
   });
   initHomeScrollAnimation(pausedPositions, pausedRotations);
 }
@@ -30,7 +52,6 @@ function startHomeLoop() {
   isHomeLoopActive = true;
   animationTime = pausedT * LOOP_DURATION;
 
-  // Immediately snap ghosts to the start of their home path
   const homePaths = getHomePaths();
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
