@@ -83,12 +83,15 @@ function updateScrollAnimation(
     console.log("Camera lookAt:", lookAtPoint.clone());
   }
 
-  // Calculate opacity for fade out in last 20% of animation
-  const fadeStartProgress = 0.8; // Start fading at 80% progress
+  const fadeStartProgress = 0.75;
+  const fadeEndProgress = 0.9;
   const opacity =
     progress < fadeStartProgress
       ? 1
-      : 1 - (progress - fadeStartProgress) / (1 - fadeStartProgress);
+      : progress > fadeEndProgress
+      ? 0
+      : 1 -
+        (progress - fadeStartProgress) / (fadeEndProgress - fadeStartProgress);
 
   // Pacman (slowest)
   if (paths.pacman && pacman) {
