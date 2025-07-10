@@ -23,7 +23,7 @@ const lookAtPosition = isMobile
   ? cameraStartPoints.mobileLookAt
   : cameraStartPoints.desktopLookAt;
 
-const lookAtMazeCenter = new THREE.Vector3(0.557, -5, 0.5);
+const lookAtMazeCenter = new THREE.Vector3(0.557, -5, 0.4);
 const lookAtIntermediate1 = lookAtPosition
   .clone()
   .lerp(lookAtMazeCenter, 1 / 3);
