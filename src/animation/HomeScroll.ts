@@ -31,46 +31,42 @@ export function initHomeScrollAnimation(
   const scrollPaths = getHomeScrollPaths(pausedPositions);
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
-  // Add a short delay before starting the animation
-  setTimeout(() => {
-    homeScrollTimeline = gsap
-      .timeline({
-        scrollTrigger: {
-          id: "homeScroll",
-          trigger: ".sc--home",
-          start: "top top",
-          end: "bottom top",
-          scrub: 0.5,
-          onScrubComplete: () => {
-            HomeLoopHandler();
-          },
+  homeScrollTimeline = gsap
+    .timeline({
+      scrollTrigger: {
+        id: "homeScroll",
+        trigger: ".sc--home",
+        start: "top top",
+        end: "bottom top",
+        scrub: 0.5,
+        onScrubComplete: () => {
+          HomeLoopHandler();
         },
-      })
-      .to(
-        { progress: 0 },
-        {
-          progress: 1,
-          immediateRender: false,
-          onUpdate: function () {
-            const progress = this.targets()[0].progress;
-            updateScrollAnimation(
-              progress,
-              scrollPaths,
-              pausedRotations,
-              cameraPathPoints
-            );
-          },
-        }
-      );
+      },
+    })
+    .to(
+      { progress: 0 },
+      {
+        progress: 1,
+        immediateRender: false,
+        onUpdate: function () {
+          const progress = this.targets()[0].progress;
+          updateScrollAnimation(
+            progress,
+            scrollPaths,
+            pausedRotations,
+            cameraPathPoints
+          );
+        },
+      }
+    );
 
-    // Sync timeline progress to current scroll position, clamped to minimum
-    const minProgress = 0.001;
-    const trigger = ScrollTrigger.getById("homeScroll");
-    if (trigger && homeScrollTimeline) {
-      const targetProgress = Math.max(trigger.progress, minProgress);
-      homeScrollTimeline.progress(targetProgress);
-    }
-  }, 2000); // 150ms delay
+  const minProgress = 0.001;
+  const trigger = ScrollTrigger.getById("homeScroll");
+  if (trigger && homeScrollTimeline) {
+    const targetProgress = Math.max(trigger.progress, minProgress);
+    homeScrollTimeline.progress(targetProgress);
+  }
 }
 
 function updateScrollAnimation(
