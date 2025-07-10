@@ -63,10 +63,12 @@ export function initHomeScrollAnimation(
         }
       );
 
-    // Sync timeline progress to current scroll position
+    // Sync timeline progress to current scroll position, clamped to minimum
+    const minProgress = 0.001;
     const trigger = ScrollTrigger.getById("homeScroll");
     if (trigger && homeScrollTimeline) {
-      homeScrollTimeline.progress(trigger.progress);
+      const targetProgress = Math.max(trigger.progress, minProgress);
+      homeScrollTimeline.progress(targetProgress);
     }
   }, 2000); // 150ms delay
 }
