@@ -1052,7 +1052,7 @@ const ghost5HomePathPoints: MazePathPoint[] = [
 
 const cameraHomeScrollPathPoints: CameraPathPoint[] = [
   { pos: startPosition, lookAt: lookAtPosition },
-  { pos: secondPosition, lookAt: lookAtPosition },
+  { pos: secondPosition, lookAt: new THREE.Vector3(-0.5, 0.5, 0.5) }, //(0.55675, -5, 0.35)
   {
     pos: new THREE.Vector3(0.55675, 3, 0.45175),
     lookAt: cameraHomeScrollEndLookAt,
