@@ -3,7 +3,7 @@ import { MazePathPoint, PathPoint, CameraPathPoint } from "../types/types";
 import { isMobile } from "../config/config";
 
 const objectHomeScrollEndPathPoint = new THREE.Vector3(0.55675, 0.35, 0.45175);
-const cameraHomeScrollEndPathPoint = new THREE.Vector3(0.55675, 0.35, 0.45175);
+const cameraHomeScrollEndPathPoint = new THREE.Vector3(0.55675, 0.5, 0.45175);
 const cameraHomeScrollEndLookAt = new THREE.Vector3(0.55675, -5, 0.45);
 
 const cameraPathPointsConfig = {
