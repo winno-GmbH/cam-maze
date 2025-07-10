@@ -22,6 +22,9 @@ export type CameraPathPoint =
   | {
       pos: THREE.Vector3;
       rotation: THREE.Euler;
+    }
+  | {
+      pos: THREE.Vector3;
     };
 
 export interface PathData {
