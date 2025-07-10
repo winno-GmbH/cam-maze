@@ -16,7 +16,7 @@ const characterSpeeds: Record<string, number> = {
   ghost1: 1,
   ghost2: 1.2,
   ghost3: 1.4,
-  ghost4: 1.6;
+  ghost4: 1.6,
   ghost5: 1.8,
 };
 
