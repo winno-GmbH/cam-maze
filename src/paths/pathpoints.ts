@@ -1280,9 +1280,9 @@ export function createHomeScrollPathPoints(
 
   Object.entries(pausedPositions).forEach(([key, pausedPos]) => {
     const arcPoint = new THREE.Vector3(
-      (pausedPos.x + objectHomeScrollEndPathPoint.x) / 2,
+      pausedPos.x * (1 / 3) + objectHomeScrollEndPathPoint.x * (2 / 3),
       1.5,
-      (pausedPos.z + objectHomeScrollEndPathPoint.z) / 2
+      pausedPos.z * (1 / 3) + objectHomeScrollEndPathPoint.z * (2 / 3)
     );
 
     scrollPaths[key] = [
