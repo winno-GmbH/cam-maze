@@ -6,6 +6,7 @@ import { slerpToLayDown } from "./util";
 import { HomeLoopHandler } from "./HomeLoop";
 import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import { camera } from "../core/camera";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 
@@ -28,12 +29,12 @@ export function initHomeScrollAnimation(
   }
 
   const scrollPaths = getHomeScrollPaths(pausedPositions);
-
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
   homeScrollTimeline = gsap
     .timeline({
       scrollTrigger: {
+        id: "homeScroll", // Add ID for reference
         trigger: ".sc--home",
         start: "top top",
         end: "bottom top",
@@ -59,6 +60,12 @@ export function initHomeScrollAnimation(
         },
       }
     );
+
+  // Sync timeline progress to current scroll position
+  const trigger = ScrollTrigger.getById("homeScroll");
+  if (trigger && homeScrollTimeline) {
+    homeScrollTimeline.progress(trigger.progress);
+  }
 }
 
 function updateScrollAnimation(
@@ -83,7 +90,7 @@ function updateScrollAnimation(
     console.log("Camera lookAt:", lookAtPoint.clone());
   }
 
-  const fadeStartProgress = 0.8;
+  const fadeStartProgress = 0.85;
   const fadeEndProgress = 0.95;
   const opacity =
     progress < fadeStartProgress
