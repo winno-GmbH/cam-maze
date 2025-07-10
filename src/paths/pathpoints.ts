@@ -23,7 +23,7 @@ const lookAtPosition = isMobile
   ? cameraStartPoints.mobileLookAt
   : cameraStartPoints.desktopLookAt;
 
-const lookAtMazeCenter = new THREE.Vector3(0.557, -5, 0.4125);
+const lookAtMazeCenter = new THREE.Vector3(0.55675, -5, 0.4125);
 
 const pacmanHomePathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(0.25525, 0.55, 0.6025), type: "straight" },
