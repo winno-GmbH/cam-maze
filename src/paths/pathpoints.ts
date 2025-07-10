@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { MazePathPoint, PathPoint, CameraPathPoint } from "../types/types";
 import { isMobile } from "../config/config";
 
-const mazeCenterPathPoint = new THREE.Vector3(0.557, 0, 0.4375);
+const mazeCenterPathPoint = new THREE.Vector3(0.557, 0.35, 0.4375);
 
 const cameraStartPoints = {
   startMobile: new THREE.Vector3(0.5, 2.5, 2.5),
@@ -1278,7 +1278,7 @@ export function createHomeScrollPathPoints(
   Object.entries(pausedPositions).forEach(([key, pausedPos]) => {
     const arcPoint = new THREE.Vector3(
       (pausedPos.x + mazeCenterPathPoint.x) / 2,
-      2,
+      1.5,
       (pausedPos.z + mazeCenterPathPoint.z) / 2
     );
 
