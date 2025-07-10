@@ -5,7 +5,7 @@ import { isMobile } from "../config/config";
 const cameraPositionMazeCenter = new THREE.Vector3(0.557, 0.55, 0.4375);
 
 const cameraLookAtMazeCenter = new THREE.Vector3(0.557, -5, 0.4125);
-const objectMazeCenter = new THREE.Vector3(0.557, 0.5, 0.4375);
+const objectMazeCenter = new THREE.Vector3(0.557, 0, 0.4375);
 
 const cameraStartPoints = {
   startMobile: new THREE.Vector3(0.5, 2.5, 2.5),
@@ -1058,7 +1058,7 @@ const cameraHomeScrollPathPoints: CameraPathPoint[] = [
     pos: new THREE.Vector3(0.55675, 3, 0.45175),
     lookAt: cameraLookAtMazeCenter,
   },
-  { pos: objectMazeCenter, lookAt: cameraLookAtMazeCenter },
+  { pos: cameraPositionMazeCenter, lookAt: cameraLookAtMazeCenter },
 ];
 
 const cameraPOVPathPoints: CameraPathPoint[] = [
