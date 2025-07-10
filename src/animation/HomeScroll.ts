@@ -114,7 +114,9 @@ function updateScrollAnimation(
   if (paths.pacman && pacman) {
     const pacmanSpeed = characterSpeeds["pacman"] ?? 1.0;
     const rawPacmanProgress = Math.min(progress * pacmanSpeed, 1);
-    const easedPacmanProgress = Math.pow(rawPacmanProgress, 1.25); // inline quadratic ease-in
+    const blend = 0.5;
+    const easedPacmanProgress =
+      rawPacmanProgress * (1 - blend) + Math.pow(rawPacmanProgress, 2) * blend;
     const pacmanPoint = paths.pacman.getPointAt(easedPacmanProgress);
     if (pacmanPoint) {
       pacman.position.copy(pacmanPoint);
@@ -134,7 +136,9 @@ function updateScrollAnimation(
     if (path) {
       const ghostSpeed = characterSpeeds[key] ?? 1.0;
       const rawGhostProgress = Math.min(progress * ghostSpeed, 1);
-      const easedGhostProgress = Math.pow(rawGhostProgress, 1.25); // inline quadratic ease-in
+      const blend = 0.5;
+      const easedGhostProgress =
+        rawGhostProgress * (1 - blend) + Math.pow(rawGhostProgress, 2) * blend;
       const ghostPoint = path.getPointAt(easedGhostProgress);
       if (ghostPoint) {
         ghost.position.copy(ghostPoint);
