@@ -9,7 +9,7 @@ import { camera } from "../core/camera";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
-let hasAnimatedFirstScroll = false; // Track if first scroll animation has been done
+let hasAnimatedFirstScroll = false;
 
 const characterSpeeds: Record<string, number> = {
   pacman: 1.0,
