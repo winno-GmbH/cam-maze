@@ -8,7 +8,7 @@ const cameraStartPoints = {
   startMobile: new THREE.Vector3(0.5, 2.5, 2.5),
   startDesktop: new THREE.Vector3(-2, 2.5, 2),
   secondMobile: new THREE.Vector3(0.5, 2.5, 2),
-  secondDesktop: new THREE.Vector3(-1.5, 3, 1),
+  secondDesktop: new THREE.Vector3(-1, 3, 1.25),
   mobileLookAt: new THREE.Vector3(0.5, 0.5, -1.5),
   desktopLookAt: new THREE.Vector3(-1.25, 0.5, 0.25),
 };
