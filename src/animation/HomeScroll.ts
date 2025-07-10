@@ -9,6 +9,7 @@ import { camera } from "../core/camera";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
+let hasAnimatedFirstScroll = false; // Track if first scroll animation has been done
 
 const characterSpeeds: Record<string, number> = {
   pacman: 0.8,
@@ -61,11 +62,19 @@ export function initHomeScrollAnimation(
       }
     );
 
-  const minProgress = 0.001;
+  // Sync timeline progress to current scroll position, with ease-in on first scroll
   const trigger = ScrollTrigger.getById("homeScroll");
   if (trigger && homeScrollTimeline) {
-    const targetProgress = Math.max(trigger.progress, minProgress);
-    homeScrollTimeline.progress(targetProgress);
+    if (!hasAnimatedFirstScroll) {
+      hasAnimatedFirstScroll = true;
+      gsap.to(homeScrollTimeline, {
+        progress: trigger.progress,
+        duration: 0.5, // Adjust duration as needed
+        ease: "power2.out",
+      });
+    } else {
+      homeScrollTimeline.progress(trigger.progress);
+    }
   }
 }
 
