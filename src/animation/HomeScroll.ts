@@ -83,8 +83,8 @@ function updateScrollAnimation(
     console.log("Camera lookAt:", lookAtPoint.clone());
   }
 
-  const fadeStartProgress = 0.75;
-  const fadeEndProgress = 0.9;
+  const fadeStartProgress = 0.8;
+  const fadeEndProgress = 0.95;
   const opacity =
     progress < fadeStartProgress
       ? 1
