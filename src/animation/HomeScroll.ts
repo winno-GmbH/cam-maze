@@ -9,14 +9,13 @@ import { camera } from "../core/camera";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 
-// Character speed factors (pacman slowest)
 const characterSpeeds: Record<string, number> = {
-  pacman: 0.5, // slowest
-  ghost1: 1.0, // normal
-  ghost2: 1.2, // faster
-  ghost3: 1.4, // even faster
-  ghost4: 1.6, // fastest
-  ghost5: 1.8, // super fast (if you have 5 ghosts)
+  pacman: 0.8,
+  ghost1: 1.0,
+  ghost2: 1.2,
+  ghost3: 1.4,
+  ghost4: 1.6,
+  ghost5: 1.8,
 };
 
 export function initHomeScrollAnimation(
