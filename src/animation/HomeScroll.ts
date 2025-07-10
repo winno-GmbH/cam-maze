@@ -9,6 +9,16 @@ import { camera } from "../core/camera";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 
+// Character speed factors (pacman slowest)
+const characterSpeeds: Record<string, number> = {
+  pacman: 0.5, // slowest
+  ghost1: 1.0, // normal
+  ghost2: 1.2, // faster
+  ghost3: 1.4, // even faster
+  ghost4: 1.6, // fastest
+  ghost5: 1.8, // super fast (if you have 5 ghosts)
+};
+
 export function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
   pausedRotations: Record<string, THREE.Quaternion>
@@ -74,21 +84,27 @@ function updateScrollAnimation(
     console.log("Camera lookAt:", lookAtPoint.clone());
   }
 
+  // Pacman (slowest)
   if (paths.pacman && pacman) {
-    const pacmanPoint = paths.pacman.getPointAt(progress);
+    const pacmanSpeed = characterSpeeds["pacman"] ?? 1.0;
+    const pacmanProgress = Math.min(progress * pacmanSpeed, 1);
+    const pacmanPoint = paths.pacman.getPointAt(pacmanProgress);
     if (pacmanPoint) {
       pacman.position.copy(pacmanPoint);
-      slerpToLayDown(pacman, pausedRotations["pacman"], progress);
+      slerpToLayDown(pacman, pausedRotations["pacman"], pacmanProgress);
     }
   }
 
+  // Ghosts (each with their own speed)
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = paths[key];
     if (path) {
-      const ghostPoint = path.getPointAt(progress);
+      const ghostSpeed = characterSpeeds[key] ?? 1.0;
+      const ghostProgress = Math.min(progress * ghostSpeed, 1);
+      const ghostPoint = path.getPointAt(ghostProgress);
       if (ghostPoint) {
         ghost.position.copy(ghostPoint);
-        slerpToLayDown(ghost, pausedRotations[key], progress);
+        slerpToLayDown(ghost, pausedRotations[key], ghostProgress);
       }
     }
   });
