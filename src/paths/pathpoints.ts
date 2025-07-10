@@ -24,12 +24,6 @@ const lookAtPosition = isMobile
   : cameraStartPoints.desktopLookAt;
 
 const lookAtMazeCenter = new THREE.Vector3(0.557, -5, 0.4);
-const lookAtIntermediate1 = lookAtPosition
-  .clone()
-  .lerp(lookAtMazeCenter, 1 / 3);
-const lookAtIntermediate2 = lookAtPosition
-  .clone()
-  .lerp(lookAtMazeCenter, 2 / 3);
 
 const pacmanHomePathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(0.25525, 0.55, 0.6025), type: "straight" },
@@ -1059,8 +1053,8 @@ const ghost5HomePathPoints: MazePathPoint[] = [
 const cameraHomeScrollPathPoints: CameraPathPoint[] = [
   { pos: startPosition, lookAt: lookAtPosition },
   { pos: secondPosition },
-  { pos: new THREE.Vector3(0.55675, 3, 0.45175) },
-  { pos: mazeCenterPathPoint, lookAt: lookAtMazeCenter },
+  { pos: new THREE.Vector3(0.55675, 3, 0.45175), lookAt: lookAtMazeCenter },
+  { pos: mazeCenterPathPoint },
 ];
 
 const cameraPOVPathPoints: CameraPathPoint[] = [
