@@ -12,12 +12,12 @@ let homeScrollTimeline: gsap.core.Timeline | null = null;
 let hasAnimatedFirstScroll = false;
 
 const characterSpeeds: Record<string, number> = {
-  pacman: 0.8,
-  ghost1: 1,
-  ghost2: 1.2,
-  ghost3: 1.4,
-  ghost4: 1.6,
-  ghost5: 1.8,
+  pacman: 1,
+  ghost1: 1.175,
+  ghost2: 1.35,
+  ghost3: 1.525,
+  ghost4: 1.7,
+  ghost5: 1.875,
 };
 
 export function initHomeScrollAnimation(
