@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { MazePathPoint, PathPoint, CameraPathPoint } from "../types/types";
 import { isMobile } from "../config/config";
 
-const mazeCenterPathPoint = new THREE.Vector3(0.557, 0.55, 0.4375);
+const mazeCenterPathPoint = new THREE.Vector3(0.557, 0.45, 0.4375);
 
 const cameraStartPoints = {
   startMobile: new THREE.Vector3(0.5, 2.5, 2.5),
