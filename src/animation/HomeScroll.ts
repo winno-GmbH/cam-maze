@@ -78,14 +78,6 @@ export function initHomeScrollAnimation(
   }
 }
 
-function mapHomeScrollPathProgress(linearProgress: number) {
-  if (linearProgress < 2 / 3) {
-    return linearProgress * 0.5;
-  } else {
-    return 1 / 3 + (linearProgress - 2 / 3) * 2;
-  }
-}
-
 function updateScrollAnimation(
   progress: number,
   paths: Record<string, THREE.CurvePath<THREE.Vector3>>,
@@ -122,7 +114,7 @@ function updateScrollAnimation(
   if (paths.pacman && pacman) {
     const pacmanSpeed = characterSpeeds["pacman"] ?? 1.0;
     const rawPacmanProgress = Math.min(progress * pacmanSpeed, 1);
-    const easedPacmanProgress = mapHomeScrollPathProgress(rawPacmanProgress);
+    const easedPacmanProgress = Math.pow(rawPacmanProgress, 2); // inline quadratic ease-in
     const pacmanPoint = paths.pacman.getPointAt(easedPacmanProgress);
     if (pacmanPoint) {
       pacman.position.copy(pacmanPoint);
@@ -142,7 +134,7 @@ function updateScrollAnimation(
     if (path) {
       const ghostSpeed = characterSpeeds[key] ?? 1.0;
       const rawGhostProgress = Math.min(progress * ghostSpeed, 1);
-      const easedGhostProgress = mapHomeScrollPathProgress(rawGhostProgress);
+      const easedGhostProgress = Math.pow(rawGhostProgress, 2); // inline quadratic ease-in
       const ghostPoint = path.getPointAt(easedGhostProgress);
       if (ghostPoint) {
         ghost.position.copy(ghostPoint);
