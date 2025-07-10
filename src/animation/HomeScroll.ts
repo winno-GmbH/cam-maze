@@ -83,6 +83,13 @@ function updateScrollAnimation(
     console.log("Camera lookAt:", lookAtPoint.clone());
   }
 
+  // Calculate opacity for fade out in last 20% of animation
+  const fadeStartProgress = 0.8; // Start fading at 80% progress
+  const opacity =
+    progress < fadeStartProgress
+      ? 1
+      : 1 - (progress - fadeStartProgress) / (1 - fadeStartProgress);
+
   // Pacman (slowest)
   if (paths.pacman && pacman) {
     const pacmanSpeed = characterSpeeds["pacman"] ?? 1.0;
@@ -91,6 +98,13 @@ function updateScrollAnimation(
     if (pacmanPoint) {
       pacman.position.copy(pacmanPoint);
       slerpToLayDown(pacman, pausedRotations["pacman"], pacmanProgress);
+
+      // Animate pacman opacity
+      pacman.traverse((child) => {
+        if ((child as any).isMesh && (child as any).material) {
+          (child as any).material.opacity = opacity;
+        }
+      });
     }
   }
 
@@ -104,6 +118,11 @@ function updateScrollAnimation(
       if (ghostPoint) {
         ghost.position.copy(ghostPoint);
         slerpToLayDown(ghost, pausedRotations[key], ghostProgress);
+
+        // Animate ghost opacity
+        if ((ghost as any).material) {
+          (ghost as any).material.opacity = opacity;
+        }
       }
     }
   });
