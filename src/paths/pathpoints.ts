@@ -29,7 +29,7 @@ const lookAtIntermediate1 = lookAtPosition
 const lookAtIntermediate2 = lookAtPosition
   .clone()
   .lerp(mazeCenterPathPoint, 2 / 3);
-const lookAtMazeCenter = new THREE.Vector3(0.5, 0, 0.5);
+const lookAtMazeCenter = new THREE.Vector3(0.5, 0, 1);
 
 const pacmanHomePathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(0.25525, 0.55, 0.6025), type: "straight" },
