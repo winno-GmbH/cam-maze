@@ -7,6 +7,7 @@ import { HomeLoopHandler } from "./HomeLoop";
 import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import { camera } from "../core/camera";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { Power2 } from "gsap";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 let hasAnimatedFirstScroll = false;
@@ -113,12 +114,12 @@ function updateScrollAnimation(
   // Pacman (slowest)
   if (paths.pacman && pacman) {
     const pacmanSpeed = characterSpeeds["pacman"] ?? 1.0;
-    const pacmanProgress = Math.min(progress * pacmanSpeed, 1);
-    const pacmanPoint = paths.pacman.getPointAt(pacmanProgress);
+    const rawPacmanProgress = Math.min(progress * pacmanSpeed, 1);
+    const easedPacmanProgress = Power2.easeIn(rawPacmanProgress);
+    const pacmanPoint = paths.pacman.getPointAt(easedPacmanProgress);
     if (pacmanPoint) {
       pacman.position.copy(pacmanPoint);
-      slerpToLayDown(pacman, pausedRotations["pacman"], pacmanProgress);
-
+      slerpToLayDown(pacman, pausedRotations["pacman"], easedPacmanProgress);
       // Animate pacman opacity
       pacman.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
@@ -133,12 +134,12 @@ function updateScrollAnimation(
     const path = paths[key];
     if (path) {
       const ghostSpeed = characterSpeeds[key] ?? 1.0;
-      const ghostProgress = Math.min(progress * ghostSpeed, 1);
-      const ghostPoint = path.getPointAt(ghostProgress);
+      const rawGhostProgress = Math.min(progress * ghostSpeed, 1);
+      const easedGhostProgress = Power2.easeIn(rawGhostProgress);
+      const ghostPoint = path.getPointAt(easedGhostProgress);
       if (ghostPoint) {
         ghost.position.copy(ghostPoint);
-        slerpToLayDown(ghost, pausedRotations[key], ghostProgress);
-
+        slerpToLayDown(ghost, pausedRotations[key], easedGhostProgress);
         // Animate ghost opacity
         if ((ghost as any).material) {
           (ghost as any).material.opacity = opacity;
