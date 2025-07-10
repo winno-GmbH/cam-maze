@@ -1054,7 +1054,7 @@ const cameraHomeScrollPathPoints: CameraPathPoint[] = [
   { pos: startPosition, lookAt: lookAtPosition },
   { pos: secondPosition },
   { pos: new THREE.Vector3(0.55675, 3, 0.45175), lookAt: lookAtMazeCenter },
-  { pos: mazeCenterPathPoint },
+  { pos: mazeCenterPathPoint, lookAt: lookAtMazeCenter },
 ];
 
 const cameraPOVPathPoints: CameraPathPoint[] = [
