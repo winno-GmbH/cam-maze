@@ -68,7 +68,7 @@ export function initHomeScrollAnimation(
     if (trigger && homeScrollTimeline) {
       homeScrollTimeline.progress(trigger.progress);
     }
-  }, 150); // 150ms delay
+  }, 2000); // 150ms delay
 }
 
 function updateScrollAnimation(
