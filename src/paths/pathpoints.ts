@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { MazePathPoint, PathPoint, CameraPathPoint } from "../types/types";
 import { isMobile } from "../config/config";
 
-const mazeCenterPathPoint = new THREE.Vector3(0.575, 0.5, 0.425);
+const mazeCenterPathPoint = new THREE.Vector3(0.575, 0.55, 0.425);
 
 const cameraStartPoints = {
   startMobile: new THREE.Vector3(0.5, 2.5, 2.5),
@@ -23,13 +23,13 @@ const lookAtPosition = isMobile
   ? cameraStartPoints.mobileLookAt
   : cameraStartPoints.desktopLookAt;
 
+const lookAtMazeCenter = new THREE.Vector3(0.5, -5, -1);
 const lookAtIntermediate1 = lookAtPosition
   .clone()
-  .lerp(mazeCenterPathPoint, 1 / 3);
+  .lerp(lookAtMazeCenter, 1 / 3);
 const lookAtIntermediate2 = lookAtPosition
   .clone()
-  .lerp(mazeCenterPathPoint, 2 / 3);
-const lookAtMazeCenter = new THREE.Vector3(0.5, -5, -1);
+  .lerp(lookAtMazeCenter, 2 / 3);
 
 const pacmanHomePathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(0.25525, 0.55, 0.6025), type: "straight" },
