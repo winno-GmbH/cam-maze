@@ -1,8 +1,7 @@
 import * as THREE from "three";
 import { isMobile } from "../config/config";
 import { DOM_ELEMENTS } from "../config/selectors";
-import { camera, setupCamera } from "./camera";
-import { loadModel } from "./objects";
+import { camera } from "./camera";
 
 function enhanceAntiAliasing(): void {
   if (isMobile) {
@@ -86,10 +85,8 @@ export function initRenderer(): void {
 
 export function startRenderLoop(): void {
   const render = () => {
-    // Call all registered frame callbacks
     frameCallbacks.forEach((callback) => callback());
 
-    // Render the scene
     renderer.render(scene, camera);
 
     requestAnimationFrame(render);
