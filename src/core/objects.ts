@@ -44,6 +44,13 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
       function (gltf) {
         const model = gltf.scene;
 
+        // Print all elements in the 3D model
+        console.log("=== 3D Model Hierarchy ===");
+        model.traverse((obj: THREE.Object3D) => {
+          console.log(`[${obj.type}] ${obj.name}`);
+        });
+        console.log("=========================");
+
         model.traverse((child: THREE.Object3D) => {
           if (child.name === "CAM-Pacman") {
             const children: THREE.Object3D[] = [];
