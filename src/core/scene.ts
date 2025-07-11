@@ -84,11 +84,6 @@ export function initRenderer(): void {
   renderer.render(scene, camera);
 }
 
-export async function setupScene() {
-  setupCamera();
-  await loadModel(scene);
-}
-
 export function startRenderLoop(): void {
   const render = () => {
     // Call all registered frame callbacks
