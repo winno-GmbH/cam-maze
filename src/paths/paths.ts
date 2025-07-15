@@ -19,65 +19,14 @@ function createMazePath(
     curveType?: "upperArc" | "lowerArc" | "forwardDownArc";
   }>;
 
+  // Simple approach: just connect all points with straight lines
   for (let i = 0; i < typedPathPoints.length - 1; i++) {
     const current = typedPathPoints[i];
     const next = typedPathPoints[i + 1];
 
-    if (current.type === "straight") {
-      // Use cubic Bezier for straight lines too, with very small curvature
-      const midPoint = current.pos.clone().lerp(next.pos, 0.5);
-      const control1 = current.pos.clone().lerp(midPoint, 0.01); // Almost straight
-      const control2 = next.pos.clone().lerp(midPoint, 0.01); // Almost straight
-      path.add(
-        new THREE.CubicBezierCurve3(current.pos, control1, control2, next.pos)
-      );
-    } else if (current.type === "curve") {
-      const zigZagGroup = findZigZagGroup(typedPathPoints, i);
-
-      if (zigZagGroup) {
-        const startPoint = zigZagGroup.start;
-        const endPoint = zigZagGroup.end;
-
-        console.log(
-          `S-CURVE: i=${i}, endIndex=${zigZagGroup.endIndex}, next i will be ${
-            zigZagGroup.endIndex + 1
-          }`
-        );
-
-        // Create a single smooth S-curve through all zig-zag points
-        const zigZagPoints = [];
-        for (let j = i; j <= zigZagGroup.endIndex; j++) {
-          zigZagPoints.push(typedPathPoints[j]);
-        }
-
-        // Use a single cubic Bezier curve from start to end with control points
-        // that create a smooth path through the intermediate points
-        const start = zigZagPoints[0];
-        const end = zigZagPoints[zigZagPoints.length - 1];
-
-        // Calculate control points that create a smooth curve through all points
-        const midPoint = createNormalCurveMidPoint(start, end);
-
-        // Use control points that are closer to create straighter curves
-        const control1 = start.pos.clone().lerp(midPoint, 0.1);
-        const control2 = end.pos.clone().lerp(midPoint, 0.1);
-
-        path.add(
-          new THREE.CubicBezierCurve3(start.pos, control1, control2, end.pos)
-        );
-
-        i = zigZagGroup.endIndex;
-      } else {
-        // Use cubic Bezier for normal curves too, for consistency
-        const midPoint = createNormalCurveMidPoint(current, next);
-        const control1 = current.pos.clone().lerp(midPoint, 0.3);
-        const control2 = next.pos.clone().lerp(midPoint, 0.3);
-        path.add(
-          new THREE.CubicBezierCurve3(current.pos, control1, control2, next.pos)
-        );
-      }
-    }
+    path.add(new THREE.LineCurve3(current.pos, next.pos));
   }
+
   return path;
 }
 
