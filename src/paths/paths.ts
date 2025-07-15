@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { MazePathPoint, PathPoint, CameraPathPoint } from "../types/types";
 import {
   homePaths,
-  povPaths,
   createHomeScrollPathPoints,
   getCameraHomeScrollPathPoints,
 } from "./pathpoints";
@@ -27,63 +26,62 @@ function createMazePath(
     if (current.type === "straight") {
       path.add(new THREE.LineCurve3(current.pos, next.pos));
     } else if (current.type === "curve") {
-      const hasPrevCurve = i > 0 && typedPathPoints[i - 1].type === "curve";
-      const hasNextCurve =
-        i < typedPathPoints.length - 2 &&
-        typedPathPoints[i + 1].type === "curve";
+      const isZigZag = checkForZigZag(typedPathPoints, i);
 
-      const midPoint =
-        hasPrevCurve || hasNextCurve
-          ? createDoubleCurveMidPoint(current, next, hasPrevCurve, hasNextCurve)
-          : createSingleCurveMidPoint(current, next);
-
-      path.add(
-        new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
-      );
+      if (isZigZag) {
+        const softMidPoint = createSoftCurveMidPoint(current, next);
+        path.add(
+          new THREE.QuadraticBezierCurve3(current.pos, softMidPoint, next.pos)
+        );
+      } else {
+        const normalMidPoint = createNormalCurveMidPoint(current, next);
+        path.add(
+          new THREE.QuadraticBezierCurve3(current.pos, normalMidPoint, next.pos)
+        );
+      }
     }
   }
   return path;
 }
 
-function createCameraPath(
-  pathPoints: CameraPathPoint[]
-): THREE.CurvePath<THREE.Vector3> {
-  const path = new THREE.CurvePath<THREE.Vector3>();
-
-  const typedPathPoints = pathPoints.filter(
-    (point) => "type" in point
-  ) as Array<{
+function checkForZigZag(
+  pathPoints: Array<{
     pos: THREE.Vector3;
     type: "straight" | "curve";
-    curveType?: "upperArc" | "lowerArc" | "forwardDownArc";
-  }>;
+    curveType?: string;
+  }>,
+  currentIndex: number
+): boolean {
+  let consecutiveCurves = 0;
+  let previousCurveType: string | undefined;
 
-  for (let i = 0; i < typedPathPoints.length - 1; i++) {
-    const current = typedPathPoints[i];
-    const next = typedPathPoints[i + 1];
+  for (
+    let i = currentIndex;
+    i < Math.min(currentIndex + 3, pathPoints.length - 1);
+    i++
+  ) {
+    const point = pathPoints[i];
 
-    if (current.type === "straight") {
-      path.add(new THREE.LineCurve3(current.pos, next.pos));
-    } else if (current.type === "curve") {
-      const hasPrevCurve = i > 0 && typedPathPoints[i - 1].type === "curve";
-      const hasNextCurve =
-        i < typedPathPoints.length - 2 &&
-        typedPathPoints[i + 1].type === "curve";
+    if (point.type === "curve") {
+      consecutiveCurves++;
 
-      const midPoint =
-        hasPrevCurve || hasNextCurve
-          ? createDoubleCurveMidPoint(current, next, hasPrevCurve, hasNextCurve)
-          : createSingleCurveMidPoint(current, next);
+      if (
+        previousCurveType !== undefined &&
+        point.curveType !== previousCurveType
+      ) {
+        return consecutiveCurves >= 2;
+      }
 
-      path.add(
-        new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
-      );
+      previousCurveType = point.curveType;
+    } else {
+      break;
     }
   }
-  return path;
+
+  return false;
 }
 
-function createSingleCurveMidPoint(
+function createNormalCurveMidPoint(
   current: { pos: THREE.Vector3; curveType?: string },
   next: { pos: THREE.Vector3; curveType?: string }
 ): THREE.Vector3 {
@@ -102,17 +100,18 @@ function createSingleCurveMidPoint(
   return new THREE.Vector3(current.pos.x, current.pos.y, next.pos.z);
 }
 
-function createDoubleCurveMidPoint(
+function createSoftCurveMidPoint(
   current: { pos: THREE.Vector3; curveType?: string },
-  next: { pos: THREE.Vector3; curveType?: string },
-  hasPrevCurve: boolean,
-  hasNextCurve: boolean
+  next: { pos: THREE.Vector3; curveType?: string }
 ): THREE.Vector3 {
-  const smoothingFactor = 0.12;
-  const originalMidPoint = createSingleCurveMidPoint(current, next);
+  // For zig-zag patterns, create a softer curve with reduced side escalation
+  const normalMidPoint = createNormalCurveMidPoint(current, next);
   const straightMidPoint = current.pos.clone().lerp(next.pos, 0.5);
 
-  return originalMidPoint.clone().lerp(straightMidPoint, smoothingFactor);
+  // Use a higher smoothing factor to reduce side escalation
+  const smoothingFactor = 0.3; // Increased from 0.12 for softer curves
+
+  return normalMidPoint.clone().lerp(straightMidPoint, smoothingFactor);
 }
 
 function createHomeScrollPath(
@@ -181,30 +180,6 @@ export function getHomeScrollPaths(
 
   Object.entries(scrollPathPoints).forEach(([key, pathPoints]) => {
     paths[key] = createHomeScrollPath(pathPoints);
-  });
-
-  return paths;
-}
-
-export function getPOVPaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
-  const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
-
-  Object.entries(povPaths).forEach(([key, pathPoints]) => {
-    console.log(
-      `Creating POV path for ${key} with ${pathPoints.length} points`
-    );
-
-    if (key === "camera") {
-      paths[key] = createCameraPath(pathPoints as CameraPathPoint[]);
-      console.log(
-        `Camera path created with ${paths[key].curves.length} curves`
-      );
-    } else {
-      paths[key] = createMazePath(pathPoints as MazePathPoint[]);
-      console.log(
-        `${key} path created with ${paths[key].curves.length} curves`
-      );
-    }
   });
 
   return paths;
