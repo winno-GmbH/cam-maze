@@ -31,12 +31,12 @@ function createMazePath(
       const midPoint = createNormalCurveMidPoint(current, next);
 
       if (isZigZag) {
-        const softMidPoint = current.pos
-          .clone()
-          .lerp(next.pos, 0.5)
-          .lerp(midPoint, 0.3);
+        // For zig-zag patterns, use a cubic Bezier curve for smoother cornering
+        // Create control points that extend the curve direction for smoother transitions
+        const control1 = current.pos.clone().lerp(midPoint, 1.2);
+        const control2 = next.pos.clone().lerp(midPoint, 1.2);
         path.add(
-          new THREE.QuadraticBezierCurve3(current.pos, softMidPoint, next.pos)
+          new THREE.CubicBezierCurve3(current.pos, control1, control2, next.pos)
         );
       } else {
         path.add(
