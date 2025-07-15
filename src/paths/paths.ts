@@ -34,16 +34,7 @@ function createMazePath(
         const midPoint = createNormalCurveMidPoint(startPoint, endPoint);
 
         console.log(
-          `S-CURVE DEBUG: Creating S-curve from index ${i} to ${zigZagGroup.endIndex}`
-        );
-        console.log(
-          `S-CURVE DEBUG: Start point: ${startPoint.pos.x}, ${startPoint.pos.y}, ${startPoint.pos.z}`
-        );
-        console.log(
-          `S-CURVE DEBUG: End point: ${endPoint.pos.x}, ${endPoint.pos.y}, ${endPoint.pos.z}`
-        );
-        console.log(
-          `S-CURVE DEBUG: Skipping from index ${i} to ${zigZagGroup.endIndex}`
+          `S-CURVE: Creating curve from index ${i} to ${zigZagGroup.endIndex}`
         );
 
         const control1 = startPoint.pos.clone().lerp(midPoint, 0.6);
@@ -57,9 +48,7 @@ function createMazePath(
           )
         );
 
-        console.log(`S-CURVE DEBUG: Before skip: i = ${i}`);
         i = zigZagGroup.endIndex;
-        console.log(`S-CURVE DEBUG: After skip: i = ${i}`);
       } else {
         const midPoint = createNormalCurveMidPoint(current, next);
         path.add(
@@ -104,18 +93,8 @@ function findZigZagGroup(
 
   if (consecutiveZigZagCount >= 1) {
     const endIndex = currentIndex + consecutiveZigZagCount + 1;
-    console.log(`ZIGZAG DEBUG: Found zig-zag group at index ${currentIndex}`);
     console.log(
-      `ZIGZAG DEBUG: consecutiveZigZagCount = ${consecutiveZigZagCount}`
-    );
-    console.log(`ZIGZAG DEBUG: endIndex = ${endIndex}`);
-    console.log(
-      `ZIGZAG DEBUG: Start curveType = ${pathPoints[zigZagStartIndex].curveType}`
-    );
-    console.log(
-      `ZIGZAG DEBUG: End curveType = ${
-        pathPoints[endIndex]?.curveType || "undefined"
-      }`
+      `ZIGZAG: Found ${consecutiveZigZagCount} curves, endIndex=${endIndex}`
     );
     return {
       start: pathPoints[zigZagStartIndex],
