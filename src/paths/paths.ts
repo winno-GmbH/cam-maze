@@ -64,7 +64,6 @@ function findZigZagGroup(
   }>,
   currentIndex: number
 ): { start: any; end: any; endIndex: number } | null {
-  zigZagCallCount++;
   if (pathPoints[currentIndex].type !== "curve") {
     return null;
   }
@@ -95,13 +94,6 @@ function findZigZagGroup(
       end: pathPoints[endIndex],
       endIndex: endIndex,
     };
-  }
-
-  // Log call count every 100 calls to see how often it's being called
-  if (zigZagCallCount % 100 === 0) {
-    console.log(
-      `ZIGZAG: Called ${zigZagCallCount} times, found ${zigZagLogCount} groups`
-    );
   }
 
   return null;
