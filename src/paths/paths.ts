@@ -27,16 +27,12 @@ function createMazePath(
       path.add(new THREE.LineCurve3(current.pos, next.pos));
     } else if (current.type === "curve") {
       const isZigZag = checkForZigZag(typedPathPoints, i);
-
+      const midPoint = createNormalCurveMidPoint(current, next);
       if (isZigZag) {
-        const softMidPoint = createSoftCurveMidPoint(current, next);
-        path.add(
-          new THREE.QuadraticBezierCurve3(current.pos, softMidPoint, next.pos)
-        );
+        path.add(new THREE.CubicBezierCurve3(current.pos, midPoint, next.pos));
       } else {
-        const normalMidPoint = createNormalCurveMidPoint(current, next);
         path.add(
-          new THREE.QuadraticBezierCurve3(current.pos, normalMidPoint, next.pos)
+          new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
         );
       }
     }
@@ -98,33 +94,6 @@ function createNormalCurveMidPoint(
   }
 
   return new THREE.Vector3(current.pos.x, current.pos.y, next.pos.z);
-}
-
-function createSoftCurveMidPoint(
-  current: { pos: THREE.Vector3; curveType?: string },
-  next: { pos: THREE.Vector3; curveType?: string }
-): THREE.Vector3 {
-  const straightMidPoint = current.pos.clone().lerp(next.pos, 0.5);
-
-  // Add a small amount of curve based on the curveType, but much less than normal
-  if (current.curveType) {
-    const curveType = current.curveType;
-    let curveOffset: THREE.Vector3;
-
-    if (curveType === "upperArc") {
-      curveOffset = new THREE.Vector3(0, 0, (next.pos.z - current.pos.z) * 0.1);
-    } else if (curveType === "lowerArc") {
-      curveOffset = new THREE.Vector3((next.pos.x - current.pos.x) * 0.1, 0, 0);
-    } else if (curveType === "forwardDownArc") {
-      curveOffset = new THREE.Vector3(0, (next.pos.y - current.pos.y) * 0.1, 0);
-    } else {
-      curveOffset = new THREE.Vector3(0, 0, 0);
-    }
-
-    return straightMidPoint.clone().add(curveOffset);
-  }
-
-  return straightMidPoint;
 }
 
 function createHomeScrollPath(
