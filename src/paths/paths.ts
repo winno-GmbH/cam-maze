@@ -19,50 +19,13 @@ function createMazePath(
     curveType?: "upperArc" | "lowerArc" | "forwardDownArc";
   }>;
 
-  // Simple approach: just connect all points with straight lines
-  for (let i = 0; i < typedPathPoints.length - 1; i++) {
-    const current = typedPathPoints[i];
-    const next = typedPathPoints[i + 1];
+  // Extract all positions
+  const positions = typedPathPoints.map((point) => point.pos);
 
-    if (current.type === "straight") {
-      path.add(new THREE.LineCurve3(current.pos, next.pos));
-    } else if (current.type === "curve") {
-      // Simple curve logic with reduced intensity
-      const straightMidPoint = current.pos.clone().lerp(next.pos, 0.5);
-
-      // Create a gentle curve by offsetting the midpoint slightly
-      let curveOffset = new THREE.Vector3(0, 0, 0);
-      if (current.curveType === "upperArc") {
-        curveOffset = new THREE.Vector3(
-          0,
-          0,
-          (next.pos.z - current.pos.z) * 0.1
-        );
-      } else if (current.curveType === "lowerArc") {
-        curveOffset = new THREE.Vector3(
-          (next.pos.x - current.pos.x) * 0.1,
-          0,
-          0
-        );
-      } else if (current.curveType === "forwardDownArc") {
-        curveOffset = new THREE.Vector3(
-          0,
-          (next.pos.y - current.pos.y) * 0.1,
-          0
-        );
-      }
-
-      const softMidPoint = straightMidPoint.clone().add(curveOffset);
-
-      // Use cubic Bezier for smoother rotation
-      const control1 = current.pos.clone().lerp(softMidPoint, 0.7);
-      const control2 = next.pos.clone().lerp(softMidPoint, 0.7);
-
-      path.add(
-        new THREE.CubicBezierCurve3(current.pos, control1, control2, next.pos)
-      );
-    }
-  }
+  // Create a single CatmullRomCurve3 that passes through all points
+  // This provides smooth rotation while following the exact path
+  const curve = new THREE.CatmullRomCurve3(positions);
+  path.add(curve);
 
   return path;
 }
