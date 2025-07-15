@@ -34,7 +34,7 @@ function createMazePath(
 
       const midPoint =
         hasPrevCurve || hasNextCurve
-          ? createDoubleCurveMidPoint(current, next, hasPrevCurve, hasNextCurve)
+          ? createFlattenedCurveMidPoint(current, next)
           : createSingleCurveMidPoint(current, next);
 
       path.add(
@@ -71,17 +71,21 @@ function createSingleCurveMidPoint(
   return new THREE.Vector3(current.pos.x, current.pos.y, next.pos.z);
 }
 
-function createDoubleCurveMidPoint(
+function createFlattenedCurveMidPoint(
   current: { pos: THREE.Vector3; curveType?: string },
-  next: { pos: THREE.Vector3; curveType?: string },
-  hasPrevCurve: boolean,
-  hasNextCurve: boolean
+  next: { pos: THREE.Vector3; curveType?: string }
 ): THREE.Vector3 {
-  const smoothingFactor = 0.05; // Increased from 0.12 to make curves much smoother
-  const originalMidPoint = createSingleCurveMidPoint(current, next);
+  // Create the original sharp curve midpoint
+  const sharpMidPoint = createSingleCurveMidPoint(current, next);
+
+  // Create a straight line midpoint
   const straightMidPoint = current.pos.clone().lerp(next.pos, 0.5);
 
-  return originalMidPoint.clone().lerp(straightMidPoint, smoothingFactor);
+  // Interpolate between sharp curve and straight line to flatten the curve
+  // Lower values = more curved, higher values = more straight
+  const flattenFactor = 0.6; // Adjust this to control curve sharpness
+
+  return sharpMidPoint.clone().lerp(straightMidPoint, flattenFactor);
 }
 
 function createHomeScrollPath(
