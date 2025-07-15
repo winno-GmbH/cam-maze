@@ -28,11 +28,31 @@ function createMazePath(
       path.add(new THREE.LineCurve3(current.pos, next.pos));
     } else if (current.type === "curve") {
       // Simple curve logic with reduced intensity
-      const normalMidPoint = createNormalCurveMidPoint(current, next);
       const straightMidPoint = current.pos.clone().lerp(next.pos, 0.5);
 
-      // Find the sweet spot: smooth rotation but straighter curves
-      const softMidPoint = straightMidPoint.clone().lerp(normalMidPoint, 0.6);
+      // Create a gentle curve by offsetting the midpoint slightly
+      let curveOffset = new THREE.Vector3(0, 0, 0);
+      if (current.curveType === "upperArc") {
+        curveOffset = new THREE.Vector3(
+          0,
+          0,
+          (next.pos.z - current.pos.z) * 0.3
+        );
+      } else if (current.curveType === "lowerArc") {
+        curveOffset = new THREE.Vector3(
+          (next.pos.x - current.pos.x) * 0.3,
+          0,
+          0
+        );
+      } else if (current.curveType === "forwardDownArc") {
+        curveOffset = new THREE.Vector3(
+          0,
+          (next.pos.y - current.pos.y) * 0.3,
+          0
+        );
+      }
+
+      const softMidPoint = straightMidPoint.clone().add(curveOffset);
 
       // Use cubic Bezier for smoother rotation
       const control1 = current.pos.clone().lerp(softMidPoint, 0.7);
