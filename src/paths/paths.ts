@@ -44,7 +44,6 @@ function createMazePath(
           )
         );
 
-        // Skip all intermediate points in the zig-zag group
         i = zigZagGroup.endIndex;
       } else {
         const midPoint = createNormalCurveMidPoint(current, next);
@@ -65,58 +64,41 @@ function findZigZagGroup(
   }>,
   currentIndex: number
 ): { start: any; end: any; endIndex: number } | null {
-  // Check if we're at the start of a zig-zag pattern
-  let consecutiveCurves = 0;
-  let previousCurveType: string | undefined;
-  let zigZagStartIndex = -1;
+  // Check if current point is a curve
+  if (pathPoints[currentIndex].type !== "curve") {
+    return null;
+  }
 
-  for (
-    let i = currentIndex;
-    i < Math.min(currentIndex + 4, pathPoints.length - 1);
-    i++
-  ) {
+  let zigZagStartIndex = currentIndex;
+  let previousCurveType = pathPoints[currentIndex].curveType;
+  let consecutiveZigZagCount = 0;
+
+  // Look ahead to find all consecutive zig-zag curves
+  for (let i = currentIndex + 1; i < pathPoints.length; i++) {
     const point = pathPoints[i];
 
     if (point.type === "curve") {
-      consecutiveCurves++;
-
-      if (
-        previousCurveType !== undefined &&
-        point.curveType !== previousCurveType
-      ) {
-        // Found a zig-zag pattern
-        if (zigZagStartIndex === -1) {
-          zigZagStartIndex = i - 1; // Start from the previous curve
-        }
-      } else if (zigZagStartIndex !== -1) {
-        // Zig-zag pattern ended, return the group
-        return {
-          start: pathPoints[zigZagStartIndex],
-          end: pathPoints[i],
-          endIndex: i,
-        };
+      // Check if this curve alternates with the previous one (zig-zag)
+      if (point.curveType !== previousCurveType) {
+        consecutiveZigZagCount++;
+        previousCurveType = point.curveType;
+      } else {
+        // Same curveType - zig-zag pattern ended
+        break;
       }
-
-      previousCurveType = point.curveType;
     } else {
-      // Straight path - if we found a zig-zag, return it
-      if (zigZagStartIndex !== -1) {
-        return {
-          start: pathPoints[zigZagStartIndex],
-          end: pathPoints[i - 1],
-          endIndex: i - 1,
-        };
-      }
+      // Straight path - zig-zag pattern ended
       break;
     }
   }
 
-  // Check if we're at the end of the array and have a zig-zag
-  if (zigZagStartIndex !== -1) {
+  // If we found at least 2 consecutive zig-zag curves, return the group
+  if (consecutiveZigZagCount >= 1) {
+    const endIndex = currentIndex + consecutiveZigZagCount;
     return {
       start: pathPoints[zigZagStartIndex],
-      end: pathPoints[pathPoints.length - 1],
-      endIndex: pathPoints.length - 1,
+      end: pathPoints[endIndex],
+      endIndex: endIndex,
     };
   }
 
