@@ -13,6 +13,9 @@ let pausedPositions: Record<string, THREE.Vector3> = {};
 let pausedRotations: Record<string, THREE.Quaternion> = {};
 let homeLoopFrameRegistered = false;
 
+// Track previous rotations for smoothing
+let previousRotations: Record<string, number> = {};
+
 function stopHomeLoop() {
   if (!isHomeLoopActive) return;
   isHomeLoopActive = false;
@@ -29,6 +32,9 @@ function stopHomeLoop() {
 function startHomeLoop() {
   isHomeLoopActive = true;
   animationTime = pausedT * LOOP_DURATION;
+
+  // Reset previous rotations for clean state
+  previousRotations = {};
 
   const homePaths = getHomePaths();
   Object.entries(ghosts).forEach(([key, ghost]) => {
@@ -58,7 +64,38 @@ function updateHomeLoop(delta: number) {
       if (position) ghost.position.copy(position);
       if (tangent && tangent.length() > 0) {
         const objectType = key === "pacman" ? "pacman" : "ghost";
-        calculateObjectOrientation(ghost, tangent, objectType);
+
+        // Calculate target rotation
+        const targetRotation = Math.atan2(tangent.x, tangent.z);
+
+        // Apply rotation smoothing for ghosts
+        if (objectType === "ghost") {
+          if (previousRotations[key] === undefined) {
+            previousRotations[key] = targetRotation;
+          }
+
+          let rotationDiff = targetRotation - previousRotations[key];
+
+          // Handle angle wrapping
+          if (rotationDiff > Math.PI) {
+            rotationDiff -= 2 * Math.PI;
+          } else if (rotationDiff < -Math.PI) {
+            rotationDiff += 2 * Math.PI;
+          }
+
+          // Smooth the rotation
+          const smoothFactor = 0.15; // Adjust this value to control smoothing speed
+          const smoothedRotation =
+            previousRotations[key] + rotationDiff * smoothFactor;
+
+          previousRotations[key] = smoothedRotation;
+
+          // Apply the smoothed rotation
+          ghost.rotation.set(0, smoothedRotation, 0);
+        } else {
+          // For pacman, use the original calculation
+          calculateObjectOrientation(ghost, tangent, objectType);
+        }
       }
     }
   });
