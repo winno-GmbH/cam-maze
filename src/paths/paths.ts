@@ -32,7 +32,7 @@ function createMazePath(
       const straightMidPoint = current.pos.clone().lerp(next.pos, 0.5);
 
       // Use mostly straight line with just a bit of curve
-      const softMidPoint = straightMidPoint.clone().lerp(normalMidPoint, 0.2);
+      const softMidPoint = straightMidPoint.clone().lerp(normalMidPoint, 0.4);
 
       path.add(
         new THREE.QuadraticBezierCurve3(current.pos, softMidPoint, next.pos)
