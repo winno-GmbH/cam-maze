@@ -36,18 +36,18 @@ function createMazePath(
         curveOffset = new THREE.Vector3(
           0,
           0,
-          (next.pos.z - current.pos.z) * 0.3
+          (next.pos.z - current.pos.z) * 0.1
         );
       } else if (current.curveType === "lowerArc") {
         curveOffset = new THREE.Vector3(
-          (next.pos.x - current.pos.x) * 0.3,
+          (next.pos.x - current.pos.x) * 0.1,
           0,
           0
         );
       } else if (current.curveType === "forwardDownArc") {
         curveOffset = new THREE.Vector3(
           0,
-          (next.pos.y - current.pos.y) * 0.3,
+          (next.pos.y - current.pos.y) * 0.1,
           0
         );
       }
