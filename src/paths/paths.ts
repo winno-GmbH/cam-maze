@@ -33,6 +33,12 @@ function createMazePath(
         const endPoint = zigZagGroup.end;
         const midPoint = createNormalCurveMidPoint(startPoint, endPoint);
 
+        console.log(
+          `S-CURVE: i=${i}, endIndex=${zigZagGroup.endIndex}, next i will be ${
+            zigZagGroup.endIndex + 1
+          }`
+        );
+
         const control1 = startPoint.pos.clone().lerp(midPoint, 0.6);
         const control2 = endPoint.pos.clone().lerp(midPoint, 0.6);
         path.add(
