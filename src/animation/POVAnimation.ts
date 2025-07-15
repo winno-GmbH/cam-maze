@@ -25,7 +25,7 @@ class POVAnimationHandler {
   private timeline: gsap.core.Timeline | null = null;
 
   // Animation constants
-  private readonly TRIGGER_DISTANCE = 0.02;
+  private readonly TRIGGER_DISTANCE = 0.1; // Increased for testing
   private readonly START_END_SCREEN_SECTION_PROGRESS = 0.8;
   private readonly ROTATION_STARTING_POINT = 0.973;
 
@@ -40,6 +40,10 @@ class POVAnimationHandler {
   constructor(ghosts: GhostContainer) {
     this.ghosts = ghosts;
     this.paths = getPOVPaths();
+
+    // Debug: Log available paths and trigger positions
+    console.log("POV Paths available:", Object.keys(this.paths));
+    console.log("POV Trigger positions:", povTriggerPositions);
 
     this.state = {
       isInPOVSection: false,
@@ -62,7 +66,7 @@ class POVAnimationHandler {
           start: "top bottom",
           end: "bottom top",
           endTrigger: ".sc--final",
-          scrub: 0.5,
+          scrub: 5, // Increased for testing
           toggleActions: "play none none reverse",
           onLeave: () => this.handleLeavePOV(),
           onLeaveBack: () => this.handleLeavePOV(),
@@ -349,6 +353,13 @@ class POVAnimationHandler {
   private updateGhosts(cameraProgress: number): void {
     const pathMapping = this.getPathMapping();
 
+    // Debug: Log ghost update call
+    if (cameraProgress > 0.1 && cameraProgress < 0.2) {
+      console.log(
+        `updateGhosts called at progress: ${cameraProgress.toFixed(3)}`
+      );
+    }
+
     Object.entries(this.ghosts).forEach(([key, ghost]) => {
       if (key === "pacman") return;
 
@@ -358,6 +369,15 @@ class POVAnimationHandler {
         povTriggerPositions[key as keyof typeof povTriggerPositions]
       ) {
         this.updateGhost(key, ghost, pathKey, cameraProgress);
+      } else {
+        if (key === "ghost1") {
+          console.warn(
+            `Ghost1 path or trigger missing - pathKey: ${pathKey}, hasPath: ${!!this
+              .paths[pathKey]}, hasTrigger: ${!!povTriggerPositions[
+              key as keyof typeof povTriggerPositions
+            ]}`
+          );
+        }
       }
     });
   }
@@ -370,10 +390,16 @@ class POVAnimationHandler {
   ): void {
     const triggerData =
       povTriggerPositions[key as keyof typeof povTriggerPositions];
-    if (!triggerData) return;
+    if (!triggerData) {
+      console.warn(`No trigger data for ${key}`);
+      return;
+    }
 
     const path = this.paths[pathKey];
-    if (!path) return;
+    if (!path) {
+      console.warn(`No path found for ${key} (${pathKey})`);
+      return;
+    }
 
     // Find closest progress on camera path to trigger position
     const triggerProgress = this.findClosestProgressOnPath(
@@ -383,6 +409,17 @@ class POVAnimationHandler {
 
     // Calculate distance to trigger
     const distanceToTrigger = Math.abs(cameraProgress - triggerProgress);
+
+    // Debug logging
+    if (key === "ghost1") {
+      console.log(
+        `Ghost1 - Camera: ${cameraProgress.toFixed(
+          3
+        )}, Trigger: ${triggerProgress.toFixed(
+          3
+        )}, Distance: ${distanceToTrigger.toFixed(3)}`
+      );
+    }
 
     if (distanceToTrigger < this.TRIGGER_DISTANCE) {
       // Show ghost and animate it
@@ -398,6 +435,12 @@ class POVAnimationHandler {
 
         const tangent = path.getTangentAt(clampedProgress).normalize();
         ghost.lookAt(position.clone().add(tangent));
+      }
+
+      if (key === "ghost1") {
+        console.log(
+          `Ghost1 visible at progress: ${clampedProgress.toFixed(3)}`
+        );
       }
     } else {
       ghost.visible = false;
