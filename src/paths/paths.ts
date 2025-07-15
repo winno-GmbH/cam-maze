@@ -31,7 +31,6 @@ function createMazePath(
       if (zigZagGroup) {
         const startPoint = zigZagGroup.start;
         const endPoint = zigZagGroup.end;
-        const midPoint = createNormalCurveMidPoint(startPoint, endPoint);
 
         console.log(
           `S-CURVE: i=${i}, endIndex=${zigZagGroup.endIndex}, next i will be ${
@@ -39,16 +38,30 @@ function createMazePath(
           }`
         );
 
-        const control1 = startPoint.pos.clone().lerp(midPoint, 0.6);
-        const control2 = endPoint.pos.clone().lerp(midPoint, 0.6);
-        path.add(
-          new THREE.CubicBezierCurve3(
-            startPoint.pos,
-            control1,
-            control2,
-            endPoint.pos
-          )
-        );
+        // Create a smoother S-curve by using multiple cubic Bezier curves
+        // that pass through the intermediate zig-zag points
+        const zigZagPoints = [];
+        for (let j = i; j <= zigZagGroup.endIndex; j++) {
+          zigZagPoints.push(typedPathPoints[j]);
+        }
+
+        // Create a smooth curve through all zig-zag points
+        for (let j = 0; j < zigZagPoints.length - 1; j++) {
+          const current = zigZagPoints[j];
+          const next = zigZagPoints[j + 1];
+          const midPoint = createNormalCurveMidPoint(current, next);
+
+          const control1 = current.pos.clone().lerp(midPoint, 0.6);
+          const control2 = next.pos.clone().lerp(midPoint, 0.6);
+          path.add(
+            new THREE.CubicBezierCurve3(
+              current.pos,
+              control1,
+              control2,
+              next.pos
+            )
+          );
+        }
 
         i = zigZagGroup.endIndex;
       } else {
