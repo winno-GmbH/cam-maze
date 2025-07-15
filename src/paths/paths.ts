@@ -77,7 +77,7 @@ function createDoubleCurveMidPoint(
   hasPrevCurve: boolean,
   hasNextCurve: boolean
 ): THREE.Vector3 {
-  const smoothingFactor = 0.35; // Increased from 0.12 to make curves much smoother
+  const smoothingFactor = 1; // Increased from 0.12 to make curves much smoother
   const originalMidPoint = createSingleCurveMidPoint(current, next);
   const straightMidPoint = current.pos.clone().lerp(next.pos, 0.5);
 
