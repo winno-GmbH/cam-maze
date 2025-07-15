@@ -34,8 +34,12 @@ function createMazePath(
       // Use mostly straight line with just a bit of curve
       const softMidPoint = straightMidPoint.clone().lerp(normalMidPoint, 0.4);
 
+      // Use cubic Bezier for smoother rotation
+      const control1 = current.pos.clone().lerp(softMidPoint, 0.7);
+      const control2 = next.pos.clone().lerp(softMidPoint, 0.7);
+
       path.add(
-        new THREE.QuadraticBezierCurve3(current.pos, softMidPoint, next.pos)
+        new THREE.CubicBezierCurve3(current.pos, control1, control2, next.pos)
       );
     }
   }
