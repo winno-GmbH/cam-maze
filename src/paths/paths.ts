@@ -41,8 +41,8 @@ function createMazePath(
         // Create a smoother S-curve by using multiple cubic Bezier curves
         // that pass through the intermediate zig-zag points
         const zigZagPoints = [];
-        for (let j = i; j < zigZagGroup.endIndex; j++) {
-          // Changed from <= to <
+        for (let j = i; j <= zigZagGroup.endIndex; j++) {
+          // Changed back to <=
           zigZagPoints.push(typedPathPoints[j]);
         }
 
@@ -53,8 +53,8 @@ function createMazePath(
           const midPoint = createNormalCurveMidPoint(current, next);
 
           // Make curves straighter by using control points closer to the line
-          const control1 = current.pos.clone().lerp(midPoint, 0.3); // Reduced from 0.6
-          const control2 = next.pos.clone().lerp(midPoint, 0.3); // Reduced from 0.6
+          const control1 = current.pos.clone().lerp(midPoint, 0.15); // Reduced from 0.3
+          const control2 = next.pos.clone().lerp(midPoint, 0.15); // Reduced from 0.3
           path.add(
             new THREE.CubicBezierCurve3(
               current.pos,
