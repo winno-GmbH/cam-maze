@@ -24,7 +24,15 @@ function createMazePath(
     const current = typedPathPoints[i];
     const next = typedPathPoints[i + 1];
 
-    path.add(new THREE.LineCurve3(current.pos, next.pos));
+    if (current.type === "straight") {
+      path.add(new THREE.LineCurve3(current.pos, next.pos));
+    } else if (current.type === "curve") {
+      // Simple curve logic without zig-zag complexity
+      const midPoint = createNormalCurveMidPoint(current, next);
+      path.add(
+        new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
+      );
+    }
   }
 
   return path;
