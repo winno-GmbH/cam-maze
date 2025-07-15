@@ -33,6 +33,19 @@ function createMazePath(
         const endPoint = zigZagGroup.end;
         const midPoint = createNormalCurveMidPoint(startPoint, endPoint);
 
+        console.log(
+          `S-CURVE DEBUG: Creating S-curve from index ${i} to ${zigZagGroup.endIndex}`
+        );
+        console.log(
+          `S-CURVE DEBUG: Start point: ${startPoint.pos.x}, ${startPoint.pos.y}, ${startPoint.pos.z}`
+        );
+        console.log(
+          `S-CURVE DEBUG: End point: ${endPoint.pos.x}, ${endPoint.pos.y}, ${endPoint.pos.z}`
+        );
+        console.log(
+          `S-CURVE DEBUG: Skipping from index ${i} to ${zigZagGroup.endIndex}`
+        );
+
         const control1 = startPoint.pos.clone().lerp(midPoint, 0.6);
         const control2 = endPoint.pos.clone().lerp(midPoint, 0.6);
         path.add(
@@ -44,7 +57,9 @@ function createMazePath(
           )
         );
 
+        console.log(`S-CURVE DEBUG: Before skip: i = ${i}`);
         i = zigZagGroup.endIndex;
+        console.log(`S-CURVE DEBUG: After skip: i = ${i}`);
       } else {
         const midPoint = createNormalCurveMidPoint(current, next);
         path.add(
@@ -64,7 +79,6 @@ function findZigZagGroup(
   }>,
   currentIndex: number
 ): { start: any; end: any; endIndex: number } | null {
-  // Check if current point is a curve
   if (pathPoints[currentIndex].type !== "curve") {
     return null;
   }
@@ -73,28 +87,36 @@ function findZigZagGroup(
   let previousCurveType = pathPoints[currentIndex].curveType;
   let consecutiveZigZagCount = 0;
 
-  // Look ahead to find all consecutive zig-zag curves
   for (let i = currentIndex + 1; i < pathPoints.length; i++) {
     const point = pathPoints[i];
 
     if (point.type === "curve") {
-      // Check if this curve alternates with the previous one (zig-zag)
       if (point.curveType !== previousCurveType) {
         consecutiveZigZagCount++;
         previousCurveType = point.curveType;
       } else {
-        // Same curveType - zig-zag pattern ended
         break;
       }
     } else {
-      // Straight path - zig-zag pattern ended
       break;
     }
   }
 
-  // If we found at least 1 consecutive zig-zag curve, return the group
   if (consecutiveZigZagCount >= 1) {
-    const endIndex = currentIndex + consecutiveZigZagCount + 1; // +1 to include the next point after the last zig-zag
+    const endIndex = currentIndex + consecutiveZigZagCount + 1;
+    console.log(`ZIGZAG DEBUG: Found zig-zag group at index ${currentIndex}`);
+    console.log(
+      `ZIGZAG DEBUG: consecutiveZigZagCount = ${consecutiveZigZagCount}`
+    );
+    console.log(`ZIGZAG DEBUG: endIndex = ${endIndex}`);
+    console.log(
+      `ZIGZAG DEBUG: Start curveType = ${pathPoints[zigZagStartIndex].curveType}`
+    );
+    console.log(
+      `ZIGZAG DEBUG: End curveType = ${
+        pathPoints[endIndex]?.curveType || "undefined"
+      }`
+    );
     return {
       start: pathPoints[zigZagStartIndex],
       end: pathPoints[endIndex],
