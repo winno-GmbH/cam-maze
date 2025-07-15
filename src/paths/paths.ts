@@ -29,7 +29,6 @@ function createMazePath(
       const zigZagGroup = findZigZagGroup(typedPathPoints, i);
 
       if (zigZagGroup) {
-        // Create one smooth curve for the entire zig-zag group
         const startPoint = zigZagGroup.start;
         const endPoint = zigZagGroup.end;
         const midPoint = createNormalCurveMidPoint(startPoint, endPoint);
@@ -45,10 +44,8 @@ function createMazePath(
           )
         );
 
-        // Skip the intermediate points in the zig-zag group
         i = zigZagGroup.endIndex - 1;
       } else {
-        // Single curve - use normal approach
         const midPoint = createNormalCurveMidPoint(current, next);
         path.add(
           new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
