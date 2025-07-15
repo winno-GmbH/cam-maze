@@ -7,148 +7,10 @@ import {
   getCameraHomeScrollPathPoints,
 } from "./pathpoints";
 
-export { PathWithMetadata, PathSegment };
-
-interface PathSegment {
-  type: "straight" | "curve" | "multiCurve";
-  startIndex: number;
-  endIndex: number;
-  curveCount?: number;
-  directionChanges?: number;
-  rotationAngle?: number;
-}
-
-interface PathWithMetadata {
-  path: THREE.CurvePath<THREE.Vector3>;
-  segments: PathSegment[];
-}
-
-function analyzePathSegments(
-  pathPoints: (MazePathPoint | CameraPathPoint)[]
-): PathSegment[] {
-  const segments: PathSegment[] = [];
-  const typedPathPoints = pathPoints.filter(
-    (point) => "type" in point
-  ) as Array<{
-    pos: THREE.Vector3;
-    type: "straight" | "curve";
-    curveType?: "upperArc" | "lowerArc" | "forwardDownArc";
-  }>;
-
-  let currentSegment: PathSegment | null = null;
-  let curveSequence: number[] = [];
-
-  for (let i = 0; i < typedPathPoints.length; i++) {
-    const point = typedPathPoints[i];
-
-    if (point.type === "straight") {
-      // End current segment if it exists
-      if (currentSegment) {
-        currentSegment.endIndex = i - 1;
-        segments.push(currentSegment);
-        currentSegment = null;
-        curveSequence = [];
-      }
-
-      // Start new straight segment
-      currentSegment = {
-        type: "straight",
-        startIndex: i,
-        endIndex: i,
-      };
-    } else if (point.type === "curve") {
-      curveSequence.push(i);
-
-      if (!currentSegment) {
-        currentSegment = {
-          type: "curve",
-          startIndex: i,
-          endIndex: i,
-        };
-      } else if (currentSegment.type === "straight") {
-        // End straight segment and start curve segment
-        currentSegment.endIndex = i - 1;
-        segments.push(currentSegment);
-
-        currentSegment = {
-          type: "curve",
-          startIndex: i,
-          endIndex: i,
-        };
-      } else {
-        // Continue curve segment
-        currentSegment.endIndex = i;
-      }
-    }
-  }
-
-  // Add final segment
-  if (currentSegment) {
-    currentSegment.endIndex = typedPathPoints.length - 1;
-    segments.push(currentSegment);
-  }
-
-  // Analyze curve sequences for multi-curve segments
-  const finalSegments: PathSegment[] = [];
-
-  for (let i = 0; i < segments.length; i++) {
-    const segment = segments[i];
-
-    if (segment.type === "curve") {
-      // Count consecutive curves
-      let curveCount = 1;
-      let directionChanges = 0;
-
-      // Look ahead for consecutive curves
-      for (let j = i + 1; j < segments.length; j++) {
-        if (segments[j].type === "curve") {
-          curveCount++;
-        } else {
-          break;
-        }
-      }
-
-      // Analyze direction changes in curve sequence
-      if (curveCount > 1) {
-        const curveIndices = [];
-        for (let j = i; j < i + curveCount; j++) {
-          curveIndices.push(segments[j].startIndex);
-        }
-
-        // Check for direction changes
-        for (let k = 0; k < curveIndices.length - 1; k++) {
-          const currentCurve = typedPathPoints[curveIndices[k]];
-          const nextCurve = typedPathPoints[curveIndices[k + 1]];
-
-          if (currentCurve.curveType !== nextCurve.curveType) {
-            directionChanges++;
-          }
-        }
-
-        // If multiple curves with direction changes, mark as multiCurve
-        if (directionChanges > 0) {
-          segment.type = "multiCurve";
-          segment.curveCount = curveCount;
-          segment.directionChanges = directionChanges;
-          segment.rotationAngle = 75; // Use 75° instead of 90°
-
-          // Skip the next curveCount-1 segments since we've merged them
-          i += curveCount - 1;
-        }
-      }
-    }
-
-    finalSegments.push(segment);
-  }
-
-  return finalSegments;
-}
-
 function createMazePath(
   pathPoints: (MazePathPoint | CameraPathPoint)[]
-): PathWithMetadata {
+): THREE.CurvePath<THREE.Vector3> {
   const path = new THREE.CurvePath<THREE.Vector3>();
-  const segments = analyzePathSegments(pathPoints);
 
   const typedPathPoints = pathPoints.filter(
     (point) => "type" in point
@@ -180,11 +42,12 @@ function createMazePath(
       );
     }
   }
-
-  return { path, segments };
+  return path;
 }
 
-function createCameraPath(pathPoints: CameraPathPoint[]): PathWithMetadata {
+function createCameraPath(
+  pathPoints: CameraPathPoint[]
+): THREE.CurvePath<THREE.Vector3> {
   // Use the same logic as createMazePath since they handle the same curve types
   return createMazePath(pathPoints);
 }
@@ -214,7 +77,7 @@ function createDoubleCurveMidPoint(
   hasPrevCurve: boolean,
   hasNextCurve: boolean
 ): THREE.Vector3 {
-  const smoothingFactor = 0.12;
+  const smoothingFactor = 0.35; // Increased from 0.12 to make curves much smoother
   const originalMidPoint = createSingleCurveMidPoint(current, next);
   const straightMidPoint = current.pos.clone().lerp(next.pos, 0.5);
 
@@ -265,8 +128,8 @@ function createCameraHomeScrollPath(
   return path;
 }
 
-export function getHomePaths(): Record<string, PathWithMetadata> {
-  const paths: Record<string, PathWithMetadata> = {};
+export function getHomePaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
+  const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 
   Object.entries(homePaths).forEach(([key, pathPoints]) => {
     paths[key] = createMazePath(pathPoints);
@@ -292,8 +155,8 @@ export function getHomeScrollPaths(
   return paths;
 }
 
-export function getPOVPaths(): Record<string, PathWithMetadata> {
-  const paths: Record<string, PathWithMetadata> = {};
+export function getPOVPaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
+  const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 
   Object.entries(povPaths).forEach(([key, pathPoints]) => {
     if (key === "camera") {

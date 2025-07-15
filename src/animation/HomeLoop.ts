@@ -32,9 +32,9 @@ function startHomeLoop() {
 
   const homePaths = getHomePaths();
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    const pathData = homePaths[key];
-    if (pathData) {
-      const position = pathData.path.getPointAt(0);
+    const path = homePaths[key];
+    if (path) {
+      const position = path.getPointAt(0);
       if (position) ghost.position.copy(position);
     }
   });
@@ -51,10 +51,10 @@ function updateHomeLoop(delta: number) {
   const t = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   const homePaths = getHomePaths();
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    const pathData = homePaths[key];
-    if (pathData) {
-      const position = pathData.path.getPointAt(t);
-      const tangent = pathData.path.getTangentAt(t);
+    const path = homePaths[key];
+    if (path) {
+      const position = path.getPointAt(t);
+      const tangent = path.getTangentAt(t);
       if (position) ghost.position.copy(position);
       if (tangent && tangent.length() > 0) {
         const objectType = key === "pacman" ? "pacman" : "ghost";
