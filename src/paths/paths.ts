@@ -33,8 +33,8 @@ function createMazePath(
       if (isZigZag) {
         // For zig-zag patterns, use a cubic Bezier curve with closer control points
         // This creates more continuous curves instead of straight-then-turn patterns
-        const control1 = current.pos.clone().lerp(midPoint, 0.8);
-        const control2 = next.pos.clone().lerp(midPoint, 0.8);
+        const control1 = current.pos.clone().lerp(midPoint, 0.25);
+        const control2 = next.pos.clone().lerp(midPoint, 0.25);
         path.add(
           new THREE.CubicBezierCurve3(current.pos, control1, control2, next.pos)
         );
