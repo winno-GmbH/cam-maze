@@ -27,9 +27,18 @@ function createMazePath(
       path.add(new THREE.LineCurve3(current.pos, next.pos));
     } else if (current.type === "curve") {
       const isZigZag = checkForZigZag(typedPathPoints, i);
+
       const midPoint = createNormalCurveMidPoint(current, next);
+
       if (isZigZag) {
-        path.add(new THREE.CubicBezierCurve3(current.pos, midPoint, next.pos));
+        // For zig-zag patterns, use a softer midpoint that's closer to a straight line
+        const softMidPoint = current.pos
+          .clone()
+          .lerp(next.pos, 0.5)
+          .lerp(midPoint, 0.3);
+        path.add(
+          new THREE.QuadraticBezierCurve3(current.pos, softMidPoint, next.pos)
+        );
       } else {
         path.add(
           new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
