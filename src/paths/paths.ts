@@ -41,7 +41,8 @@ function createMazePath(
         // Create a smoother S-curve by using multiple cubic Bezier curves
         // that pass through the intermediate zig-zag points
         const zigZagPoints = [];
-        for (let j = i; j <= zigZagGroup.endIndex; j++) {
+        for (let j = i; j < zigZagGroup.endIndex; j++) {
+          // Changed from <= to <
           zigZagPoints.push(typedPathPoints[j]);
         }
 
