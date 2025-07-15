@@ -27,11 +27,36 @@ function createMazePath(
     if (current.type === "straight") {
       path.add(new THREE.LineCurve3(current.pos, next.pos));
     } else if (current.type === "curve") {
-      // Simple curve logic without zig-zag complexity
-      const midPoint = createNormalCurveMidPoint(current, next);
-      path.add(
-        new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
-      );
+      const zigZagGroup = findZigZagGroup(typedPathPoints, i);
+
+      if (zigZagGroup) {
+        // For zig-zag patterns, create a much straighter curve
+        const startPoint = zigZagGroup.start;
+        const endPoint = zigZagGroup.end;
+
+        // Use a midpoint that's much closer to a straight line
+        const straightMidPoint = startPoint.pos.clone().lerp(endPoint.pos, 0.5);
+        const curveMidPoint = createNormalCurveMidPoint(startPoint, endPoint);
+
+        // Blend mostly towards straight line, with just a tiny bit of curve
+        const softMidPoint = straightMidPoint.clone().lerp(curveMidPoint, 0.1);
+
+        path.add(
+          new THREE.QuadraticBezierCurve3(
+            startPoint.pos,
+            softMidPoint,
+            endPoint.pos
+          )
+        );
+
+        i = zigZagGroup.endIndex;
+      } else {
+        // Simple curve logic without zig-zag complexity
+        const midPoint = createNormalCurveMidPoint(current, next);
+        path.add(
+          new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
+        );
+      }
     }
   }
 
