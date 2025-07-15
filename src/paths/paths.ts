@@ -26,17 +26,30 @@ function createMazePath(
     if (current.type === "straight") {
       path.add(new THREE.LineCurve3(current.pos, next.pos));
     } else if (current.type === "curve") {
-      const isZigZag = checkForZigZag(typedPathPoints, i);
+      const zigZagGroup = findZigZagGroup(typedPathPoints, i);
 
-      const midPoint = createNormalCurveMidPoint(current, next);
+      if (zigZagGroup) {
+        // Create one smooth curve for the entire zig-zag group
+        const startPoint = zigZagGroup.start;
+        const endPoint = zigZagGroup.end;
+        const midPoint = createNormalCurveMidPoint(startPoint, endPoint);
 
-      if (isZigZag) {
-        const control1 = current.pos.clone().lerp(midPoint, 0.5);
-        const control2 = next.pos.clone().lerp(midPoint, 0.5);
+        const control1 = startPoint.pos.clone().lerp(midPoint, 0.6);
+        const control2 = endPoint.pos.clone().lerp(midPoint, 0.6);
         path.add(
-          new THREE.CubicBezierCurve3(current.pos, control1, control2, next.pos)
+          new THREE.CubicBezierCurve3(
+            startPoint.pos,
+            control1,
+            control2,
+            endPoint.pos
+          )
         );
+
+        // Skip the intermediate points in the zig-zag group
+        i = zigZagGroup.endIndex - 1;
       } else {
+        // Single curve - use normal approach
+        const midPoint = createNormalCurveMidPoint(current, next);
         path.add(
           new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
         );
@@ -46,20 +59,22 @@ function createMazePath(
   return path;
 }
 
-function checkForZigZag(
+function findZigZagGroup(
   pathPoints: Array<{
     pos: THREE.Vector3;
     type: "straight" | "curve";
     curveType?: string;
   }>,
   currentIndex: number
-): boolean {
+): { start: any; end: any; endIndex: number } | null {
+  // Check if we're at the start of a zig-zag pattern
   let consecutiveCurves = 0;
   let previousCurveType: string | undefined;
+  let zigZagStartIndex = -1;
 
   for (
     let i = currentIndex;
-    i < Math.min(currentIndex + 3, pathPoints.length - 1);
+    i < Math.min(currentIndex + 4, pathPoints.length - 1);
     i++
   ) {
     const point = pathPoints[i];
@@ -71,16 +86,43 @@ function checkForZigZag(
         previousCurveType !== undefined &&
         point.curveType !== previousCurveType
       ) {
-        return consecutiveCurves >= 2;
+        // Found a zig-zag pattern
+        if (zigZagStartIndex === -1) {
+          zigZagStartIndex = i - 1; // Start from the previous curve
+        }
+      } else if (zigZagStartIndex !== -1) {
+        // Zig-zag pattern ended, return the group
+        return {
+          start: pathPoints[zigZagStartIndex],
+          end: pathPoints[i],
+          endIndex: i,
+        };
       }
 
       previousCurveType = point.curveType;
     } else {
+      // Straight path - if we found a zig-zag, return it
+      if (zigZagStartIndex !== -1) {
+        return {
+          start: pathPoints[zigZagStartIndex],
+          end: pathPoints[i - 1],
+          endIndex: i - 1,
+        };
+      }
       break;
     }
   }
 
-  return false;
+  // Check if we're at the end of the array and have a zig-zag
+  if (zigZagStartIndex !== -1) {
+    return {
+      start: pathPoints[zigZagStartIndex],
+      end: pathPoints[pathPoints.length - 1],
+      endIndex: pathPoints.length - 1,
+    };
+  }
+
+  return null;
 }
 
 function createNormalCurveMidPoint(
