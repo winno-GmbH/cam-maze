@@ -31,8 +31,8 @@ function createMazePath(
       const normalMidPoint = createNormalCurveMidPoint(current, next);
       const straightMidPoint = current.pos.clone().lerp(next.pos, 0.5);
 
-      // Use mostly straight line with just a bit of curve
-      const softMidPoint = straightMidPoint.clone().lerp(normalMidPoint, 0.4);
+      // Use more curve for smoother rotation
+      const softMidPoint = straightMidPoint.clone().lerp(normalMidPoint, 0.8);
 
       // Use cubic Bezier for smoother rotation
       const control1 = current.pos.clone().lerp(softMidPoint, 0.7);
