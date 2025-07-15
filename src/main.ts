@@ -9,7 +9,8 @@ import {
   HomeLoopHandler,
   setupHomeLoopScrollHandler,
 } from "./animation/HomeLoop";
-import { loadModel } from "./core/objects";
+import { POVAnimationHandler } from "./animation/POVAnimation";
+import { loadModel, ghosts } from "./core/objects";
 import { setupCamera } from "./core/camera";
 
 async function main() {
@@ -17,7 +18,11 @@ async function main() {
   setupLighting();
   setupCamera();
   await loadModel(scene);
+
+  // Initialize animation handlers
   HomeLoopHandler();
+  const povHandler = new POVAnimationHandler(ghosts);
+
   startRenderLoop();
   setupHomeLoopScrollHandler();
 }

@@ -45,6 +45,44 @@ function createMazePath(
   return path;
 }
 
+function createCameraPath(
+  pathPoints: CameraPathPoint[]
+): THREE.CurvePath<THREE.Vector3> {
+  const path = new THREE.CurvePath<THREE.Vector3>();
+
+  const typedPathPoints = pathPoints.filter(
+    (point) => "type" in point
+  ) as Array<{
+    pos: THREE.Vector3;
+    type: "straight" | "curve";
+    curveType?: "upperArc" | "lowerArc" | "forwardDownArc";
+  }>;
+
+  for (let i = 0; i < typedPathPoints.length - 1; i++) {
+    const current = typedPathPoints[i];
+    const next = typedPathPoints[i + 1];
+
+    if (current.type === "straight") {
+      path.add(new THREE.LineCurve3(current.pos, next.pos));
+    } else if (current.type === "curve") {
+      const hasPrevCurve = i > 0 && typedPathPoints[i - 1].type === "curve";
+      const hasNextCurve =
+        i < typedPathPoints.length - 2 &&
+        typedPathPoints[i + 1].type === "curve";
+
+      const midPoint =
+        hasPrevCurve || hasNextCurve
+          ? createDoubleCurveMidPoint(current, next, hasPrevCurve, hasNextCurve)
+          : createSingleCurveMidPoint(current, next);
+
+      path.add(
+        new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
+      );
+    }
+  }
+  return path;
+}
+
 function createSingleCurveMidPoint(
   current: { pos: THREE.Vector3; curveType?: string },
   next: { pos: THREE.Vector3; curveType?: string }
@@ -152,7 +190,11 @@ export function getPOVPaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
   const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 
   Object.entries(povPaths).forEach(([key, pathPoints]) => {
-    paths[key] = createMazePath(pathPoints);
+    if (key === "camera") {
+      paths[key] = createCameraPath(pathPoints as CameraPathPoint[]);
+    } else {
+      paths[key] = createMazePath(pathPoints as MazePathPoint[]);
+    }
   });
 
   return paths;

@@ -1062,7 +1062,7 @@ const cameraHomeScrollPathPoints: CameraPathPoint[] = [
 
 const cameraPOVPathPoints: CameraPathPoint[] = [
   {
-    pos: new THREE.Vector3(0.55675, -0.5, 0.45175),
+    pos: new THREE.Vector3(0.55675, 0.5, 0.45175),
     type: "curve",
     curveType: "forwardDownArc",
   },
