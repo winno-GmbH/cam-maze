@@ -31,7 +31,6 @@ function createMazePath(
       const midPoint = createNormalCurveMidPoint(current, next);
 
       if (isZigZag) {
-        // For zig-zag patterns, use a softer midpoint that's closer to a straight line
         const softMidPoint = current.pos
           .clone()
           .lerp(next.pos, 0.5)
