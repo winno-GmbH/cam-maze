@@ -104,14 +104,27 @@ function createSoftCurveMidPoint(
   current: { pos: THREE.Vector3; curveType?: string },
   next: { pos: THREE.Vector3; curveType?: string }
 ): THREE.Vector3 {
-  // For zig-zag patterns, create a softer curve with reduced side escalation
-  const normalMidPoint = createNormalCurveMidPoint(current, next);
   const straightMidPoint = current.pos.clone().lerp(next.pos, 0.5);
 
-  // Use a higher smoothing factor to reduce side escalation
-  const smoothingFactor = 0.3; // Increased from 0.12 for softer curves
+  // Add a small amount of curve based on the curveType, but much less than normal
+  if (current.curveType) {
+    const curveType = current.curveType;
+    let curveOffset: THREE.Vector3;
 
-  return normalMidPoint.clone().lerp(straightMidPoint, smoothingFactor);
+    if (curveType === "upperArc") {
+      curveOffset = new THREE.Vector3(0, 0, (next.pos.z - current.pos.z) * 0.1);
+    } else if (curveType === "lowerArc") {
+      curveOffset = new THREE.Vector3((next.pos.x - current.pos.x) * 0.1, 0, 0);
+    } else if (curveType === "forwardDownArc") {
+      curveOffset = new THREE.Vector3(0, (next.pos.y - current.pos.y) * 0.1, 0);
+    } else {
+      curveOffset = new THREE.Vector3(0, 0, 0);
+    }
+
+    return straightMidPoint.clone().add(curveOffset);
+  }
+
+  return straightMidPoint;
 }
 
 function createHomeScrollPath(
