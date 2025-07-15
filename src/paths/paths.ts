@@ -51,8 +51,9 @@ function createMazePath(
           const next = zigZagPoints[j + 1];
           const midPoint = createNormalCurveMidPoint(current, next);
 
-          const control1 = current.pos.clone().lerp(midPoint, 0.6);
-          const control2 = next.pos.clone().lerp(midPoint, 0.6);
+          // Make curves straighter by using control points closer to the line
+          const control1 = current.pos.clone().lerp(midPoint, 0.3); // Reduced from 0.6
+          const control2 = next.pos.clone().lerp(midPoint, 0.3); // Reduced from 0.6
           path.add(
             new THREE.CubicBezierCurve3(
               current.pos,
@@ -107,7 +108,7 @@ function findZigZagGroup(
   }
 
   if (consecutiveZigZagCount >= 1) {
-    const endIndex = currentIndex + consecutiveZigZagCount; // Add +1 back
+    const endIndex = currentIndex + consecutiveZigZagCount + 1; // Add +1 back
     return {
       start: pathPoints[zigZagStartIndex],
       end: pathPoints[endIndex],
