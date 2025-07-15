@@ -44,7 +44,8 @@ function createMazePath(
           )
         );
 
-        i = zigZagGroup.endIndex - 1;
+        // Skip all intermediate points in the zig-zag group
+        i = zigZagGroup.endIndex;
       } else {
         const midPoint = createNormalCurveMidPoint(current, next);
         path.add(
