@@ -100,7 +100,7 @@ function findZigZagGroup(
   }
 
   if (consecutiveZigZagCount >= 1) {
-    const endIndex = currentIndex + consecutiveZigZagCount + 1;
+    const endIndex = currentIndex + consecutiveZigZagCount;
 
     // Only log the first few zig-zag detections
     if (zigZagLogCount < 3) {
