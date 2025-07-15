@@ -92,9 +92,9 @@ function findZigZagGroup(
     }
   }
 
-  // If we found at least 2 consecutive zig-zag curves, return the group
+  // If we found at least 1 consecutive zig-zag curve, return the group
   if (consecutiveZigZagCount >= 1) {
-    const endIndex = currentIndex + consecutiveZigZagCount;
+    const endIndex = currentIndex + consecutiveZigZagCount + 1; // +1 to include the next point after the last zig-zag
     return {
       start: pathPoints[zigZagStartIndex],
       end: pathPoints[endIndex],
