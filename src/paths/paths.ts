@@ -24,7 +24,13 @@ function createMazePath(
     const next = typedPathPoints[i + 1];
 
     if (current.type === "straight") {
-      path.add(new THREE.LineCurve3(current.pos, next.pos));
+      // Use cubic Bezier for straight lines too, with very small curvature
+      const midPoint = current.pos.clone().lerp(next.pos, 0.5);
+      const control1 = current.pos.clone().lerp(midPoint, 0.01); // Almost straight
+      const control2 = next.pos.clone().lerp(midPoint, 0.01); // Almost straight
+      path.add(
+        new THREE.CubicBezierCurve3(current.pos, control1, control2, next.pos)
+      );
     } else if (current.type === "curve") {
       const zigZagGroup = findZigZagGroup(typedPathPoints, i);
 
@@ -62,9 +68,12 @@ function createMazePath(
 
         i = zigZagGroup.endIndex;
       } else {
+        // Use cubic Bezier for normal curves too, for consistency
         const midPoint = createNormalCurveMidPoint(current, next);
+        const control1 = current.pos.clone().lerp(midPoint, 0.3);
+        const control2 = next.pos.clone().lerp(midPoint, 0.3);
         path.add(
-          new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
+          new THREE.CubicBezierCurve3(current.pos, control1, control2, next.pos)
         );
       }
     }
