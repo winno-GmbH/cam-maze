@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { gsap } from "gsap";
+import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { camera } from "../core/camera";
 import { getPOVPaths } from "../paths/paths";
