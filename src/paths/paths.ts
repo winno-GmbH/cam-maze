@@ -7,6 +7,7 @@ import {
 } from "./pathpoints";
 
 let zigZagLogCount = 0; // Module-level counter for zig-zag logs
+let zigZagCallCount = 0; // Module-level counter for function calls
 
 function createMazePath(
   pathPoints: (MazePathPoint | CameraPathPoint)[]
@@ -37,7 +38,6 @@ function createMazePath(
         const midPoint = createNormalCurveMidPoint(startPoint, endPoint);
 
         if (sCurveCount < 5) {
-          // Only log first 5 S-curves
           console.log(
             `S-CURVE: Creating curve from index ${i} to ${zigZagGroup.endIndex}`
           );
@@ -75,6 +75,7 @@ function findZigZagGroup(
   }>,
   currentIndex: number
 ): { start: any; end: any; endIndex: number } | null {
+  zigZagCallCount++;
   if (pathPoints[currentIndex].type !== "curve") {
     return null;
   }
@@ -104,7 +105,7 @@ function findZigZagGroup(
     // Only log the first few zig-zag detections
     if (zigZagLogCount < 3) {
       console.log(
-        `ZIGZAG: Found ${consecutiveZigZagCount} curves, endIndex=${endIndex}`
+        `ZIGZAG: Found ${consecutiveZigZagCount} curves, endIndex=${endIndex} (call #${zigZagCallCount})`
       );
       zigZagLogCount++;
     }
@@ -114,6 +115,13 @@ function findZigZagGroup(
       end: pathPoints[endIndex],
       endIndex: endIndex,
     };
+  }
+
+  // Log call count every 100 calls to see how often it's being called
+  if (zigZagCallCount % 100 === 0) {
+    console.log(
+      `ZIGZAG: Called ${zigZagCallCount} times, found ${zigZagLogCount} groups`
+    );
   }
 
   return null;
