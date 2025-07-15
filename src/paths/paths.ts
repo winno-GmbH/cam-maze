@@ -107,7 +107,7 @@ function findZigZagGroup(
   }
 
   if (consecutiveZigZagCount >= 1) {
-    const endIndex = currentIndex + consecutiveZigZagCount + 1; // Add +1 back
+    const endIndex = currentIndex + consecutiveZigZagCount; // Add +1 back
     return {
       start: pathPoints[zigZagStartIndex],
       end: pathPoints[endIndex],
