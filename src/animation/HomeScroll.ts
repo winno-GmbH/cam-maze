@@ -97,7 +97,6 @@ function updateScrollAnimation(
     const lookAtPoint = lookAtCurve.getPoint(progress);
     camera.lookAt(lookAtPoint);
     camera.updateProjectionMatrix();
-    console.log("Camera lookAt:", lookAtPoint.clone());
   }
 
   const fadeStartProgress = 0.85;
