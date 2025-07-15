@@ -6,14 +6,10 @@ import {
   getCameraHomeScrollPathPoints,
 } from "./pathpoints";
 
-let zigZagLogCount = 0; // Module-level counter for zig-zag logs
-let zigZagCallCount = 0; // Module-level counter for function calls
-
 function createMazePath(
   pathPoints: (MazePathPoint | CameraPathPoint)[]
 ): THREE.CurvePath<THREE.Vector3> {
   const path = new THREE.CurvePath<THREE.Vector3>();
-  let sCurveCount = 0; // Counter to limit logs
 
   const typedPathPoints = pathPoints.filter(
     (point) => "type" in point
@@ -36,13 +32,6 @@ function createMazePath(
         const startPoint = zigZagGroup.start;
         const endPoint = zigZagGroup.end;
         const midPoint = createNormalCurveMidPoint(startPoint, endPoint);
-
-        if (sCurveCount < 5) {
-          console.log(
-            `S-CURVE: Creating curve from index ${i} to ${zigZagGroup.endIndex}`
-          );
-        }
-        sCurveCount++;
 
         const control1 = startPoint.pos.clone().lerp(midPoint, 0.6);
         const control2 = endPoint.pos.clone().lerp(midPoint, 0.6);
@@ -101,15 +90,6 @@ function findZigZagGroup(
 
   if (consecutiveZigZagCount >= 1) {
     const endIndex = currentIndex + consecutiveZigZagCount;
-
-    // Only log the first few zig-zag detections
-    if (zigZagLogCount < 3) {
-      console.log(
-        `ZIGZAG: Found ${consecutiveZigZagCount} curves, endIndex=${endIndex} (call #${zigZagCallCount})`
-      );
-      zigZagLogCount++;
-    }
-
     return {
       start: pathPoints[zigZagStartIndex],
       end: pathPoints[endIndex],
