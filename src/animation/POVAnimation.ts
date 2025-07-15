@@ -2,7 +2,7 @@ import * as THREE from "three";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { camera } from "../core/camera";
-import { getPOVPaths } from "../paths/paths";
+import { getPOVPaths, PathWithMetadata } from "../paths/paths";
 import { povTriggerPositions } from "../paths/pathpoints";
 import { GhostContainer } from "../types/types";
 
@@ -19,7 +19,7 @@ interface POVAnimationState {
 }
 
 class POVAnimationHandler {
-  private paths: Record<string, THREE.CurvePath<THREE.Vector3>>;
+  private paths: Record<string, PathWithMetadata>;
   private ghosts: GhostContainer;
   private state: POVAnimationState;
   private timeline: gsap.core.Timeline | null = null;
@@ -112,11 +112,11 @@ class POVAnimationHandler {
   private updateCamera(progress: number): void {
     if (!this.paths.camera) return;
 
-    const position = this.paths.camera.getPointAt(progress);
+    const position = this.paths.camera.path.getPointAt(progress);
     camera.position.copy(position);
     camera.fov = 80; // wideFOV
 
-    const tangent = this.paths.camera.getTangentAt(progress).normalize();
+    const tangent = this.paths.camera.path.getTangentAt(progress).normalize();
     const defaultLookAt = position.clone().add(tangent);
 
     // Handle initial transition
@@ -143,23 +143,26 @@ class POVAnimationHandler {
       );
 
       camera.lookAt(interpolatedLookAt);
+    } else {
+      // Use smooth camera orientation for the rest of the path
+      this.updateSmoothCameraOrientation(progress);
     }
 
     // Find key progress points
     const point1Progress = this.findClosestProgressOnPath(
-      this.paths.camera,
+      this.paths.camera.path,
       this.povStartPoint1
     );
     const point2Progress = this.findClosestProgressOnPath(
-      this.paths.camera,
+      this.paths.camera.path,
       this.povStartPoint2
     );
     const startRotationProgress = this.findClosestProgressOnPath(
-      this.paths.camera,
+      this.paths.camera.path,
       this.startRotationPoint
     );
     const endRotationProgress = this.findClosestProgressOnPath(
-      this.paths.camera,
+      this.paths.camera.path,
       this.endRotationPoint
     );
 
@@ -342,7 +345,8 @@ class POVAnimationHandler {
     }
 
     if (!this.state.rotationStarted && !this.state.startedInitEndScreen) {
-      camera.lookAt(defaultLookAt);
+      // Use smooth camera orientation instead of direct lookAt
+      this.updateSmoothCameraOrientation(progress);
     }
 
     if (!(this.state.endScreenPassed && progress > 0.8)) {
@@ -403,7 +407,7 @@ class POVAnimationHandler {
 
     // Find closest progress on camera path to trigger position
     const triggerProgress = this.findClosestProgressOnPath(
-      this.paths.camera!,
+      this.paths.camera!.path,
       triggerData.triggerPos
     );
 
@@ -430,10 +434,10 @@ class POVAnimationHandler {
       const clampedProgress = Math.min(1, ghostProgress);
 
       if (clampedProgress <= 1) {
-        const position = path.getPointAt(clampedProgress);
+        const position = path.path.getPointAt(clampedProgress);
         ghost.position.copy(position);
 
-        const tangent = path.getTangentAt(clampedProgress).normalize();
+        const tangent = path.path.getTangentAt(clampedProgress).normalize();
         ghost.lookAt(position.clone().add(tangent));
       }
 
@@ -484,6 +488,96 @@ class POVAnimationHandler {
 
   private smoothStep(x: number): number {
     return x * x * (3 - 2 * x);
+  }
+
+  private updateSmoothCameraOrientation(progress: number): void {
+    if (!this.paths.camera) return;
+
+    // Get the current position and tangent
+    const position = this.paths.camera.path.getPointAt(progress);
+    const tangent = this.paths.camera.path.getTangentAt(progress).normalize();
+
+    // Determine the appropriate orientation strategy based on current segment
+    const currentSegment = this.getCurrentSegment(progress);
+
+    if (currentSegment.type === "straight" || currentSegment.type === "curve") {
+      // Use tangent-based orientation for straight paths and single curves
+      this.updateTangentBasedOrientation(position, tangent);
+    } else if (currentSegment.type === "multiCurve") {
+      // Use manual rotation for multi-curve segments with direction changes
+      this.updateManualRotationOrientation(progress, position, currentSegment);
+    }
+  }
+
+  private getCurrentSegment(progress: number): any {
+    if (!this.paths.camera) return null;
+
+    // Find which segment the current progress falls into
+    for (const segment of this.paths.camera.segments) {
+      const segmentStart =
+        segment.startIndex / (this.paths.camera.path.curves.length - 1);
+      const segmentEnd =
+        segment.endIndex / (this.paths.camera.path.curves.length - 1);
+
+      if (progress >= segmentStart && progress <= segmentEnd) {
+        return segment;
+      }
+    }
+
+    return null;
+  }
+
+  private updateTangentBasedOrientation(
+    position: THREE.Vector3,
+    tangent: THREE.Vector3
+  ): void {
+    // Create a smooth look-at point that follows the curve direction
+    const lookAtDistance = 2.0; // Distance ahead to look at
+    const smoothLookAt = position
+      .clone()
+      .add(tangent.multiplyScalar(lookAtDistance));
+
+    // Add some upward bias to make the camera look slightly up
+    smoothLookAt.y += 0.3;
+
+    // Use smooth interpolation for camera rotation
+    const targetQuaternion = new THREE.Quaternion().setFromRotationMatrix(
+      new THREE.Matrix4().lookAt(position, smoothLookAt, camera.up)
+    );
+
+    // Smoothly interpolate to the target rotation
+    const rotationSpeed = 0.1; // Adjust for faster/slower rotation
+    camera.quaternion.slerp(targetQuaternion, rotationSpeed);
+  }
+
+  private updateManualRotationOrientation(
+    progress: number,
+    position: THREE.Vector3,
+    segment: any
+  ): void {
+    // For multi-curve segments, use manual rotation with reduced angles
+    const segmentStart =
+      segment.startIndex / (this.paths.camera.path.curves.length - 1);
+    const segmentEnd =
+      segment.endIndex / (this.paths.camera.path.curves.length - 1);
+    const segmentProgress =
+      (progress - segmentStart) / (segmentEnd - segmentStart);
+
+    // Calculate rotation based on segment progress and direction changes
+    const totalRotation = segment.rotationAngle || 75; // Use 75° instead of 90°
+    const currentRotation = totalRotation * segmentProgress;
+
+    // Apply the rotation around the Y-axis
+    const rotationMatrix = new THREE.Matrix4().makeRotationY(
+      THREE.MathUtils.degToRad(currentRotation)
+    );
+    const targetQuaternion = new THREE.Quaternion().setFromRotationMatrix(
+      rotationMatrix
+    );
+
+    // Smoothly interpolate to the target rotation
+    const rotationSpeed = 0.15; // Slightly faster for manual rotation
+    camera.quaternion.slerp(targetQuaternion, rotationSpeed);
   }
 
   private getPathMapping(): Record<string, string> {
