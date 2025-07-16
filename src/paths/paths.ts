@@ -60,10 +60,29 @@ function createMazePath(
       next.type === "curve" &&
       current.curveType !== next.curveType
     ) {
-      catmullPoints.push(current.pos);
-      catmullPoints.push(next.pos);
+      // Check if current point is already in collection
+      const isCurrentPointInCollection = catmullPoints.some(
+        (p) =>
+          p.x === current.pos.x &&
+          p.y === current.pos.y &&
+          p.z === current.pos.z
+      );
+
+      // Check if next point is already in collection
+      const isNextPointInCollection = catmullPoints.some(
+        (p) => p.x === next.pos.x && p.y === next.pos.y && p.z === next.pos.z
+      );
+
+      // Only add points that aren't already in the collection
+      if (!isCurrentPointInCollection) {
+        catmullPoints.push(current.pos);
+      }
+      if (!isNextPointInCollection) {
+        catmullPoints.push(next.pos);
+      }
+
       console.log(
-        `Segment ${i}: Added both points to catmullPoints for ${pathName}`,
+        `Segment ${i}: Added points to catmullPoints for ${pathName}`,
         catmullPoints.length,
         "total points"
       );
