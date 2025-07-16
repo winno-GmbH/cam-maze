@@ -79,32 +79,42 @@ function createMazePath(
             p.z === current.pos.z
         );
 
-        if (!isCurrentPointInCollection) {
-          catmullPoints.push(current.pos);
-        } else {
+        if (isCurrentPointInCollection) {
+          // Current point is already in collection, create CatmullRomCurve3
+          console.log("Curve to catmullPoints", catmullPoints);
           console.log(
-            "Creating QuadraticBezierCurve3 from",
-            `(${current.pos.x}, ${current.pos.y}, ${current.pos.z})`,
-            "via",
-            `(${midPoint.x}, ${midPoint.y}, ${midPoint.z})`,
-            "to",
-            `(${next.pos.x}, ${next.pos.y}, ${next.pos.z})`
+            "Creating CatmullRomCurve3 with points:",
+            catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
           );
-          path.add(
-            new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
-          );
+          path.add(new THREE.CatmullRomCurve3(catmullPoints));
           catmullPoints = [];
-          i++;
+        } else {
+          // Current point is not in collection, add it and create CatmullRomCurve3
+          catmullPoints.push(current.pos);
+          console.log("Curve to catmullPoints", catmullPoints);
+          console.log(
+            "Creating CatmullRomCurve3 with points:",
+            catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
+          );
+          path.add(new THREE.CatmullRomCurve3(catmullPoints));
+          catmullPoints = [];
         }
-
-        console.log("Curve to catmullPoints", catmullPoints);
-        console.log(
-          "Creating CatmullRomCurve3 with points:",
-          catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
-        );
-        path.add(new THREE.CatmullRomCurve3(catmullPoints));
-        catmullPoints = [];
       }
+
+      // Create QuadraticBezierCurve3 for the current segment
+      console.log(
+        "Creating QuadraticBezierCurve3 from",
+        `(${current.pos.x}, ${current.pos.y}, ${current.pos.z})`,
+        "via",
+        `(${midPoint.x}, ${midPoint.y}, ${midPoint.z})`,
+        "to",
+        `(${next.pos.x}, ${next.pos.y}, ${next.pos.z})`
+      );
+      path.add(
+        new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
+      );
+      catmullPoints = [];
+      i++;
     }
   }
 
