@@ -81,6 +81,20 @@ function createMazePath(
 
         if (!isCurrentPointInCollection) {
           catmullPoints.push(current.pos);
+        } else {
+          console.log(
+            "Creating QuadraticBezierCurve3 from",
+            `(${current.pos.x}, ${current.pos.y}, ${current.pos.z})`,
+            "via",
+            `(${midPoint.x}, ${midPoint.y}, ${midPoint.z})`,
+            "to",
+            `(${next.pos.x}, ${next.pos.y}, ${next.pos.z})`
+          );
+          path.add(
+            new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
+          );
+          catmullPoints = [];
+          i++;
         }
 
         console.log("Curve to catmullPoints", catmullPoints);
@@ -90,20 +104,6 @@ function createMazePath(
         );
         path.add(new THREE.CatmullRomCurve3(catmullPoints));
         catmullPoints = [];
-      } else {
-        console.log(
-          "Creating QuadraticBezierCurve3 from",
-          `(${current.pos.x}, ${current.pos.y}, ${current.pos.z})`,
-          "via",
-          `(${midPoint.x}, ${midPoint.y}, ${midPoint.z})`,
-          "to",
-          `(${next.pos.x}, ${next.pos.y}, ${next.pos.z})`
-        );
-        path.add(
-          new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
-        );
-        catmullPoints = [];
-        i++;
       }
     }
   }
