@@ -39,12 +39,14 @@ function createMazePath(
     if (current.type === "straight") {
       if (catmullPoints.length >= 2) {
         catmullPoints.push(current.pos);
+        console.log("catmull Points", catmullPoints);
         console.log(
           "Creating CatmullRomCurve3 with points:",
           catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
         );
         path.add(new THREE.CatmullRomCurve3(catmullPoints));
         catmullPoints = [];
+        console.log("catmull Reset");
       }
       console.log(
         "Creating LineCurve3 from",
@@ -60,17 +62,20 @@ function createMazePath(
       current.curveType !== next.curveType
     ) {
       catmullPoints.push(current.pos);
+      console.log("catmull Points", catmullPoints);
       i++;
     } else {
       const midPoint = createNormalCurveMidPoint(current, next);
       if (catmullPoints.length >= 2) {
         catmullPoints.push(current.pos);
+        console.log("catmull Points", catmullPoints);
         console.log(
           "Creating CatmullRomCurve3 with points:",
           catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
         );
         path.add(new THREE.CatmullRomCurve3(catmullPoints));
         catmullPoints = [];
+        console.log("catmull Reset");
       }
       console.log(
         "Creating QuadraticBezierCurve3 from",
