@@ -16,6 +16,11 @@ function createMazePath(
     const current = pathPoints[i];
     const next = pathPoints[i + 1];
 
+    // Safety check for undefined positions
+    if (!current || !next || !current.pos || !next.pos) {
+      continue;
+    }
+
     if (current.type === "straight") {
       if (catmullPoints.length > 0) {
         path.add(new THREE.CatmullRomCurve3(catmullPoints));
