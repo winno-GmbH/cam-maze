@@ -7,28 +7,85 @@ import {
 } from "./pathpoints";
 
 function createMazePath(
-  pathPoints: (MazePathPoint | CameraPathPoint)[]
+  pathPoints: MazePathPoint[]
 ): THREE.CurvePath<THREE.Vector3> {
   const path = new THREE.CurvePath<THREE.Vector3>();
 
-  const typedPathPoints = pathPoints.filter(
-    (point) => "type" in point
-  ) as Array<{
-    pos: THREE.Vector3;
-    type: "straight" | "curve";
-    curveType?: "upperArc" | "lowerArc" | "forwardDownArc";
-  }>;
+  let i = 0;
+  while (i < pathPoints.length - 1) {
+    const current = pathPoints[i];
+    const next = pathPoints[i + 1];
 
-  const positions = typedPathPoints.map((point) => point.pos);
+    // === STRAIGHT ===
+    if (current.type === "straight" && next) {
+      console.log(`Line: ${i} → ${i + 1}`);
+      path.add(new THREE.LineCurve3(current.pos, next.pos));
+      i++;
+      continue;
+    }
 
-  // Create a smoother CatmullRomCurve3 with adjusted tension
-  const curve = new THREE.CatmullRomCurve3(
-    positions,
-    false,
-    "centripetal",
-    2.0
-  );
-  path.add(curve);
+    // === ARC HANDLING ===
+    if (
+      current.type === "curve" &&
+      (current.curveType === "upperArc" || current.curveType === "lowerArc")
+    ) {
+      const arcType = current.curveType!;
+      const sequence: THREE.Vector3[] = [current.pos];
+      let alternating = false;
+      let j = i + 1;
+      let prevType = arcType;
+
+      console.log(`Arc sequence started at ${i} (${arcType})`);
+
+      while (
+        j < pathPoints.length &&
+        pathPoints[j].type === "curve" &&
+        pathPoints[j].curveType
+      ) {
+        const nextType = pathPoints[j].curveType!;
+        sequence.push(pathPoints[j].pos);
+
+        if (nextType !== prevType) {
+          alternating = true;
+        } else if (alternating) {
+          // stop if alternation breaks after it has started
+          console.log(`Alternation stopped at ${j} (duplicate ${nextType})`);
+          sequence.pop();
+          break;
+        }
+
+        prevType = nextType;
+        j++;
+      }
+
+      if (alternating && sequence.length >= 2) {
+        console.log(
+          `CatmullRomCurve from points ${i} to ${
+            i + sequence.length - 1
+          } (alternating)`
+        );
+        path.add(new THREE.CatmullRomCurve3(sequence));
+      } else {
+        for (let k = 0; k < sequence.length - 1; k++) {
+          const from = sequence[k];
+          const to = sequence[k + 1];
+          const mid = from.clone().add(to).multiplyScalar(0.5);
+          mid.y += arcType === "upperArc" ? 0.5 : -0.5;
+          console.log(
+            `QuadraticBezier from ${i + k} to ${i + k + 1} (${arcType})`
+          );
+          path.add(new THREE.QuadraticBezierCurve3(from, mid, to));
+        }
+      }
+
+      i += sequence.length - 1;
+      continue;
+    }
+
+    // fallback
+    console.log(`Unhandled point at ${i}:`, current);
+    i++;
+  }
 
   return path;
 }
