@@ -44,6 +44,7 @@ function createMazePath(
 
     if (current.type === "straight") {
       if (catmullPoints.length >= 2) {
+        catmullPoints.push(current.pos);
         console.log(
           "Creating CatmullRomCurve3 with points:",
           catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
@@ -78,6 +79,7 @@ function createMazePath(
       );
 
       if (catmullPoints.length >= 2) {
+        catmullPoints.push(current.pos);
         console.log(
           "Creating CatmullRomCurve3 with points:",
           catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
@@ -89,6 +91,7 @@ function createMazePath(
     } else {
       // Handle curve to straight or same curve type
       if (catmullPoints.length >= 2) {
+        catmullPoints.push(current.pos);
         console.log(
           "Creating CatmullRomCurve3 with points:",
           catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
