@@ -22,7 +22,7 @@ function createMazePath(
     return pathCache.get(cacheKey)!;
   }
 
-  console.log("createMazePath called with", pathPoints.length, "points");
+  console.log("Creating new path with", pathPoints.length, "points");
   const path = new THREE.CurvePath<THREE.Vector3>();
   let catmullPoints: THREE.Vector3[] = [];
 
@@ -32,10 +32,19 @@ function createMazePath(
 
     if (current.type === "straight") {
       if (catmullPoints.length >= 2) {
+        console.log(
+          "Creating CatmullRomCurve3 with points:",
+          catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
+        );
         path.add(new THREE.CatmullRomCurve3(catmullPoints));
-        console.log(catmullPoints);
         catmullPoints = [];
       }
+      console.log(
+        "Creating LineCurve3 from",
+        `(${current.pos.x}, ${current.pos.y}, ${current.pos.z})`,
+        "to",
+        `(${next.pos.x}, ${next.pos.y}, ${next.pos.z})`
+      );
       path.add(new THREE.LineCurve3(current.pos, next.pos));
     } else if (
       current.type === "curve" &&
@@ -46,10 +55,21 @@ function createMazePath(
     } else {
       const midPoint = createNormalCurveMidPoint(current, next);
       if (catmullPoints.length >= 2) {
+        console.log(
+          "Creating CatmullRomCurve3 with points:",
+          catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
+        );
         path.add(new THREE.CatmullRomCurve3(catmullPoints));
-        console.log(catmullPoints);
         catmullPoints = [];
       }
+      console.log(
+        "Creating QuadraticBezierCurve3 from",
+        `(${current.pos.x}, ${current.pos.y}, ${current.pos.z})`,
+        "via",
+        `(${midPoint.x}, ${midPoint.y}, ${midPoint.z})`,
+        "to",
+        `(${next.pos.x}, ${next.pos.y}, ${next.pos.z})`
+      );
       path.add(
         new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
       );
