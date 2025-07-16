@@ -6,7 +6,7 @@ export interface PathPoint {
 
 export interface MazePathPoint extends PathPoint {
   type: "straight" | "curve";
-  curveType?: "upperArc" | "lowerArc" /*| "forwardDownArc"*/;
+  curveType?: "upperArc" | "lowerArc" | "forwardDownArc";
 }
 
 export type CameraPathPoint =
