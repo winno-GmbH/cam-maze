@@ -61,22 +61,37 @@ function createMazePath(
       current.curveType !== next.curveType
     ) {
       catmullPoints.push(current.pos);
+      catmullPoints.push(next.pos);
       console.log(
-        `Segment ${i}: Added point to catmullPoints for ${pathName}`,
+        `Segment ${i}: Added both points to catmullPoints for ${pathName}`,
         catmullPoints.length,
         "total points"
       );
       i++;
     } else {
       const midPoint = createNormalCurveMidPoint(current, next);
-      if (catmullPoints.length >= 2) {
-        catmullPoints.push(current.pos);
+
+      // If we have any catmull points, check if current point is already in collection
+      if (catmullPoints.length >= 1) {
+        // Check if current point is already in the collection
+        const isCurrentPointInCollection = catmullPoints.some(
+          (p) =>
+            p.x === current.pos.x &&
+            p.y === current.pos.y &&
+            p.z === current.pos.z
+        );
+
+        if (!isCurrentPointInCollection) {
+          catmullPoints.push(current.pos);
+        }
+
         console.log("Curve to catmullPoints", catmullPoints);
         console.log(
           "Creating CatmullRomCurve3 with points:",
           catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
         );
         path.add(new THREE.CatmullRomCurve3(catmullPoints));
+        catmullPoints = [];
       }
 
       console.log(
