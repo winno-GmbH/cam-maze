@@ -18,6 +18,7 @@ function createMazePath(
 
     // === STRAIGHT ===
     if (current.type === "straight" && next) {
+      console.log(`Line: ${i} → ${i + 1}`);
       path.add(new THREE.LineCurve3(current.pos, next.pos));
       i++;
       continue;
@@ -34,6 +35,8 @@ function createMazePath(
       let j = i + 1;
       let prevType = arcType;
 
+      console.log(`Arc sequence started at ${i} (${arcType})`);
+
       while (
         j < pathPoints.length &&
         pathPoints[j].type === "curve" &&
@@ -46,7 +49,8 @@ function createMazePath(
           alternating = true;
         } else if (alternating) {
           // stop if alternation breaks after it has started
-          sequence.pop(); // remove last that broke
+          console.log(`Alternation stopped at ${j} (duplicate ${nextType})`);
+          sequence.pop();
           break;
         }
 
@@ -55,15 +59,21 @@ function createMazePath(
       }
 
       if (alternating && sequence.length >= 2) {
-        // Create one CatmullRom for all alternating arcs
+        console.log(
+          `CatmullRomCurve from points ${i} to ${
+            i + sequence.length - 1
+          } (alternating)`
+        );
         path.add(new THREE.CatmullRomCurve3(sequence));
       } else {
-        // Fallback: Bezier between each
         for (let k = 0; k < sequence.length - 1; k++) {
           const from = sequence[k];
           const to = sequence[k + 1];
           const mid = from.clone().add(to).multiplyScalar(0.5);
           mid.y += arcType === "upperArc" ? 0.5 : -0.5;
+          console.log(
+            `QuadraticBezier from ${i + k} to ${i + k + 1} (${arcType})`
+          );
           path.add(new THREE.QuadraticBezierCurve3(from, mid, to));
         }
       }
@@ -73,6 +83,7 @@ function createMazePath(
     }
 
     // fallback
+    console.log(`Unhandled point at ${i}:`, current);
     i++;
   }
 
