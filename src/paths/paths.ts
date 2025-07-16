@@ -36,12 +36,6 @@ function createMazePath(
     const current = pathPoints[i];
     const next = pathPoints[i + 1];
 
-    console.log(
-      `Processing segment ${i}: ${current.type}${
-        current.curveType ? ` (${current.curveType})` : ""
-      } to ${next.type}${next.curveType ? ` (${next.curveType})` : ""}`
-    );
-
     if (current.type === "straight") {
       if (catmullPoints.length >= 2) {
         catmullPoints.push(current.pos);
@@ -59,24 +53,16 @@ function createMazePath(
         `(${next.pos.x}, ${next.pos.y}, ${next.pos.z})`
       );
       path.add(new THREE.LineCurve3(current.pos, next.pos));
-      i++; // Move to next segment
+      i++;
     } else if (
       current.type === "curve" &&
       next.type === "curve" &&
       current.curveType !== next.curveType
     ) {
-      // Add current point to catmull points and continue collecting
       catmullPoints.push(current.pos);
-      console.log(
-        `Added point to CatmullRom collection: (${current.pos.x}, ${current.pos.y}, ${current.pos.z})`
-      );
-      i++; // Move to next segment, but don't consume the next point yet
+      i++;
     } else if (current.type === "curve" && next.type === "straight") {
-      // End of curve sequence, add current point and create CatmullRomCurve3
       catmullPoints.push(current.pos);
-      console.log(
-        `Added final curve point to CatmullRom collection: (${current.pos.x}, ${current.pos.y}, ${current.pos.z})`
-      );
 
       if (catmullPoints.length >= 2) {
         catmullPoints.push(current.pos);
@@ -87,9 +73,8 @@ function createMazePath(
         path.add(new THREE.CatmullRomCurve3(catmullPoints));
         catmullPoints = [];
       }
-      i++; // Move to next segment
+      i++;
     } else {
-      // Handle curve to straight or same curve type
       if (catmullPoints.length >= 2) {
         catmullPoints.push(current.pos);
         console.log(
