@@ -26,7 +26,7 @@ function createMazePath(
     positions,
     false,
     "centripetal",
-    1.5
+    2.0
   );
   path.add(curve);
 
