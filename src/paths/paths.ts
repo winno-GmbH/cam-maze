@@ -35,7 +35,10 @@ function createMazePath(
     } else {
       const midPoint = createNormalCurveMidPoint(current, next);
       if (catmullPoints.length > 0) {
-        path.add(new THREE.CatmullRomCurve3(catmullPoints));
+        // Only create curve if we have enough points
+        if (catmullPoints.length >= 2) {
+          path.add(new THREE.CatmullRomCurve3(catmullPoints));
+        }
         catmullPoints = [];
       }
       path.add(
@@ -51,6 +54,11 @@ function createNormalCurveMidPoint(
   current: MazePathPoint,
   next: MazePathPoint
 ): THREE.Vector3 {
+  // Safety check for undefined positions
+  if (!current?.pos || !next?.pos) {
+    return new THREE.Vector3(0, 0, 0);
+  }
+
   return new THREE.Vector3(
     (current.pos.x + next.pos.x) / 2,
     (current.pos.y + next.pos.y) / 2,
