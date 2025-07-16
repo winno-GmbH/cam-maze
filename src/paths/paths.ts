@@ -63,13 +63,15 @@ function createMazePath(
       i++;
     } else {
       const midPoint = createNormalCurveMidPoint(current, next);
-      catmullPoints.push(current.pos);
-      console.log(
-        "Creating CatmullRomCurve3 with points:",
-        catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
-      );
-      path.add(new THREE.CatmullRomCurve3(catmullPoints));
-      catmullPoints = [];
+      if (catmullPoints.length >= 2) {
+        catmullPoints.push(current.pos);
+        console.log(
+          "Creating CatmullRomCurve3 with points:",
+          catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
+        );
+        path.add(new THREE.CatmullRomCurve3(catmullPoints));
+        catmullPoints = [];
+      }
       console.log(
         "Creating QuadraticBezierCurve3 from",
         `(${current.pos.x}, ${current.pos.y}, ${current.pos.z})`,
