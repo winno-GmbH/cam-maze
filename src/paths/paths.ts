@@ -23,11 +23,6 @@ function createMazePath(
     return pathCache.get(cacheKey)!;
   }
 
-  console.log(
-    `Creating new path: ${pathName || "unknown"} with`,
-    pathPoints.length,
-    "points"
-  );
   const path = new THREE.CurvePath<THREE.Vector3>();
   let catmullPoints: THREE.Vector3[] = [];
 
