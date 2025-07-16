@@ -16,10 +16,6 @@ function createMazePath(
     const current = pathPoints[i];
     const next = pathPoints[i + 1];
 
-    if (!current || !next || !current.pos || !next.pos) {
-      continue;
-    }
-
     if (current.type === "straight") {
       if (catmullPoints.length >= 2) {
         path.add(new THREE.CatmullRomCurve3(catmullPoints));
