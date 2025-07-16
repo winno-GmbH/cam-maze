@@ -80,7 +80,8 @@ function createMazePath(
         );
 
         if (isCurrentPointInCollection) {
-          // Current point is already in collection, create CatmullRomCurve3
+          // Current point is already in collection, add next point and create CatmullRomCurve3
+          catmullPoints.push(next.pos);
           console.log("Curve to catmullPoints", catmullPoints);
           console.log(
             "Creating CatmullRomCurve3 with points:",
@@ -89,8 +90,9 @@ function createMazePath(
           path.add(new THREE.CatmullRomCurve3(catmullPoints));
           catmullPoints = [];
         } else {
-          // Current point is not in collection, add it and create CatmullRomCurve3
+          // Current point is not in collection, add both current and next points
           catmullPoints.push(current.pos);
+          catmullPoints.push(next.pos);
           console.log("Curve to catmullPoints", catmullPoints);
           console.log(
             "Creating CatmullRomCurve3 with points:",
