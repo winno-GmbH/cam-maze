@@ -31,9 +31,16 @@ function createMazePath(
   const path = new THREE.CurvePath<THREE.Vector3>();
   let catmullPoints: THREE.Vector3[] = [];
 
-  for (let i = 0; i < pathPoints.length - 1; i++) {
+  let i = 0;
+  while (i < pathPoints.length - 1) {
     const current = pathPoints[i];
     const next = pathPoints[i + 1];
+
+    console.log(
+      `Processing segment ${i}: ${current.type}${
+        current.curveType ? ` (${current.curveType})` : ""
+      } to ${next.type}${next.curveType ? ` (${next.curveType})` : ""}`
+    );
 
     if (current.type === "straight") {
       if (catmullPoints.length >= 2) {
@@ -51,14 +58,25 @@ function createMazePath(
         `(${next.pos.x}, ${next.pos.y}, ${next.pos.z})`
       );
       path.add(new THREE.LineCurve3(current.pos, next.pos));
+      i++; // Move to next segment
     } else if (
       current.type === "curve" &&
       next.type === "curve" &&
       current.curveType !== next.curveType
     ) {
+      // Add current point to catmull points and continue collecting
       catmullPoints.push(current.pos);
-    } else {
-      const midPoint = createNormalCurveMidPoint(current, next);
+      console.log(
+        `Added point to CatmullRom collection: (${current.pos.x}, ${current.pos.y}, ${current.pos.z})`
+      );
+      i++; // Move to next segment, but don't consume the next point yet
+    } else if (current.type === "curve" && next.type === "straight") {
+      // End of curve sequence, add current point and create CatmullRomCurve3
+      catmullPoints.push(current.pos);
+      console.log(
+        `Added final curve point to CatmullRom collection: (${current.pos.x}, ${current.pos.y}, ${current.pos.z})`
+      );
+
       if (catmullPoints.length >= 2) {
         console.log(
           "Creating CatmullRomCurve3 with points:",
@@ -67,6 +85,19 @@ function createMazePath(
         path.add(new THREE.CatmullRomCurve3(catmullPoints));
         catmullPoints = [];
       }
+      i++; // Move to next segment
+    } else {
+      // Handle curve to straight or same curve type
+      if (catmullPoints.length >= 2) {
+        console.log(
+          "Creating CatmullRomCurve3 with points:",
+          catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
+        );
+        path.add(new THREE.CatmullRomCurve3(catmullPoints));
+        catmullPoints = [];
+      }
+
+      const midPoint = createNormalCurveMidPoint(current, next);
       console.log(
         "Creating QuadraticBezierCurve3 from",
         `(${current.pos.x}, ${current.pos.y}, ${current.pos.z})`,
@@ -78,7 +109,17 @@ function createMazePath(
       path.add(
         new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
       );
+      i++; // Move to next segment
     }
+  }
+
+  // Handle any remaining catmull points
+  if (catmullPoints.length >= 2) {
+    console.log(
+      "Creating final CatmullRomCurve3 with points:",
+      catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
+    );
+    path.add(new THREE.CatmullRomCurve3(catmullPoints));
   }
 
   // Store the created path in cache
