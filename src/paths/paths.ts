@@ -22,7 +22,12 @@ function createMazePath(
   const positions = typedPathPoints.map((point) => point.pos);
 
   // Create a smoother CatmullRomCurve3 with adjusted tension
-  const curve = new THREE.CatmullRomCurve3(positions, false, "catmullrom", 0.8);
+  const curve = new THREE.CatmullRomCurve3(
+    positions,
+    false,
+    "centripetal",
+    1.5
+  );
   path.add(curve);
 
   return path;
