@@ -10,7 +10,8 @@ import {
 const pathCache = new Map<string, THREE.CurvePath<THREE.Vector3>>();
 
 function createMazePath(
-  pathPoints: MazePathPoint[]
+  pathPoints: MazePathPoint[],
+  pathName?: string
 ): THREE.CurvePath<THREE.Vector3> {
   const cacheKey = pathPoints
     .map(
@@ -19,10 +20,15 @@ function createMazePath(
     .join("|");
 
   if (pathCache.has(cacheKey)) {
+    console.log(`Using cached path for: ${pathName || "unknown"}`);
     return pathCache.get(cacheKey)!;
   }
 
-  console.log("Creating new path with", pathPoints.length, "points");
+  console.log(
+    `Creating new path: ${pathName || "unknown"} with`,
+    pathPoints.length,
+    "points"
+  );
   const path = new THREE.CurvePath<THREE.Vector3>();
   let catmullPoints: THREE.Vector3[] = [];
 
@@ -139,7 +145,7 @@ export function getHomePaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
   const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 
   Object.entries(homePaths).forEach(([key, pathPoints]) => {
-    paths[key] = createMazePath(pathPoints);
+    paths[key] = createMazePath(pathPoints, key);
   });
 
   return paths;
