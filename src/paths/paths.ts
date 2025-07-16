@@ -25,6 +25,11 @@ function createMazePath(
 
   const path = new THREE.CurvePath<THREE.Vector3>();
   let catmullPoints: THREE.Vector3[] = [];
+  console.log(
+    `Initial catmullPoints for ${pathName}:`,
+    catmullPoints.length,
+    "points"
+  );
 
   let i = 0;
   while (i < pathPoints.length - 1) {
@@ -57,7 +62,11 @@ function createMazePath(
       current.curveType !== next.curveType
     ) {
       catmullPoints.push(current.pos);
-      console.log("catmull Points", catmullPoints);
+      console.log(
+        `Segment ${i}: Added point to catmullPoints for ${pathName}`,
+        catmullPoints.length,
+        "total points"
+      );
       i++;
     } else {
       const midPoint = createNormalCurveMidPoint(current, next);
