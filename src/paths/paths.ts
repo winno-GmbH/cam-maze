@@ -19,77 +19,13 @@ function createMazePath(
     curveType?: "upperArc" | "lowerArc" | "forwardDownArc";
   }>;
 
-  // Extract all positions
   const positions = typedPathPoints.map((point) => point.pos);
 
-  // Create a single CatmullRomCurve3 that passes through all points
-  // This provides smooth rotation while following the exact path
-  const curve = new THREE.CatmullRomCurve3(positions);
+  // Create a smoother CatmullRomCurve3 with adjusted tension
+  const curve = new THREE.CatmullRomCurve3(positions, false, "catmullrom", 0.5);
   path.add(curve);
 
   return path;
-}
-
-function findZigZagGroup(
-  pathPoints: Array<{
-    pos: THREE.Vector3;
-    type: "straight" | "curve";
-    curveType?: string;
-  }>,
-  currentIndex: number
-): { start: any; end: any; endIndex: number } | null {
-  if (pathPoints[currentIndex].type !== "curve") {
-    return null;
-  }
-
-  let zigZagStartIndex = currentIndex;
-  let previousCurveType = pathPoints[currentIndex].curveType;
-  let consecutiveZigZagCount = 0;
-
-  for (let i = currentIndex + 1; i < pathPoints.length; i++) {
-    const point = pathPoints[i];
-
-    if (point.type === "curve") {
-      if (point.curveType !== previousCurveType) {
-        consecutiveZigZagCount++;
-        previousCurveType = point.curveType;
-      } else {
-        break;
-      }
-    } else {
-      break;
-    }
-  }
-
-  if (consecutiveZigZagCount >= 1) {
-    const endIndex = currentIndex + consecutiveZigZagCount + 1; // Add +1 back
-    return {
-      start: pathPoints[zigZagStartIndex],
-      end: pathPoints[endIndex],
-      endIndex: endIndex,
-    };
-  }
-
-  return null;
-}
-
-function createNormalCurveMidPoint(
-  current: { pos: THREE.Vector3; curveType?: string },
-  next: { pos: THREE.Vector3; curveType?: string }
-): THREE.Vector3 {
-  if (current.curveType) {
-    const curveType = current.curveType;
-
-    if (curveType === "upperArc") {
-      return new THREE.Vector3(current.pos.x, current.pos.y, next.pos.z);
-    } else if (curveType === "lowerArc") {
-      return new THREE.Vector3(next.pos.x, current.pos.y, current.pos.z);
-    } else if (curveType === "forwardDownArc") {
-      return new THREE.Vector3(current.pos.x, next.pos.y, current.pos.z);
-    }
-  }
-
-  return new THREE.Vector3(current.pos.x, current.pos.y, next.pos.z);
 }
 
 function createHomeScrollPath(
