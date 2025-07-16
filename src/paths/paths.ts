@@ -10,70 +10,48 @@ function createMazePath(
   pathPoints: MazePathPoint[]
 ): THREE.CurvePath<THREE.Vector3> {
   const path = new THREE.CurvePath<THREE.Vector3>();
+  let catmullPoints: THREE.Vector3[] = [];
 
-  let i = 0;
-  while (i < pathPoints.length - 1) {
+  for (let i = 0; i < pathPoints.length - 1; i++) {
     const current = pathPoints[i];
     const next = pathPoints[i + 1];
 
-    // === STRAIGHT ===
-    if (current.type === "straight" && next) {
+    if (current.type === "straight") {
+      if (catmullPoints.length > 0) {
+        path.add(new THREE.CatmullRomCurve3(catmullPoints));
+        catmullPoints = [];
+      }
       path.add(new THREE.LineCurve3(current.pos, next.pos));
-      i++;
-      continue;
-    }
-
-    // === ARC HANDLING ===
-    if (
+    } else if (
       current.type === "curve" &&
-      (current.curveType === "upperArc" || current.curveType === "lowerArc")
+      next.type === "curve" &&
+      current.curveType !== next.curveType
     ) {
-      const arcType = current.curveType!;
-      const sequence: THREE.Vector3[] = [current.pos];
-      let alternating = false;
-      let j = i + 1;
-      let prevType = arcType;
-
-      while (
-        j < pathPoints.length &&
-        pathPoints[j].type === "curve" &&
-        pathPoints[j].curveType
-      ) {
-        const nextType = pathPoints[j].curveType!;
-        sequence.push(pathPoints[j].pos);
-
-        if (nextType !== prevType) {
-          alternating = true;
-        } else if (alternating) {
-          sequence.pop();
-          break;
-        }
-
-        prevType = nextType;
-        j++;
+      catmullPoints.push(current.pos);
+    } else {
+      const midPoint = createNormalCurveMidPoint(current, next);
+      if (catmullPoints.length > 0) {
+        path.add(new THREE.CatmullRomCurve3(catmullPoints));
+        catmullPoints = [];
       }
-
-      if (alternating && sequence.length >= 2) {
-        path.add(new THREE.CatmullRomCurve3(sequence));
-      } else {
-        for (let k = 0; k < sequence.length - 1; k++) {
-          const from = sequence[k];
-          const to = sequence[k + 1];
-          const mid = from.clone().add(to).multiplyScalar(0.5);
-          mid.y += arcType === "upperArc" ? 0.5 : -0.5;
-          path.add(new THREE.QuadraticBezierCurve3(from, mid, to));
-        }
-      }
-
-      i += sequence.length - 1;
-      continue;
+      path.add(
+        new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
+      );
     }
-
-    // fallback
-    i++;
   }
 
   return path;
+}
+
+function createNormalCurveMidPoint(
+  current: MazePathPoint,
+  next: MazePathPoint
+): THREE.Vector3 {
+  return new THREE.Vector3(
+    (current.pos.x + next.pos.x) / 2,
+    (current.pos.y + next.pos.y) / 2,
+    (current.pos.z + next.pos.z) / 2
+  );
 }
 
 function createHomeScrollPath(
