@@ -20,7 +20,6 @@ function createMazePath(
     .join("|");
 
   if (pathCache.has(cacheKey)) {
-    console.log(`Using cached path for: ${pathName || "unknown"}`);
     return pathCache.get(cacheKey)!;
   }
 
