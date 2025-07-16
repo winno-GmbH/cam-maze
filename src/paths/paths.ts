@@ -19,6 +19,7 @@ function createMazePath(
     if (current.type === "straight") {
       if (catmullPoints.length >= 2) {
         path.add(new THREE.CatmullRomCurve3(catmullPoints));
+        console.log(catmullPoints);
         catmullPoints = [];
       }
       path.add(new THREE.LineCurve3(current.pos, next.pos));
