@@ -6,9 +6,26 @@ import {
   getCameraHomeScrollPathPoints,
 } from "./pathpoints";
 
+// Cache for created paths
+const pathCache = new Map<string, THREE.CurvePath<THREE.Vector3>>();
+
 function createMazePath(
   pathPoints: MazePathPoint[]
 ): THREE.CurvePath<THREE.Vector3> {
+  // Create a cache key based on the path points
+  const cacheKey = pathPoints
+    .map(
+      (p) => `${p.pos.x},${p.pos.y},${p.pos.z},${p.type},${p.curveType || ""}`
+    )
+    .join("|");
+
+  // Check if path already exists in cache
+  if (pathCache.has(cacheKey)) {
+    console.log("Using cached path");
+    return pathCache.get(cacheKey)!;
+  }
+
+  console.log("createMazePath called with", pathPoints.length, "points");
   const path = new THREE.CurvePath<THREE.Vector3>();
   let catmullPoints: THREE.Vector3[] = [];
 
@@ -41,6 +58,8 @@ function createMazePath(
     }
   }
 
+  // Store the created path in cache
+  pathCache.set(cacheKey, path);
   return path;
 }
 
