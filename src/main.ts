@@ -8,6 +8,7 @@ import {
   homeLoopHandler,
   setupHomeLoopScrollHandler,
 } from "./animation/home-loop";
+import { initPovScrollAnimation } from "./animation/pov-scroll";
 import { loadModel } from "./core/objects";
 import { setupCamera } from "./core/camera";
 
@@ -19,6 +20,8 @@ async function main() {
 
   homeLoopHandler();
   setupHomeLoopScrollHandler();
+
+  initPovScrollAnimation();
 
   startRenderLoop();
 }

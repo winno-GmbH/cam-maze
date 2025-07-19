@@ -2,6 +2,8 @@ import * as THREE from "three";
 import { MazePathPoint, PathPoint, CameraPathPoint } from "../types/types";
 import { isMobile } from "../config/config";
 
+// TODO - add curveCheckPoints to all curves where needed
+
 const objectHomeScrollEndPathPoint = new THREE.Vector3(0.55675, 0.35, 0.45175);
 
 const cameraPathPointsConfig = {
@@ -112,16 +114,11 @@ const pacmanHomePathPoints: MazePathPoint[] = [
     type: "curve",
     arc: "upperArc",
     curveCheckPoints: [
-      new THREE.Vector3(-0.44825, 0.55, -0.1),
+      new THREE.Vector3(-0.44825, 0.55, -0.05),
       new THREE.Vector3(-0.398, 0.55, -0.0005),
-      new THREE.Vector3(-0.34775, 0.55, 0.0999),
+      new THREE.Vector3(-0.34775, 0.55, 0.05),
     ]
   },
-  // {
-  //   pos: new THREE.Vector3(-0.398, 0.55, -0.0005),
-  //   type: "curve",
-  //   arc: "lowerArc",
-  // },
   {
     pos: new THREE.Vector3(-0.34775, 0.55, 0.1),
     type: "curve",
@@ -1093,14 +1090,13 @@ const ghost5HomePathPoints: MazePathPoint[] = [
 ];
 
 const cameraHomeScrollPathPoints: CameraPathPoint[] = [
-  { pos: thirdPosition, lookAt: cameraHomeScrollEndLookAt },
-  // { pos: startPosition, lookAt: lookAtPosition },
+  { pos: startPosition, lookAt: lookAtPosition },
   { pos: secondPosition, lookAt: cameraLookAtSecondPosition },
   { pos: thirdPosition, lookAt: cameraHomeScrollEndLookAt, },
   { pos: cameraHomeScrollEndPathPoint, lookAt: cameraHomeScrollEndLookAt },
 ];
 
-const cameraPOVPathPoints: CameraPathPoint[] = [
+const cameraPOVPathPoints: MazePathPoint[] = [
   {
     pos: new THREE.Vector3(0.55675, 0.5, 0.45175),
     type: "curve",
@@ -1110,19 +1106,15 @@ const cameraPOVPathPoints: CameraPathPoint[] = [
     pos: new THREE.Vector3(0.55675, 0.55, 0.6025),
     type: "curve",
     arc: "upperArc",
+    curveCheckPoints: [
+      new THREE.Vector3(0.55675, 0.55, 0.6525),
+      new THREE.Vector3(0.607, 0.55, 0.703),
+      new THREE.Vector3(0.65725, 0.55, 0.75325),
+      new THREE.Vector3(0.7075, 0.55, 0.8035),
+    ],
   },
   {
-    pos: new THREE.Vector3(0.607, 0.55, 0.703),
-    type: "curve",
-    arc: "lowerArc",
-  },
-  {
-    pos: new THREE.Vector3(0.65725, 0.55, 0.75325),
-    type: "curve",
-    arc: "upperArc",
-  },
-  {
-    pos: new THREE.Vector3(0.7075, 0.55, 0.8035),
+    pos: new THREE.Vector3(0.75775, 0.55, 0.8035),
     type: "straight",
   },
   {
@@ -1250,37 +1242,47 @@ const ghost5POVPathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(0.406, 0.55, 1.2055), type: "straight" },
 ];
 
+// start position, end position, ghost fade: 10, 20, cam fade: 50, 60, text start fade out: 90
+
 export const povTriggerPositions = {
   ghost1: {
     triggerPos: new THREE.Vector3(0.65725, 0.55, 0.75325),
-    ghostTextPos: new THREE.Vector3(0.7075, 0.55, 0.8035),
-    camTextPos: new THREE.Vector3(0.75775, 0.55, 0.8035),
+    ghostStartFadeIn: new THREE.Vector3(0.7075, 0.55, 0.8035),
+    ghostEndFadeIn: new THREE.Vector3(0.725, 0.55, 0.8035),
+    ghostStartFadeOut: new THREE.Vector3(0.75, 0.55, 0.8035),
+    camStartFadeIn: new THREE.Vector3(0.75775, 0.55, 0.8035),
+    camEndFadeIn: new THREE.Vector3(0.775, 0.55, 0.8035),
+    camStartFadeOut: new THREE.Vector3(0.84, 0.55, 0.8035),
     endPosition: new THREE.Vector3(0.85825, 0.55, 0.8035),
   },
   ghost2: {
     triggerPos: new THREE.Vector3(0.9085, 0.55, 0.8035),
-    ghostTextPos: new THREE.Vector3(0.95875, 0.55, 0.85375),
-    camTextPos: new THREE.Vector3(0.95875, 0.55, 0.904),
+    ghostStartFadeIn: new THREE.Vector3(0.95875, 0.55, 0.85375),
+    ghostEndFadeIn: new THREE.Vector3(0.95875, 0.55, 0.875),
+    ghostStartFadeOut: new THREE.Vector3(0.95875, 0.55, 0.89),
+    camStartFadeIn: new THREE.Vector3(0.95875, 0.55, 0.904),
+    camEndFadeIn: new THREE.Vector3(0.95875, 0.55, 0.93),
+    camStartFadeOut: new THREE.Vector3(0.95875, 0.55, 0.9975),
     endPosition: new THREE.Vector3(0.95875, 0.55, 1.0045),
   },
-  ghost3: {
-    triggerPos: new THREE.Vector3(0.75775, 0.55, 1.05475),
-    ghostTextPos: new THREE.Vector3(0.7075, 0.55, 1.0045),
-    camTextPos: new THREE.Vector3(0.65725, 0.55, 1.0045),
-    endPosition: new THREE.Vector3(0.55675, 0.55, 1.0045),
-  },
-  ghost4: {
-    triggerPos: new THREE.Vector3(0.65725, 0.55, 1.0045),
-    ghostTextPos: new THREE.Vector3(0.5065, 0.55, 1.0045),
-    camTextPos: new THREE.Vector3(0.45625, 0.55, 1.0045),
-    endPosition: new THREE.Vector3(0.35575, 0.55, 1.0045),
-  },
-  ghost5: {
-    triggerPos: new THREE.Vector3(0.15475, 0.55, 1.15525),
-    ghostTextPos: new THREE.Vector3(0.205, 0.55, 1.2055),
-    camTextPos: new THREE.Vector3(0.25525, 0.55, 1.2055),
-    endPosition: new THREE.Vector3(0.35575, 0.55, 1.2055),
-  },
+  // ghost3: {
+  //   triggerPos: new THREE.Vector3(0.75775, 0.55, 1.05475),
+  //   ghostTextPos: new THREE.Vector3(0.7075, 0.55, 1.0045),
+  //   camTextPos: new THREE.Vector3(0.65725, 0.55, 1.0045),
+  //   endPosition: new THREE.Vector3(0.55675, 0.55, 1.0045),
+  // },
+  // ghost4: {
+  //   triggerPos: new THREE.Vector3(0.65725, 0.55, 1.0045),
+  //   ghostTextPos: new THREE.Vector3(0.5065, 0.55, 1.0045),
+  //   camTextPos: new THREE.Vector3(0.45625, 0.55, 1.0045),
+  //   endPosition: new THREE.Vector3(0.35575, 0.55, 1.0045),
+  // },
+  // ghost5: {
+  //   triggerPos: new THREE.Vector3(0.15475, 0.55, 1.15525),
+  //   ghostTextPos: new THREE.Vector3(0.205, 0.55, 1.2055),
+  //   camTextPos: new THREE.Vector3(0.25525, 0.55, 1.2055),
+  //   endPosition: new THREE.Vector3(0.35575, 0.55, 1.2055),
+  // },
 };
 
 export function getStartPosition() {

@@ -1,5 +1,4 @@
 import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts, pacman } from "../core/objects";
@@ -9,7 +8,6 @@ import { homeLoopHandler } from "./home-loop";
 import { slerpToLayDown } from "./util";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
-let hasAnimatedFirstScroll = false;
 
 const characterSpeeds: Record<string, number> = {
   pacman: 0.9,
@@ -62,22 +60,6 @@ export function initHomeScrollAnimation(
         },
       }
     );
-
-  // Sync timeline progress to current scroll position, with ease-in on first scroll
-  // TODO
-  const trigger = ScrollTrigger.getById("homeScroll");
-  if (trigger && homeScrollTimeline) {
-    if (!hasAnimatedFirstScroll) {
-      hasAnimatedFirstScroll = true;
-      gsap.to(homeScrollTimeline, {
-        progress: trigger.progress,
-        duration: 0.5, // Adjust duration as needed
-        ease: "power2.out",
-      });
-    } else {
-      homeScrollTimeline.progress(trigger.progress);
-    }
-  }
 }
 
 function updateScrollAnimation(

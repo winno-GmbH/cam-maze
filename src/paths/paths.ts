@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { MazePathPoint, PathPoint, CameraPathPoint } from "../types/types";
 import {
   homePaths,
+  povPaths,
   createHomeScrollPathPoints,
   getCameraHomeScrollPathPoints,
 } from "./pathpoints";
@@ -148,6 +149,52 @@ function createCameraHomeScrollPath(
   return path;
 }
 
+function createCameraPath(
+  pathPoints: CameraPathPoint[]
+): THREE.CurvePath<THREE.Vector3> {
+  const path = new THREE.CurvePath<THREE.Vector3>();
+
+  for (let i = 0; i < pathPoints.length - 1; i++) {
+    const current = pathPoints[i];
+    const next = pathPoints[i + 1];
+
+    // Check if it's a MazePathPoint-like structure
+    if ('type' in current && current.type === "straight") {
+      path.add(new THREE.LineCurve3(current.pos, next.pos));
+    } else if ('type' in current && current.type === "curve" && 'arc' in current) {
+      // Create curve using existing logic
+      const midPoint = createCameraCurveMidPoint(current, next);
+      path.add(
+        new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
+      );
+    } else {
+      // Default to straight line for other types
+      path.add(new THREE.LineCurve3(current.pos, next.pos));
+    }
+  }
+
+  return path;
+}
+
+function createCameraCurveMidPoint(
+  current: CameraPathPoint,
+  next: CameraPathPoint
+): THREE.Vector3 {
+  if ('arc' in current && current.arc) {
+    const curveType = current.arc;
+
+    if (curveType === "upperArc") {
+      return new THREE.Vector3(current.pos.x, current.pos.y, next.pos.z);
+    } else if (curveType === "lowerArc") {
+      return new THREE.Vector3(next.pos.x, current.pos.y, current.pos.z);
+    } else if (curveType === "forwardDownArc") {
+      return new THREE.Vector3(current.pos.x, next.pos.y, current.pos.z);
+    }
+  }
+
+  return new THREE.Vector3(current.pos.x, current.pos.y, next.pos.z);
+}
+
 export function getHomePaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
   const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 
@@ -171,6 +218,22 @@ export function getHomeScrollPaths(
 
   Object.entries(scrollPathPoints).forEach(([key, pathPoints]) => {
     paths[key] = createHomeScrollPath(pathPoints);
+  });
+
+  return paths;
+}
+
+export function getPovPaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
+  const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
+
+  Object.entries(povPaths).forEach(([key, pathPoints]) => {
+    if (key === "camera") {
+      // Camera path uses CameraPathPoint[] and needs special handling
+      paths[key] = createMazePath(pathPoints as MazePathPoint[], key);
+    } else {
+      // Ghost paths use MazePathPoint[]
+      paths[key] = createMazePath(pathPoints as MazePathPoint[], key);
+    }
   });
 
   return paths;
