@@ -16,6 +16,7 @@ async function main() {
   setupLighting();
   setupCamera();
   await loadModel(scene);
+  console.log("scene", scene);
 
   HomeLoopHandler();
 
