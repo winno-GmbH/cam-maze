@@ -178,7 +178,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
 
         resolve();
       },
-      function (progress: any) {},
+      function (progress: any) { },
       function (error: any) {
         reject(error);
       }

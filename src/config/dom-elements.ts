@@ -1,5 +1,6 @@
 const SELECTORS = {
   mazeContainer: ".el--home-maze.el",
+  canvas: "canvas",
 
   homeSection: ".sc--home.sc",
   introSection: ".sc--intro.sc",
@@ -16,7 +17,7 @@ const SELECTORS = {
 
 export const DOM_ELEMENTS = {
   mazeContainer: document.querySelector(SELECTORS.mazeContainer) as HTMLElement,
-  canvas: document.querySelector("canvas") as HTMLCanvasElement,
+  canvas: document.querySelector(SELECTORS.canvas) as HTMLCanvasElement,
 
   homeSection: document.querySelector(SELECTORS.homeSection) as HTMLElement,
   introSection: document.querySelector(SELECTORS.introSection) as HTMLElement,

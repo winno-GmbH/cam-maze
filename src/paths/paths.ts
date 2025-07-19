@@ -210,6 +210,7 @@ export function getHomePaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
   return paths;
 }
 
+// when scrolling, this is where the ghosts are going into the void
 export function getHomeScrollPaths(
   pausedPositions: Record<string, THREE.Vector3>
 ): Record<string, THREE.CurvePath<THREE.Vector3>> {

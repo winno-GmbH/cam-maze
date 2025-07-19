@@ -3,7 +3,7 @@ import { getHomePaths } from "../paths/paths";
 import { onFrame, clock } from "../core/scene";
 import * as THREE from "three";
 import { calculateObjectOrientation } from "./util";
-import { initHomeScrollAnimation } from "./HomeScroll";
+import { initHomeScrollAnimation } from "./home-scroll";
 
 const LOOP_DURATION = 50;
 let isHomeLoopActive = true;
@@ -64,11 +64,14 @@ function updateHomeLoop(delta: number) {
   });
 }
 
-export function HomeLoopHandler() {
+// when scroll is 0 - home loop is running.
+// Home loop = pacman and ghosts moving on their paths - scroll doesn't matter
+export function homeLoopHandler() {
   if (window.scrollY === 0) {
     startHomeLoop();
   }
 }
+
 export function setupHomeLoopScrollHandler() {
   window.addEventListener("scroll", () => {
     if (window.scrollY !== 0) {

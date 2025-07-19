@@ -3,8 +3,6 @@ import { MazePathPoint, PathPoint, CameraPathPoint } from "../types/types";
 import { isMobile } from "../config/config";
 
 const objectHomeScrollEndPathPoint = new THREE.Vector3(0.55675, 0.35, 0.45175);
-const cameraHomeScrollEndPathPoint = new THREE.Vector3(0.55675, 0.5, 0.45175);
-const cameraHomeScrollEndLookAt = new THREE.Vector3(0.55675, -5, 0.35);
 
 const cameraPathPointsConfig = {
   startMobile: new THREE.Vector3(0.5, 2.5, 2.5),
@@ -13,8 +11,16 @@ const cameraPathPointsConfig = {
   secondDesktop: new THREE.Vector3(-1.5, 3, 0.75),
   mobileLookAt: new THREE.Vector3(0.5, 0.5, -1.5),
   desktopLookAt: new THREE.Vector3(-1.25, 0.5, 0.25),
+  cameraLookAtSecondDesktop: new THREE.Vector3(-0.75, 0.5, -0.75),
+  cameraLookAtSecondMobile: new THREE.Vector3(-0.75, 0.5, -0.75), // TODO
+
+  cameraHomeScrollEndLookAt: new THREE.Vector3(0.55675, -5, 0.35),
+  thirdPosition: new THREE.Vector3(0.55675, 3, 0.45175),
+
+  cameraHomeScrollEndPathPoint: new THREE.Vector3(0.55675, 0.5, 0.45175),
 };
 
+// determine positions and look at - changed if is mobile
 const startPosition = isMobile
   ? cameraPathPointsConfig.startMobile
   : cameraPathPointsConfig.startDesktop;
@@ -24,6 +30,15 @@ const secondPosition = isMobile
 const lookAtPosition = isMobile
   ? cameraPathPointsConfig.mobileLookAt
   : cameraPathPointsConfig.desktopLookAt;
+const cameraLookAtSecondPosition = isMobile
+  ? cameraPathPointsConfig.cameraLookAtSecondMobile
+  : cameraPathPointsConfig.cameraLookAtSecondDesktop;
+
+const thirdPosition = cameraPathPointsConfig.thirdPosition;
+const cameraHomeScrollEndLookAt =
+  cameraPathPointsConfig.cameraHomeScrollEndLookAt;
+const cameraHomeScrollEndPathPoint =
+  cameraPathPointsConfig.cameraHomeScrollEndPathPoint;
 
 const pacmanHomePathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(0.25525, 0.55, 0.6025), type: "straight" },
@@ -1052,11 +1067,8 @@ const ghost5HomePathPoints: MazePathPoint[] = [
 
 const cameraHomeScrollPathPoints: CameraPathPoint[] = [
   { pos: startPosition, lookAt: lookAtPosition },
-  { pos: secondPosition, lookAt: new THREE.Vector3(-0.75, 0.5, -0.75) }, //(0.55675, -5, 0.35)
-  {
-    pos: new THREE.Vector3(0.55675, 3, 0.45175),
-    lookAt: cameraHomeScrollEndLookAt,
-  },
+  { pos: secondPosition, lookAt: cameraLookAtSecondPosition },
+  { pos: thirdPosition, lookAt: cameraHomeScrollEndLookAt, },
   { pos: cameraHomeScrollEndPathPoint, lookAt: cameraHomeScrollEndLookAt },
 ];
 

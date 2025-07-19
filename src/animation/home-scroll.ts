@@ -3,7 +3,7 @@ import { getHomeScrollPaths } from "../paths/paths";
 import { pacman, ghosts } from "../core/objects";
 import gsap from "gsap";
 import { slerpToLayDown } from "./util";
-import { HomeLoopHandler } from "./HomeLoop";
+import { homeLoopHandler } from "./home-loop";
 import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import { camera } from "../core/camera";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -41,7 +41,8 @@ export function initHomeScrollAnimation(
         end: "bottom top",
         scrub: 0.5,
         onScrubComplete: () => {
-          HomeLoopHandler();
+          // on scroll complete, check home loop handler
+          homeLoopHandler();
         },
       },
     })
@@ -105,8 +106,8 @@ function updateScrollAnimation(
     progress < fadeStartProgress
       ? 1
       : progress > fadeEndProgress
-      ? 0
-      : 1 -
+        ? 0
+        : 1 -
         (progress - fadeStartProgress) / (fadeEndProgress - fadeStartProgress);
 
   // Pacman (slowest)

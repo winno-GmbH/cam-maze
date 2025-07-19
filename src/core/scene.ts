@@ -1,7 +1,39 @@
 import * as THREE from "three";
 import { isMobile } from "../config/config";
-import { DOM_ELEMENTS } from "../config/selectors";
+import { DOM_ELEMENTS } from "../config/dom-elements";
 import { camera } from "./camera";
+
+export const scene = new THREE.Scene();
+
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  alpha: true,
+  powerPreference: "high-performance",
+  precision: "highp",
+});
+
+const clock = new THREE.Clock();
+const frameCallbacks: (() => void)[] = [];
+
+export function initRenderer(): void {
+  enhanceAntiAliasing();
+
+  if (DOM_ELEMENTS.mazeContainer) {
+    renderer.setSize(
+      DOM_ELEMENTS.mazeContainer.clientWidth,
+      DOM_ELEMENTS.mazeContainer.clientHeight
+    );
+    DOM_ELEMENTS.mazeContainer.appendChild(renderer.domElement);
+  } else {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+  }
+
+  setPixelRatio();
+  window.addEventListener("resize", setPixelRatio);
+
+  renderer.render(scene, camera);
+}
 
 function enhanceAntiAliasing(): void {
   if (isMobile) {
@@ -45,42 +77,6 @@ export function setupLighting(): void {
   directionalLight.shadow.bias = -0.001;
   directionalLight.shadow.radius = 3;
   directionalLight.castShadow = true;
-}
-
-export const scene = new THREE.Scene();
-
-const renderer = new THREE.WebGLRenderer({
-  antialias: true,
-  alpha: true,
-  powerPreference: "high-performance",
-  precision: "highp",
-});
-
-const clock = new THREE.Clock();
-const frameCallbacks: (() => void)[] = [];
-
-export function initRenderer(): void {
-  enhanceAntiAliasing();
-
-  if (DOM_ELEMENTS.mazeContainer) {
-    renderer.setSize(
-      DOM_ELEMENTS.mazeContainer.clientWidth,
-      DOM_ELEMENTS.mazeContainer.clientHeight
-    );
-    DOM_ELEMENTS.mazeContainer.appendChild(renderer.domElement);
-  } else {
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", setPixelRatio);
-  } else {
-    setPixelRatio();
-  }
-  window.addEventListener("resize", setPixelRatio);
-
-  renderer.render(scene, camera);
 }
 
 export function startRenderLoop(): void {
