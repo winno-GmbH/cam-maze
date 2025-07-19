@@ -1,12 +1,12 @@
-import * as THREE from "three";
-import { getHomeScrollPaths } from "../paths/paths";
-import { pacman, ghosts } from "../core/objects";
 import gsap from "gsap";
-import { slerpToLayDown } from "./util";
-import { homeLoopHandler } from "./home-loop";
-import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
-import { camera } from "../core/camera";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import * as THREE from "three";
+import { camera } from "../core/camera";
+import { ghosts, pacman } from "../core/objects";
+import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
+import { getHomeScrollPaths } from "../paths/paths";
+import { homeLoopHandler } from "./home-loop";
+import { slerpToLayDown } from "./util";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 let hasAnimatedFirstScroll = false;
@@ -64,6 +64,7 @@ export function initHomeScrollAnimation(
     );
 
   // Sync timeline progress to current scroll position, with ease-in on first scroll
+  // TODO
   const trigger = ScrollTrigger.getById("homeScroll");
   if (trigger && homeScrollTimeline) {
     if (!hasAnimatedFirstScroll) {

@@ -2,30 +2,31 @@ import * as THREE from "three";
 
 export interface PathPoint {
   pos: THREE.Vector3;
+  curveCheckPoints?: THREE.Vector3[];
 }
 
 export interface MazePathPoint extends PathPoint {
   type: "straight" | "curve";
-  curveType?: "upperArc" | "lowerArc" | "forwardDownArc";
+  arc?: "upperArc" | "lowerArc" | "forwardDownArc";
 }
 
 export type CameraPathPoint =
   | {
-      pos: THREE.Vector3;
-      type: "straight" | "curve";
-      curveType?: "upperArc" | "lowerArc" | "forwardDownArc";
-    }
+    pos: THREE.Vector3;
+    type: "straight" | "curve";
+    arc?: "upperArc" | "lowerArc" | "forwardDownArc";
+  }
   | {
-      pos: THREE.Vector3;
-      lookAt: THREE.Vector3;
-    }
+    pos: THREE.Vector3;
+    lookAt: THREE.Vector3;
+  }
   | {
-      pos: THREE.Vector3;
-      rotation: THREE.Euler;
-    }
+    pos: THREE.Vector3;
+    rotation: THREE.Euler;
+  }
   | {
-      pos: THREE.Vector3;
-    };
+    pos: THREE.Vector3;
+  };
 
 export interface PathData {
   points: MazePathPoint[];

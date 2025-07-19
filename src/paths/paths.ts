@@ -9,13 +9,37 @@ import {
 // Cache for created paths
 const pathCache = new Map<string, THREE.CurvePath<THREE.Vector3>>();
 
+// Optional utility for smoothing tangent directions when following paths
+export class TangentSmoother {
+  private currentTangent: THREE.Vector3;
+  private smoothing: number;
+
+  constructor(initialTangent: THREE.Vector3, smoothing: number = 0.05) {
+    this.currentTangent = initialTangent.clone();
+    this.smoothing = smoothing;
+  }
+
+  update(targetTangent: THREE.Vector3): THREE.Vector3 {
+    this.currentTangent.lerp(targetTangent, this.smoothing);
+    return this.currentTangent.normalize();
+  }
+
+  reset(newTangent: THREE.Vector3): void {
+    this.currentTangent.copy(newTangent);
+  }
+
+  setSmoothingFactor(smoothing: number): void {
+    this.smoothing = Math.max(0.001, Math.min(1, smoothing)); // Clamp between 0.001 and 1
+  }
+}
+
 function createMazePath(
   pathPoints: MazePathPoint[],
   pathName?: string
 ): THREE.CurvePath<THREE.Vector3> {
   const cacheKey = pathPoints
     .map(
-      (p) => `${p.pos.x},${p.pos.y},${p.pos.z},${p.type},${p.curveType || ""}`
+      (p) => `${p.pos.x},${p.pos.y},${p.pos.z},${p.type},${p.arc || ""}`
     )
     .join("|");
 
@@ -24,28 +48,22 @@ function createMazePath(
   }
 
   const path = new THREE.CurvePath<THREE.Vector3>();
-  let catmullPoints: THREE.Vector3[] = [];
-  console.log(
-    `Initial catmullPoints for ${pathName}:`,
-    catmullPoints.length,
-    "points"
-  );
 
   let i = 0;
   while (i < pathPoints.length - 1) {
     const current = pathPoints[i];
     const next = pathPoints[i + 1];
 
-    if (current.type === "straight") {
-      if (catmullPoints.length >= 2) {
-        catmullPoints.push(current.pos);
-        console.log("Straight to catmullPoints", catmullPoints);
-        console.log(
-          "Creating CatmullRomCurve3 with points:",
-          catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
-        );
-        path.add(new THREE.CatmullRomCurve3(catmullPoints));
-      }
+    // Check if current point has curveCheckPoints
+    if (current.curveCheckPoints && current.curveCheckPoints.length > 0) {
+      // Create CatmullRomCurve3 with start point, checkpoints, and end point
+      const catmullPoints = [current.pos, ...current.curveCheckPoints, next.pos];
+      console.log(
+        `Creating CatmullRomCurve3 for ${pathName} with curveCheckPoints:`,
+        catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
+      );
+      path.add(new THREE.CatmullRomCurve3(catmullPoints, false, "centripetal", 0.5));
+    } else if (current.type === "straight") {
       console.log(
         "Creating LineCurve3 from",
         `(${current.pos.x}, ${current.pos.y}, ${current.pos.z})`,
@@ -53,93 +71,23 @@ function createMazePath(
         `(${next.pos.x}, ${next.pos.y}, ${next.pos.z})`
       );
       path.add(new THREE.LineCurve3(current.pos, next.pos));
-      catmullPoints = [];
-      i++;
-    } else if (
-      current.type === "curve" &&
-      next.type === "curve" &&
-      current.curveType !== next.curveType
-    ) {
-      // Check if current point is already in collection
-      const isCurrentPointInCollection = catmullPoints.some(
-        (p) =>
-          p.x === current.pos.x &&
-          p.y === current.pos.y &&
-          p.z === current.pos.z
-      );
-
-      // Check if next point is already in collection
-      const isNextPointInCollection = catmullPoints.some(
-        (p) => p.x === next.pos.x && p.y === next.pos.y && p.z === next.pos.z
-      );
-
-      // Only add points that aren't already in the collection
-      if (!isCurrentPointInCollection) {
-        catmullPoints.push(current.pos);
-      }
-      if (!isNextPointInCollection) {
-        catmullPoints.push(next.pos);
-      }
-
-      console.log(
-        `Segment ${i}: Added points to catmullPoints for ${pathName}`,
-        catmullPoints.length,
-        "total points"
-      );
-      i++;
     } else {
+      // Create curve using existing logic
       const midPoint = createNormalCurveMidPoint(current, next);
-
-      if (catmullPoints.length >= 1) {
-        const isCurrentPointInCollection = catmullPoints.some(
-          (p) =>
-            p.x === current.pos.x &&
-            p.y === current.pos.y &&
-            p.z === current.pos.z
-        );
-
-        if (isCurrentPointInCollection) {
-          // Current point is already in collection, add next point and create CatmullRomCurve3
-          catmullPoints.push(next.pos);
-          console.log("Curve to catmullPoints", catmullPoints);
-          console.log(
-            "Creating CatmullRomCurve3 with points:",
-            catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
-          );
-          path.add(new THREE.CatmullRomCurve3(catmullPoints));
-          catmullPoints = [];
-        } else {
-          // Current point is not in collection, add both current and next points
-          catmullPoints.push(current.pos);
-          catmullPoints.push(next.pos);
-          console.log("Curve to catmullPoints", catmullPoints);
-          console.log(
-            "Creating CatmullRomCurve3 with points:",
-            catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
-          );
-          path.add(new THREE.CatmullRomCurve3(catmullPoints));
-          catmullPoints = [];
-        }
-
-        // After creating CatmullRomCurve3, don't create QuadraticBezierCurve3
-        i++;
-      } else {
-        // No catmull points, create QuadraticBezierCurve3 for the current segment
-        console.log(
-          "Creating QuadraticBezierCurve3 from",
-          `(${current.pos.x}, ${current.pos.y}, ${current.pos.z})`,
-          "via",
-          `(${midPoint.x}, ${midPoint.y}, ${midPoint.z})`,
-          "to",
-          `(${next.pos.x}, ${next.pos.y}, ${next.pos.z})`
-        );
-        path.add(
-          new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
-        );
-        catmullPoints = [];
-        i++;
-      }
+      console.log(
+        "Creating QuadraticBezierCurve3 from",
+        `(${current.pos.x}, ${current.pos.y}, ${current.pos.z})`,
+        "via",
+        `(${midPoint.x}, ${midPoint.y}, ${midPoint.z})`,
+        "to",
+        `(${next.pos.x}, ${next.pos.y}, ${next.pos.z})`
+      );
+      path.add(
+        new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
+      );
     }
+
+    i++;
   }
 
   pathCache.set(cacheKey, path);
@@ -150,8 +98,8 @@ function createNormalCurveMidPoint(
   current: MazePathPoint,
   next: MazePathPoint
 ): THREE.Vector3 {
-  if (current.curveType) {
-    const curveType = current.curveType;
+  if (current.arc) {
+    const curveType = current.arc;
 
     if (curveType === "upperArc") {
       return new THREE.Vector3(current.pos.x, current.pos.y, next.pos.z);
