@@ -42,28 +42,6 @@ const cameraHomeScrollEndLookAt =
 const cameraHomeScrollEndPathPoint =
   cameraPathPointsConfig.cameraHomeScrollEndPathPoint;
 
-/*
-Optionen / Kurven Komibs:
-
-gerade ✅
-
-rechts ✅
-
-links ✅
-
-weite Kurven ✅
-
-kurze Kurven ❌
-
-
-curveCheckPoints: []
-
- 
-*/
-
-// upperArc = right - clockwise
-// lowerArc = left - counter-clockwise
-
 const pacmanHomePathPoints: MazePathPoint[] = [
   { pos: new THREE.Vector3(0.25525, 0.55, 0.6025), type: "straight" },
   {
@@ -117,7 +95,7 @@ const pacmanHomePathPoints: MazePathPoint[] = [
       new THREE.Vector3(-0.44825, 0.55, -0.05),
       new THREE.Vector3(-0.398, 0.55, -0.0005),
       new THREE.Vector3(-0.34775, 0.55, 0.05),
-    ]
+    ],
   },
   {
     pos: new THREE.Vector3(-0.34775, 0.55, 0.1),
@@ -167,11 +145,11 @@ const pacmanHomePathPoints: MazePathPoint[] = [
     pos: new THREE.Vector3(-0.34775, 0.55, 0.904),
     type: "curve",
     arc: "upperArc",
-  },
-  {
-    pos: new THREE.Vector3(-0.398, 0.55, 1.0045),
-    type: "curve",
-    arc: "lowerArc",
+    curveCheckPoints: [
+      new THREE.Vector3(-0.34775, 0.55, 0.95),
+      new THREE.Vector3(-0.398, 0.55, 1.0045),
+      new THREE.Vector3(-0.44825, 0.55, 1.05),
+    ],
   },
   {
     pos: new THREE.Vector3(-0.44825, 0.55, 1.105),
@@ -1090,9 +1068,10 @@ const ghost5HomePathPoints: MazePathPoint[] = [
 ];
 
 const cameraHomeScrollPathPoints: CameraPathPoint[] = [
-  { pos: startPosition, lookAt: lookAtPosition },
+  //{ pos: startPosition, lookAt: lookAtPosition },
+  { pos: thirdPosition, lookAt: cameraHomeScrollEndLookAt },
   { pos: secondPosition, lookAt: cameraLookAtSecondPosition },
-  { pos: thirdPosition, lookAt: cameraHomeScrollEndLookAt, },
+  { pos: thirdPosition, lookAt: cameraHomeScrollEndLookAt },
   { pos: cameraHomeScrollEndPathPoint, lookAt: cameraHomeScrollEndLookAt },
 ];
 

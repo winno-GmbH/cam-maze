@@ -39,9 +39,7 @@ function createMazePath(
   pathName?: string
 ): THREE.CurvePath<THREE.Vector3> {
   const cacheKey = pathPoints
-    .map(
-      (p) => `${p.pos.x},${p.pos.y},${p.pos.z},${p.type},${p.arc || ""}`
-    )
+    .map((p) => `${p.pos.x},${p.pos.y},${p.pos.z},${p.type},${p.arc || ""}`)
     .join("|");
 
   if (pathCache.has(cacheKey)) {
@@ -58,12 +56,18 @@ function createMazePath(
     // Check if current point has curveCheckPoints
     if (current.curveCheckPoints && current.curveCheckPoints.length > 0) {
       // Create CatmullRomCurve3 with start point, checkpoints, and end point
-      const catmullPoints = [current.pos, ...current.curveCheckPoints, next.pos];
+      const catmullPoints = [
+        current.pos,
+        ...current.curveCheckPoints,
+        next.pos,
+      ];
       console.log(
         `Creating CatmullRomCurve3 for ${pathName} with curveCheckPoints:`,
         catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
       );
-      path.add(new THREE.CatmullRomCurve3(catmullPoints, false, "centripetal", 0.5));
+      path.add(
+        new THREE.CatmullRomCurve3(catmullPoints, false, "centripetal", 0)
+      );
     } else if (current.type === "straight") {
       console.log(
         "Creating LineCurve3 from",
@@ -159,9 +163,13 @@ function createCameraPath(
     const next = pathPoints[i + 1];
 
     // Check if it's a MazePathPoint-like structure
-    if ('type' in current && current.type === "straight") {
+    if ("type" in current && current.type === "straight") {
       path.add(new THREE.LineCurve3(current.pos, next.pos));
-    } else if ('type' in current && current.type === "curve" && 'arc' in current) {
+    } else if (
+      "type" in current &&
+      current.type === "curve" &&
+      "arc" in current
+    ) {
       // Create curve using existing logic
       const midPoint = createCameraCurveMidPoint(current, next);
       path.add(
@@ -180,7 +188,7 @@ function createCameraCurveMidPoint(
   current: CameraPathPoint,
   next: CameraPathPoint
 ): THREE.Vector3 {
-  if ('arc' in current && current.arc) {
+  if ("arc" in current && current.arc) {
     const curveType = current.arc;
 
     if (curveType === "upperArc") {
