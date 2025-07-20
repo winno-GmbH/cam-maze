@@ -318,11 +318,7 @@ const ghost1HomePathPoints: MazePathPoint[] = [
     pos: new THREE.Vector3(0.05425, 0.55, 0.703),
     type: "curve",
     arc: "upperArc",
-  },
-  {
-    pos: new THREE.Vector3(0.004, 0.55, 0.8035),
-    type: "curve",
-    arc: "lowerArc",
+    curveCheckPoints: [new THREE.Vector3(0.004, 0.55, 0.8035)],
   },
   {
     pos: new THREE.Vector3(-0.04625, 0.55, 0.904),
