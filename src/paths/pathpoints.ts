@@ -370,11 +370,7 @@ const ghost2HomePathPoints: MazePathPoint[] = [
     pos: new THREE.Vector3(-0.04625, 0.55, 0.904),
     type: "curve",
     arc: "upperArc",
-  },
-  {
-    pos: new THREE.Vector3(0.004, 0.55, 0.8035),
-    type: "curve",
-    arc: "lowerArc",
+    curveCheckPoints: [new THREE.Vector3(0.004, 0.55, 0.8035)],
   },
   {
     pos: new THREE.Vector3(0.05425, 0.55, 0.703),
@@ -403,16 +399,10 @@ const ghost2HomePathPoints: MazePathPoint[] = [
     pos: new THREE.Vector3(0.25525, 0.55, 0.703),
     type: "curve",
     arc: "upperArc",
-  },
-  {
-    pos: new THREE.Vector3(0.3055, 0.55, 0.8035),
-    type: "curve",
-    arc: "lowerArc",
-  },
-  {
-    pos: new THREE.Vector3(0.35575, 0.55, 0.904),
-    type: "curve",
-    arc: "upperArc",
+    curveCheckPoints: [
+      new THREE.Vector3(0.3055, 0.55, 0.8035),
+      new THREE.Vector3(0.35575, 0.55, 0.904),
+    ],
   },
   { pos: new THREE.Vector3(0.45625, 0.55, 1.0045), type: "straight" },
   {
@@ -463,11 +453,7 @@ const ghost2HomePathPoints: MazePathPoint[] = [
     pos: new THREE.Vector3(0.75775, 0.55, -0.2015),
     type: "curve",
     arc: "lowerArc",
-  },
-  {
-    pos: new THREE.Vector3(0.65725, 0.55, -0.15125),
-    type: "curve",
-    arc: "upperArc",
+    curveCheckPoints: [new THREE.Vector3(0.65725, 0.55, -0.15125)],
   },
   {
     pos: new THREE.Vector3(0.55675, 0.55, -0.101),
@@ -490,11 +476,7 @@ const ghost2HomePathPoints: MazePathPoint[] = [
     pos: new THREE.Vector3(0.25525, 0.55, 0.703),
     type: "curve",
     arc: "upperArc",
-  },
-  {
-    pos: new THREE.Vector3(0.3055, 0.55, 0.8035),
-    type: "curve",
-    arc: "lowerArc",
+    curveCheckPoints: [new THREE.Vector3(0.3055, 0.55, 0.8035)],
   },
   {
     pos: new THREE.Vector3(0.35575, 0.55, 0.904),
@@ -521,24 +503,8 @@ const ghost2HomePathPoints: MazePathPoint[] = [
     pos: new THREE.Vector3(-0.14675, 0.55, 1.105),
     type: "curve",
     arc: "upperArc",
+    curveCheckPoints: [new THREE.Vector3(-0.0965, 0.55, 1.0045)],
   },
-  {
-    pos: new THREE.Vector3(-0.0965, 0.55, 1.0045),
-    type: "curve",
-    arc: "lowerArc",
-  },
-  {
-    pos: new THREE.Vector3(-0.04625, 0.55, 0.904),
-    type: "curve",
-    arc: "upperArc",
-  },
-  { pos: new THREE.Vector3(-0.14675, 0.55, 0.8035), type: "straight" },
-  {
-    pos: new THREE.Vector3(-0.34775, 0.55, 0.8035),
-    type: "curve",
-    arc: "lowerArc",
-  },
-  { pos: new THREE.Vector3(-0.44825, 0.55, 0.703), type: "straight" },
 ];
 
 const ghost3HomePathPoints: MazePathPoint[] = [
