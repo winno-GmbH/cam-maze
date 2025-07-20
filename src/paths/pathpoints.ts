@@ -197,36 +197,16 @@ const pacmanHomePathPoints: MazePathPoint[] = [
     pos: new THREE.Vector3(0.65725, 0.55, 1.0045),
     type: "curve",
     arc: "lowerArc",
-  },
-  {
-    pos: new THREE.Vector3(0.75775, 0.55, 0.904),
-    type: "curve",
-    arc: "upperArc",
-  },
-  {
-    pos: new THREE.Vector3(0.7075, 0.55, 0.8035),
-    type: "curve",
-    arc: "lowerArc",
-  },
-  {
-    pos: new THREE.Vector3(0.65725, 0.55, 0.75325),
-    type: "curve",
-    arc: "upperArc",
-  },
-  {
-    pos: new THREE.Vector3(0.55675, 0.55, 0.703),
-    type: "curve",
-    arc: "lowerArc",
-  },
-  {
-    pos: new THREE.Vector3(0.45625, 0.55, 0.75325),
-    type: "curve",
-    arc: "upperArc",
-  },
-  {
-    pos: new THREE.Vector3(0.35575, 0.55, 0.8035),
-    type: "curve",
-    arc: "lowerArc",
+    curveCheckPoints: [
+      new THREE.Vector3(0.65725, 0.55, 0.9545),
+      new THREE.Vector3(0.75775, 0.55, 0.904),
+      new THREE.Vector3(0.7075, 0.55, 0.8035),
+      new THREE.Vector3(0.65725, 0.55, 0.75325),
+      new THREE.Vector3(0.55675, 0.55, 0.703),
+      new THREE.Vector3(0.45625, 0.55, 0.75325),
+      new THREE.Vector3(0.35575, 0.55, 0.8035),
+      new THREE.Vector3(0.25525, 0.55, 0.753),
+    ],
   },
   {
     pos: new THREE.Vector3(0.25525, 0.55, 0.703),
