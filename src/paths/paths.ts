@@ -15,7 +15,7 @@ export class TangentSmoother {
   private currentTangent: THREE.Vector3;
   private smoothing: number;
 
-  constructor(initialTangent: THREE.Vector3, smoothing: number = 0.05) {
+  constructor(initialTangent: THREE.Vector3, smoothing: number = 0.06) {
     this.currentTangent = initialTangent.clone();
     this.smoothing = smoothing;
   }
@@ -30,7 +30,7 @@ export class TangentSmoother {
   }
 
   setSmoothingFactor(smoothing: number): void {
-    this.smoothing = Math.max(0.001, Math.min(1, smoothing)); // Clamp between 0.001 and 1
+    this.smoothing = Math.max(0.001, Math.min(1, smoothing));
   }
 }
 
