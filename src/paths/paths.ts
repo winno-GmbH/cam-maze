@@ -65,7 +65,9 @@ function createMazePath(
         `Creating CatmullRomCurve3 for ${pathName} with curveCheckPoints:`,
         catmullPoints.map((p) => `(${p.x}, ${p.y}, ${p.z})`)
       );
-      path.add(new THREE.CatmullRomCurve3(catmullPoints, false, "chordal", 0));
+      path.add(
+        new THREE.CatmullRomCurve3(catmullPoints, false, "centripetal", 0)
+      );
     } else if (current.type === "straight") {
       console.log(
         "Creating LineCurve3 from",
