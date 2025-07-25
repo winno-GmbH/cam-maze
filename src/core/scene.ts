@@ -54,9 +54,15 @@ function setPixelRatio(): void {
       DOM_ELEMENTS.mazeContainer.clientWidth,
       DOM_ELEMENTS.mazeContainer.clientHeight
     );
+    camera.aspect =
+      DOM_ELEMENTS.mazeContainer.clientWidth /
+      DOM_ELEMENTS.mazeContainer.clientHeight;
   } else {
     renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
   }
+
+  camera.updateProjectionMatrix();
 }
 
 export function setupLighting(): void {
