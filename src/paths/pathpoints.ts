@@ -81,17 +81,12 @@ const pacmanHomePathPoints: MazePathPoint[] = [
     type: "curve",
     arc: "upperArc",
   },
-  { pos: new THREE.Vector3(-0.24725, 0.55, -0.2015), type: "straight" },
   {
-    pos: new THREE.Vector3(-0.34775, 0.55, -0.2015),
-    type: "curve",
-    arc: "lowerArc",
-  },
-  {
-    pos: new THREE.Vector3(-0.44825, 0.55, -0.101),
-    type: "curve",
-    arc: "upperArc",
+    pos: new THREE.Vector3(-0.24725, 0.55, -0.2015),
+    type: "straight",
     curveCheckPoints: [
+      new THREE.Vector3(-0.34775, 0.55, -0.2015),
+      new THREE.Vector3(-0.44825, 0.55, -0.101),
       new THREE.Vector3(-0.44825, 0.55, -0.05075),
       new THREE.Vector3(-0.398, 0.55, -0.0005),
       new THREE.Vector3(-0.34775, 0.55, 0.04975),
