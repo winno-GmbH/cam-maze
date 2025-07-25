@@ -143,6 +143,8 @@ const pacmanHomePathPoints: MazePathPoint[] = [
       new THREE.Vector3(-0.34775, 0.55, 0.904),
       new THREE.Vector3(-0.398, 0.55, 1.0045),
       new THREE.Vector3(-0.44825, 0.55, 1.105),
+      new THREE.Vector3(-0.34775, 0.55, 1.2055),
+      new THREE.Vector3(-0.24725, 0.55, 1.2055),
     ],
   },
   /*  {
