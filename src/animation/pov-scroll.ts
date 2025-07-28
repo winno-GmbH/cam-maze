@@ -102,8 +102,8 @@ export function initPovScrollAnimation() {
         onEnter: () => {
           isInPovSection = true;
         },
+        onScrubComplete: handleLeavePOV,
         onLeave: handleLeavePOV,
-        onLeaveBack: handleLeavePOV,
       },
     })
     .to(
