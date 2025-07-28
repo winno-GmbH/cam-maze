@@ -605,6 +605,8 @@ function resetState(isReverse: boolean = false) {
     endScreenPassed = false;
   }
 
+  console.log("resetState", isReverse);
+
   // Reset all ghost states
   Object.keys(ghostStates).forEach((key) => {
     ghostStates[key] = {
