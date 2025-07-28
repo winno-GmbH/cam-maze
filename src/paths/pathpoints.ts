@@ -852,8 +852,8 @@ const ghost5HomePathPoints: MazePathPoint[] = [
 ];
 
 const cameraHomeScrollPathPoints: CameraPathPoint[] = [
-  { pos: startPosition, lookAt: lookAtPosition },
-  // { pos: thirdPosition, lookAt: cameraHomeScrollEndLookAt },
+  // { pos: startPosition, lookAt: lookAtPosition },
+  { pos: thirdPosition, lookAt: cameraHomeScrollEndLookAt },
   { pos: secondPosition, lookAt: cameraLookAtSecondPosition },
   { pos: thirdPosition, lookAt: cameraHomeScrollEndLookAt },
   { pos: cameraHomeScrollEndPathPoint, lookAt: cameraHomeScrollEndLookAt },
