@@ -102,8 +102,6 @@ export function initPovScrollAnimation() {
         onEnter: () => {
           isInPovSection = true;
         },
-        onScrubComplete: handleLeavePOV,
-        onLeave: handleLeavePOV,
       },
     })
     .to(
@@ -115,8 +113,14 @@ export function initPovScrollAnimation() {
         onUpdate: function (this: gsap.core.Tween) {
           handleAnimationUpdate.call(this);
         },
-        onReverseComplete: () => resetState(true),
-        onComplete: resetState,
+        onReverseComplete: () => {
+          handleLeavePOV();
+          resetState(true);
+        },
+        onComplete: () => {
+          handleLeavePOV();
+          resetState();
+        },
       }
     );
 }
