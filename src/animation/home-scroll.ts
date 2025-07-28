@@ -41,6 +41,7 @@ export function initHomeScrollAnimation(
         onScrubComplete: () => {
           // on scroll complete, check home loop handler
           homeLoopHandler();
+          console.log("homeScrollTimeline complete");
         },
       },
     })
