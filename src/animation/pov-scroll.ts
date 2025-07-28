@@ -526,6 +526,8 @@ function updateTextVisibility(
 function handleLeavePOV() {
   isInPovSection = false;
 
+  console.log("handleLeavePOV");
+
   // Reset all ghost states
   Object.entries(ghosts).forEach(([key, ghost]) => {
     if (key !== "pacman") {
