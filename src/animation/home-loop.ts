@@ -52,6 +52,8 @@ function startHomeLoop() {
     if (path) {
       const position = path.getPointAt(0);
       if (position) ghost.position.copy(position);
+      ghost.visible = true;
+      ghost.scale.set(1, 1, 1);
 
       // Reset the smoother with initial tangent
       if (homeLoopTangentSmoothers[key]) {
