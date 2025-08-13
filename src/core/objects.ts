@@ -127,7 +127,8 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
 
             children.forEach((item) => ghosts.pacman.add(item));
             ghosts.pacman.scale.set(0.05, 0.05, 0.05);
-            ghosts.pacman.rotation.set(Math.PI / 2, Math.PI / 2, Math.PI / 4);
+            // TODO: remove comment
+            // ghosts.pacman.rotation.set(Math.PI / 2, Math.PI / 2, Math.PI / 4);
 
             pacmanMixer = new THREE.AnimationMixer(ghosts.pacman);
             const pacmanActions: { [key: string]: THREE.AnimationAction } = {};
