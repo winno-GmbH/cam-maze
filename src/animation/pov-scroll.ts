@@ -10,9 +10,7 @@ import { calculateObjectOrientation } from "./util";
 let povScrollTimeline: gsap.core.Timeline | null = null;
 
 // Animation state
-let isInPovSection = false;
 let previousCameraPosition: THREE.Vector3 | null = null;
-let animationStarted = false;
 let rotationStarted = false;
 let startedInitEndScreen = false;
 let endScreenPassed = false;
@@ -30,7 +28,6 @@ const reverseFinalLookAt = new THREE.Vector3(
 );
 
 // Animation timing constants
-const originalFOV = 50;
 const wideFOV = 80;
 const startEndScreenSectionProgress = 0.8;
 const rotationStartingPoint = 0.973;
@@ -162,9 +159,6 @@ export function initPovScrollAnimation() {
         endTrigger: ".sc--final",
         scrub: 0.5,
         toggleActions: "play none none reverse",
-        onEnter: () => {
-          isInPovSection = true;
-        },
       },
     })
     .to(
@@ -216,7 +210,6 @@ function handleAnimationStart() {
     ghosts.pacman.visible = false;
   }
 
-  animationStarted = true;
 }
 
 function handleAnimationUpdate(this: gsap.core.Tween) {
@@ -350,6 +343,8 @@ function handleEndSequence(progress: number) {
 
   const animationProgress = (progress - startEndProgress) / (1 - startEndProgress);
 
+  console.log("animationProgress", animationProgress, isMovingForward);
+
   if (isMovingForward && animationProgress > 0) {
     const currentLookAt = getCameraLookAtPoint();
     const interpolatedLookAt = new THREE.Vector3().lerpVectors(
@@ -364,6 +359,7 @@ function handleEndSequence(progress: number) {
 
     camera.lookAt(interpolatedLookAt);
   } else if (animationProgress > 0) {
+    console.log("animationProgress", animationProgress);
     const interpolatedLookAt = new THREE.Vector3().lerpVectors(
       reverseFinalLookAt,
       finalLookAt,
@@ -605,8 +601,6 @@ function updateTextVisibility(
 }
 
 function handleLeavePOV() {
-  isInPovSection = false;
-
   console.log("handleLeavePOV");
 
   // Reset all ghost states
@@ -652,10 +646,6 @@ function handleLeavePOV() {
   if (ghosts.pacman) {
     ghosts.pacman.visible = true;
   }
-
-  // Reset camera
-  camera.fov = originalFOV;
-  camera.updateProjectionMatrix();
 
   // Reset tangent smoothers
   Object.keys(povTangentSmoothers).forEach((key) => {

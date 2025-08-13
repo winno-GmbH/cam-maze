@@ -8,6 +8,7 @@ import { homeLoopHandler } from "./home-loop";
 import { slerpToLayDown } from "./util";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
+const originalFOV = 50;
 
 const characterSpeeds: Record<string, number> = {
   pacman: 0.9,
@@ -51,6 +52,8 @@ export function initHomeScrollAnimation(
         immediateRender: false,
         onUpdate: function () {
           const progress = this.targets()[0].progress;
+          camera.fov = originalFOV;
+          camera.updateProjectionMatrix();
           console.log("home-scroll");
           updateScrollAnimation(
             progress,

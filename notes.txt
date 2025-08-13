@@ -28,10 +28,10 @@ Nach Labyrinth:
   - kamera soll gerade aus schauen (top von Labyrinth soll nicht gesehen werden)
   - on scroll immer weiter hoch mit der view
   - sobald top erreicht wieder nach vorne schauen
+- on labyrinth leave - fov
 
 Bessi:
 - Geist texte
-- on labyrinth leave - fov
   evt:
   - labyrinth back scrolling ghosts turn around (not a bug - feature)
   (- evt. grind ahschlah fixe?)

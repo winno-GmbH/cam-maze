@@ -1,9 +1,9 @@
-import { ghosts, pacmanMixer } from "../core/objects";
-import { getHomePaths, TangentSmoother } from "../paths/paths";
-import { onFrame, clock } from "../core/scene";
 import * as THREE from "three";
-import { calculateObjectOrientation } from "./util";
+import { ghosts, pacmanMixer } from "../core/objects";
+import { clock, onFrame } from "../core/scene";
+import { getHomePaths, TangentSmoother } from "../paths/paths";
 import { initHomeScrollAnimation } from "./home-scroll";
+import { calculateObjectOrientation } from "./util";
 
 const LOOP_DURATION = 50;
 let isHomeLoopActive = true;
