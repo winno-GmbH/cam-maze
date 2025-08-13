@@ -54,7 +54,6 @@ export function initHomeScrollAnimation(
           const progress = this.targets()[0].progress;
           camera.fov = originalFOV;
           camera.updateProjectionMatrix();
-          console.log("home-scroll");
           updateScrollAnimation(
             progress,
             scrollPaths,

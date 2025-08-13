@@ -29,6 +29,10 @@ Nach Labyrinth:
   - on scroll immer weiter hoch mit der view
   - sobald top erreicht wieder nach vorne schauen
 - on labyrinth leave - fov
+- Überspringen button
+- intro texte
+- outro texte
+
 
 Bessi:
 - Geist texte
@@ -39,14 +43,10 @@ Bessi:
 gemeinsam:
 - geister trigger pos anpassen
 
-phigo:
-- intro texte
-- outro texte
-- Überspringen button
-
 lonely:
 - evt. gewisse paths fixen
 
+enddings anschauen
 
 in call:
 - pacman text? tbd

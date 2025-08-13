@@ -953,10 +953,6 @@ const cameraPOVPathPoints: MazePathPoint[] = [
     type: "curve",
     arc: "upperArc",
   },
-  {
-    pos: new THREE.Vector3(X["1"], 1, 2.0095),
-    type: "straight",
-  },
 ];
 
 const ghost1POVPathPoints: MazePathPoint[] = [
@@ -1028,6 +1024,10 @@ export const povTriggerPositions = {
     camEndFadeIn: new THREE.Vector3(0.775, 0.55, 0.8035),
     camStartFadeOut: new THREE.Vector3(0.84, 0.55, 0.8035),
     endPosition: new THREE.Vector3(0.85825, 0.55, 0.8035),
+    forceEndProgress: {
+      start: 0.1,
+      end: 0.16,
+    },
   },
   ghost2: {
     triggerPos: new THREE.Vector3(0.9085, 0.55, 0.8035),
@@ -1038,6 +1038,10 @@ export const povTriggerPositions = {
     camEndFadeIn: new THREE.Vector3(0.95875, 0.55, 0.93),
     camStartFadeOut: new THREE.Vector3(0.95875, 0.55, 0.9975),
     endPosition: new THREE.Vector3(0.95875, 0.55, 1.0045),
+    forceEndProgress: {
+      start: 0.17,
+      end: 0.22
+    },
   },
   ghost3: {
     triggerPos: new THREE.Vector3(0.75775, 0.55, 1.05475),
@@ -1048,6 +1052,10 @@ export const povTriggerPositions = {
     camEndFadeIn: new THREE.Vector3(0.65725, 0.55, 1.0045),
     camStartFadeOut: new THREE.Vector3(0.6065, 0.55, 1.0045),
     endPosition: new THREE.Vector3(0.55675, 0.55, 1.0045),
+    forceEndProgress: {
+      start: 0.23,
+      end: 0.33,
+    },
   },
   ghost4: {
     triggerPos: new THREE.Vector3(0.65725, 0.55, 1.0045),
@@ -1058,6 +1066,10 @@ export const povTriggerPositions = {
     camEndFadeIn: new THREE.Vector3(0.45625, 0.55, 1.0045),
     camStartFadeOut: new THREE.Vector3(0.4065, 0.55, 1.0045),
     endPosition: new THREE.Vector3(0.35575, 0.55, 1.0045),
+    forceEndProgress: {
+      start: 0.38,
+      end: 0.47,
+    },
   },
   ghost5: {
     triggerPos: new THREE.Vector3(0.15475, 0.55, 1.15525),
@@ -1068,6 +1080,10 @@ export const povTriggerPositions = {
     camEndFadeIn: new THREE.Vector3(0.25525, 0.55, 1.2055),
     camStartFadeOut: new THREE.Vector3(0.3055, 0.55, 1.2055),
     endPosition: new THREE.Vector3(0.35575, 0.55, 1.2055),
+    forceEndProgress: {
+      start: 0.52,
+      end: 0.59,
+    },
   },
 };
 

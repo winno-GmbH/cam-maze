@@ -14,27 +14,17 @@ let previousCameraPosition: THREE.Vector3 | null = null;
 let rotationStarted = false;
 let startedInitEndScreen = false;
 let endScreenPassed = false;
-let startEndProgress = 0;
 
 // Camera rotation constants
 const startRotationPoint = new THREE.Vector3(0.55675, 0.55, 1.306);
 const endRotationPoint = new THREE.Vector3(-0.14675, 1, 1.8085);
-const targetLookAt = new THREE.Vector3(0.55675, 0.1, 1.306);
 const finalLookAt = new THREE.Vector3(-0.14675, 0, 1.8085);
-const reverseFinalLookAt = new THREE.Vector3(
-  7.395407041377711,
-  0.9578031302345096,
-  -4.312450290270135
-);
 
 // Animation timing constants
 const wideFOV = 80;
-const startEndScreenSectionProgress = 0.8;
-const rotationStartingPoint = 0.973;
 
 // Cached values
 let cachedStartYAngle: number | null = null;
-let isMovingForward = true;
 
 // Ghost trigger state
 const ghostStates: Record<string, any> = {};
@@ -156,7 +146,7 @@ export function initPovScrollAnimation() {
         trigger: DOM_ELEMENTS.povSection,
         start: "top bottom",
         end: "bottom top",
-        endTrigger: ".sc--final",
+        markers: true,
         scrub: 0.5,
         toggleActions: "play none none reverse",
       },
@@ -172,7 +162,7 @@ export function initPovScrollAnimation() {
         },
         onReverseComplete: () => {
           handleLeavePOV();
-          resetState(true);
+          resetState();
         },
         onComplete: () => {
           handleLeavePOV();
@@ -209,20 +199,20 @@ function handleAnimationStart() {
   if (ghosts.pacman) {
     ghosts.pacman.visible = false;
   }
-
 }
 
 function handleAnimationUpdate(this: gsap.core.Tween) {
   const overallProgress = (this.targets()[0] as any).progress;
-  console.log(overallProgress);
+
   const povPaths = getPovPaths();
 
   if (!povPaths.camera) return;
 
   const cameraPosition = povPaths.camera.getPointAt(overallProgress);
+  console.log(overallProgress, cameraPosition);
 
   if (previousCameraPosition) {
-    updateCamera(overallProgress, povPaths);
+    updateCamera(overallProgress, povPaths, cameraPosition);
     updateGhosts(cameraPosition, overallProgress, povPaths);
     previousCameraPosition.copy(cameraPosition);
   } else {
@@ -230,16 +220,9 @@ function handleAnimationUpdate(this: gsap.core.Tween) {
   }
 }
 
-function updateCamera(progress: number, povPaths: Record<string, THREE.CurvePath<THREE.Vector3>>) {
-  const position = povPaths.camera.getPointAt(progress);
+function updateCamera(progress: number, povPaths: Record<string, THREE.CurvePath<THREE.Vector3>>, position: THREE.Vector3) {
   camera.position.copy(position);
   camera.fov = wideFOV;
-
-  // Show canvas if hidden
-  const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-  if (canvas && canvas.style.display === "none" && progress < 0.99) {
-    canvas.style.display = "block";
-  }
 
   // Check for custom lookAt at current path point
   const customLookAt = getCustomLookAtForProgress(progress, povPaths);
@@ -263,115 +246,9 @@ function updateCamera(progress: number, povPaths: Record<string, THREE.CurvePath
   }
 
   const defaultLookAt = position.clone().add(smoothTangent);
-
-  // Handle different camera phases
-  // if (progress === 0) {
-  //   camera.lookAt(new THREE.Vector3(camera.position.x, 2, camera.position.z));
-  // } else if (progress < 0.1) {
-  //   handleInitialTransition(progress, position);
-  // } else 
-  if (progress >= rotationStartingPoint) {
-    handleRotationPhase(progress, position, defaultLookAt);
-  } else if (progress > startEndScreenSectionProgress && endScreenPassed) {
-    handleEndSequence(progress);
-  } else {
-    handleDefaultOrientation(progress, defaultLookAt);
-  }
+  handleDefaultOrientation(progress, defaultLookAt);
 
   camera.updateProjectionMatrix();
-}
-
-function handleInitialTransition(progress: number, position: THREE.Vector3) {
-  const transitionProgress = progress / 0.1;
-  const upLookAt = new THREE.Vector3(position.x, 1, position.z);
-  const frontLookAt = new THREE.Vector3(position.x, 0.5, position.z + 1);
-
-  const interpolatedLookAt = new THREE.Vector3();
-  interpolatedLookAt.lerpVectors(upLookAt, frontLookAt, smoothStep(transitionProgress));
-
-  camera.lookAt(interpolatedLookAt);
-}
-
-function handleRotationPhase(progress: number, position: THREE.Vector3, defaultLookAt: THREE.Vector3) {
-  const startRotationProgress = findClosestProgressOnPath(getPovPaths().camera, startRotationPoint);
-  const endRotationProgress = findClosestProgressOnPath(getPovPaths().camera, endRotationPoint);
-
-  if (progress >= startRotationProgress && progress <= endRotationProgress) {
-    const sectionProgress = (progress - startRotationProgress) / (endRotationProgress - startRotationProgress);
-
-    if (cachedStartYAngle === null) {
-      const startDir = new THREE.Vector2(defaultLookAt.x - position.x, defaultLookAt.z - position.z).normalize();
-      cachedStartYAngle = Math.atan2(startDir.y, startDir.x);
-      cachedStartYAngle = cachedStartYAngle > 3 ? cachedStartYAngle / 2 : cachedStartYAngle;
-    }
-
-    const targetDir = new THREE.Vector2(targetLookAt.x - position.x, targetLookAt.z - position.z).normalize();
-    let targetYAngle = Math.atan2(targetDir.y, targetDir.x);
-
-    let angleDiff = targetYAngle - cachedStartYAngle;
-    if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-    else if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-
-    angleDiff = -angleDiff * 1.75;
-    targetYAngle = cachedStartYAngle + angleDiff;
-
-    const easedProgress = smoothStep(sectionProgress);
-    const newYAngle = cachedStartYAngle * (1 - easedProgress) + targetYAngle * easedProgress;
-
-    const radius = 1.0;
-    const newLookAt = new THREE.Vector3(
-      position.x + Math.cos(newYAngle) * radius,
-      position.y,
-      position.z + Math.sin(newYAngle) * radius
-    );
-
-    camera.lookAt(newLookAt);
-    rotationStarted = true;
-
-    if (progress >= startEndScreenSectionProgress && !startedInitEndScreen) {
-      startedInitEndScreen = true;
-      initEndScreen();
-    }
-  }
-}
-
-function handleEndSequence(progress: number) {
-  if (startEndProgress === 0 && progress !== 1) {
-    const truncatedProgress = Math.floor(progress * 100) / 100;
-    startEndProgress = truncatedProgress === 0.99 ? rotationStartingPoint : progress;
-  }
-
-  const animationProgress = (progress - startEndProgress) / (1 - startEndProgress);
-
-  console.log("animationProgress", animationProgress, isMovingForward);
-
-  if (isMovingForward && animationProgress > 0) {
-    const currentLookAt = getCameraLookAtPoint();
-    const interpolatedLookAt = new THREE.Vector3().lerpVectors(
-      currentLookAt,
-      finalLookAt,
-      smoothStep(animationProgress)
-    );
-
-    const startFOV = wideFOV;
-    const targetFOV = wideFOV / 4;
-    camera.fov = startFOV + (targetFOV - startFOV) * smoothStep(animationProgress);
-
-    camera.lookAt(interpolatedLookAt);
-  } else if (animationProgress > 0) {
-    console.log("animationProgress", animationProgress);
-    const interpolatedLookAt = new THREE.Vector3().lerpVectors(
-      reverseFinalLookAt,
-      finalLookAt,
-      smoothStep(animationProgress)
-    );
-
-    const startFOV = wideFOV / 4;
-    const targetFOV = wideFOV;
-    camera.fov = targetFOV - (targetFOV - startFOV) * smoothStep(animationProgress);
-
-    camera.lookAt(interpolatedLookAt);
-  }
 }
 
 function handleDefaultOrientation(progress: number, defaultLookAt: THREE.Vector3) {
@@ -383,19 +260,10 @@ function handleDefaultOrientation(progress: number, defaultLookAt: THREE.Vector3
     rotationStarted = false;
     endScreenPassed = false;
     startedInitEndScreen = false;
-
-    const finalSection = document.querySelector(".sc--final.sc") as HTMLElement;
-    if (finalSection) {
-      finalSection.style.opacity = "0";
-    }
   }
 
   if (!rotationStarted && !startedInitEndScreen) {
     camera.lookAt(defaultLookAt);
-  }
-
-  if (!(endScreenPassed && progress > 0.8)) {
-    startEndProgress = 0;
   }
 }
 
@@ -409,8 +277,9 @@ function updateGhosts(
     const path = povPaths[key];
 
     if (!ghost || !path || key === "pacman") return;
+    const forceEndProgress = overallProgress > triggerData.forceEndProgress.start && overallProgress < triggerData.forceEndProgress.end;
 
-    updateGhost(key, ghost, path, cameraPosition, triggerData);
+    updateGhost(key, ghost, path, cameraPosition, triggerData, forceEndProgress);
   });
 }
 
@@ -419,7 +288,8 @@ function updateGhost(
   ghost: THREE.Object3D,
   path: THREE.CurvePath<THREE.Vector3>,
   cameraPosition: THREE.Vector3,
-  triggerData: any
+  triggerData: any,
+  forceEndProgress: boolean
 ) {
   const { triggerPos, ghostStartFadeIn, ghostEndFadeIn, ghostStartFadeOut, camStartFadeIn, camEndFadeIn, camStartFadeOut, endPosition } = triggerData;
   const state = ghostStates[key];
@@ -512,7 +382,7 @@ function updateGhost(
   }
 
   // Update text visibility
-  updateTextVisibility(key, currentCameraProgress, state, parent, povElements, camElements);
+  updateTextVisibility(key, currentCameraProgress, state, parent, povElements, camElements, forceEndProgress);
 }
 
 function updateTextVisibility(
@@ -521,8 +391,29 @@ function updateTextVisibility(
   state: any,
   parent: HTMLElement,
   povElements: NodeListOf<Element>,
-  camElements: NodeListOf<Element>
+  camElements: NodeListOf<Element>,
+  forceEndProgress: boolean = false
 ) {
+  // If forceEndProgress is true, immediately hide all text elements
+  if (forceEndProgress) {
+    parent.style.opacity = "0";
+    parent.classList.add("no-visibility");
+
+    povElements.forEach((povElement) => {
+      const element = povElement as HTMLElement;
+      element.classList.add("no-visibility");
+      element.style.opacity = "0";
+    });
+
+    camElements.forEach((camElement) => {
+      const element = camElement as HTMLElement;
+      element.classList.add("no-visibility");
+      element.style.opacity = "0";
+    });
+
+    return;
+  }
+
   // Calculate target opacities using precise fade timing positions
   let targetGhostOpacity = 0;
   let targetCamOpacity = 0;
@@ -601,8 +492,6 @@ function updateTextVisibility(
 }
 
 function handleLeavePOV() {
-  console.log("handleLeavePOV");
-
   // Reset all ghost states
   Object.entries(ghosts).forEach(([key, ghost]) => {
     if (key !== "pacman") {
@@ -656,7 +545,7 @@ function handleLeavePOV() {
   });
 }
 
-function resetState(isReverse: boolean = false) {
+function resetState() {
   // Reset camera state
   if (ghosts.pacman) {
     ghosts.pacman.visible = true;
@@ -664,19 +553,7 @@ function resetState(isReverse: boolean = false) {
 
   rotationStarted = false;
   cachedStartYAngle = null;
-  startEndProgress = 0;
   startedInitEndScreen = false;
-
-  if (!isReverse) {
-    const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-    if (canvas) {
-      canvas.style.display = "none";
-    }
-    camera.lookAt(finalLookAt);
-    endScreenPassed = true;
-  } else {
-    endScreenPassed = false;
-  }
 
   // Reset all ghost states
   Object.keys(ghostStates).forEach((key) => {
@@ -707,30 +584,6 @@ function resetState(isReverse: boolean = false) {
   if (povTangentSmoothers.camera) {
     povTangentSmoothers.camera.reset(new THREE.Vector3(0, 0, -1));
   }
-}
-
-function initEndScreen() {
-  const finalSection = document.querySelector(".sc--final.sc") as HTMLElement;
-  if (!finalSection) return;
-
-  const tl = gsap.timeline({
-    scrollTrigger: {
-      trigger: ".sc--final",
-      start: "top top",
-      end: "bottom bottom",
-      scrub: 0.5,
-      toggleActions: "play none none reverse",
-    },
-  });
-
-  tl.to(finalSection, {
-    opacity: 1,
-    ease: "power2.inOut",
-    onComplete: () => {
-      endScreenPassed = true;
-      startedInitEndScreen = false;
-    },
-  });
 }
 
 // Utility functions
@@ -775,10 +628,4 @@ function findClosestProgressOnPath(
   return closestProgress;
 }
 
-// Track scroll direction
-let oldTop = 0;
-window.addEventListener("scroll", () => {
-  const top = window.scrollY;
-  isMovingForward = top > oldTop;
-  oldTop = top;
-});
+

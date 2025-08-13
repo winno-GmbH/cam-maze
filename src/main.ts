@@ -13,11 +13,25 @@ import { loadModel } from "./core/objects";
 import { setupCamera, camera } from "./core/camera";
 import * as THREE from "three";
 import { X, XCoordKey, Z, ZCoordKey } from "./paths/coordinates";
+import { initIntroScrollAnimation } from "./animation/intro-scroll";
+import { initOutroScrollAnimation } from "./animation/outro-scroll";
 
 // Declare global window interface for debug commands
 declare global {
   interface Window {
     lookAt: (x: XCoordKey, y: number, z: ZCoordKey) => void;
+  }
+}
+
+function initSkipButton() {
+  const skipButton = document.querySelector(".wr_p--skip.wr_p");
+  if (skipButton) {
+    const finalSection = document.querySelector(".sc--testimonials");
+    if (finalSection) {
+      skipButton.addEventListener("click", () => {
+        finalSection.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
+      });
+    }
   }
 }
 
@@ -31,17 +45,9 @@ async function main() {
   setupHomeLoopScrollHandler();
 
   initPovScrollAnimation();
-
-  // Add public window command for setting camera lookAt
-  window.lookAt = (x: XCoordKey, y: number, z: ZCoordKey) => {
-    const lookAtTarget = new THREE.Vector3(X[x], y, Z[z]);
-    camera.lookAt(lookAtTarget);
-    console.log(`Camera now looking at: (${x}, ${y}, ${z})`);
-  };
-
-  console.log("Debug commands available:");
-  console.log("- window.lookAt(x, y, z) - Set camera lookAt direction");
-
+  initIntroScrollAnimation();
+  initOutroScrollAnimation();
+  initSkipButton();
   startRenderLoop();
 }
 

@@ -5,8 +5,8 @@ const SELECTORS = {
   homeSection: ".sc--home.sc",
   introSection: ".sc--intro.sc",
   povSection: ".sc--pov.sc",
-  finalSection: ".sc--final.sc",
-  finalContainer: ".cr--final.cr",
+  finalSection: ".sc--outro.sc",
+  finalContainer: ".cr--outro.cr",
 
   scrollComponent: ".cmp--scroll.cmp",
   parentElements: ".cmp--pov.cmp",
