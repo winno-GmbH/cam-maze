@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
 import { getPovPaths, TangentSmoother } from "../paths/paths";
-import { povTriggerPositions } from "../paths/pathpoints";
+import { povTriggerPositions, povPaths as pathPointsData } from "../paths/pathpoints";
 import { DOM_ELEMENTS } from "../config/dom-elements";
 import { calculateObjectOrientation } from "./util";
 
@@ -45,6 +45,71 @@ const ghostStates: Record<string, any> = {};
 // Tangent smoothers for POV scroll (separate from home loop smoothers)
 const povTangentSmoothers: Record<string, TangentSmoother> = {};
 
+// Helper function to get custom lookAt for a specific progress
+function getCustomLookAtForProgress(progress: number, povPaths: Record<string, THREE.CurvePath<THREE.Vector3>>): THREE.Vector3 | null {
+  const cameraPathPoints = pathPointsData.camera;
+
+  // Define the sequence phase (first 5%) and transition phase (next 2%)
+  const sequencePhaseEnd = 0.05;
+  const transitionPhaseEnd = 0.07;
+
+  // For the very first point (progress close to 0), check for lookAtSequence
+  if (progress <= sequencePhaseEnd) { // Check first 5% of path
+    const firstPoint = cameraPathPoints[0];
+
+    // Handle lookAtSequence - cycle through multiple lookAt targets
+    if ('lookAtSequence' in firstPoint && firstPoint.lookAtSequence && firstPoint.lookAtSequence.length > 0) {
+      const sequenceProgress = progress / sequencePhaseEnd; // Normalize to 0-1 within first 5%
+      const sequenceLength = firstPoint.lookAtSequence.length;
+
+      // Calculate which lookAt target to use and interpolation
+      const segmentSize = 1 / sequenceLength;
+      const currentSegment = Math.floor(sequenceProgress / segmentSize);
+      const segmentProgress = (sequenceProgress % segmentSize) / segmentSize;
+
+      // Clamp to valid range
+      const fromIndex = Math.min(currentSegment, sequenceLength - 1);
+      const toIndex = Math.min(currentSegment + 1, sequenceLength - 1);
+
+      if (fromIndex === toIndex) {
+        // At the end, use last target
+        return firstPoint.lookAtSequence[fromIndex];
+      } else {
+        // Interpolate between current and next target for smooth transitions
+        const fromTarget = firstPoint.lookAtSequence[fromIndex];
+        const toTarget = firstPoint.lookAtSequence[toIndex];
+        return fromTarget.clone().lerp(toTarget, segmentProgress);
+      }
+    }
+  }
+
+  // Transition phase: smoothly blend from final sequence lookAt to default tangent lookAt
+  else if (progress <= transitionPhaseEnd) {
+    const firstPoint = cameraPathPoints[0];
+
+    if ('lookAtSequence' in firstPoint && firstPoint.lookAtSequence && firstPoint.lookAtSequence.length > 0) {
+      // Get the final lookAt from the sequence
+      const finalSequenceLookAt = firstPoint.lookAtSequence[firstPoint.lookAtSequence.length - 1];
+
+      // Get the default tangent-based lookAt, but constrain Y to avoid looking up
+      const position = povPaths.camera.getPointAt(progress);
+      const tangent = povPaths.camera.getTangentAt(progress).normalize();
+
+      // Constrain Y component of tangent to prevent looking up/down during transition
+      const constrainedTangent = new THREE.Vector3(tangent.x, 0, tangent.z).normalize();
+      const defaultLookAt = position.clone().add(constrainedTangent);
+
+      // Calculate transition progress (0 to 1 over the 2% transition phase)
+      const transitionProgress = (progress - sequencePhaseEnd) / (transitionPhaseEnd - sequencePhaseEnd);
+
+      // Smooth interpolation from sequence lookAt to constrained default lookAt
+      return finalSequenceLookAt.clone().lerp(defaultLookAt, transitionProgress);
+    }
+  }
+
+  return null;
+}
+
 // Initialize POV tangent smoothers
 function initializePovTangentSmoothers() {
   // Camera smoother - most important for smooth user experience
@@ -63,8 +128,6 @@ export function initPovScrollAnimation() {
     povScrollTimeline.kill();
     povScrollTimeline = null;
   }
-
-  const povPaths = getPovPaths();
 
   // Initialize tangent smoothers for POV scroll
   initializePovTangentSmoothers();
@@ -158,6 +221,7 @@ function handleAnimationStart() {
 
 function handleAnimationUpdate(this: gsap.core.Tween) {
   const overallProgress = (this.targets()[0] as any).progress;
+  console.log(overallProgress);
   const povPaths = getPovPaths();
 
   if (!povPaths.camera) return;
@@ -184,12 +248,25 @@ function updateCamera(progress: number, povPaths: Record<string, THREE.CurvePath
     canvas.style.display = "block";
   }
 
+  // Check for custom lookAt at current path point
+  const customLookAt = getCustomLookAtForProgress(progress, povPaths);
+  if (customLookAt) {
+    camera.lookAt(customLookAt);
+    camera.updateProjectionMatrix();
+    return;
+  }
+
   // Get smooth tangent for camera orientation
   const rawTangent = povPaths.camera.getTangentAt(progress).normalize();
   let smoothTangent = rawTangent;
 
   if (povTangentSmoothers.camera && progress > 0) {
     smoothTangent = povTangentSmoothers.camera.update(rawTangent);
+  }
+
+  // Constrain Y component to prevent looking up/down during early path following
+  if (progress <= 0.15) { // Extend constraint for first 15% of path
+    smoothTangent = new THREE.Vector3(smoothTangent.x, 0, smoothTangent.z).normalize();
   }
 
   const defaultLookAt = position.clone().add(smoothTangent);

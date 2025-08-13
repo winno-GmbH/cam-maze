@@ -51,6 +51,7 @@ export function initHomeScrollAnimation(
         immediateRender: false,
         onUpdate: function () {
           const progress = this.targets()[0].progress;
+          console.log("home-scroll");
           updateScrollAnimation(
             progress,
             scrollPaths,

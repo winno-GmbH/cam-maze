@@ -5,10 +5,11 @@ export interface PathPoint {
   curveCheckPoints?: THREE.Vector3[];
 }
 
-export interface MazePathPoint extends PathPoint {
+export type MazePathPoint = PathPoint & {
   type: "straight" | "curve";
   arc?: "upperArc" | "lowerArc" | "forwardDownArc";
-}
+  lookAtSequence?: THREE.Vector3[];
+};
 
 export type CameraPathPoint =
   | {

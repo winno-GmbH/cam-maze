@@ -1,4 +1,4 @@
-type XCoordKey =
+export type XCoordKey =
   | "0"
   | "0.5"
   | "1"
@@ -41,7 +41,7 @@ type XCoordKey =
   | "19.5"
   | "20"
 
-type ZCoordKey =
+export type ZCoordKey =
   | "0"
   | "0.5"
   | "1"
@@ -122,7 +122,7 @@ export const X: Record<XCoordKey, number> = {
   "20": 1.46125,
 };
 
-const Z: Record<ZCoordKey, number> = {
+export const Z: Record<ZCoordKey, number> = {
   "0": -0.302,
   "0.5": -0.25175,
   "1": -0.2015,

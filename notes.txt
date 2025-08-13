@@ -23,16 +23,30 @@ Nach Labyrinth:
 
 - figuren rechts entfernen
 - pacman fixen (animation, farben & besser anzeigen)
-
-- Geist texte
 - alle geister anzeigen (aktuell nur zwei)
-
 - kamera fixen:
   - kamera soll gerade aus schauen (top von Labyrinth soll nicht gesehen werden)
   - on scroll immer weiter hoch mit der view
   - sobald top erreicht wieder nach vorne schauen
+
+Bessi:
+- Geist texte
+- on labyrinth leave - fov
+  evt:
+  - labyrinth back scrolling ghosts turn around (not a bug - feature)
+  (- evt. grind ahschlah fixe?)
+
+gemeinsam:
+- geister trigger pos anpassen
+
+phigo:
 - intro texte
 - outro texte
-- evt. gewisse paths fixen
 - Überspringen button
+
+lonely:
+- evt. gewisse paths fixen
+
+
+in call:
 - pacman text? tbd
