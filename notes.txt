@@ -1,0 +1,38 @@
+Allgemein:
+- pacman fixen (animation, farben & besser anzeigen)
+- figuren rechts entfernen
+- Überspringen button
+
+Start Animation (scroll 0):
+- evt. gewisse paths fixen
+
+Scroll bis Labyrinth:
+- intro texte
+- kamera fixen:
+  - kamera soll gerade aus schauen (top von Labyrinth soll nicht gesehen werden)
+  - on scroll immer weiter hoch mit der view
+  - sobald top erreicht wieder nach vorne schauen
+
+In Labyrinth:
+- Geist texte
+- alle geister anzeigen (aktuell nur zwei)
+
+Nach Labyrinth:
+- outro texte
+
+
+
+- figuren rechts entfernen
+
+
+- pacman fixen (animation, farben & besser anzeigen)
+- Geist texte
+- alle geister anzeigen (aktuell nur zwei)
+- kamera fixen:
+  - kamera soll gerade aus schauen (top von Labyrinth soll nicht gesehen werden)
+  - on scroll immer weiter hoch mit der view
+  - sobald top erreicht wieder nach vorne schauen
+- intro texte
+- outro texte
+- evt. gewisse paths fixen
+- Überspringen button
