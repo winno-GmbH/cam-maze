@@ -12,58 +12,6 @@ import {
 
 export { clock };
 
-const allObjectsMap = [
-  { name: "Scene", display: true },
-  { name: "Ghost_EUR", display: true },
-  { name: "EUR", display: true },
-  { name: "Ghost_Mesh", display: true },
-  { name: "Ghost_CHF", display: true },
-  { name: "CHF", display: true },
-  { name: "Ghost_Mesh001", display: true },
-  { name: "Ghost_YEN", display: true },
-  { name: "YEN", display: true },
-  { name: "Ghost_Mesh002", display: true },
-  { name: "Ghost_USD", display: true },
-  { name: "USD", display: true },
-  { name: "Ghost_Mesh003", display: true },
-  { name: "Ghost_GBP", display: true },
-  { name: "GBP", display: true },
-  { name: "Ghost_Mesh004", display: true },
-  { name: "CAM-Pill-Blue", display: true },
-  { name: "CAM-Pill_Inlay_Blue", display: true },
-  { name: "CAM-Shell_Bottom_Blue", display: true },
-  { name: "CAM-Shell_Top_Blue", display: true },
-  { name: "CAM_Logo", display: true },
-  { name: "CAM-Pill-Orange", display: true },
-  { name: "BTC_Logo", display: true },
-  { name: "CAM-Pill_Inlay_Orange", display: true },
-  { name: "CAM-Shell_Bottom_Orange", display: true },
-  { name: "CAM-Shell_Top_Orange", display: true },
-  { name: "CAM-Sign", display: true },
-  { name: "Exit", display: true },
-  { name: "Sign", display: true },
-  { name: "CAM-Pacman", display: true },
-  { name: "CAM-Pacman_Shell", display: true },
-  { name: "CAM-Pacman_Shell_Boolean", display: true },
-  { name: "CAM-Pacman_Bottom_Text", display: true },
-  { name: "CAM-Pacman_Top_Text", display: true },
-  { name: "CAM_Pacman_Logo_1", display: true },
-  { name: "CAM_Pacman_Logo_2", display: true },
-  { name: "CAM-Pacman_Eye", display: true },
-  { name: "CAM-Pacman_Bottom", display: true },
-  { name: "CAM-Pacman_Backframe", display: true },
-  { name: "CAM-Pacman_Bitcoin_1", display: true },
-  { name: "CAM-Pacman_Bitcoin_2", display: true },
-  { name: "CAM-Pacman_Bottom_electronic", display: true },
-  { name: "CAM-Pacman_Top_electronic", display: true },
-  { name: "CAM-Pacman_Top", display: true },
-  { name: "CAM-Panel", display: true },
-  { name: "CAM-Cube", display: true },
-  { name: "CAM-Floor", display: true },
-  { name: "CAM-Arena_LowRes_Top", display: true },
-  { name: "CAM-Arena_LowRes_Bottom", display: true },
-]
-
 const loader = new THREE.GLTFLoader();
 
 export let pacmanMixer: THREE.AnimationMixer;
@@ -93,22 +41,14 @@ const ghostContainers = {
 // CAM-Pacman_Bottom -> should be visible (bottom)
 // CAM-Pacman_Bitcoin_1 -> should be visible (bitcoin in logo - left)
 // CAM-Pacman_Bitcoin_2 -> should be visible (bitcoin in logo - right)
-// CAM_Pacman_Logo_1 -> should be visible (background of logo - left)
-// CAM_Pacman_Logo_2 -> should be visible (background of logo - right)
-// CAM-Pacman_Eye
-// CAM-Pacman_Bottom_electronic
-// CAM-Pacman_Top_electronic
-// CAM-Pacman_Bottom_Text
-// CAM-Pacman_Top_Text
-// CAM-Pacman_Top
-// CAM-Panel
-// CAM-Cube
-// CAM-Floor
-// CAM-Arena_LowRes_Top
-// CAM-Arena_LowRes_Bottom
-
-const currentTest = "CAM_Pacman_Logo_2"
-
+// CAM_Pacman_Logo_1 -> should be visible (octagon background of logo - left)
+// CAM_Pacman_Logo_2 -> should be visible (octagon background of logo - right)
+// CAM-Pacman_Eye -> should be visible (eyes)
+// CAM-Pacman_Bottom_electronic -> should be visible (bottom of bitcoin on pacman)
+// CAM-Pacman_Top_electronic -> should be visible (top of bitcoin on pacman)
+// CAM-Pacman_Bottom_Text -> should be visible (text on bottom of pacman)
+// CAM-Pacman_Top_Text -> should be visible (text on top of pacman)
+// CAM-Pacman_Top -> should be visible (top)  
 
 const greenMaterial = new THREE.MeshBasicMaterial({
   color: 0x00ff00,
@@ -142,7 +82,9 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               if (
                 (subChild as any).isMesh &&
                 subChild.name !== "CAM-Pacman_Shell" &&
-                subChild.name !== "CAM-Pacman_Shell_Boolean"
+                subChild.name !== "CAM-Pacman_Shell_Boolean" &&
+                subChild.name !== "CAM-Pacman_Bitcoin_1" &&
+                subChild.name !== "CAM-Pacman_Bitcoin_2"
               ) {
                 const material =
                   materialMap[subChild.name as keyof typeof materialMap] ||
@@ -151,14 +93,11 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                 children.push(subChild);
               } else if (
                 subChild.name === "CAM-Pacman_Shell" ||
-                subChild.name === "CAM-Pacman_Shell_Boolean"
+                subChild.name === "CAM-Pacman_Shell_Boolean" ||
+                subChild.name === "CAM-Pacman_Bitcoin_1" ||
+                subChild.name === "CAM-Pacman_Bitcoin_2"
               ) {
                 subChild.visible = false;
-              }
-              if (subChild.name === currentTest) {
-                (subChild as THREE.Mesh).material = greenMaterial;
-                subChild.visible = true;
-                children.push(subChild);
               }
             });
 
@@ -171,9 +110,21 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
 
             gltf.animations.forEach((clip: THREE.AnimationClip) => {
               const action = pacmanMixer.clipAction(clip);
+
+              action.getMixer().addEventListener('loop', function (e) {
+                e.action.getRoot().traverse(function (obj) {
+                  if (obj.userData && obj.userData.skipAnimation) {
+                    (obj as any).updateMorphTargets = function () { };
+                  }
+                });
+              });
+
               pacmanActions[clip.name] = action;
-              action.setEffectiveWeight(1);
+              action.setEffectiveWeight(0);
               action.play();
+            });
+            Object.values(pacmanActions).forEach((action) => {
+              action.setEffectiveWeight(1);
             });
           } else if (
             child.name &&
@@ -261,8 +212,6 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
           if ((node as any).isMesh) {
             node.castShadow = true;
             node.receiveShadow = true;
-            // TODO: remove next line
-            node.visible = false;
           }
         });
 

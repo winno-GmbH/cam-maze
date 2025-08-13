@@ -1,4 +1,4 @@
-import { ghosts } from "../core/objects";
+import { ghosts, pacmanMixer } from "../core/objects";
 import { getHomePaths, TangentSmoother } from "../paths/paths";
 import { onFrame, clock } from "../core/scene";
 import * as THREE from "three";
@@ -52,11 +52,10 @@ function startHomeLoop() {
     if (path) {
       const position = path.getPointAt(0);
       if (position) ghost.position.copy(position);
-      // TODO: move back
       if (key !== "pacman") {
+        ghost.visible = true;
+        ghost.scale.set(1, 1, 1);
       }
-      ghost.visible = true;
-      ghost.scale.set(1, 1, 1);
 
       // Reset the smoother with initial tangent
       if (homeLoopTangentSmoothers[key]) {
@@ -79,6 +78,9 @@ function updateHomeLoop(delta: number) {
   animationTime += delta;
   const t = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   const homePaths = getHomePaths();
+  if (pacmanMixer) {
+    pacmanMixer.update(delta);
+  }
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
