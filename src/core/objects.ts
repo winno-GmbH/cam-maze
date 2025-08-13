@@ -155,6 +155,8 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               }
               if (subChild.name === currentTest) {
                 (subChild as THREE.Mesh).material = greenMaterial;
+                subChild.visible = true;
+                children.push(subChild);
               }
             });
 
