@@ -91,7 +91,7 @@ const ghostContainers = {
 // CAM-Pacman_Shell_Boolean -> should not be visible
 // CAM-Pacman_Backframe -> should be visible (below the logo)
 // CAM-Pacman_Bottom -> should be visible (bottom)
-// CAM-Pacman_Bitcoin_1
+// CAM-Pacman_Bitcoin_1 -> should be visible (bitcoin in logo)
 // CAM-Pacman_Bitcoin_2
 // CAM_Pacman_Logo_1
 // CAM_Pacman_Logo_2
@@ -107,7 +107,7 @@ const ghostContainers = {
 // CAM-Arena_LowRes_Top
 // CAM-Arena_LowRes_Bottom
 
-const currentTest = "CAM-Pacman_Bitcoin_1"
+const currentTest = "CAM-Pacman_Bitcoin_2"
 
 
 const greenMaterial = new THREE.MeshBasicMaterial({

@@ -10,7 +10,7 @@ export function calculateObjectOrientation(
   const targetRotation = Math.atan2(tangent.x, tangent.z);
 
   if (objectType === "pacman") {
-    object.rotation.set(Math.PI / 2, Math.PI, targetRotation + Math.PI / 2);
+    // object.rotation.set(Math.PI / 2, Math.PI, targetRotation + Math.PI / 2);
     // TODO: remove comment
   } else if (objectType === "ghost") {
     object.rotation.set(0, targetRotation, 0);
