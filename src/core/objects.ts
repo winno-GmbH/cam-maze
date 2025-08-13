@@ -87,7 +87,7 @@ const ghostContainers = {
   Ghost_GBP: ghosts.ghost5,
 };
 
-// CAM-Pacman_Shell
+// CAM-Pacman_Shell -> should not be visible
 // CAM-Pacman_Shell_Boolean
 // CAM-Pacman_Backframe
 // CAM-Pacman_Bottom
@@ -124,7 +124,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
       function (gltf) {
         const model = gltf.scene;
 
-        const currentTest = "CAM-Pacman_Shell"
+        const currentTest = "CAM-Pacman_Shell_Boolean"
 
         // Print all elements in the 3D model
         console.log("=== 3D Model Hierarchy ===");
