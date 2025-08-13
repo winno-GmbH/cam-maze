@@ -12,6 +12,58 @@ import {
 
 export { clock };
 
+const allObjectsMap = [
+  { name: "Scene", display: true },
+  { name: "Ghost_EUR", display: true },
+  { name: "EUR", display: true },
+  { name: "Ghost_Mesh", display: true },
+  { name: "Ghost_CHF", display: true },
+  { name: "CHF", display: true },
+  { name: "Ghost_Mesh001", display: true },
+  { name: "Ghost_YEN", display: true },
+  { name: "YEN", display: true },
+  { name: "Ghost_Mesh002", display: true },
+  { name: "Ghost_USD", display: true },
+  { name: "USD", display: true },
+  { name: "Ghost_Mesh003", display: true },
+  { name: "Ghost_GBP", display: true },
+  { name: "GBP", display: true },
+  { name: "Ghost_Mesh004", display: true },
+  { name: "CAM-Pill-Blue", display: true },
+  { name: "CAM-Pill_Inlay_Blue", display: true },
+  { name: "CAM-Shell_Bottom_Blue", display: true },
+  { name: "CAM-Shell_Top_Blue", display: true },
+  { name: "CAM_Logo", display: true },
+  { name: "CAM-Pill-Orange", display: true },
+  { name: "BTC_Logo", display: true },
+  { name: "CAM-Pill_Inlay_Orange", display: true },
+  { name: "CAM-Shell_Bottom_Orange", display: true },
+  { name: "CAM-Shell_Top_Orange", display: true },
+  { name: "CAM-Sign", display: true },
+  { name: "Exit", display: true },
+  { name: "Sign", display: true },
+  { name: "CAM-Pacman", display: true },
+  { name: "CAM-Pacman_Shell", display: true },
+  { name: "CAM-Pacman_Shell_Boolean", display: true },
+  { name: "CAM-Pacman_Bottom_Text", display: true },
+  { name: "CAM-Pacman_Top_Text", display: true },
+  { name: "CAM_Pacman_Logo_1", display: true },
+  { name: "CAM_Pacman_Logo_2", display: true },
+  { name: "CAM-Pacman_Eye", display: true },
+  { name: "CAM-Pacman_Bottom", display: true },
+  { name: "CAM-Pacman_Backframe", display: true },
+  { name: "CAM-Pacman_Bitcoin_1", display: true },
+  { name: "CAM-Pacman_Bitcoin_2", display: true },
+  { name: "CAM-Pacman_Bottom_electronic", display: true },
+  { name: "CAM-Pacman_Top_electronic", display: true },
+  { name: "CAM-Pacman_Top", display: true },
+  { name: "CAM-Panel", display: true },
+  { name: "CAM-Cube", display: true },
+  { name: "CAM-Floor", display: true },
+  { name: "CAM-Arena_LowRes_Top", display: true },
+  { name: "CAM-Arena_LowRes_Bottom", display: true },
+]
+
 const loader = new THREE.GLTFLoader();
 
 export let pacmanMixer: THREE.AnimationMixer;
@@ -162,6 +214,15 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               clonedChild.position.y = -0.5;
               clonedChild.receiveShadow = true;
               scene.add(clonedChild);
+            } else {
+              (child as THREE.Mesh).material = new THREE.MeshBasicMaterial({
+                color: 0x00ff00, // green
+                opacity: 1,
+                transparent: false,
+                depthWrite: true,
+                depthTest: true,
+                side: THREE.FrontSide,
+              });
             }
           }
         });

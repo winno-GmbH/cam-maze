@@ -23,9 +23,8 @@ Nach Labyrinth:
 
 
 - figuren rechts entfernen
-
-
 - pacman fixen (animation, farben & besser anzeigen)
+
 - Geist texte
 - alle geister anzeigen (aktuell nur zwei)
 - kamera fixen:
