@@ -90,7 +90,7 @@ const ghostContainers = {
 // CAM-Pacman_Shell -> should not be visible
 // CAM-Pacman_Shell_Boolean -> should not be visible
 // CAM-Pacman_Backframe -> should be visible (below the logo)
-// CAM-Pacman_Bottom
+// CAM-Pacman_Bottom -> should be visible (bottom)
 // CAM-Pacman_Bitcoin_1
 // CAM-Pacman_Bitcoin_2
 // CAM_Pacman_Logo_1
@@ -106,6 +106,9 @@ const ghostContainers = {
 // CAM-Floor
 // CAM-Arena_LowRes_Top
 // CAM-Arena_LowRes_Bottom
+
+const currentTest = "CAM-Pacman_Bitcoin_1"
+
 
 const greenMaterial = new THREE.MeshBasicMaterial({
   color: 0x00ff00,
@@ -124,7 +127,6 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
       function (gltf) {
         const model = gltf.scene;
 
-        const currentTest = "CAM-Pacman_Bottom"
 
         // Print all elements in the 3D model
         console.log("=== 3D Model Hierarchy ===");
