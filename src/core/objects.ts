@@ -87,6 +87,34 @@ const ghostContainers = {
   Ghost_GBP: ghosts.ghost5,
 };
 
+// CAM-Pacman_Shell
+// CAM-Pacman_Shell_Boolean
+// CAM-Pacman_Backframe
+// CAM-Pacman_Bottom
+// CAM-Pacman_Bitcoin_1
+// CAM-Pacman_Bitcoin_2
+// CAM_Pacman_Logo_1
+// CAM_Pacman_Logo_2
+// CAM-Pacman_Eye
+// CAM-Pacman_Bottom_electronic
+// CAM-Pacman_Top_electronic
+// CAM-Pacman_Bottom_Text
+// CAM-Pacman_Top_Text
+// CAM-Pacman_Top
+// CAM-Panel
+// CAM-Cube
+// CAM-Floor
+// CAM-Arena_LowRes_Top
+// CAM-Arena_LowRes_Bottom
+
+const greenMaterial = new THREE.MeshBasicMaterial({
+  color: 0x00ff00,
+  opacity: 1,
+  transparent: false,
+  depthWrite: true,
+  depthTest: true,
+});
+
 export async function loadModel(scene: THREE.Scene): Promise<void> {
   Object.values(ghosts).forEach((ghost) => scene.add(ghost));
   scene.add(pacman);
@@ -95,6 +123,8 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
       ASSETS.mazeModel,
       function (gltf) {
         const model = gltf.scene;
+
+        const currentTest = "CAM-Pacman_Shell"
 
         // Print all elements in the 3D model
         console.log("=== 3D Model Hierarchy ===");
@@ -122,6 +152,9 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                 subChild.name === "CAM-Pacman_Shell_Boolean"
               ) {
                 subChild.visible = false;
+              }
+              if (subChild.name === currentTest) {
+                (subChild as THREE.Mesh).material = greenMaterial;
               }
             });
 
