@@ -215,14 +215,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               clonedChild.receiveShadow = true;
               scene.add(clonedChild);
             } else {
-              (child as THREE.Mesh).material = new THREE.MeshBasicMaterial({
-                color: 0x00ff00, // green
-                opacity: 1,
-                transparent: false,
-                depthWrite: true,
-                depthTest: true,
-                side: THREE.FrontSide,
-              });
+              (child as THREE.Mesh).visible = false;
             }
           }
         });
