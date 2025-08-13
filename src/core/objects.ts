@@ -129,7 +129,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             ghosts.pacman.scale.set(0.05, 0.05, 0.05);
             // TODO: remove comment
             // ghosts.pacman.rotation.set(Math.PI / 2, Math.PI / 2, Math.PI / 4);
-            ghosts.pacman.rotation.set(0, 0, Math.PI);
+            ghosts.pacman.rotation.set(Math.PI, 0, 0);
 
             pacmanMixer = new THREE.AnimationMixer(ghosts.pacman);
             const pacmanActions: { [key: string]: THREE.AnimationAction } = {};
