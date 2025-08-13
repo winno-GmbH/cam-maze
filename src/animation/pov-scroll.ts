@@ -577,7 +577,8 @@ function handleLeavePOV() {
   }
 
   // Reset camera
-  camera.fov = originalFOV;
+  // TODO: remove comment
+  // camera.fov = originalFOV;
   camera.updateProjectionMatrix();
 
   // Reset tangent smoothers

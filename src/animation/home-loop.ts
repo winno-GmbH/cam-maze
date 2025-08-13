@@ -52,10 +52,11 @@ function startHomeLoop() {
     if (path) {
       const position = path.getPointAt(0);
       if (position) ghost.position.copy(position);
+      // TODO: move back
       if (key !== "pacman") {
-        ghost.visible = true;
-        ghost.scale.set(1, 1, 1);
       }
+      ghost.visible = true;
+      ghost.scale.set(1, 1, 1);
 
       // Reset the smoother with initial tangent
       if (homeLoopTangentSmoothers[key]) {
