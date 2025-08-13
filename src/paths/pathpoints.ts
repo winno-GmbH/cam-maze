@@ -1016,17 +1016,17 @@ const ghost5POVPathPoints: MazePathPoint[] = [
 
 export const povTriggerPositions = {
   ghost1: {
-    triggerPos: new THREE.Vector3(0.65725, 0.55, 0.75325),
-    ghostStartFadeIn: new THREE.Vector3(0.7075, 0.55, 0.8035),
-    ghostEndFadeIn: new THREE.Vector3(0.725, 0.55, 0.8035),
-    ghostStartFadeOut: new THREE.Vector3(0.75, 0.55, 0.8035),
-    camStartFadeIn: new THREE.Vector3(0.75775, 0.55, 0.8035),
-    camEndFadeIn: new THREE.Vector3(0.775, 0.55, 0.8035),
-    camStartFadeOut: new THREE.Vector3(0.84, 0.55, 0.8035),
-    endPosition: new THREE.Vector3(0.85825, 0.55, 0.8035),
+    triggerPos: new THREE.Vector3(0.65725, 0.55, 0.75325), // start ghost path
+    ghostStartFadeIn: new THREE.Vector3(0.7075, 0.55, 0.8035), // start ghost text fade in
+    ghostEndFadeIn: new THREE.Vector3(0.725, 0.55, 0.8035), // end ghost text fade in
+    ghostStartFadeOut: new THREE.Vector3(0.75, 0.55, 0.8035), // start ghost text fade out
+    camStartFadeIn: new THREE.Vector3(0.75775, 0.55, 0.8035), // start cam fade in
+    camEndFadeIn: new THREE.Vector3(0.775, 0.55, 0.8035), // end cam fade in
+    camStartFadeOut: new THREE.Vector3(0.84, 0.55, 0.8035), // start cam fade out
+    endPosition: new THREE.Vector3(0.85825, 0.55, 0.8035), // end of path
     forceEndProgress: {
-      start: 0.1,
-      end: 0.16,
+      start: 0.1, // start of force end
+      end: 0.16, // end of force end
     },
   },
   ghost2: {
@@ -1045,7 +1045,7 @@ export const povTriggerPositions = {
   },
   ghost3: {
     triggerPos: new THREE.Vector3(0.75775, 0.55, 1.05475),
-    ghostStartFadeIn: new THREE.Vector3(0.7075, 0.55, 1.05475),
+    ghostStartFadeIn: new THREE.Vector3(0.7075, 0.55, 1.0045),
     ghostEndFadeIn: new THREE.Vector3(0.7075, 0.55, 1.0045),
     ghostStartFadeOut: new THREE.Vector3(0.6825, 0.55, 1.0045),
     camStartFadeIn: new THREE.Vector3(0.65725, 0.55, 1.0045),
