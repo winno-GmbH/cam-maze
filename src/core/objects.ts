@@ -125,10 +125,11 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               }
             });
 
+            console.log("here");
+
             children.forEach((item) => ghosts.pacman.add(item));
             ghosts.pacman.scale.set(0.05, 0.05, 0.05);
-            // TODO: remove comment
-            // ghosts.pacman.rotation.set(Math.PI / 2, Math.PI / 2, Math.PI / 4);
+            ghosts.pacman.rotation.set(Math.PI / 2, Math.PI / 2, Math.PI / 4);
 
             pacmanMixer = new THREE.AnimationMixer(ghosts.pacman);
             const pacmanActions: { [key: string]: THREE.AnimationAction } = {};
@@ -225,6 +226,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
           if ((node as any).isMesh) {
             node.castShadow = true;
             node.receiveShadow = true;
+            // TODO: remove next line
             node.visible = false;
           }
         });
