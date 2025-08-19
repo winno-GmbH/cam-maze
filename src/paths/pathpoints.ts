@@ -306,10 +306,7 @@ const ghost2HomePathPoints: MazePathPoint[] = [
     pos: getCoord("8", "10"),
     type: "curve",
     arc: "upperArc",
-    curveCheckPoints: [
-      getCoord("8.5", "11"),
-      getCoord("9", "12"),
-    ],
+    curveCheckPoints: [getCoord("8.5", "11"), getCoord("9", "12")],
   },
   { pos: getCoord("10", "13"), type: "straight" },
   {
@@ -410,10 +407,7 @@ const ghost2HomePathPoints: MazePathPoint[] = [
     pos: getCoord("4", "14"),
     type: "curve",
     arc: "upperArc",
-    curveCheckPoints: [
-      getCoord("4.5", "13"),
-      getCoord("5", "12"),
-    ],
+    curveCheckPoints: [getCoord("4.5", "13"), getCoord("5", "12")],
   },
 ];
 
@@ -861,7 +855,7 @@ const cameraHomeScrollPathPoints: CameraPathPoint[] = [
 
 const cameraPOVPathPoints: MazePathPoint[] = [
   {
-    pos: new THREE.Vector3(X["11"], 0.5, Z["7.5"]),
+    pos: new THREE.Vector3(X["11"], 0.45, Z["7.5"]),
     type: "straight",
     lookAtSequence: [
       new THREE.Vector3(X["11"], 0.2, Z["8"]), // Look forward first
@@ -1040,7 +1034,7 @@ export const povTriggerPositions = {
     endPosition: new THREE.Vector3(0.95875, 0.55, 1.0045),
     forceEndProgress: {
       start: 0.17,
-      end: 0.22
+      end: 0.22,
     },
   },
   ghost3: {
