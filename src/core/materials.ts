@@ -70,10 +70,10 @@ export const materialMap = {
   CAM_Pacman_Logo_2: pacmanMaterials.white,
   "CAM-Pacman_Shell_Boolean": pacmanMaterials.blue,
   "CAM-Pacman_Shell": pacmanMaterials.blue,
-  "CAM-Pacman_Bottom_electronic": pacmanMaterials.blue,
-  "CAM-Pacman_Top_electronic": pacmanMaterials.blue,
-  // "CAM-Pacman_Bottom_electronic": pacmanMaterials.white, // bitcoin in the middle, left side
-  // "CAM-Pacman_Top_electronic": pacmanMaterials.white, // bitcoin in the middle, right side
+  // "CAM-Pacman_Bottom_electronic": pacmanMaterials.blue,
+  // "CAM-Pacman_Top_electronic": pacmanMaterials.blue,
+  "CAM-Pacman_Bottom_electronic": pacmanMaterials.white, // bitcoin in the middle, left side
+  "CAM-Pacman_Top_electronic": pacmanMaterials.white, // bitcoin in the middle, right side
   "CAM-Pacman_Bottom_Text": pacmanMaterials.white,
   "CAM-Pacman_Top_Text": pacmanMaterials.white,
   // "CAM-Pacman_Bottom_Text": pacmanMaterials.blue, // text on the bottom of pacman
