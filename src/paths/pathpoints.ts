@@ -855,7 +855,7 @@ const cameraHomeScrollPathPoints: CameraPathPoint[] = [
 
 const cameraPOVPathPoints: MazePathPoint[] = [
   {
-    pos: new THREE.Vector3(X["11"], 0.4125, Z["7.5"]),
+    pos: new THREE.Vector3(X["11"], 0.40625, Z["7.5"]),
     type: "straight",
     lookAtSequence: [
       new THREE.Vector3(X["11"], 0.2, Z["8"]), // Look forward first
