@@ -1,4 +1,4 @@
 node_modules/
 dist/
 git.bash
-build.bash
+.DS_Storerm -f .DS_Store src/.DS_Store
