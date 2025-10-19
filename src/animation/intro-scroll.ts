@@ -15,21 +15,9 @@ export function initIntroScrollAnimation() {
         end: "bottom bottom",
         scrub: 0.5,
         onEnter: () => {
-          console.log(
-            "Intro section entered - Camera pos:",
-            camera.position,
-            "Camera lookAt:",
-            camera.getWorldDirection(new THREE.Vector3())
-          );
           resetGhostsForIntro();
         },
         onEnterBack: () => {
-          console.log(
-            "Intro section entered back - Camera pos:",
-            camera.position,
-            "Camera lookAt:",
-            camera.getWorldDirection(new THREE.Vector3())
-          );
           resetGhostsForIntro();
         },
       },
@@ -97,40 +85,32 @@ function resetGhostsForIntro() {
 }
 
 function updateObjectsWalkBy(progress: number) {
-  // Calculate camera's view direction and create a plane in front of it
-  const cameraDirection = new THREE.Vector3();
-  camera.getWorldDirection(cameraDirection);
+  // Since camera is looking down, position objects in front of camera at ground level
+  // Camera is at y: 0.584 looking down, so place objects at ground level (y: 0.5) in front of camera
 
-  // Create a plane perpendicular to camera direction, positioned in front of camera
-  const distanceInFront = 1.0; // Distance in front of camera
-  const centerPoint = camera.position
-    .clone()
-    .add(cameraDirection.multiplyScalar(distanceInFront));
+  // Calculate horizontal plane at ground level in front of camera
+  const groundY = 0.5; // Ground level
+  const distanceInFront = 1.5; // Distance in front of camera
 
-  // Create right vector for horizontal movement
-  const cameraRight = new THREE.Vector3();
-  cameraRight.crossVectors(camera.up, cameraDirection).normalize();
+  // Position objects in front of camera at ground level
+  const centerPoint = new THREE.Vector3(
+    camera.position.x,
+    groundY,
+    camera.position.z + distanceInFront
+  );
 
-  // Define walk path: left to right across the camera's view
+  // Define walk path: left to right across the camera's view at ground level
   const walkWidth = 3.0;
-  const walkStart = centerPoint
-    .clone()
-    .add(cameraRight.clone().multiplyScalar(-walkWidth / 2));
-  const walkEnd = centerPoint
-    .clone()
-    .add(cameraRight.clone().multiplyScalar(walkWidth / 2));
-
-  // Log only once per animation cycle for debugging
-  if (progress < 0.01) {
-    console.log(
-      "Walk path calculated - Start:",
-      walkStart,
-      "End:",
-      walkEnd,
-      "Camera direction:",
-      cameraDirection
-    );
-  }
+  const walkStart = new THREE.Vector3(
+    centerPoint.x - walkWidth / 2,
+    groundY,
+    centerPoint.z
+  );
+  const walkEnd = new THREE.Vector3(
+    centerPoint.x + walkWidth / 2,
+    groundY,
+    centerPoint.z
+  );
 
   // Animate pacman and ghosts walking by
   const objectsToAnimate = [
