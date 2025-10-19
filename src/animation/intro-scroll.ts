@@ -96,11 +96,11 @@ function resetGhostsForIntro() {
 }
 
 function updateObjectsWalkBy(progress: number) {
-  // Since camera is looking down, position objects in front of camera at ground level
-  // Camera is at y: 0.584 looking down, so place objects at ground level (y: 0.5) in front of camera
+  // Since camera is looking down, position objects below camera where it's looking
+  // Camera is at y: 0.584 looking down toward y: -10, so place objects below camera
 
-  // Calculate horizontal plane at ground level in front of camera
-  const groundY = 0.5; // Ground level
+  // Calculate horizontal plane below camera where it's looking
+  const groundY = -0.5; // Below camera, in its field of view
   const distanceInFront = 1.5; // Distance in front of camera
 
   // Position objects in front of camera at ground level
