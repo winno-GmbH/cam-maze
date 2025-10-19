@@ -104,10 +104,11 @@ function updateObjectsWalkBy(progress: number) {
   const distanceInFront = 1.5; // Distance in front of camera
 
   // Position objects in front of camera at ground level
+  // Since camera looks toward negative Z, place objects at camera.z - distanceInFront
   const centerPoint = new THREE.Vector3(
     camera.position.x,
     groundY,
-    camera.position.z + distanceInFront
+    camera.position.z - distanceInFront
   );
 
   // Define walk path: left to right across the camera's view at ground level
