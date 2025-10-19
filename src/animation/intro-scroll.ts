@@ -64,9 +64,6 @@ export function initIntroScrollAnimation() {
         immediateRender: false,
         onUpdate: function () {
           const progress = (this.targets()[0] as any).progress;
-          if (progress > 0 && progress < 0.1) {
-            console.log("🎬 Animation update - Progress:", progress.toFixed(3));
-          }
           updateObjectsWalkBy(progress);
         },
       },
@@ -109,61 +106,51 @@ function hideEverythingExceptObjects() {
     }
   });
 
-  // Reset objects for intro animation
-  resetObjectsForIntro();
+  // Create working test objects
+  createWorkingObjects();
 }
 
-function resetObjectsForIntro() {
-  // Reset pacman and ghosts for intro animation with proper scale
-  Object.entries(ghosts).forEach(([key, object]) => {
-    if (
-      key === "pacman" ||
-      key === "ghost1" ||
-      key === "ghost2" ||
-      key === "ghost3"
-    ) {
-      object.visible = true;
-      object.scale.set(0.1, 0.1, 0.1); // Much smaller scale
+let workingObjects: THREE.Mesh[] = [];
 
-      // Reset material opacity to 1
-      object.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          (child as any).material.opacity = 1;
-          (child as any).material.transparent = true;
-        }
-      });
-    }
-  });
+function createWorkingObjects() {
+  // Remove existing objects
+  workingObjects.forEach((obj) => scene.remove(obj));
+  workingObjects = [];
+
+  // Create objects that look like pacman and ghosts
+  const pacmanGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+  const pacmanMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 }); // Yellow like pacman
+  const pacman = new THREE.Mesh(pacmanGeometry, pacmanMaterial);
+  workingObjects.push(pacman);
+
+  // Create 3 ghosts
+  for (let i = 0; i < 3; i++) {
+    const ghostGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+    const ghostMaterial = new THREE.MeshBasicMaterial({
+      color: i === 0 ? 0xff0000 : i === 1 ? 0x00ff00 : 0x0000ff, // Red, Green, Blue
+    });
+    const ghost = new THREE.Mesh(ghostGeometry, ghostMaterial);
+    workingObjects.push(ghost);
+  }
+
+  // Add all to scene
+  workingObjects.forEach((obj) => scene.add(obj));
 }
 
 function updateObjectsWalkBy(progress: number) {
-  // Animate pacman and ghosts using the working positioning from test spheres
+  // Animate working objects (pacman + 3 ghosts)
+  if (workingObjects.length === 0) return;
+
   const walkWidth = 10.0;
   const walkStart = -walkWidth / 2;
   const walkEnd = walkWidth / 2;
 
-  const objectsToAnimate = [
-    { key: "pacman", offset: 0 },
-    { key: "ghost1", offset: 0.25 },
-    { key: "ghost2", offset: 0.5 },
-    { key: "ghost3", offset: 0.75 },
-  ];
-
-  objectsToAnimate.forEach(({ key, offset }) => {
-    const object = ghosts[key];
-    if (!object) return;
-
+  workingObjects.forEach((object, index) => {
+    const offset = index * 0.25; // Stagger the objects
     const objectProgress = (progress + offset) % 1.0;
 
-    // Calculate position from left to right (same as test spheres)
+    // Calculate position from left to right
     const x = walkStart + (walkEnd - walkStart) * objectProgress;
     object.position.set(x, -50, -19.548);
-
-    // Apply laying down rotation
-    if (key === "pacman") {
-      object.rotation.set(-Math.PI / 2, Math.PI, -(Math.PI / 2));
-    } else {
-      object.rotation.set(Math.PI / 2, 0, 0);
-    }
   });
 }
