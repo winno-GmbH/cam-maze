@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts, pacman } from "../core/objects";
 import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
-import { getHomeScrollPaths } from "../paths/paths";
+import { getHomeScrollPaths, getHomePaths } from "../paths/paths";
 import { homeLoopHandler } from "./home-loop";
 import { slerpToLayDown } from "./util";
 
@@ -18,6 +18,46 @@ const characterSpeeds: Record<string, number> = {
   ghost4: 1.3,
   ghost5: 1.4,
 };
+
+function getTargetRotationForPathPosition(
+  key: string,
+  pathPosition: THREE.Vector3,
+  homePaths: Record<string, THREE.CurvePath<THREE.Vector3>>
+): THREE.Quaternion {
+  const path = homePaths[key];
+  if (!path) return new THREE.Quaternion();
+
+  // Find the t value on the path closest to the current position
+  let closestT = 0;
+  let closestDistance = Infinity;
+  const samples = 100;
+
+  for (let i = 0; i < samples; i++) {
+    const t = i / samples;
+    const point = path.getPointAt(t);
+    const distance = point.distanceTo(pathPosition);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestT = t;
+    }
+  }
+
+  // Get the tangent at this point and calculate rotation
+  const tangent = path.getTangentAt(closestT).normalize();
+  const tempObject = new THREE.Object3D();
+
+  if (key === "pacman") {
+    tempObject.rotation.set(
+      -(Math.PI / 2),
+      Math.PI,
+      -(Math.atan2(tangent.x, tangent.z) + Math.PI / 2)
+    );
+  } else {
+    tempObject.rotation.set(0, Math.atan2(tangent.x, tangent.z), 0);
+  }
+
+  return tempObject.quaternion.clone();
+}
 
 export function initHomeScrollAnimation(
   pausedPositions: Record<string, THREE.Vector3>,
@@ -57,6 +97,7 @@ export function initHomeScrollAnimation(
           updateScrollAnimation(
             progress,
             scrollPaths,
+            pausedPositions,
             pausedRotations,
             cameraPathPoints
           );
@@ -68,6 +109,7 @@ export function initHomeScrollAnimation(
 function updateScrollAnimation(
   progress: number,
   paths: Record<string, THREE.CurvePath<THREE.Vector3>>,
+  pausedPositions: Record<string, THREE.Vector3>,
   pausedRotations: Record<string, THREE.Quaternion>,
   cameraPathPoints: any[]
 ) {
@@ -105,14 +147,29 @@ function updateScrollAnimation(
     if (pacmanPoint) {
       pacman.position.copy(pacmanPoint);
 
-      // Smooth rotation handling for scroll and reverse
-      const rotationProgress = Math.pow(progress, 2); // Ease the rotation transition
-      if (rotationProgress < 0.05) {
-        // When near the start (scrolling back), maintain original rotation
-        pacman.quaternion.copy(pausedRotations["pacman"]);
+      // Smooth rotation handling
+      const rotationProgress = Math.pow(progress, 2);
+      const homePaths = getHomePaths();
+
+      if (rotationProgress < 0.1) {
+        // Near start: blend between current laying rotation and target path rotation
+        const targetRotation = getTargetRotationForPathPosition(
+          "pacman",
+          pausedPositions["pacman"],
+          homePaths
+        );
+        const layingRotation = new THREE.Quaternion().setFromEuler(
+          new THREE.Euler(Math.PI / 2, 0, 0)
+        );
+
+        // Inverse blend: at progress 0 we want target rotation, at 0.1 we want laying rotation
+        const blendFactor = rotationProgress / 0.1;
+        pacman.quaternion.copy(
+          targetRotation.clone().slerp(layingRotation, blendFactor)
+        );
       } else {
-        // Gradually transition to laying down position
-        const adjustedProgress = (rotationProgress - 0.05) / 0.95;
+        // Continue with laying down rotation
+        const adjustedProgress = (rotationProgress - 0.1) / 0.9;
         slerpToLayDown(pacman, pausedRotations["pacman"], adjustedProgress);
       }
 
@@ -136,12 +193,29 @@ function updateScrollAnimation(
       if (ghostPoint) {
         ghost.position.copy(ghostPoint);
 
-        // Smooth rotation handling for scroll and reverse
+        // Smooth rotation handling
         const rotationProgress = Math.pow(progress, 2);
-        if (rotationProgress < 0.05) {
-          ghost.quaternion.copy(pausedRotations[key]);
+        const homePaths = getHomePaths();
+
+        if (rotationProgress < 0.1) {
+          // Near start: blend between current laying rotation and target path rotation
+          const targetRotation = getTargetRotationForPathPosition(
+            key,
+            pausedPositions[key],
+            homePaths
+          );
+          const layingRotation = new THREE.Quaternion().setFromEuler(
+            new THREE.Euler(Math.PI / 2, 0, 0)
+          );
+
+          // Inverse blend: at progress 0 we want target rotation, at 0.1 we want laying rotation
+          const blendFactor = rotationProgress / 0.1;
+          ghost.quaternion.copy(
+            targetRotation.clone().slerp(layingRotation, blendFactor)
+          );
         } else {
-          const adjustedProgress = (rotationProgress - 0.05) / 0.95;
+          // Continue with laying down rotation
+          const adjustedProgress = (rotationProgress - 0.1) / 0.9;
           slerpToLayDown(ghost, pausedRotations[key], adjustedProgress);
         }
 
