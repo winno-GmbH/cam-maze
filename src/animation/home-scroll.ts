@@ -92,8 +92,8 @@ function updateScrollAnimation(
     progress < fadeStartProgress
       ? 1
       : progress > fadeEndProgress
-        ? 0
-        : 1 -
+      ? 0
+      : 1 -
         (progress - fadeStartProgress) / (fadeEndProgress - fadeStartProgress);
 
   // Pacman (slowest)
@@ -104,7 +104,18 @@ function updateScrollAnimation(
     const pacmanPoint = paths.pacman.getPointAt(easedPacmanProgress);
     if (pacmanPoint) {
       pacman.position.copy(pacmanPoint);
-      slerpToLayDown(pacman, pausedRotations["pacman"], easedPacmanProgress);
+
+      // Smooth rotation handling for scroll and reverse
+      const rotationProgress = Math.pow(progress, 2); // Ease the rotation transition
+      if (rotationProgress < 0.05) {
+        // When near the start (scrolling back), maintain original rotation
+        pacman.quaternion.copy(pausedRotations["pacman"]);
+      } else {
+        // Gradually transition to laying down position
+        const adjustedProgress = (rotationProgress - 0.05) / 0.95;
+        slerpToLayDown(pacman, pausedRotations["pacman"], adjustedProgress);
+      }
+
       // Animate pacman opacity
       pacman.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
@@ -124,7 +135,16 @@ function updateScrollAnimation(
       const ghostPoint = path.getPointAt(easedGhostProgress);
       if (ghostPoint) {
         ghost.position.copy(ghostPoint);
-        slerpToLayDown(ghost, pausedRotations[key], easedGhostProgress);
+
+        // Smooth rotation handling for scroll and reverse
+        const rotationProgress = Math.pow(progress, 2);
+        if (rotationProgress < 0.05) {
+          ghost.quaternion.copy(pausedRotations[key]);
+        } else {
+          const adjustedProgress = (rotationProgress - 0.05) / 0.95;
+          slerpToLayDown(ghost, pausedRotations[key], adjustedProgress);
+        }
+
         // Animate ghost opacity
         if ((ghost as any).material) {
           (ghost as any).material.opacity = opacity;

@@ -18,12 +18,30 @@ const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
 
 // Initialize home loop tangent smoothers
 function initializeHomeLoopTangentSmoothers() {
-  homeLoopTangentSmoothers.pacman = new TangentSmoother(new THREE.Vector3(1, 0, 0), 0.06);
-  homeLoopTangentSmoothers.ghost1 = new TangentSmoother(new THREE.Vector3(1, 0, 0), 0.06);
-  homeLoopTangentSmoothers.ghost2 = new TangentSmoother(new THREE.Vector3(1, 0, 0), 0.06);
-  homeLoopTangentSmoothers.ghost3 = new TangentSmoother(new THREE.Vector3(1, 0, 0), 0.06);
-  homeLoopTangentSmoothers.ghost4 = new TangentSmoother(new THREE.Vector3(1, 0, 0), 0.06);
-  homeLoopTangentSmoothers.ghost5 = new TangentSmoother(new THREE.Vector3(1, 0, 0), 0.06);
+  homeLoopTangentSmoothers.pacman = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.06
+  );
+  homeLoopTangentSmoothers.ghost1 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.06
+  );
+  homeLoopTangentSmoothers.ghost2 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.06
+  );
+  homeLoopTangentSmoothers.ghost3 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.06
+  );
+  homeLoopTangentSmoothers.ghost4 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.06
+  );
+  homeLoopTangentSmoothers.ghost5 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.06
+  );
 }
 
 function stopHomeLoop() {
@@ -91,7 +109,8 @@ function updateHomeLoop(delta: number) {
       if (homeLoopTangentSmoothers[key] && t > 0) {
         const rawTangent = path.getTangentAt(t);
         if (rawTangent && rawTangent.length() > 0) {
-          const smoothTangent = homeLoopTangentSmoothers[key].update(rawTangent);
+          const smoothTangent =
+            homeLoopTangentSmoothers[key].update(rawTangent);
           const objectType = key === "pacman" ? "pacman" : "ghost";
           calculateObjectOrientation(ghost, smoothTangent, objectType);
         }
