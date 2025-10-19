@@ -109,48 +109,61 @@ function hideEverythingExceptObjects() {
     }
   });
 
-  // Create simple test spheres instead of using complex objects
-  createTestSpheres();
+  // Reset objects for intro animation
+  resetObjectsForIntro();
 }
 
-let testSpheres: THREE.Mesh[] = [];
+function resetObjectsForIntro() {
+  // Reset pacman and ghosts for intro animation with proper scale
+  Object.entries(ghosts).forEach(([key, object]) => {
+    if (
+      key === "pacman" ||
+      key === "ghost1" ||
+      key === "ghost2" ||
+      key === "ghost3"
+    ) {
+      object.visible = true;
+      object.scale.set(0.1, 0.1, 0.1); // Much smaller scale
 
-function createTestSpheres() {
-  // Remove existing test spheres
-  testSpheres.forEach((sphere) => scene.remove(sphere));
-  testSpheres = [];
-
-  // Create simple colored spheres
-  const geometry = new THREE.SphereGeometry(0.1, 8, 8);
-  const materials = [
-    new THREE.MeshBasicMaterial({ color: 0xff0000 }), // Red
-    new THREE.MeshBasicMaterial({ color: 0x00ff00 }), // Green
-    new THREE.MeshBasicMaterial({ color: 0x0000ff }), // Blue
-    new THREE.MeshBasicMaterial({ color: 0xffff00 }), // Yellow
-  ];
-
-  materials.forEach((material, index) => {
-    const sphere = new THREE.Mesh(geometry, material);
-    sphere.position.set(-2 + index * 1.5, -50, -19.548);
-    scene.add(sphere);
-    testSpheres.push(sphere);
+      // Reset material opacity to 1
+      object.traverse((child) => {
+        if ((child as any).isMesh && (child as any).material) {
+          (child as any).material.opacity = 1;
+          (child as any).material.transparent = true;
+        }
+      });
+    }
   });
 }
 
 function updateObjectsWalkBy(progress: number) {
-  // Animate simple test spheres instead of complex objects
-  if (testSpheres.length === 0) return;
-
+  // Animate pacman and ghosts using the working positioning from test spheres
   const walkWidth = 10.0;
   const walkStart = -walkWidth / 2;
   const walkEnd = walkWidth / 2;
 
-  testSpheres.forEach((sphere, index) => {
-    const offset = index * 0.25; // Stagger the spheres
-    const sphereProgress = (progress + offset) % 1.0;
+  const objectsToAnimate = [
+    { key: "pacman", offset: 0 },
+    { key: "ghost1", offset: 0.25 },
+    { key: "ghost2", offset: 0.5 },
+    { key: "ghost3", offset: 0.75 },
+  ];
 
-    // Calculate position from left to right
-    const x = walkStart + (walkEnd - walkStart) * sphereProgress;
-    sphere.position.set(x, -50, -19.548);
+  objectsToAnimate.forEach(({ key, offset }) => {
+    const object = ghosts[key];
+    if (!object) return;
+
+    const objectProgress = (progress + offset) % 1.0;
+
+    // Calculate position from left to right (same as test spheres)
+    const x = walkStart + (walkEnd - walkStart) * objectProgress;
+    object.position.set(x, -50, -19.548);
+
+    // Apply laying down rotation
+    if (key === "pacman") {
+      object.rotation.set(-Math.PI / 2, Math.PI, -(Math.PI / 2));
+    } else {
+      object.rotation.set(Math.PI / 2, 0, 0);
+    }
   });
 }
