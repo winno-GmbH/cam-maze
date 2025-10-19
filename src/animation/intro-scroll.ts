@@ -61,17 +61,19 @@ export function initIntroScrollAnimation() {
 }
 
 function resetGhostsForIntro() {
-  // Reset ghost materials to be visible for intro animation
-  Object.entries(ghosts).forEach(([key, ghost]) => {
+  // Reset object materials to be visible for intro animation
+  Object.entries(ghosts).forEach(([key, object]) => {
     if (
-      key !== "pacman" &&
-      (key === "ghost1" || key === "ghost2" || key === "ghost3")
+      key === "pacman" ||
+      key === "ghost1" ||
+      key === "ghost2" ||
+      key === "ghost3"
     ) {
-      ghost.visible = true;
-      ghost.scale.set(0.5, 0.5, 0.5);
+      object.visible = true;
+      object.scale.set(0.5, 0.5, 0.5);
 
       // Reset material opacity to 1
-      ghost.traverse((child) => {
+      object.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
           (child as any).material.opacity = 1;
           (child as any).material.transparent = true;
@@ -90,49 +92,56 @@ function updateObjectsWalkBy(progress: number) {
   );
 
   // Use a fixed direction for walking (left to right across the maze)
-  // Based on the camera position, we'll walk along the X axis
-  const walkStart = new THREE.Vector3(-1, camera.position.y, camera.position.z); // Start left of camera
-  const walkEnd = new THREE.Vector3(2, camera.position.y, camera.position.z); // End right of camera
+  // Position ghosts deeper in the 3D world so they're visible in front of camera
+  const depthOffset = 2.0; // Move further away from camera
+  const walkStart = new THREE.Vector3(-1, 0.3, camera.position.z - depthOffset); // Start left, lower Y, deeper Z
+  const walkEnd = new THREE.Vector3(2, 0.3, camera.position.z - depthOffset); // End right, lower Y, deeper Z
 
   console.log("Walk start:", walkStart, "Walk end:", walkEnd);
 
-  // Animate up to 3 ghosts walking by
-  const ghostsToAnimate = [
-    { key: "ghost1", offset: 0, speed: 1.0 },
-    { key: "ghost2", offset: 0.3, speed: 1.1 },
-    { key: "ghost3", offset: 0.6, speed: 0.9 },
+  // Animate pacman and ghosts walking by
+  const objectsToAnimate = [
+    { key: "pacman", offset: 0, speed: 0.8 },
+    { key: "ghost1", offset: 0.2, speed: 1.0 },
+    { key: "ghost2", offset: 0.5, speed: 1.1 },
+    { key: "ghost3", offset: 0.8, speed: 0.9 },
   ];
 
-  ghostsToAnimate.forEach(({ key, offset, speed }) => {
-    const ghost = ghosts[key];
-    if (!ghost) return;
+  objectsToAnimate.forEach(({ key, offset, speed }) => {
+    const object = ghosts[key];
+    if (!object) return;
 
     // Calculate progress with offset and speed
-    const ghostProgress = ((progress + offset) * speed) % 1.2; // Loop with spacing
+    const objectProgress = ((progress + offset) * speed) % 1.2; // Loop with spacing
 
-    // Only show ghost during its active phase
-    if (ghostProgress > 1.0) {
-      ghost.visible = false;
+    // Only show object during its active phase
+    if (objectProgress > 1.0) {
+      object.visible = false;
       return;
     }
 
-    ghost.visible = true;
-    ghost.scale.set(0.5, 0.5, 0.5);
+    object.visible = true;
+    object.scale.set(0.5, 0.5, 0.5);
 
     // Calculate position from left to right using fixed walk path
-    const t = ghostProgress;
-    const ghostPosition = walkStart.clone().lerp(walkEnd, t);
+    const t = objectProgress;
+    const objectPosition = walkStart.clone().lerp(walkEnd, t);
 
-    ghost.position.copy(ghostPosition);
+    object.position.copy(objectPosition);
 
     console.log(
       `${key} visible at progress ${t.toFixed(2)}, position:`,
-      ghostPosition
+      objectPosition
     );
 
-    // Make ghost face the direction of movement (to the right)
-    const movementDirection = new THREE.Vector3(1, 0, 0);
-    ghost.lookAt(ghostPosition.clone().add(movementDirection));
+    // Apply laying down rotation (same as in maze)
+    if (key === "pacman") {
+      // Pacman rotation
+      object.rotation.set(-Math.PI / 2, Math.PI, -(Math.PI / 2));
+    } else {
+      // Ghost rotation - laying down state
+      object.rotation.set(Math.PI / 2, 0, 0);
+    }
 
     // Fade in/out at edges
     let opacity = 1.0;
@@ -142,17 +151,12 @@ function updateObjectsWalkBy(progress: number) {
       opacity = (1.0 - t) / 0.1;
     }
 
-    // Apply opacity to ghost material
-    ghost.traverse((child) => {
+    // Apply opacity to object material
+    object.traverse((child) => {
       if ((child as any).isMesh && (child as any).material) {
         (child as any).material.opacity = opacity;
         (child as any).material.transparent = true;
       }
     });
   });
-
-  // Hide pacman during intro
-  if (ghosts.pacman) {
-    ghosts.pacman.visible = false;
-  }
 }
