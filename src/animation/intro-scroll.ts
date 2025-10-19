@@ -108,108 +108,49 @@ function hideEverythingExceptObjects() {
       child.visible = false;
     }
   });
-  console.log("🎬 Hidden everything except objects for testing");
+
+  // Create simple test spheres instead of using complex objects
+  createTestSpheres();
+}
+
+let testSpheres: THREE.Mesh[] = [];
+
+function createTestSpheres() {
+  // Remove existing test spheres
+  testSpheres.forEach((sphere) => scene.remove(sphere));
+  testSpheres = [];
+
+  // Create simple colored spheres
+  const geometry = new THREE.SphereGeometry(0.1, 8, 8);
+  const materials = [
+    new THREE.MeshBasicMaterial({ color: 0xff0000 }), // Red
+    new THREE.MeshBasicMaterial({ color: 0x00ff00 }), // Green
+    new THREE.MeshBasicMaterial({ color: 0x0000ff }), // Blue
+    new THREE.MeshBasicMaterial({ color: 0xffff00 }), // Yellow
+  ];
+
+  materials.forEach((material, index) => {
+    const sphere = new THREE.Mesh(geometry, material);
+    sphere.position.set(-2 + index * 1.5, -50, -19.548);
+    scene.add(sphere);
+    testSpheres.push(sphere);
+  });
 }
 
 function updateObjectsWalkBy(progress: number) {
-  // Since camera is looking down, position objects below camera where it's looking
-  // Camera is at y: 0.584 looking down toward y: -10, so place objects below camera
+  // Animate simple test spheres instead of complex objects
+  if (testSpheres.length === 0) return;
 
-  // Calculate horizontal plane below camera where it's looking
-  const groundY = -50; // Much further below camera
-  const distanceInFront = 20.0; // Much further in front of camera
+  const walkWidth = 10.0;
+  const walkStart = -walkWidth / 2;
+  const walkEnd = walkWidth / 2;
 
-  // Position objects in front of camera at ground level
-  // Since camera looks toward negative Z, place objects at camera.z - distanceInFront
-  const centerPoint = new THREE.Vector3(
-    camera.position.x,
-    groundY,
-    camera.position.z - distanceInFront
-  );
+  testSpheres.forEach((sphere, index) => {
+    const offset = index * 0.25; // Stagger the spheres
+    const sphereProgress = (progress + offset) % 1.0;
 
-  // Define walk path: left to right across the camera's view at ground level
-  const walkWidth = 10.0; // Much wider walk path
-  const walkStart = new THREE.Vector3(
-    centerPoint.x - walkWidth / 2,
-    groundY,
-    centerPoint.z
-  );
-  const walkEnd = new THREE.Vector3(
-    centerPoint.x + walkWidth / 2,
-    groundY,
-    centerPoint.z
-  );
-
-  // Log walk path for debugging
-  if (progress < 0.01) {
-    console.log("🎬 Walk path - Start:", walkStart, "End:", walkEnd);
-  }
-
-  // Animate pacman and ghosts walking by
-  const objectsToAnimate = [
-    { key: "pacman", offset: 0, speed: 0.8 },
-    { key: "ghost1", offset: 0.2, speed: 1.0 },
-    { key: "ghost2", offset: 0.5, speed: 1.1 },
-    { key: "ghost3", offset: 0.8, speed: 0.9 },
-  ];
-
-  objectsToAnimate.forEach(({ key, offset, speed }) => {
-    const object = ghosts[key];
-    if (!object) return;
-
-    // Calculate progress with offset and speed
-    const objectProgress = ((progress + offset) * speed) % 1.2; // Loop with spacing
-
-    // Only show object during its active phase
-    if (objectProgress > 1.0) {
-      object.visible = false;
-      return;
-    }
-
-    object.visible = true;
-    object.scale.set(0.01, 0.01, 0.01);
-
-    // Calculate position from left to right using fixed walk path
-    const t = objectProgress;
-    const objectPosition = walkStart.clone().lerp(walkEnd, t);
-
-    object.position.copy(objectPosition);
-
-    // Log first few object positions for debugging
-    if (progress < 0.1) {
-      console.log(
-        `🎬 ${key} at position:`,
-        objectPosition,
-        "progress:",
-        t.toFixed(3),
-        "scale:",
-        object.scale.x
-      );
-    }
-
-    // Apply laying down rotation (same as in maze)
-    if (key === "pacman") {
-      // Pacman rotation
-      object.rotation.set(-Math.PI / 2, Math.PI, -(Math.PI / 2));
-    } else {
-      // Ghost rotation - laying down state
-      object.rotation.set(Math.PI / 2, 0, 0);
-    }
-
-    // Fade in/out at edges
-    let opacity = 1.0;
-    if (t < 0.1) {
-      opacity = t / 0.1;
-    } else if (t > 0.9) {
-      opacity = (1.0 - t) / 0.1;
-    }
-
-    // Apply opacity to object material
-    object.traverse((child) => {
-      if ((child as any).isMesh && (child as any).material) {
-        (child as any).material.opacity = opacity;
-        (child as any).material.transparent = true;
-      }
-    });
+    // Calculate position from left to right
+    const x = walkStart + (walkEnd - walkStart) * sphereProgress;
+    sphere.position.set(x, -50, -19.548);
   });
 }
