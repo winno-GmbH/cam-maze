@@ -11,6 +11,7 @@ let animationTime = 0;
 let pausedT = 0;
 let pausedPositions: Record<string, THREE.Vector3> = {};
 let pausedRotations: Record<string, THREE.Quaternion> = {};
+let pausedTangents: Record<string, THREE.Vector3> = {}; // Store smoother tangents
 let homeLoopFrameRegistered = false;
 
 // Tangent smoothers for home loop (separate from scroll smoothers)
@@ -51,10 +52,16 @@ function stopHomeLoop() {
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   pausedPositions = {};
   pausedRotations = {};
+  pausedTangents = {};
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     pausedPositions[key] = ghost.position.clone();
     pausedRotations[key] = ghost.quaternion.clone();
+
+    // Capture the smoother's current tangent state
+    if (homeLoopTangentSmoothers[key]) {
+      pausedTangents[key] = homeLoopTangentSmoothers[key].getCurrentTangent();
+    }
   });
 
   initHomeScrollAnimation(pausedPositions, pausedRotations);
@@ -79,33 +86,16 @@ function startHomeLoop() {
         ghost.scale.set(1, 1, 1);
       }
 
-      // Initialize the smoother to match the object's current rotation
-      // This prevents jumps when transitioning from scroll to home loop
-      if (homeLoopTangentSmoothers[key]) {
-        // Derive a tangent from the object's current rotation
-        const euler = new THREE.Euler().setFromQuaternion(
-          ghost.quaternion,
-          "XYZ"
-        );
-        let yaw: number;
+      // Restore the smoother's exact tangent state from when we paused
+      // This ensures perfect continuity with no rotation jumps
+      if (homeLoopTangentSmoothers[key] && pausedTangents[key]) {
+        homeLoopTangentSmoothers[key].reset(pausedTangents[key]);
+      }
 
-        if (key === "pacman") {
-          // From: rotation.set(-(π/2), π, -(atan2(tx, tz) + π/2))
-          // We have: rotation.z = -(yaw + π/2), so: yaw = -rotation.z - π/2
-          yaw = -euler.z - Math.PI / 2;
-        } else {
-          // From: rotation.set(0, atan2(tx, tz), 0)
-          // We have: rotation.y = yaw
-          yaw = euler.y;
-        }
-
-        // Convert yaw back to tangent direction
-        const derivedTangent = new THREE.Vector3(
-          Math.sin(yaw),
-          0,
-          Math.cos(yaw)
-        ).normalize();
-        homeLoopTangentSmoothers[key].reset(derivedTangent);
+      // Restore the exact rotation from when we paused
+      // This prevents any mismatch between scroll animation and home loop
+      if (pausedRotations[key]) {
+        ghost.quaternion.copy(pausedRotations[key]);
       }
     }
   });

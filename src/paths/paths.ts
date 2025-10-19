@@ -29,6 +29,10 @@ export class TangentSmoother {
     this.currentTangent.copy(newTangent);
   }
 
+  getCurrentTangent(): THREE.Vector3 {
+    return this.currentTangent.clone();
+  }
+
   setSmoothingFactor(smoothing: number): void {
     this.smoothing = Math.max(0.001, Math.min(1, smoothing));
   }
