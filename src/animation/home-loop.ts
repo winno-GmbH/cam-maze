@@ -53,9 +53,29 @@ function stopHomeLoop() {
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   pausedPositions = {};
   pausedRotations = {};
+
+  const homePaths = getHomePaths();
   Object.entries(ghosts).forEach(([key, ghost]) => {
     pausedPositions[key] = ghost.position.clone();
-    pausedRotations[key] = ghost.quaternion.clone();
+
+    // Store the target tangent-based rotation, not the current transitioning rotation
+    const path = homePaths[key];
+    if (path && homeLoopTangentSmoothers[key]) {
+      const rawTangent = path.getTangentAt(pausedT);
+      if (rawTangent && rawTangent.length() > 0) {
+        const smoothTangent = homeLoopTangentSmoothers[key].getCurrentTangent();
+        const objectType = key === "pacman" ? "pacman" : "ghost";
+
+        // Create temp object to calculate target quaternion
+        const tempObject = new THREE.Object3D();
+        calculateObjectOrientation(tempObject, smoothTangent, objectType);
+        pausedRotations[key] = tempObject.quaternion.clone();
+      } else {
+        pausedRotations[key] = ghost.quaternion.clone();
+      }
+    } else {
+      pausedRotations[key] = ghost.quaternion.clone();
+    }
   });
   initHomeScrollAnimation(pausedPositions, pausedRotations);
 }
