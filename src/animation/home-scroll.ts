@@ -97,13 +97,8 @@ function updateScrollAnimation(
       : 1 -
         (progress - fadeStartProgress) / (fadeEndProgress - fadeStartProgress);
 
-  // Define the "laying down" quaternions once
-  const layDownQuat1 = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(Math.PI / 2, 0, 0)
-  );
-  const layDownQuat2 = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(-Math.PI / 2, 0, 0)
-  );
+  // Apply smooth easing to rotation progress (bidirectional - reverses when scrolling up)
+  const rotationProgress = Math.pow(progress, 1.5);
 
   // Pacman animation
   if (paths.pacman && pacman) {
@@ -115,19 +110,8 @@ function updateScrollAnimation(
     if (pacmanPoint) {
       pacman.position.copy(pacmanPoint);
 
-      // Determine which laying down rotation is closer
-      const startQuat = pausedRotations["pacman"];
-      const d1 = startQuat.angleTo(layDownQuat1);
-      const d2 = startQuat.angleTo(layDownQuat2);
-      const targetLayDownQuat = d1 < d2 ? layDownQuat1 : layDownQuat2;
-
-      // Use a smooth easing function for rotation
-      const rotationProgress = Math.pow(progress, 1.5); // Smoother easing
-
-      // Direct interpolation between start and end rotation
-      pacman.quaternion.copy(
-        startQuat.clone().slerp(targetLayDownQuat, rotationProgress)
-      );
+      // Apply bidirectional laying down animation
+      slerpToLayDown(pacman, pausedRotations["pacman"], rotationProgress);
 
       // Animate pacman opacity
       pacman.traverse((child) => {
@@ -150,19 +134,8 @@ function updateScrollAnimation(
       if (ghostPoint) {
         ghost.position.copy(ghostPoint);
 
-        // Determine which laying down rotation is closer
-        const startQuat = pausedRotations[key];
-        const d1 = startQuat.angleTo(layDownQuat1);
-        const d2 = startQuat.angleTo(layDownQuat2);
-        const targetLayDownQuat = d1 < d2 ? layDownQuat1 : layDownQuat2;
-
-        // Use a smooth easing function for rotation
-        const rotationProgress = Math.pow(progress, 1.5); // Smoother easing
-
-        // Direct interpolation between start and end rotation
-        ghost.quaternion.copy(
-          startQuat.clone().slerp(targetLayDownQuat, rotationProgress)
-        );
+        // Apply bidirectional laying down animation
+        slerpToLayDown(ghost, pausedRotations[key], rotationProgress);
 
         // Animate ghost opacity
         if ((ghost as any).material) {

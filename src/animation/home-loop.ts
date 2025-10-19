@@ -11,7 +11,6 @@ let animationTime = 0;
 let pausedT = 0;
 let pausedPositions: Record<string, THREE.Vector3> = {};
 let pausedRotations: Record<string, THREE.Quaternion> = {};
-let pausedTangents: Record<string, THREE.Vector3> = {}; // Store smoother tangents
 let homeLoopFrameRegistered = false;
 
 // Tangent smoothers for home loop (separate from scroll smoothers)
@@ -48,27 +47,17 @@ function initializeHomeLoopTangentSmoothers() {
 function stopHomeLoop() {
   if (!isHomeLoopActive) return;
   isHomeLoopActive = false;
-
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   pausedPositions = {};
   pausedRotations = {};
-  pausedTangents = {};
-
   Object.entries(ghosts).forEach(([key, ghost]) => {
     pausedPositions[key] = ghost.position.clone();
     pausedRotations[key] = ghost.quaternion.clone();
-
-    // Capture the smoother's current tangent state
-    if (homeLoopTangentSmoothers[key]) {
-      pausedTangents[key] = homeLoopTangentSmoothers[key].getCurrentTangent();
-    }
   });
-
   initHomeScrollAnimation(pausedPositions, pausedRotations);
 }
 
 function startHomeLoop() {
-  if (isHomeLoopActive) return;
   isHomeLoopActive = true;
   animationTime = pausedT * LOOP_DURATION;
 
@@ -79,23 +68,19 @@ function startHomeLoop() {
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
-      const position = path.getPointAt(pausedT);
+      const position = path.getPointAt(0);
       if (position) ghost.position.copy(position);
       if (key !== "pacman") {
         ghost.visible = true;
         ghost.scale.set(1, 1, 1);
       }
 
-      // Restore the smoother's exact tangent state from when we paused
-      // This ensures perfect continuity with no rotation jumps
-      if (homeLoopTangentSmoothers[key] && pausedTangents[key]) {
-        homeLoopTangentSmoothers[key].reset(pausedTangents[key]);
-      }
-
-      // Restore the exact rotation from when we paused
-      // This prevents any mismatch between scroll animation and home loop
-      if (pausedRotations[key]) {
-        ghost.quaternion.copy(pausedRotations[key]);
+      // Reset the smoother with initial tangent
+      if (homeLoopTangentSmoothers[key]) {
+        const initialTangent = path.getTangentAt(0);
+        if (initialTangent) {
+          homeLoopTangentSmoothers[key].reset(initialTangent);
+        }
       }
     }
   });
