@@ -9,6 +9,7 @@ import { slerpToLayDown } from "./util";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
+let isScrollAnimationActive = false;
 
 const characterSpeeds: Record<string, number> = {
   pacman: 0.9,
@@ -31,6 +32,14 @@ export function initHomeScrollAnimation(
   const scrollPaths = getHomeScrollPaths(pausedPositions);
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
+  // Clone rotations to prevent any external modifications
+  const clonedPausedRotations: Record<string, THREE.Quaternion> = {};
+  Object.entries(pausedRotations).forEach(([key, quat]) => {
+    clonedPausedRotations[key] = quat.clone();
+  });
+
+  isScrollAnimationActive = true;
+
   homeScrollTimeline = gsap
     .timeline({
       scrollTrigger: {
@@ -40,8 +49,19 @@ export function initHomeScrollAnimation(
         end: "bottom top",
         scrub: 0.5,
         onScrubComplete: () => {
-          // on scroll complete, check home loop handler
-          homeLoopHandler();
+          // Delay slightly to ensure smooth transition
+          setTimeout(() => {
+            isScrollAnimationActive = false;
+            homeLoopHandler();
+          }, 50);
+        },
+        onUpdate: (self) => {
+          // If we're at the very start, prepare to hand off to home loop
+          if (self.progress < 0.01) {
+            isScrollAnimationActive = false;
+          } else {
+            isScrollAnimationActive = true;
+          }
         },
       },
     })
@@ -57,7 +77,7 @@ export function initHomeScrollAnimation(
           updateScrollAnimation(
             progress,
             scrollPaths,
-            pausedRotations,
+            clonedPausedRotations,
             cameraPathPoints
           );
         },
@@ -71,6 +91,11 @@ function updateScrollAnimation(
   pausedRotations: Record<string, THREE.Quaternion>,
   cameraPathPoints: any[]
 ) {
+  // Don't update if we're transitioning to home loop
+  if (!isScrollAnimationActive && progress < 0.01) {
+    return;
+  }
+
   // Camera animation (unchanged)
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);

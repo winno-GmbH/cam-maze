@@ -12,6 +12,7 @@ let pausedT = 0;
 let pausedPositions: Record<string, THREE.Vector3> = {};
 let pausedRotations: Record<string, THREE.Quaternion> = {};
 let homeLoopFrameRegistered = false;
+let isTransitioning = false; // Prevent race conditions during transitions
 
 // Tangent smoothers for home loop (separate from scroll smoothers)
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
@@ -45,19 +46,49 @@ function initializeHomeLoopTangentSmoothers() {
 }
 
 function stopHomeLoop() {
-  if (!isHomeLoopActive) return;
+  if (!isHomeLoopActive || isTransitioning) return;
+  isTransitioning = true;
+
+  // First, run one final update to ensure rotations are current
+  // This ensures we capture the most up-to-date rotation state
+  const homePaths = getHomePaths();
+  const currentT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
+
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    const path = homePaths[key];
+    if (path && homeLoopTangentSmoothers[key]) {
+      const rawTangent = path.getTangentAt(currentT);
+      if (rawTangent && rawTangent.length() > 0) {
+        const smoothTangent = homeLoopTangentSmoothers[key].update(rawTangent);
+        const objectType = key === "pacman" ? "pacman" : "ghost";
+        calculateObjectOrientation(ghost, smoothTangent, objectType);
+      }
+    }
+  });
+
+  // Now stop the loop and capture the final state
   isHomeLoopActive = false;
-  pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
+  pausedT = currentT;
   pausedPositions = {};
   pausedRotations = {};
+
   Object.entries(ghosts).forEach(([key, ghost]) => {
     pausedPositions[key] = ghost.position.clone();
     pausedRotations[key] = ghost.quaternion.clone();
   });
+
   initHomeScrollAnimation(pausedPositions, pausedRotations);
+
+  // Small delay to ensure scroll animation has taken over
+  setTimeout(() => {
+    isTransitioning = false;
+  }, 100);
 }
 
 function startHomeLoop() {
+  if (isHomeLoopActive || isTransitioning) return;
+  isTransitioning = true;
+
   isHomeLoopActive = true;
   animationTime = pausedT * LOOP_DURATION;
 
@@ -104,6 +135,8 @@ function startHomeLoop() {
     onFrame(() => updateHomeLoop(clock.getDelta()));
     homeLoopFrameRegistered = true;
   }
+
+  isTransitioning = false;
 }
 
 function updateHomeLoop(delta: number) {
