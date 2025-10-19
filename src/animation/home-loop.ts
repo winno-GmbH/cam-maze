@@ -12,7 +12,6 @@ let pausedT = 0;
 let pausedPositions: Record<string, THREE.Vector3> = {};
 let pausedRotations: Record<string, THREE.Quaternion> = {};
 let homeLoopFrameRegistered = false;
-let isTransitioning = false; // Prevent race conditions during transitions
 
 // Tangent smoothers for home loop (separate from scroll smoothers)
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
@@ -46,29 +45,10 @@ function initializeHomeLoopTangentSmoothers() {
 }
 
 function stopHomeLoop() {
-  if (!isHomeLoopActive || isTransitioning) return;
-  isTransitioning = true;
-
-  // First, run one final update to ensure rotations are current
-  // This ensures we capture the most up-to-date rotation state
-  const homePaths = getHomePaths();
-  const currentT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
-
-  Object.entries(ghosts).forEach(([key, ghost]) => {
-    const path = homePaths[key];
-    if (path && homeLoopTangentSmoothers[key]) {
-      const rawTangent = path.getTangentAt(currentT);
-      if (rawTangent && rawTangent.length() > 0) {
-        const smoothTangent = homeLoopTangentSmoothers[key].update(rawTangent);
-        const objectType = key === "pacman" ? "pacman" : "ghost";
-        calculateObjectOrientation(ghost, smoothTangent, objectType);
-      }
-    }
-  });
-
-  // Now stop the loop and capture the final state
+  if (!isHomeLoopActive) return;
   isHomeLoopActive = false;
-  pausedT = currentT;
+
+  pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   pausedPositions = {};
   pausedRotations = {};
 
@@ -78,17 +58,10 @@ function stopHomeLoop() {
   });
 
   initHomeScrollAnimation(pausedPositions, pausedRotations);
-
-  // Small delay to ensure scroll animation has taken over
-  setTimeout(() => {
-    isTransitioning = false;
-  }, 100);
 }
 
 function startHomeLoop() {
-  if (isHomeLoopActive || isTransitioning) return;
-  isTransitioning = true;
-
+  if (isHomeLoopActive) return;
   isHomeLoopActive = true;
   animationTime = pausedT * LOOP_DURATION;
 
@@ -107,26 +80,32 @@ function startHomeLoop() {
       }
 
       // Initialize the smoother to match the object's current rotation
-      // This prevents jumps when transitioning from scroll animation to home loop
+      // This prevents jumps when transitioning from scroll to home loop
       if (homeLoopTangentSmoothers[key]) {
-        // Get the tangent that would produce the current rotation
-        const currentRotation = ghost.quaternion.clone();
+        // Derive a tangent from the object's current rotation
+        const euler = new THREE.Euler().setFromQuaternion(
+          ghost.quaternion,
+          "XYZ"
+        );
+        let yaw: number;
 
-        // Extract the yaw from the current rotation to derive an initial tangent direction
-        let initialTangent: THREE.Vector3;
         if (key === "pacman") {
-          // For pacman, reverse the rotation calculation
-          const euler = new THREE.Euler().setFromQuaternion(currentRotation);
-          const yaw = -(euler.z - Math.PI / 2);
-          initialTangent = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+          // From: rotation.set(-(π/2), π, -(atan2(tx, tz) + π/2))
+          // We have: rotation.z = -(yaw + π/2), so: yaw = -rotation.z - π/2
+          yaw = -euler.z - Math.PI / 2;
         } else {
-          // For ghosts, extract yaw directly
-          const euler = new THREE.Euler().setFromQuaternion(currentRotation);
-          const yaw = euler.y;
-          initialTangent = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+          // From: rotation.set(0, atan2(tx, tz), 0)
+          // We have: rotation.y = yaw
+          yaw = euler.y;
         }
 
-        homeLoopTangentSmoothers[key].reset(initialTangent);
+        // Convert yaw back to tangent direction
+        const derivedTangent = new THREE.Vector3(
+          Math.sin(yaw),
+          0,
+          Math.cos(yaw)
+        ).normalize();
+        homeLoopTangentSmoothers[key].reset(derivedTangent);
       }
     }
   });
@@ -135,8 +114,6 @@ function startHomeLoop() {
     onFrame(() => updateHomeLoop(clock.getDelta()));
     homeLoopFrameRegistered = true;
   }
-
-  isTransitioning = false;
 }
 
 function updateHomeLoop(delta: number) {
