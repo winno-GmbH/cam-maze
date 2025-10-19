@@ -84,7 +84,7 @@ function resetGhostsForIntro() {
       key === "ghost3"
     ) {
       object.visible = true;
-      object.scale.set(0.5, 0.5, 0.5);
+      object.scale.set(0.1, 0.1, 0.1);
 
       // Reset material opacity to 1
       object.traverse((child) => {
@@ -128,7 +128,7 @@ function updateObjectsWalkBy(progress: number) {
   );
 
   // Define walk path: left to right across the camera's view at ground level
-  const walkWidth = 3.0;
+  const walkWidth = 10.0; // Much wider walk path
   const walkStart = new THREE.Vector3(
     centerPoint.x - walkWidth / 2,
     groundY,
