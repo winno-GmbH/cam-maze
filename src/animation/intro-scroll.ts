@@ -2,6 +2,7 @@ import gsap from "gsap";
 import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
+import { scene } from "../core/scene";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 
@@ -16,20 +17,14 @@ export function initIntroScrollAnimation() {
         onEnter: () => {
           console.log("Intro section entered!");
           resetGhostsForIntro();
-          // Add red background for testing
-          const introSection = document.querySelector(".sc--intro");
-          if (introSection) {
-            (introSection as HTMLElement).style.backgroundColor = "red";
-          }
+          // Change world background to red for better visibility
+          scene.background = new THREE.Color(0xff0000);
         },
         onEnterBack: () => {
           console.log("Intro section entered back!");
           resetGhostsForIntro();
-          // Add red background for testing
-          const introSection = document.querySelector(".sc--intro");
-          if (introSection) {
-            (introSection as HTMLElement).style.backgroundColor = "red";
-          }
+          // Change world background to red for better visibility
+          scene.background = new THREE.Color(0xff0000);
         },
       },
     })
