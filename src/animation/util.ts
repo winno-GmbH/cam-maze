@@ -31,11 +31,6 @@ export const LAY_DOWN_QUAT_2 = new THREE.Quaternion().setFromEuler(
   new THREE.Euler(-Math.PI / 2, 0, 0)
 );
 
-/**
- * Slerps an object from a starting quaternion toward a laying down position.
- * Automatically chooses the closer of two laying down orientations.
- * This animation is bidirectional - reversing the progress reverses the rotation.
- */
 export function slerpToLayDown(
   object: THREE.Object3D,
   startQuat: THREE.Quaternion,

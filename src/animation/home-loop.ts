@@ -6,12 +6,15 @@ import { initHomeScrollAnimation } from "./home-scroll";
 import { calculateObjectOrientation } from "./util";
 
 const LOOP_DURATION = 50;
+const ROTATION_TRANSITION_DURATION = 1.5; // Seconds to transition from laying down to upright
 let isHomeLoopActive = true;
 let animationTime = 0;
 let pausedT = 0;
 let pausedPositions: Record<string, THREE.Vector3> = {};
 let pausedRotations: Record<string, THREE.Quaternion> = {};
 let homeLoopFrameRegistered = false;
+let rotationTransitionTime = 0;
+let startRotations: Record<string, THREE.Quaternion> = {};
 
 // Tangent smoothers for home loop (separate from scroll smoothers)
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
@@ -60,6 +63,8 @@ function stopHomeLoop() {
 function startHomeLoop() {
   isHomeLoopActive = true;
   animationTime = pausedT * LOOP_DURATION;
+  rotationTransitionTime = 0;
+  startRotations = {};
 
   // Initialize smooth tangent smoothers for home loop
   initializeHomeLoopTangentSmoothers();
@@ -68,6 +73,9 @@ function startHomeLoop() {
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
+      // Store current rotation for smooth transition
+      startRotations[key] = ghost.quaternion.clone();
+
       const position = path.getPointAt(0);
       if (position) ghost.position.copy(position);
       if (key !== "pacman") {
@@ -94,26 +102,56 @@ function startHomeLoop() {
 function updateHomeLoop(delta: number) {
   if (!isHomeLoopActive) return;
   animationTime += delta;
+  rotationTransitionTime += delta;
+
   const t = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   const homePaths = getHomePaths();
   if (pacmanMixer) {
     pacmanMixer.update(delta);
   }
+
+  // Calculate rotation transition progress (0 to 1 over ROTATION_TRANSITION_DURATION)
+  const transitionProgress = Math.min(
+    rotationTransitionTime / ROTATION_TRANSITION_DURATION,
+    1
+  );
+  const isTransitioning = transitionProgress < 1;
+
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
       const position = path.getPointAt(t);
       if (position) ghost.position.copy(position);
 
-      // Apply smooth tangent-based orientation
+      // Calculate target rotation from path tangent
+      const targetQuat = new THREE.Quaternion();
       if (homeLoopTangentSmoothers[key] && t > 0) {
         const rawTangent = path.getTangentAt(t);
         if (rawTangent && rawTangent.length() > 0) {
           const smoothTangent =
             homeLoopTangentSmoothers[key].update(rawTangent);
           const objectType = key === "pacman" ? "pacman" : "ghost";
-          calculateObjectOrientation(ghost, smoothTangent, objectType);
+
+          // Create a temporary object to get target quaternion
+          const tempObject = new THREE.Object3D();
+          calculateObjectOrientation(tempObject, smoothTangent, objectType);
+          targetQuat.copy(tempObject.quaternion);
         }
+      }
+
+      // Smoothly transition from laying down rotation to upright rotation
+      if (isTransitioning && startRotations[key]) {
+        // Smooth easing for rotation transition
+        const easedProgress =
+          transitionProgress *
+          transitionProgress *
+          (3 - 2 * transitionProgress); // smoothstep
+        ghost.quaternion.copy(
+          startRotations[key].clone().slerp(targetQuat, easedProgress)
+        );
+      } else {
+        // After transition, use normal rotation
+        ghost.quaternion.copy(targetQuat);
       }
     }
   });
