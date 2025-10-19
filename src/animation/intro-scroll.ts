@@ -20,6 +20,7 @@ export function initIntroScrollAnimation() {
             camera.position
           );
           resetGhostsForIntro();
+          hideEverythingExceptObjects();
         },
         onEnterBack: () => {
           console.log(
@@ -27,6 +28,7 @@ export function initIntroScrollAnimation() {
             camera.position
           );
           resetGhostsForIntro();
+          hideEverythingExceptObjects();
         },
       },
     })
@@ -93,6 +95,20 @@ function resetGhostsForIntro() {
       });
     }
   });
+}
+
+// Hide everything except pacman and ghosts for testing
+function hideEverythingExceptObjects() {
+  scene.traverse((child) => {
+    if (
+      child.name &&
+      !child.name.includes("pacman") &&
+      !child.name.includes("Ghost")
+    ) {
+      child.visible = false;
+    }
+  });
+  console.log("🎬 Hidden everything except objects for testing");
 }
 
 function updateObjectsWalkBy(progress: number) {
