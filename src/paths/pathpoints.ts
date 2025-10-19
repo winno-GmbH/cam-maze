@@ -5,7 +5,7 @@ import { getCoord, X, Y, Z } from "./coordinates";
 
 // TODO - add curveCheckPoints to all curves where needed
 
-const objectHomeScrollEndPathPoint = new THREE.Vector3(0.55675, 0.35, 0.45175);
+const objectHomeScrollEndPathPoint = new THREE.Vector3(0.55675, -10, 0.45175);
 
 const cameraPathPointsConfig = {
   startMobile: new THREE.Vector3(0.5, 2.5, 2.5),

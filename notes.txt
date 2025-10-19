@@ -50,3 +50,11 @@ enddings anschauen
 
 in call:
 - pacman text? tbd
+
+
+- pacman dreht sich nicht mehr beim hineinscrollen
+- Karte verschwindet nicht beim durch das Labyrinth scrollen
+- Labyrinth am Ende verschwinden lassen.
+- Scroll Frequenz verschnellern am Ende
+- Scroll Frequenz verlangsamen bei Geistern und Start von POV
+- 30. Update senden Cyril
