@@ -84,7 +84,7 @@ function resetGhostsForIntro() {
       key === "ghost3"
     ) {
       object.visible = true;
-      object.scale.set(0.1, 0.1, 0.1);
+      object.scale.set(0.01, 0.01, 0.01);
 
       // Reset material opacity to 1
       object.traverse((child) => {
@@ -116,8 +116,8 @@ function updateObjectsWalkBy(progress: number) {
   // Camera is at y: 0.584 looking down toward y: -10, so place objects below camera
 
   // Calculate horizontal plane below camera where it's looking
-  const groundY = -20; // Much further below camera
-  const distanceInFront = 5.0; // Much further in front of camera
+  const groundY = -50; // Much further below camera
+  const distanceInFront = 20.0; // Much further in front of camera
 
   // Position objects in front of camera at ground level
   // Since camera looks toward negative Z, place objects at camera.z - distanceInFront
@@ -167,7 +167,7 @@ function updateObjectsWalkBy(progress: number) {
     }
 
     object.visible = true;
-    object.scale.set(0.1, 0.1, 0.1);
+    object.scale.set(0.01, 0.01, 0.01);
 
     // Calculate position from left to right using fixed walk path
     const t = objectProgress;
@@ -176,12 +176,14 @@ function updateObjectsWalkBy(progress: number) {
     object.position.copy(objectPosition);
 
     // Log first few object positions for debugging
-    if (progress < 0.05 && t < 0.1) {
+    if (progress < 0.1) {
       console.log(
-        `🎬 ${key} visible at position:`,
+        `🎬 ${key} at position:`,
         objectPosition,
         "progress:",
-        t.toFixed(3)
+        t.toFixed(3),
+        "scale:",
+        object.scale.x
       );
     }
 
