@@ -3,7 +3,10 @@ import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
 import { getPovPaths, TangentSmoother } from "../paths/paths";
-import { povTriggerPositions, povPaths as pathPointsData } from "../paths/pathpoints";
+import {
+  povTriggerPositions,
+  povPaths as pathPointsData,
+} from "../paths/pathpoints";
 import { DOM_ELEMENTS } from "../config/dom-elements";
 import { calculateObjectOrientation } from "./util";
 
@@ -33,7 +36,10 @@ const ghostStates: Record<string, any> = {};
 const povTangentSmoothers: Record<string, TangentSmoother> = {};
 
 // Helper function to get custom lookAt for a specific progress
-function getCustomLookAtForProgress(progress: number, povPaths: Record<string, THREE.CurvePath<THREE.Vector3>>): THREE.Vector3 | null {
+function getCustomLookAtForProgress(
+  progress: number,
+  povPaths: Record<string, THREE.CurvePath<THREE.Vector3>>
+): THREE.Vector3 | null {
   const cameraPathPoints = pathPointsData.camera;
 
   // Define the sequence phase (first 5%) and transition phase (next 2%)
@@ -41,11 +47,16 @@ function getCustomLookAtForProgress(progress: number, povPaths: Record<string, T
   const transitionPhaseEnd = 0.07;
 
   // For the very first point (progress close to 0), check for lookAtSequence
-  if (progress <= sequencePhaseEnd) { // Check first 5% of path
+  if (progress <= sequencePhaseEnd) {
+    // Check first 5% of path
     const firstPoint = cameraPathPoints[0];
 
     // Handle lookAtSequence - cycle through multiple lookAt targets
-    if ('lookAtSequence' in firstPoint && firstPoint.lookAtSequence && firstPoint.lookAtSequence.length > 0) {
+    if (
+      "lookAtSequence" in firstPoint &&
+      firstPoint.lookAtSequence &&
+      firstPoint.lookAtSequence.length > 0
+    ) {
       const sequenceProgress = progress / sequencePhaseEnd; // Normalize to 0-1 within first 5%
       const sequenceLength = firstPoint.lookAtSequence.length;
 
@@ -74,23 +85,35 @@ function getCustomLookAtForProgress(progress: number, povPaths: Record<string, T
   else if (progress <= transitionPhaseEnd) {
     const firstPoint = cameraPathPoints[0];
 
-    if ('lookAtSequence' in firstPoint && firstPoint.lookAtSequence && firstPoint.lookAtSequence.length > 0) {
+    if (
+      "lookAtSequence" in firstPoint &&
+      firstPoint.lookAtSequence &&
+      firstPoint.lookAtSequence.length > 0
+    ) {
       // Get the final lookAt from the sequence
-      const finalSequenceLookAt = firstPoint.lookAtSequence[firstPoint.lookAtSequence.length - 1];
+      const finalSequenceLookAt =
+        firstPoint.lookAtSequence[firstPoint.lookAtSequence.length - 1];
 
       // Get the default tangent-based lookAt, but constrain Y to avoid looking up
       const position = povPaths.camera.getPointAt(progress);
       const tangent = povPaths.camera.getTangentAt(progress).normalize();
 
       // Constrain Y component of tangent to prevent looking up/down during transition
-      const constrainedTangent = new THREE.Vector3(tangent.x, 0, tangent.z).normalize();
+      const constrainedTangent = new THREE.Vector3(
+        tangent.x,
+        0,
+        tangent.z
+      ).normalize();
       const defaultLookAt = position.clone().add(constrainedTangent);
 
       // Calculate transition progress (0 to 1 over the 2% transition phase)
-      const transitionProgress = (progress - sequencePhaseEnd) / (transitionPhaseEnd - sequencePhaseEnd);
+      const transitionProgress =
+        (progress - sequencePhaseEnd) / (transitionPhaseEnd - sequencePhaseEnd);
 
       // Smooth interpolation from sequence lookAt to constrained default lookAt
-      return finalSequenceLookAt.clone().lerp(defaultLookAt, transitionProgress);
+      return finalSequenceLookAt
+        .clone()
+        .lerp(defaultLookAt, transitionProgress);
     }
   }
 
@@ -100,14 +123,32 @@ function getCustomLookAtForProgress(progress: number, povPaths: Record<string, T
 // Initialize POV tangent smoothers
 function initializePovTangentSmoothers() {
   // Camera smoother - most important for smooth user experience
-  povTangentSmoothers.camera = new TangentSmoother(new THREE.Vector3(0, 0, -1), 0.08);
+  povTangentSmoothers.camera = new TangentSmoother(
+    new THREE.Vector3(0, 0, -1),
+    0.08
+  );
 
   // Ghost smoothers
-  povTangentSmoothers.ghost1 = new TangentSmoother(new THREE.Vector3(1, 0, 0), 0.08);
-  povTangentSmoothers.ghost2 = new TangentSmoother(new THREE.Vector3(1, 0, 0), 0.08);
-  povTangentSmoothers.ghost3 = new TangentSmoother(new THREE.Vector3(1, 0, 0), 0.08);
-  povTangentSmoothers.ghost4 = new TangentSmoother(new THREE.Vector3(1, 0, 0), 0.08);
-  povTangentSmoothers.ghost5 = new TangentSmoother(new THREE.Vector3(1, 0, 0), 0.08);
+  povTangentSmoothers.ghost1 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.08
+  );
+  povTangentSmoothers.ghost2 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.08
+  );
+  povTangentSmoothers.ghost3 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.08
+  );
+  povTangentSmoothers.ghost4 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.08
+  );
+  povTangentSmoothers.ghost5 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.08
+  );
 }
 
 export function initPovScrollAnimation() {
@@ -209,7 +250,6 @@ function handleAnimationUpdate(this: gsap.core.Tween) {
   if (!povPaths.camera) return;
 
   const cameraPosition = povPaths.camera.getPointAt(overallProgress);
-  console.log(overallProgress, cameraPosition);
 
   if (previousCameraPosition) {
     updateCamera(overallProgress, povPaths, cameraPosition);
@@ -220,7 +260,11 @@ function handleAnimationUpdate(this: gsap.core.Tween) {
   }
 }
 
-function updateCamera(progress: number, povPaths: Record<string, THREE.CurvePath<THREE.Vector3>>, position: THREE.Vector3) {
+function updateCamera(
+  progress: number,
+  povPaths: Record<string, THREE.CurvePath<THREE.Vector3>>,
+  position: THREE.Vector3
+) {
   camera.position.copy(position);
   camera.fov = wideFOV;
 
@@ -241,8 +285,13 @@ function updateCamera(progress: number, povPaths: Record<string, THREE.CurvePath
   }
 
   // Constrain Y component to prevent looking up/down during early path following
-  if (progress <= 0.15) { // Extend constraint for first 15% of path
-    smoothTangent = new THREE.Vector3(smoothTangent.x, 0, smoothTangent.z).normalize();
+  if (progress <= 0.15) {
+    // Extend constraint for first 15% of path
+    smoothTangent = new THREE.Vector3(
+      smoothTangent.x,
+      0,
+      smoothTangent.z
+    ).normalize();
   }
 
   const defaultLookAt = position.clone().add(smoothTangent);
@@ -251,11 +300,23 @@ function updateCamera(progress: number, povPaths: Record<string, THREE.CurvePath
   camera.updateProjectionMatrix();
 }
 
-function handleDefaultOrientation(progress: number, defaultLookAt: THREE.Vector3) {
-  const startRotationProgress = findClosestProgressOnPath(getPovPaths().camera, startRotationPoint);
-  const endRotationProgress = findClosestProgressOnPath(getPovPaths().camera, endRotationPoint);
+function handleDefaultOrientation(
+  progress: number,
+  defaultLookAt: THREE.Vector3
+) {
+  const startRotationProgress = findClosestProgressOnPath(
+    getPovPaths().camera,
+    startRotationPoint
+  );
+  const endRotationProgress = findClosestProgressOnPath(
+    getPovPaths().camera,
+    endRotationPoint
+  );
 
-  if ((progress < startRotationProgress || progress > endRotationProgress) && !startedInitEndScreen) {
+  if (
+    (progress < startRotationProgress || progress > endRotationProgress) &&
+    !startedInitEndScreen
+  ) {
     cachedStartYAngle = null;
     rotationStarted = false;
     endScreenPassed = false;
@@ -277,9 +338,18 @@ function updateGhosts(
     const path = povPaths[key];
 
     if (!ghost || !path || key === "pacman") return;
-    const forceEndProgress = overallProgress > triggerData.forceEndProgress.start && overallProgress < triggerData.forceEndProgress.end;
+    const forceEndProgress =
+      overallProgress > triggerData.forceEndProgress.start &&
+      overallProgress < triggerData.forceEndProgress.end;
 
-    updateGhost(key, ghost, path, cameraPosition, triggerData, forceEndProgress);
+    updateGhost(
+      key,
+      ghost,
+      path,
+      cameraPosition,
+      triggerData,
+      forceEndProgress
+    );
   });
 }
 
@@ -291,7 +361,16 @@ function updateGhost(
   triggerData: any,
   forceEndProgress: boolean
 ) {
-  const { triggerPos, ghostStartFadeIn, ghostEndFadeIn, ghostStartFadeOut, camStartFadeIn, camEndFadeIn, camStartFadeOut, endPosition } = triggerData;
+  const {
+    triggerPos,
+    ghostStartFadeIn,
+    ghostEndFadeIn,
+    ghostStartFadeOut,
+    camStartFadeIn,
+    camEndFadeIn,
+    camStartFadeOut,
+    endPosition,
+  } = triggerData;
   const state = ghostStates[key];
 
   // Get DOM elements specific to this ghost
@@ -305,24 +384,69 @@ function updateGhost(
   const povElements = parent.querySelectorAll(".pov");
   const camElements = parent.querySelectorAll(".cam");
 
-  if (!povElements || !camElements || povElements.length === 0 || camElements.length === 0) return;
+  if (
+    !povElements ||
+    !camElements ||
+    povElements.length === 0 ||
+    camElements.length === 0
+  )
+    return;
 
   // Initialize state if needed
   if (state.triggerCameraProgress === null) {
-    state.triggerCameraProgress = findClosestProgressOnPath(getPovPaths().camera, triggerPos, 800);
-    state.ghostStartFadeInProgress = findClosestProgressOnPath(getPovPaths().camera, ghostStartFadeIn, 800);
-    state.ghostEndFadeInProgress = findClosestProgressOnPath(getPovPaths().camera, ghostEndFadeIn, 800);
-    state.ghostStartFadeOutProgress = findClosestProgressOnPath(getPovPaths().camera, ghostStartFadeOut, 800);
-    state.camStartFadeInProgress = findClosestProgressOnPath(getPovPaths().camera, camStartFadeIn, 800);
-    state.camEndFadeInProgress = findClosestProgressOnPath(getPovPaths().camera, camEndFadeIn, 800);
-    state.camStartFadeOutProgress = findClosestProgressOnPath(getPovPaths().camera, camStartFadeOut, 800);
-    state.endCameraProgress = findClosestProgressOnPath(getPovPaths().camera, endPosition, 800);
+    state.triggerCameraProgress = findClosestProgressOnPath(
+      getPovPaths().camera,
+      triggerPos,
+      800
+    );
+    state.ghostStartFadeInProgress = findClosestProgressOnPath(
+      getPovPaths().camera,
+      ghostStartFadeIn,
+      800
+    );
+    state.ghostEndFadeInProgress = findClosestProgressOnPath(
+      getPovPaths().camera,
+      ghostEndFadeIn,
+      800
+    );
+    state.ghostStartFadeOutProgress = findClosestProgressOnPath(
+      getPovPaths().camera,
+      ghostStartFadeOut,
+      800
+    );
+    state.camStartFadeInProgress = findClosestProgressOnPath(
+      getPovPaths().camera,
+      camStartFadeIn,
+      800
+    );
+    state.camEndFadeInProgress = findClosestProgressOnPath(
+      getPovPaths().camera,
+      camEndFadeIn,
+      800
+    );
+    state.camStartFadeOutProgress = findClosestProgressOnPath(
+      getPovPaths().camera,
+      camStartFadeOut,
+      800
+    );
+    state.endCameraProgress = findClosestProgressOnPath(
+      getPovPaths().camera,
+      endPosition,
+      800
+    );
   }
 
-  const currentCameraProgress = findClosestProgressOnPath(getPovPaths().camera, cameraPosition, 800);
+  const currentCameraProgress = findClosestProgressOnPath(
+    getPovPaths().camera,
+    cameraPosition,
+    800
+  );
 
   // Update ghost visibility and position
-  if (currentCameraProgress >= state.triggerCameraProgress && currentCameraProgress <= state.endCameraProgress) {
+  if (
+    currentCameraProgress >= state.triggerCameraProgress &&
+    currentCameraProgress <= state.endCameraProgress
+  ) {
     if (!ghost.visible) {
       ghost.visible = true;
       state.hasBeenTriggered = true;
@@ -337,7 +461,8 @@ function updateGhost(
     }
 
     // Update ghost position
-    const normalizedProgress = (currentCameraProgress - state.triggerCameraProgress) /
+    const normalizedProgress =
+      (currentCameraProgress - state.triggerCameraProgress) /
       (state.endCameraProgress - state.triggerCameraProgress);
     let ghostProgress = Math.max(0, Math.min(1, normalizedProgress));
 
@@ -346,7 +471,8 @@ function updateGhost(
       state.currentPathT = ghostProgress;
     } else {
       const parameterSmoothingFactor = 0.1;
-      state.currentPathT += (ghostProgress - state.currentPathT) * parameterSmoothingFactor;
+      state.currentPathT +=
+        (ghostProgress - state.currentPathT) * parameterSmoothingFactor;
     }
 
     ghostProgress = state.currentPathT;
@@ -367,12 +493,13 @@ function updateGhost(
     // Handle fade out at the end
     if (ghostProgress > 0.9) {
       const mesh = ghost as THREE.Mesh;
-      if (mesh.material && 'opacity' in mesh.material) {
-        (mesh.material as THREE.Material & { opacity: number }).opacity = 1 - (ghostProgress - 0.9) / 0.1;
+      if (mesh.material && "opacity" in mesh.material) {
+        (mesh.material as THREE.Material & { opacity: number }).opacity =
+          1 - (ghostProgress - 0.9) / 0.1;
       }
     } else {
       const mesh = ghost as THREE.Mesh;
-      if (mesh.material && 'opacity' in mesh.material) {
+      if (mesh.material && "opacity" in mesh.material) {
         (mesh.material as THREE.Material & { opacity: number }).opacity = 1;
       }
     }
@@ -382,7 +509,15 @@ function updateGhost(
   }
 
   // Update text visibility
-  updateTextVisibility(key, currentCameraProgress, state, parent, povElements, camElements, forceEndProgress);
+  updateTextVisibility(
+    key,
+    currentCameraProgress,
+    state,
+    parent,
+    povElements,
+    camElements,
+    forceEndProgress
+  );
 }
 
 function updateTextVisibility(
@@ -419,36 +554,58 @@ function updateTextVisibility(
   let targetCamOpacity = 0;
 
   // Ghost text fade in (ghostStartFadeIn -> ghostEndFadeIn)
-  if (currentCameraProgress >= state.ghostStartFadeInProgress && currentCameraProgress <= state.ghostEndFadeInProgress) {
-    const fadeProgress = (currentCameraProgress - state.ghostStartFadeInProgress) /
+  if (
+    currentCameraProgress >= state.ghostStartFadeInProgress &&
+    currentCameraProgress <= state.ghostEndFadeInProgress
+  ) {
+    const fadeProgress =
+      (currentCameraProgress - state.ghostStartFadeInProgress) /
       (state.ghostEndFadeInProgress - state.ghostStartFadeInProgress);
     targetGhostOpacity = Math.min(1, fadeProgress);
     parent.style.opacity = targetGhostOpacity.toString();
   }
   // Ghost text stays fully visible (ghostEndFadeIn -> ghostStartFadeOut)
-  else if (currentCameraProgress > state.ghostEndFadeInProgress && currentCameraProgress < state.ghostStartFadeOutProgress) {
+  else if (
+    currentCameraProgress > state.ghostEndFadeInProgress &&
+    currentCameraProgress < state.ghostStartFadeOutProgress
+  ) {
     targetGhostOpacity = 1;
   }
   // Ghost text fade out (ghostStartFadeOut -> camStartFadeIn) - finishes exactly when cam starts fading in
-  else if (currentCameraProgress >= state.ghostStartFadeOutProgress && currentCameraProgress <= state.camStartFadeInProgress) {
-    const fadeOutProgress = (currentCameraProgress - state.ghostStartFadeOutProgress) /
+  else if (
+    currentCameraProgress >= state.ghostStartFadeOutProgress &&
+    currentCameraProgress <= state.camStartFadeInProgress
+  ) {
+    const fadeOutProgress =
+      (currentCameraProgress - state.ghostStartFadeOutProgress) /
       (state.camStartFadeInProgress - state.ghostStartFadeOutProgress);
     targetGhostOpacity = Math.max(0, 1 - fadeOutProgress);
   }
 
   // CAM text fade in (camStartFadeIn -> camEndFadeIn)
-  if (currentCameraProgress >= state.camStartFadeInProgress && currentCameraProgress <= state.camEndFadeInProgress) {
-    const fadeProgress = (currentCameraProgress - state.camStartFadeInProgress) /
+  if (
+    currentCameraProgress >= state.camStartFadeInProgress &&
+    currentCameraProgress <= state.camEndFadeInProgress
+  ) {
+    const fadeProgress =
+      (currentCameraProgress - state.camStartFadeInProgress) /
       (state.camEndFadeInProgress - state.camStartFadeInProgress);
     targetCamOpacity = Math.min(1, fadeProgress);
   }
   // CAM text stays visible (camEndFadeIn -> camStartFadeOut)
-  else if (currentCameraProgress > state.camEndFadeInProgress && currentCameraProgress < state.camStartFadeOutProgress) {
+  else if (
+    currentCameraProgress > state.camEndFadeInProgress &&
+    currentCameraProgress < state.camStartFadeOutProgress
+  ) {
     targetCamOpacity = 1;
   }
   // CAM text fade out (camStartFadeOut -> endPosition)
-  else if (currentCameraProgress >= state.camStartFadeOutProgress && currentCameraProgress <= state.endCameraProgress) {
-    const fadeOutProgress = (currentCameraProgress - state.camStartFadeOutProgress) /
+  else if (
+    currentCameraProgress >= state.camStartFadeOutProgress &&
+    currentCameraProgress <= state.endCameraProgress
+  ) {
+    const fadeOutProgress =
+      (currentCameraProgress - state.camStartFadeOutProgress) /
       (state.endCameraProgress - state.camStartFadeOutProgress);
     targetCamOpacity = Math.max(0, 1 - fadeOutProgress);
     parent.style.opacity = targetCamOpacity.toString();
@@ -472,7 +629,10 @@ function updateTextVisibility(
     if (targetGhostOpacity > 0.01) {
       element.classList.remove("no-visibility");
       element.style.opacity = targetGhostOpacity.toString();
-    } else if (targetGhostOpacity <= 0.01 && !element.classList.contains("no-visibility")) {
+    } else if (
+      targetGhostOpacity <= 0.01 &&
+      !element.classList.contains("no-visibility")
+    ) {
       element.classList.add("no-visibility");
       element.style.opacity = "0";
     }
@@ -484,7 +644,10 @@ function updateTextVisibility(
     if (targetCamOpacity > 0.01) {
       element.classList.remove("no-visibility");
       element.style.opacity = targetCamOpacity.toString();
-    } else if (targetCamOpacity <= 0.01 && !element.classList.contains("no-visibility")) {
+    } else if (
+      targetCamOpacity <= 0.01 &&
+      !element.classList.contains("no-visibility")
+    ) {
       element.classList.add("no-visibility");
       element.style.opacity = "0";
     }
@@ -525,7 +688,7 @@ function handleLeavePOV() {
 
       // Reset ghost material opacity
       const mesh = ghost as THREE.Mesh;
-      if (mesh.material && 'opacity' in mesh.material) {
+      if (mesh.material && "opacity" in mesh.material) {
         (mesh.material as THREE.Material & { opacity: number }).opacity = 1;
       }
     }
@@ -539,7 +702,10 @@ function handleLeavePOV() {
   // Reset tangent smoothers
   Object.keys(povTangentSmoothers).forEach((key) => {
     if (povTangentSmoothers[key]) {
-      const resetVector = key === "camera" ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(1, 0, 0);
+      const resetVector =
+        key === "camera"
+          ? new THREE.Vector3(0, 0, -1)
+          : new THREE.Vector3(1, 0, 0);
       povTangentSmoothers[key].reset(resetVector);
     }
   });
@@ -627,5 +793,3 @@ function findClosestProgressOnPath(
 
   return closestProgress;
 }
-
-

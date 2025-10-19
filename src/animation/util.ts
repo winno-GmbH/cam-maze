@@ -23,7 +23,6 @@ export function calculateObjectOrientation(
   }
 }
 
-// Pre-defined laying down quaternions (rotate 90° on X-axis, both directions)
 export const LAY_DOWN_QUAT_1 = new THREE.Quaternion().setFromEuler(
   new THREE.Euler(Math.PI / 2, 0, 0)
 );

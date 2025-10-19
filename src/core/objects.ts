@@ -48,7 +48,7 @@ const ghostContainers = {
 // CAM-Pacman_Top_electronic -> should be visible (top of bitcoin on pacman)
 // CAM-Pacman_Bottom_Text -> should be visible (text on bottom of pacman)
 // CAM-Pacman_Top_Text -> should be visible (text on top of pacman)
-// CAM-Pacman_Top -> should be visible (top)  
+// CAM-Pacman_Top -> should be visible (top)
 
 const greenMaterial = new THREE.MeshBasicMaterial({
   color: 0x00ff00,
@@ -67,13 +67,8 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
       function (gltf) {
         const model = gltf.scene;
 
-
         // Print all elements in the 3D model
-        console.log("=== 3D Model Hierarchy ===");
-        model.traverse((obj: THREE.Object3D) => {
-          console.log(`[${obj.type}] ${obj.name}`);
-        });
-        console.log("=========================");
+        model.traverse((obj: THREE.Object3D) => {});
 
         model.traverse((child: THREE.Object3D) => {
           if (child.name === "CAM-Pacman") {
@@ -111,10 +106,10 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             gltf.animations.forEach((clip: THREE.AnimationClip) => {
               const action = pacmanMixer.clipAction(clip);
 
-              action.getMixer().addEventListener('loop', function (e) {
+              action.getMixer().addEventListener("loop", function (e) {
                 e.action.getRoot().traverse(function (obj) {
                   if (obj.userData && obj.userData.skipAnimation) {
-                    (obj as any).updateMorphTargets = function () { };
+                    (obj as any).updateMorphTargets = function () {};
                   }
                 });
               });
@@ -220,7 +215,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
 
         resolve();
       },
-      function (progress: any) { },
+      function (progress: any) {},
       function (error: any) {
         reject(error);
       }

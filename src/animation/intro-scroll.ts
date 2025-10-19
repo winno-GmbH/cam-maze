@@ -15,9 +15,17 @@ export function initIntroScrollAnimation() {
         end: "bottom bottom",
         scrub: 0.5,
         onEnter: () => {
+          console.log(
+            "🎬 Intro section entered - Camera pos:",
+            camera.position
+          );
           resetGhostsForIntro();
         },
         onEnterBack: () => {
+          console.log(
+            "🎬 Intro section entered back - Camera pos:",
+            camera.position
+          );
           resetGhostsForIntro();
         },
       },
@@ -54,6 +62,9 @@ export function initIntroScrollAnimation() {
         immediateRender: false,
         onUpdate: function () {
           const progress = (this.targets()[0] as any).progress;
+          if (progress > 0 && progress < 0.1) {
+            console.log("🎬 Animation update - Progress:", progress.toFixed(3));
+          }
           updateObjectsWalkBy(progress);
         },
       },
@@ -112,6 +123,11 @@ function updateObjectsWalkBy(progress: number) {
     centerPoint.z
   );
 
+  // Log walk path for debugging
+  if (progress < 0.01) {
+    console.log("🎬 Walk path - Start:", walkStart, "End:", walkEnd);
+  }
+
   // Animate pacman and ghosts walking by
   const objectsToAnimate = [
     { key: "pacman", offset: 0, speed: 0.8 },
@@ -141,6 +157,16 @@ function updateObjectsWalkBy(progress: number) {
     const objectPosition = walkStart.clone().lerp(walkEnd, t);
 
     object.position.copy(objectPosition);
+
+    // Log first few object positions for debugging
+    if (progress < 0.05 && t < 0.1) {
+      console.log(
+        `🎬 ${key} visible at position:`,
+        objectPosition,
+        "progress:",
+        t.toFixed(3)
+      );
+    }
 
     // Apply laying down rotation (same as in maze)
     if (key === "pacman") {
