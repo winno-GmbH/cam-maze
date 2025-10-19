@@ -119,8 +119,13 @@ function createWorkingObjects() {
 
   // Create objects that look like pacman and ghosts
   const pacmanGeometry = new THREE.SphereGeometry(0.1, 8, 8);
-  const pacmanMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 }); // Yellow like pacman
+  const pacmanMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffff00, // Yellow like pacman
+    opacity: 1.0,
+    transparent: false,
+  });
   const pacman = new THREE.Mesh(pacmanGeometry, pacmanMaterial);
+  pacman.visible = true;
   workingObjects.push(pacman);
 
   // Create 3 ghosts
@@ -128,13 +133,22 @@ function createWorkingObjects() {
     const ghostGeometry = new THREE.SphereGeometry(0.1, 8, 8);
     const ghostMaterial = new THREE.MeshBasicMaterial({
       color: i === 0 ? 0xff0000 : i === 1 ? 0x00ff00 : 0x0000ff, // Red, Green, Blue
+      opacity: 1.0,
+      transparent: false,
     });
     const ghost = new THREE.Mesh(ghostGeometry, ghostMaterial);
+    ghost.visible = true;
     workingObjects.push(ghost);
   }
 
   // Add all to scene
   workingObjects.forEach((obj) => scene.add(obj));
+
+  console.log(
+    "Created",
+    workingObjects.length,
+    "working objects for intro animation"
+  );
 }
 
 function updateObjectsWalkBy(progress: number) {
