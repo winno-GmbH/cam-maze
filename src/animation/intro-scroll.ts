@@ -10,7 +10,7 @@ export function initIntroScrollAnimation() {
     .timeline({
       scrollTrigger: {
         trigger: ".sc--intro",
-        start: "top center",
+        start: "top top",
         end: "bottom bottom",
         scrub: 0.5,
         onEnter: () => {
@@ -89,25 +89,12 @@ function updateObjectsWalkBy(progress: number) {
     camera.position
   );
 
-  // Get camera's forward and right vectors
-  const cameraDirection = new THREE.Vector3();
-  camera.getWorldDirection(cameraDirection);
+  // Use a fixed direction for walking (left to right across the maze)
+  // Based on the camera position, we'll walk along the X axis
+  const walkStart = new THREE.Vector3(-1, camera.position.y, camera.position.z); // Start left of camera
+  const walkEnd = new THREE.Vector3(2, camera.position.y, camera.position.z); // End right of camera
 
-  // Calculate right vector (perpendicular to camera direction)
-  const cameraRight = new THREE.Vector3();
-  cameraRight.crossVectors(camera.up, cameraDirection).normalize();
-
-  // Calculate a point in front of the camera where objects will walk
-  const distanceFromCamera = 1.5; // Distance in front of camera (reduced for better visibility)
-  const centerPoint = camera.position
-    .clone()
-    .add(cameraDirection.multiplyScalar(distanceFromCamera));
-
-  // Set the Y position to be at ground level for proper viewing
-  centerPoint.y = 0.5; // Ground level of the maze
-
-  // Define the width of the walking path
-  const walkWidth = 2.5;
+  console.log("Walk start:", walkStart, "Walk end:", walkEnd);
 
   // Animate up to 3 ghosts walking by
   const ghostsToAnimate = [
@@ -132,12 +119,9 @@ function updateObjectsWalkBy(progress: number) {
     ghost.visible = true;
     ghost.scale.set(0.5, 0.5, 0.5);
 
-    // Calculate position from left to right
+    // Calculate position from left to right using fixed walk path
     const t = ghostProgress;
-    const xOffset = (t - 0.5) * walkWidth;
-    const ghostPosition = centerPoint
-      .clone()
-      .add(cameraRight.clone().multiplyScalar(xOffset));
+    const ghostPosition = walkStart.clone().lerp(walkEnd, t);
 
     ghost.position.copy(ghostPosition);
 
@@ -147,7 +131,7 @@ function updateObjectsWalkBy(progress: number) {
     );
 
     // Make ghost face the direction of movement (to the right)
-    const movementDirection = cameraRight.clone();
+    const movementDirection = new THREE.Vector3(1, 0, 0);
     ghost.lookAt(ghostPosition.clone().add(movementDirection));
 
     // Fade in/out at edges
