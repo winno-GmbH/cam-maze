@@ -15,6 +15,7 @@ let pausedRotations: Record<string, THREE.Quaternion> = {};
 let homeLoopFrameRegistered = false;
 let rotationTransitionTime = 0;
 let startRotations: Record<string, THREE.Quaternion> = {};
+let hasBeenPausedBefore = false; // Track if we've ever stopped the loop (i.e., scrolled)
 
 // Tangent smoothers for home loop (separate from scroll smoothers)
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
@@ -50,6 +51,7 @@ function initializeHomeLoopTangentSmoothers() {
 function stopHomeLoop() {
   if (!isHomeLoopActive) return;
   isHomeLoopActive = false;
+  hasBeenPausedBefore = true; // Mark that we've paused (scrolled)
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   pausedPositions = {};
   pausedRotations = {};
@@ -93,8 +95,10 @@ function startHomeLoop() {
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
-      // Store current rotation for smooth transition
-      startRotations[key] = ghost.quaternion.clone();
+      // Only store current rotation for transition if we're returning from scroll
+      if (hasBeenPausedBefore) {
+        startRotations[key] = ghost.quaternion.clone();
+      }
 
       const position = path.getPointAt(0);
       if (position) ghost.position.copy(position);
@@ -131,11 +135,12 @@ function updateHomeLoop(delta: number) {
   }
 
   // Calculate rotation transition progress (0 to 1 over ROTATION_TRANSITION_DURATION)
+  // Only transition if we've been paused before (returning from scroll)
   const transitionProgress = Math.min(
     rotationTransitionTime / ROTATION_TRANSITION_DURATION,
     1
   );
-  const isTransitioning = transitionProgress < 1;
+  const isTransitioning = hasBeenPausedBefore && transitionProgress < 1;
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
@@ -159,7 +164,7 @@ function updateHomeLoop(delta: number) {
         }
       }
 
-      // Smoothly transition from laying down rotation to upright rotation
+      // Smoothly transition from laying down rotation to upright rotation (only when returning from scroll)
       if (isTransitioning && startRotations[key]) {
         // Smooth easing for rotation transition
         const easedProgress =
@@ -170,7 +175,7 @@ function updateHomeLoop(delta: number) {
           startRotations[key].clone().slerp(targetQuat, easedProgress)
         );
       } else {
-        // After transition, use normal rotation
+        // After transition or on first load, use normal rotation
         ghost.quaternion.copy(targetQuat);
       }
     }
