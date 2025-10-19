@@ -15,16 +15,22 @@ export function initIntroScrollAnimation() {
         end: "bottom bottom",
         scrub: 0.5,
         onEnter: () => {
-          console.log("Intro section entered!");
+          console.log(
+            "Intro section entered - Camera pos:",
+            camera.position,
+            "Camera lookAt:",
+            camera.getWorldDirection(new THREE.Vector3())
+          );
           resetGhostsForIntro();
-          // Change world background to red for better visibility
-          scene.background = new THREE.Color(0xff0000);
         },
         onEnterBack: () => {
-          console.log("Intro section entered back!");
+          console.log(
+            "Intro section entered back - Camera pos:",
+            camera.position,
+            "Camera lookAt:",
+            camera.getWorldDirection(new THREE.Vector3())
+          );
           resetGhostsForIntro();
-          // Change world background to red for better visibility
-          scene.background = new THREE.Color(0xff0000);
         },
       },
     })
@@ -60,7 +66,6 @@ export function initIntroScrollAnimation() {
         immediateRender: false,
         onUpdate: function () {
           const progress = (this.targets()[0] as any).progress;
-          console.log("Animation update called with progress:", progress);
           updateObjectsWalkBy(progress);
         },
       },
@@ -92,20 +97,40 @@ function resetGhostsForIntro() {
 }
 
 function updateObjectsWalkBy(progress: number) {
-  console.log(
-    "Intro walk-by progress:",
-    progress,
-    "Camera pos:",
-    camera.position
-  );
+  // Calculate camera's view direction and create a plane in front of it
+  const cameraDirection = new THREE.Vector3();
+  camera.getWorldDirection(cameraDirection);
 
-  // Use a fixed direction for walking (left to right across the maze)
-  // Position ghosts deeper in the 3D world so they're visible in front of camera
-  const depthOffset = 2.0; // Move further away from camera
-  const walkStart = new THREE.Vector3(-1, 0.3, camera.position.z - depthOffset); // Start left, lower Y, deeper Z
-  const walkEnd = new THREE.Vector3(2, 0.3, camera.position.z - depthOffset); // End right, lower Y, deeper Z
+  // Create a plane perpendicular to camera direction, positioned in front of camera
+  const distanceInFront = 1.0; // Distance in front of camera
+  const centerPoint = camera.position
+    .clone()
+    .add(cameraDirection.multiplyScalar(distanceInFront));
 
-  console.log("Walk start:", walkStart, "Walk end:", walkEnd);
+  // Create right vector for horizontal movement
+  const cameraRight = new THREE.Vector3();
+  cameraRight.crossVectors(camera.up, cameraDirection).normalize();
+
+  // Define walk path: left to right across the camera's view
+  const walkWidth = 3.0;
+  const walkStart = centerPoint
+    .clone()
+    .add(cameraRight.clone().multiplyScalar(-walkWidth / 2));
+  const walkEnd = centerPoint
+    .clone()
+    .add(cameraRight.clone().multiplyScalar(walkWidth / 2));
+
+  // Log only once per animation cycle for debugging
+  if (progress < 0.01) {
+    console.log(
+      "Walk path calculated - Start:",
+      walkStart,
+      "End:",
+      walkEnd,
+      "Camera direction:",
+      cameraDirection
+    );
+  }
 
   // Animate pacman and ghosts walking by
   const objectsToAnimate = [
@@ -136,11 +161,6 @@ function updateObjectsWalkBy(progress: number) {
     const objectPosition = walkStart.clone().lerp(walkEnd, t);
 
     object.position.copy(objectPosition);
-
-    console.log(
-      `${key} visible at progress ${t.toFixed(2)}, position:`,
-      objectPosition
-    );
 
     // Apply laying down rotation (same as in maze)
     if (key === "pacman") {
