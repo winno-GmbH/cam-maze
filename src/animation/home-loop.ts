@@ -68,19 +68,34 @@ function startHomeLoop() {
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
-      const position = path.getPointAt(0);
+      const position = path.getPointAt(pausedT);
       if (position) ghost.position.copy(position);
       if (key !== "pacman") {
         ghost.visible = true;
         ghost.scale.set(1, 1, 1);
       }
 
-      // Reset the smoother with initial tangent
+      // Initialize the smoother to match the object's current rotation
+      // This prevents jumps when transitioning from scroll animation to home loop
       if (homeLoopTangentSmoothers[key]) {
-        const initialTangent = path.getTangentAt(0);
-        if (initialTangent) {
-          homeLoopTangentSmoothers[key].reset(initialTangent);
+        // Get the tangent that would produce the current rotation
+        const currentRotation = ghost.quaternion.clone();
+
+        // Extract the yaw from the current rotation to derive an initial tangent direction
+        let initialTangent: THREE.Vector3;
+        if (key === "pacman") {
+          // For pacman, reverse the rotation calculation
+          const euler = new THREE.Euler().setFromQuaternion(currentRotation);
+          const yaw = -(euler.z - Math.PI / 2);
+          initialTangent = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+        } else {
+          // For ghosts, extract yaw directly
+          const euler = new THREE.Euler().setFromQuaternion(currentRotation);
+          const yaw = euler.y;
+          initialTangent = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
         }
+
+        homeLoopTangentSmoothers[key].reset(initialTangent);
       }
     }
   });
