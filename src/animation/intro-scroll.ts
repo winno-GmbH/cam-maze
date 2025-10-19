@@ -13,6 +13,12 @@ export function initIntroScrollAnimation() {
         start: "top center",
         end: "bottom bottom",
         scrub: 0.5,
+        onEnter: () => {
+          resetGhostsForIntro();
+        },
+        onEnterBack: () => {
+          resetGhostsForIntro();
+        },
       },
     })
     .fromTo(
@@ -54,7 +60,35 @@ export function initIntroScrollAnimation() {
     );
 }
 
+function resetGhostsForIntro() {
+  // Reset ghost materials to be visible for intro animation
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    if (
+      key !== "pacman" &&
+      (key === "ghost1" || key === "ghost2" || key === "ghost3")
+    ) {
+      ghost.visible = true;
+      ghost.scale.set(0.5, 0.5, 0.5);
+
+      // Reset material opacity to 1
+      ghost.traverse((child) => {
+        if ((child as any).isMesh && (child as any).material) {
+          (child as any).material.opacity = 1;
+          (child as any).material.transparent = true;
+        }
+      });
+    }
+  });
+}
+
 function updateObjectsWalkBy(progress: number) {
+  console.log(
+    "Intro walk-by progress:",
+    progress,
+    "Camera pos:",
+    camera.position
+  );
+
   // Get camera's forward and right vectors
   const cameraDirection = new THREE.Vector3();
   camera.getWorldDirection(cameraDirection);
@@ -64,16 +98,16 @@ function updateObjectsWalkBy(progress: number) {
   cameraRight.crossVectors(camera.up, cameraDirection).normalize();
 
   // Calculate a point in front of the camera where objects will walk
-  const distanceFromCamera = 3.0; // Distance in front of camera
+  const distanceFromCamera = 1.5; // Distance in front of camera (reduced for better visibility)
   const centerPoint = camera.position
     .clone()
     .add(cameraDirection.multiplyScalar(distanceFromCamera));
 
-  // Set the Y position to be slightly below camera for better visibility
-  centerPoint.y = camera.position.y - 0.5;
+  // Set the Y position to be at ground level for proper viewing
+  centerPoint.y = 0.5; // Ground level of the maze
 
   // Define the width of the walking path
-  const walkWidth = 4.0;
+  const walkWidth = 2.5;
 
   // Animate up to 3 ghosts walking by
   const ghostsToAnimate = [
@@ -106,6 +140,11 @@ function updateObjectsWalkBy(progress: number) {
       .add(cameraRight.clone().multiplyScalar(xOffset));
 
     ghost.position.copy(ghostPosition);
+
+    console.log(
+      `${key} visible at progress ${t.toFixed(2)}, position:`,
+      ghostPosition
+    );
 
     // Make ghost face the direction of movement (to the right)
     const movementDirection = cameraRight.clone();
