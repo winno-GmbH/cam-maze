@@ -14,10 +14,22 @@ export function initIntroScrollAnimation() {
         end: "bottom bottom",
         scrub: 0.5,
         onEnter: () => {
+          console.log("Intro section entered!");
           resetGhostsForIntro();
+          // Add red background for testing
+          const introSection = document.querySelector(".sc--intro");
+          if (introSection) {
+            (introSection as HTMLElement).style.backgroundColor = "red";
+          }
         },
         onEnterBack: () => {
+          console.log("Intro section entered back!");
           resetGhostsForIntro();
+          // Add red background for testing
+          const introSection = document.querySelector(".sc--intro");
+          if (introSection) {
+            (introSection as HTMLElement).style.backgroundColor = "red";
+          }
         },
       },
     })
@@ -53,6 +65,7 @@ export function initIntroScrollAnimation() {
         immediateRender: false,
         onUpdate: function () {
           const progress = (this.targets()[0] as any).progress;
+          console.log("Animation update called with progress:", progress);
           updateObjectsWalkBy(progress);
         },
       },
