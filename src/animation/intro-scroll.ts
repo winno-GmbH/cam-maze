@@ -116,8 +116,8 @@ function updateObjectsWalkBy(progress: number) {
   // Camera is at y: 0.584 looking down toward y: -10, so place objects below camera
 
   // Calculate horizontal plane below camera where it's looking
-  const groundY = -0.5; // Below camera, in its field of view
-  const distanceInFront = 1.5; // Distance in front of camera
+  const groundY = -20; // Much further below camera
+  const distanceInFront = 5.0; // Much further in front of camera
 
   // Position objects in front of camera at ground level
   // Since camera looks toward negative Z, place objects at camera.z - distanceInFront
@@ -167,7 +167,7 @@ function updateObjectsWalkBy(progress: number) {
     }
 
     object.visible = true;
-    object.scale.set(0.5, 0.5, 0.5);
+    object.scale.set(0.1, 0.1, 0.1);
 
     // Calculate position from left to right using fixed walk path
     const t = objectProgress;
