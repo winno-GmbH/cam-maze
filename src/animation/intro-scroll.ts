@@ -286,9 +286,10 @@ function resetGhostsForIntro() {
       // Apply laying down rotation (progress = 1.0 means fully laid down)
       slerpToLayDown(object, introInitialRotations[key], 1.0);
       
-      // Apply additional 90-degree rotation on X axis
-      const xRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
-      object.quaternion.multiply(xRotation90);
+      // Apply additional 90-degree rotation on Y axis (changed from X to Y)
+      // Changed from X to Y axis since they're walking horizontally
+      const yRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+      object.quaternion.multiply(yRotation90);
       
       object.updateMatrixWorld(true);
       
@@ -496,9 +497,10 @@ function updateObjectsWalkBy(progress: number) {
     // First: laying down rotation
     slerpToLayDown(object, introInitialRotations[key], 1.0);
     
-    // Then: 90-degree rotation on X axis (same for pacman and ghosts)
-    const xRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
-    object.quaternion.multiply(xRotation90);
+    // Then: 90-degree rotation on Y axis (same for pacman and ghosts)
+    // Changed from X to Y axis since they're walking horizontally
+    const yRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+    object.quaternion.multiply(yRotation90);
     
     // Force update matrix to ensure rotation is applied
     object.updateMatrixWorld(true);
