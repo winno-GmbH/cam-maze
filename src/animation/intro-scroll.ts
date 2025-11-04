@@ -286,10 +286,15 @@ function resetGhostsForIntro() {
       // Apply laying down rotation (progress = 1.0 means fully laid down)
       slerpToLayDown(object, introInitialRotations[key], 1.0);
       
-      // Apply additional 90-degree rotation on Y axis (changed from X to Y)
-      // Changed from X to Y axis since they're walking horizontally
-      const yRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
-      object.quaternion.multiply(yRotation90);
+      // Different rotations for pacman vs ghosts
+      if (key === "pacman") {
+        // Pacman: only laying down rotation, no additional 90-degree rotation
+        // (pacman was working correctly before)
+      } else {
+        // Ghosts: apply 90-degree rotation on X axis
+        const xRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+        object.quaternion.multiply(xRotation90);
+      }
       
       object.updateMatrixWorld(true);
       
@@ -493,14 +498,18 @@ function updateObjectsWalkBy(progress: number) {
       introInitialRotations[key] = object.quaternion.clone();
     }
     
-    // CRITICAL: Apply same rotation to both pacman and ghosts
-    // First: laying down rotation
+    // Apply laying down rotation (progress = 1.0 means fully laid down)
     slerpToLayDown(object, introInitialRotations[key], 1.0);
     
-    // Then: 90-degree rotation on Y axis (same for pacman and ghosts)
-    // Changed from X to Y axis since they're walking horizontally
-    const yRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
-    object.quaternion.multiply(yRotation90);
+    // Different rotations for pacman vs ghosts
+    if (key === "pacman") {
+      // Pacman: only laying down rotation, no additional 90-degree rotation
+      // (revert to original - pacman was working correctly)
+    } else {
+      // Ghosts: apply 90-degree rotation on X axis
+      const xRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+      object.quaternion.multiply(xRotation90);
+    }
     
     // Force update matrix to ensure rotation is applied
     object.updateMatrixWorld(true);
