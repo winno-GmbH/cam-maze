@@ -15,10 +15,12 @@ export function initIntroScrollAnimation() {
       end: "bottom bottom",
       scrub: 0.5,
         onEnter: () => {
+          console.log("🎬 Intro section ENTERED!");
           resetGhostsForIntro();
           hideEverythingExceptObjects();
         },
         onEnterBack: () => {
+          console.log("🎬 Intro section ENTERED BACK!");
           resetGhostsForIntro();
           hideEverythingExceptObjects();
         },
@@ -64,6 +66,7 @@ export function initIntroScrollAnimation() {
 }
 
 function resetGhostsForIntro() {
+  console.log("🎬 resetGhostsForIntro called");
   // Make objects visible and set opacity (similar to home-scroll.ts approach)
   const objectsToAnimate = ["pacman", "ghost1", "ghost2", "ghost3"];
 
@@ -130,9 +133,10 @@ function hideEverythingExceptObjects() {
 }
 
 function updateObjectsWalkBy(progress: number) {
-  // Calculate camera's view direction to position objects correctly in front
-  const cameraDirection = new THREE.Vector3();
-  camera.getWorldDirection(cameraDirection);
+  // Debug: Log first few animation updates
+  if (progress < 0.1) {
+    console.log("🎬 Animation update - Progress:", progress.toFixed(3), "Camera:", camera.position);
+  }
   
   // Position objects much further down and in front of camera
   const distanceBelow = 100; // Much further below camera
@@ -150,6 +154,11 @@ function updateObjectsWalkBy(progress: number) {
   const walkStart = centerPoint.x - 5.0; // Left edge
   const walkEnd = centerPoint.x; // Center (camera x position)
   
+  // Debug: Log positioning info
+  if (progress < 0.05) {
+    console.log("🎬 Center point:", centerPoint, "Walk:", walkStart, "to", walkEnd);
+  }
+  
   const objectsToAnimate = [
     { key: "pacman", offset: 0 },
     { key: "ghost1", offset: 0.25 },
@@ -159,7 +168,10 @@ function updateObjectsWalkBy(progress: number) {
 
   objectsToAnimate.forEach(({ key, offset }) => {
     const object = ghosts[key];
-    if (!object) return;
+    if (!object) {
+      if (progress < 0.05) console.warn(`⚠️ ${key} not found!`);
+      return;
+    }
 
     const objectProgress = (progress + offset) % 1.0;
     
@@ -167,6 +179,11 @@ function updateObjectsWalkBy(progress: number) {
     const x = walkStart + (walkEnd - walkStart) * objectProgress;
     // Position objects relative to camera's view direction
     object.position.set(x, centerPoint.y, centerPoint.z);
+    
+    // Debug: Log first object position
+    if (progress < 0.05 && key === "pacman") {
+      console.log(`🎬 ${key} positioned at:`, object.position, "visible:", object.visible);
+    }
     
     // Set opacity to 1 (like home-scroll.ts does)
     object.traverse((child) => {
