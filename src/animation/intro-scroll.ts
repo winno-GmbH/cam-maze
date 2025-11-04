@@ -139,6 +139,11 @@ function createPositionAdjusterUI() {
     (document.getElementById("x-value-display") as HTMLElement).textContent = ghostPositionAdjuster.x.toFixed(2);
     console.log(`🎛️ X Position changed to: ${ghostPositionAdjuster.x.toFixed(2)}`);
     logCurrentGhostPositions();
+    // Immediately update positions when slider changes
+    // Use current timeline progress, or 0 if timeline not active
+    const progress = introScrollTimeline ? introScrollTimeline.progress() : 0;
+    console.log(`🎛️ Updating positions immediately - X slider - progress: ${progress.toFixed(3)}, adjuster:`, ghostPositionAdjuster);
+    updateObjectsWalkBy(Math.max(0, progress));
   });
 
   ySlider?.addEventListener("input", (e: any) => {
@@ -146,6 +151,10 @@ function createPositionAdjusterUI() {
     (document.getElementById("y-value-display") as HTMLElement).textContent = ghostPositionAdjuster.y.toFixed(2);
     console.log(`🎛️ Y Position changed to: ${ghostPositionAdjuster.y.toFixed(2)}`);
     logCurrentGhostPositions();
+    // Immediately update positions when slider changes
+    // Use current timeline progress, or 0 if timeline not active
+    const progress = introScrollTimeline ? introScrollTimeline.progress() : 0;
+    updateObjectsWalkBy(Math.max(0, progress));
   });
 
   zSlider?.addEventListener("input", (e: any) => {
@@ -153,6 +162,10 @@ function createPositionAdjusterUI() {
     (document.getElementById("z-value-display") as HTMLElement).textContent = ghostPositionAdjuster.z.toFixed(2);
     console.log(`🎛️ Z Position changed to: ${ghostPositionAdjuster.z.toFixed(2)}`);
     logCurrentGhostPositions();
+    // Immediately update positions when slider changes
+    // Use current timeline progress, or 0 if timeline not active
+    const progress = introScrollTimeline ? introScrollTimeline.progress() : 0;
+    updateObjectsWalkBy(Math.max(0, progress));
   });
 
   // Reset button
@@ -166,6 +179,11 @@ function createPositionAdjusterUI() {
     (document.getElementById("y-value-display") as HTMLElement).textContent = ghostPositionAdjuster.y.toFixed(2);
     (document.getElementById("z-value-display") as HTMLElement).textContent = ghostPositionAdjuster.z.toFixed(2);
     logCurrentGhostPositions();
+    // Immediately update positions when reset
+    if (introScrollTimeline) {
+      const progress = introScrollTimeline.progress();
+      updateObjectsWalkBy(Math.max(0, progress));
+    }
   });
 
   // Update camera position display
@@ -231,21 +249,33 @@ export function initIntroScrollAnimation() {
         },
         onLeave: () => {
           console.log("🎬 Intro section LEFT!");
-          // Restore floor visibility when leaving intro section
+          // Restore floor to original appearance when leaving intro section
           scene.traverse((child) => {
             if (child.name === "CAM-Floor") {
               child.visible = true;
-              console.log("🎬 Restored floor plane:", child.name);
+              if (child instanceof THREE.Mesh && child.material) {
+                const material = child.material as THREE.MeshBasicMaterial;
+                material.color.setHex(0xffffff); // White
+                material.opacity = 1;
+                material.transparent = false;
+                console.log("🎬 Restored floor plane:", child.name);
+              }
             }
           });
         },
         onLeaveBack: () => {
           console.log("🎬 Intro section LEFT BACK!");
-          // Restore floor visibility when leaving intro section
+          // Restore floor to original appearance when leaving intro section
           scene.traverse((child) => {
             if (child.name === "CAM-Floor") {
               child.visible = true;
-              console.log("🎬 Restored floor plane:", child.name);
+              if (child instanceof THREE.Mesh && child.material) {
+                const material = child.material as THREE.MeshBasicMaterial;
+                material.color.setHex(0xffffff); // White
+                material.opacity = 1;
+                material.transparent = false;
+                console.log("🎬 Restored floor plane:", child.name);
+              }
             }
           });
         },
@@ -300,11 +330,17 @@ export function initIntroScrollAnimation() {
 function resetGhostsForIntro() {
   console.log("🎬 resetGhostsForIntro called");
   
-  // Hide the floor plane that blocks the view
+  // Make floor plane semi-transparent red so it's visible but doesn't block view
   scene.traverse((child) => {
     if (child.name === "CAM-Floor") {
-      child.visible = false;
-      console.log("🎬 Hid floor plane:", child.name);
+      child.visible = true;
+      if (child instanceof THREE.Mesh && child.material) {
+        const material = child.material as THREE.MeshBasicMaterial;
+        material.color.setHex(0xff0000); // Red
+        material.opacity = 0.1;
+        material.transparent = true;
+        console.log("🎬 Made floor plane semi-transparent red:", child.name);
+      }
     }
   });
   
@@ -413,10 +449,16 @@ function updateObjectsWalkBy(progress: number) {
     console.log("🎬 Animation update - Progress:", progress.toFixed(3), "Camera:", camera.position);
   }
   
-  // Ensure floor plane stays hidden during animation
+  // Ensure floor plane stays semi-transparent red during animation
   scene.traverse((child) => {
     if (child.name === "CAM-Floor") {
-      child.visible = false;
+      child.visible = true;
+      if (child instanceof THREE.Mesh && child.material) {
+        const material = child.material as THREE.MeshBasicMaterial;
+        material.color.setHex(0xff0000); // Red
+        material.opacity = 0.1;
+        material.transparent = true;
+      }
     }
   });
   
