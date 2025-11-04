@@ -3,14 +3,18 @@ import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
 import { scene } from "../core/scene";
+import { slerpToLayDown } from "./util";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 
+// Store initial rotations when entering intro section (like pausedRotations in home-scroll)
+let introInitialRotations: Record<string, THREE.Quaternion> = {};
+
 // Ghost position adjuster - simple X, Y, Z sliders
 let ghostPositionAdjuster = {
-  x: 0,
-  y: -100,
-  z: -50,
+  x: 4.30,
+  y: -2.00,
+  z: 0.00,
 };
 
 // Log current ghost positions for debugging
@@ -171,7 +175,7 @@ function createPositionAdjusterUI() {
   // Reset button
   document.getElementById("reset-ghost-positions")?.addEventListener("click", () => {
     console.log("🎛️ Reset button clicked - Resetting to defaults");
-    ghostPositionAdjuster = { x: 0, y: -100, z: -50 };
+    ghostPositionAdjuster = { x: 4.30, y: -2.00, z: 0.00 };
     xSlider.value = ghostPositionAdjuster.x.toString();
     ySlider.value = ghostPositionAdjuster.y.toString();
     zSlider.value = ghostPositionAdjuster.z.toString();
@@ -350,6 +354,11 @@ function resetGhostsForIntro() {
 
   Object.entries(ghosts).forEach(([key, object]) => {
     if (objectsToAnimate.includes(key)) {
+      // CRITICAL: Store initial rotation before applying laying down rotation
+      if (!introInitialRotations[key]) {
+        introInitialRotations[key] = object.quaternion.clone();
+      }
+      
       // CRITICAL: Force visibility and scale BEFORE anything else
       object.visible = true;
       object.scale.set(0.1, 0.1, 0.1);
@@ -361,6 +370,10 @@ function resetGhostsForIntro() {
         camera.position.y + ghostPositionAdjuster.y,
         camera.position.z + ghostPositionAdjuster.z
       );
+      
+      // Apply laying down rotation (progress = 1.0 means fully laid down)
+      slerpToLayDown(object, introInitialRotations[key], 1.0);
+      
       object.updateMatrixWorld(true);
       
       console.log(`🎬 ${key} reset - Position set to:`, object.position, "Visible:", object.visible);
@@ -532,6 +545,13 @@ function updateObjectsWalkBy(progress: number) {
     object.position.x = finalX;
     object.position.y = finalY;
     object.position.z = finalZ;
+    
+    // Apply laying down rotation (progress = 1.0 means fully laid down)
+    // Ensure we have initial rotation stored
+    if (!introInitialRotations[key]) {
+      introInitialRotations[key] = object.quaternion.clone();
+    }
+    slerpToLayDown(object, introInitialRotations[key], 1.0);
     
     // Force update matrix to ensure position is applied
     object.updateMatrixWorld(true);
