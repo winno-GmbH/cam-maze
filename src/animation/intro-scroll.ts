@@ -182,11 +182,35 @@ function createPositionAdjusterUI() {
   }, 100);
 }
 
+let continuousUpdateInterval: number | null = null;
+
 export function initIntroScrollAnimation() {
   // Create position adjuster UI
   if (!document.getElementById("ghost-position-overlay")) {
     createPositionAdjusterUI();
   }
+  
+  // Stop any existing continuous update
+  if (continuousUpdateInterval) {
+    clearInterval(continuousUpdateInterval);
+  }
+  
+  // Start continuous update loop to ensure positions are always set
+  // This runs MORE frequently than home-loop to override any position updates
+  continuousUpdateInterval = setInterval(() => {
+    // Check if intro section is visible in viewport
+    const introSection = document.querySelector(".sc--intro");
+    if (introSection) {
+      const rect = introSection.getBoundingClientRect();
+      const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+      
+      if (isVisible && introScrollTimeline) {
+        const progress = introScrollTimeline.progress();
+        // Force update even if progress is 0 (at start of section)
+        updateObjectsWalkBy(Math.max(0, progress));
+      }
+    }
+  }, 10) as any; // ~100fps - faster than home-loop to ensure our positions stick
   
   introScrollTimeline = gsap
     .timeline({
@@ -260,8 +284,20 @@ function resetGhostsForIntro() {
 
   Object.entries(ghosts).forEach(([key, object]) => {
     if (objectsToAnimate.includes(key)) {
+      // CRITICAL: Force visibility and scale BEFORE anything else
       object.visible = true;
       object.scale.set(0.1, 0.1, 0.1);
+      
+      // Force initial position (far left, off-screen)
+      const centerPoint = new THREE.Vector3(
+        camera.position.x + ghostPositionAdjuster.x,
+        camera.position.y + ghostPositionAdjuster.y,
+        camera.position.z + ghostPositionAdjuster.z
+      );
+      object.position.set(centerPoint.x - 10, centerPoint.y, centerPoint.z);
+      object.updateMatrixWorld(true);
+      
+      console.log(`🎬 ${key} reset - Position set to:`, object.position, "Visible:", object.visible);
 
       // Set opacity to 1 and change colors for ghosts (like home-scroll.ts does)
       const ghostColors: Record<string, number> = {
@@ -400,15 +436,36 @@ function updateObjectsWalkBy(progress: number) {
     
     // Calculate position from left to center
     const x = walkStart + (walkEnd - walkStart) * normalizedProgress;
-    // Position objects relative to camera's view direction
-    object.position.set(x, centerPoint.y, centerPoint.z);
     
-    // Ensure object is visible
+    // CRITICAL: Force position update - use direct assignment to ensure it sticks
+    object.position.x = x;
+    object.position.y = centerPoint.y;
+    object.position.z = centerPoint.z;
+    
+    // Force update matrix to ensure position is applied
+    object.updateMatrixWorld(true);
+    
+    // CRITICAL: Force visibility EVERY frame (in case something else is hiding it)
     object.visible = true;
     
-    // Debug: Log positions for all objects
-    if (progress < 0.1) {
-      console.log(`🎬 ${key} - Progress: ${objectProgress.toFixed(3)}, Normalized: ${normalizedProgress.toFixed(3)}, Position:`, object.position);
+    // CRITICAL: Also ensure child meshes are visible
+    object.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.visible = true;
+        if ((child.material as any)?.opacity !== undefined) {
+          (child.material as any).opacity = 1;
+        }
+      }
+    });
+    
+    // Debug: Log positions occasionally to verify they're being set
+    if (progress < 0.1 || Math.abs(object.position.x - x) > 0.1) {
+      console.log(`🎬 ${key} - SETTING position to X:${x.toFixed(2)}, Y:${centerPoint.y.toFixed(2)}, Z:${centerPoint.z.toFixed(2)}, Actual after set:`, {
+        x: object.position.x.toFixed(2),
+        y: object.position.y.toFixed(2),
+        z: object.position.z.toFixed(2),
+        visible: object.visible
+      });
     }
     
     // Set opacity to 1 and maintain ghost colors (like home-scroll.ts does)
