@@ -201,7 +201,14 @@ export function initIntroScrollAnimation() {
         immediateRender: false,
         onUpdate: function () {
           const progress = (this.targets()[0] as any).progress;
+          // Debug: Log progress updates
+          if (progress > 0 && progress < 0.1) {
+            console.log("🎬 Timeline update - Progress:", progress.toFixed(3));
+          }
           updateObjectsWalkBy(progress);
+        },
+        onStart: function () {
+          console.log("🎬 Animation timeline STARTED!");
         },
       },
       0 // Start at the same time as the other animations
@@ -285,16 +292,16 @@ function resetGhostsForIntro() {
 
 // Hide everything except pacman and ghosts for testing
 function hideEverythingExceptObjects() {
-  scene.traverse((child) => {
-    if (
-      child.name &&
-      !child.name.includes("pacman") &&
-      !child.name.includes("Ghost")
-    ) {
-      child.visible = false;
-    }
-  });
-
+  // Commented out - might be causing rendering issues
+  // scene.traverse((child) => {
+  //   if (
+  //     child.name &&
+  //     !child.name.includes("pacman") &&
+  //     !child.name.includes("Ghost")
+  //   ) {
+  //     child.visible = false;
+  //   }
+  // });
 }
 
 function updateObjectsWalkBy(progress: number) {
@@ -326,6 +333,14 @@ function updateObjectsWalkBy(progress: number) {
     { key: "ghost3", offset: 0.75 },
   ];
 
+  // Debug: Check if all objects exist
+  if (progress < 0.05) {
+    objectsToAnimate.forEach(({ key }) => {
+      const obj = ghosts[key];
+      console.log(`🎬 ${key} exists:`, !!obj, "position:", obj?.position);
+    });
+  }
+
   objectsToAnimate.forEach(({ key, offset }) => {
     const object = ghosts[key];
     if (!object) {
@@ -333,16 +348,29 @@ function updateObjectsWalkBy(progress: number) {
       return;
     }
 
-    const objectProgress = (progress + offset) % 1.0;
+    // Calculate object progress - don't use modulo, let it extend beyond 1.0 for looping
+    const objectProgress = progress + offset;
+    
+    // Only show object if it's in the visible range (0 to 1.2 for spacing)
+    if (objectProgress > 1.2) {
+      object.visible = false;
+      return;
+    }
+    
+    // Normalize progress for positioning (0 to 1)
+    const normalizedProgress = Math.max(0, Math.min(1, objectProgress));
     
     // Calculate position from left to center
-    const x = walkStart + (walkEnd - walkStart) * objectProgress;
+    const x = walkStart + (walkEnd - walkStart) * normalizedProgress;
     // Position objects relative to camera's view direction
     object.position.set(x, centerPoint.y, centerPoint.z);
     
-    // Debug: Log first object position
-    if (progress < 0.05 && key === "pacman") {
-      console.log(`🎬 ${key} positioned at:`, object.position, "visible:", object.visible);
+    // Ensure object is visible
+    object.visible = true;
+    
+    // Debug: Log positions for all objects
+    if (progress < 0.1) {
+      console.log(`🎬 ${key} - Progress: ${objectProgress.toFixed(3)}, Normalized: ${normalizedProgress.toFixed(3)}, Position:`, object.position);
     }
     
     // Set opacity to 1 and maintain ghost colors (like home-scroll.ts does)
