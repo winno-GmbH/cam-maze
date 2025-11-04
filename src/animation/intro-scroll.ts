@@ -250,9 +250,13 @@ function resetGhostsForIntro() {
       }
       
       // CRITICAL: Force visibility and scale BEFORE anything else
-      // Use scale 1.0 to match home-loop scale (they were getting too small at 0.1)
+      // Pacman uses smaller scale (0.1), ghosts use normal scale (1.0)
       object.visible = true;
-      object.scale.set(1.0, 1.0, 1.0);
+      if (key === "pacman") {
+        object.scale.set(0.1, 0.1, 0.1);
+      } else {
+        object.scale.set(1.0, 1.0, 1.0);
+      }
       
       // CRITICAL: Restore opacity to 1 immediately (override home-scroll's opacity = 0)
       // This must happen FIRST to ensure objects are visible
@@ -432,17 +436,32 @@ function updateObjectsWalkBy(progress: number) {
   const walkStart = baseCenter.x - 5.0;
   const walkEnd = baseCenter.x;
   
-  // Objects to animate - ghosts walk directly behind pacman (same X, Y, staggered Z)
+  // Objects to animate - ghosts walk 0.5 units behind pacman
   const objectsToAnimate = [
-    { key: "pacman", offset: 0, zOffset: 0 },
-    { key: "ghost1", offset: 0, zOffset: -1 },   // Directly behind pacman
-    { key: "ghost2", offset: 0, zOffset: -2 },   // Behind ghost1
-    { key: "ghost3", offset: 0, zOffset: -3 },   // Behind ghost2
-    { key: "ghost4", offset: 0, zOffset: -4 },   // Behind ghost3
-    { key: "ghost5", offset: 0, zOffset: -5 },   // Behind ghost4
+    { key: "pacman", offset: 0, behindOffset: 0 },
+    { key: "ghost1", offset: 0, behindOffset: -0.5 },   // 0.5 units behind pacman
+    { key: "ghost2", offset: 0, behindOffset: -1.0 },   // 1.0 units behind pacman
+    { key: "ghost3", offset: 0, behindOffset: -1.5 },   // 1.5 units behind pacman
+    { key: "ghost4", offset: 0, behindOffset: -2.0 },   // 2.0 units behind pacman
+    { key: "ghost5", offset: 0, behindOffset: -2.5 },   // 2.5 units behind pacman
   ];
 
-  objectsToAnimate.forEach(({ key, offset, zOffset }) => {
+  // First, calculate pacman's position
+  const pacmanObj = ghosts.pacman;
+  let pacmanPosition: THREE.Vector3 | null = null;
+  
+  if (pacmanObj) {
+    const normalizedProgress = Math.max(0, Math.min(1, progress));
+    const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
+    pacmanPosition = new THREE.Vector3(
+      baseX + POSITION_OFFSET.x,
+      baseCenter.y + POSITION_OFFSET.y,
+      baseCenter.z + POSITION_OFFSET.z
+    );
+    pacmanObj.position.copy(pacmanPosition);
+  }
+
+  objectsToAnimate.forEach(({ key, offset, behindOffset }) => {
     const object = ghosts[key];
     if (!object) {
       if (progress < 0.1) {
@@ -451,33 +470,20 @@ function updateObjectsWalkBy(progress: number) {
       return;
     }
 
-    // TEST: Position ghosts at EXACT same spot as pacman to verify visibility
-    // If ghosts are visible at same position, then positioning is the issue
-    // If still not visible, then it's a different issue (materials, visibility flags, etc.)
-    const useTestPosition = false; // Set to true for debugging
-    if (useTestPosition && key !== "pacman") {
-      const pacmanObj = ghosts.pacman;
-      if (pacmanObj) {
-        object.position.copy(pacmanObj.position);
-        console.log(`🧪 TEST: ${key} positioned at same spot as pacman:`, pacmanObj.position);
+    if (key === "pacman") {
+      // Pacman uses calculated position
+      if (pacmanPosition) {
+        object.position.copy(pacmanPosition);
       }
     } else {
-      // All objects use the same progress (walk together in a line)
-      // Since offset is 0 for all objects, they all move together
-      const normalizedProgress = Math.max(0, Math.min(1, progress));
-      
-      // Calculate base position from walk path (same for all objects)
-      const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
-      
-      // Calculate final positions with position offset and staggered Z positions
-      const finalX = baseX + POSITION_OFFSET.x;
-      const finalY = baseCenter.y + POSITION_OFFSET.y;
-      const finalZ = baseCenter.z + POSITION_OFFSET.z + zOffset;
-      
-      // Set positions directly
-      object.position.x = finalX;
-      object.position.y = finalY;
-      object.position.z = finalZ;
+      // Ghosts position relative to pacman - 0.5 units behind in Z direction
+      if (pacmanPosition) {
+        object.position.set(
+          pacmanPosition.x,
+          pacmanPosition.y,
+          pacmanPosition.z + behindOffset
+        );
+      }
     }
     
     // Apply laying down rotation (progress = 1.0 means fully laid down)
@@ -496,9 +502,13 @@ function updateObjectsWalkBy(progress: number) {
     
     // CRITICAL: Force visibility, scale, and opacity EVERY frame to override home-scroll
     // home-scroll sets opacity to 0 at the end (progress > 0.95), we must override this
-    // Also ensure scale stays at 1.0 (objects might get scaled down when exiting home-scroll)
+    // Also ensure scale stays correct (pacman: 0.1, ghosts: 1.0)
     object.visible = true;
-    object.scale.set(1.0, 1.0, 1.0);
+    if (key === "pacman") {
+      object.scale.set(0.1, 0.1, 0.1);
+    } else {
+      object.scale.set(1.0, 1.0, 1.0);
+    }
     
     // Ensure child meshes are visible and maintain ghost colors
     const ghostColors: Record<string, number> = {
