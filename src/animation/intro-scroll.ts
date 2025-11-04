@@ -19,6 +19,7 @@ const POSITION_OFFSET = {
 
 let continuousUpdateInterval: number | null = null;
 let isContinuousUpdateActive = false;
+let lastTimelineProgress = -1;
 
 export function initIntroScrollAnimation() {
   // Stop any existing continuous update
@@ -27,18 +28,18 @@ export function initIntroScrollAnimation() {
     continuousUpdateInterval = null;
   }
   isContinuousUpdateActive = false;
+  lastTimelineProgress = -1;
   
-  // Start continuous update loop to ensure positions are always set
-  // This runs MORE frequently than home-loop to override any position updates
-  // Use requestAnimationFrame for smoother updates during scrolling
+  // Start continuous update loop ONLY when timeline is not active (to prevent flickering)
+  // This ensures positions are maintained when timeline updates are paused
   isContinuousUpdateActive = true;
   let lastUpdateTime = 0;
   function continuousUpdate(currentTime: number) {
     if (!isContinuousUpdateActive) return;
     
     const deltaTime = currentTime - lastUpdateTime;
-    // Update at ~60fps (every ~16ms)
-    if (deltaTime >= 16) {
+    // Update at ~30fps (every ~33ms) - slower to avoid conflicts
+    if (deltaTime >= 33) {
       lastUpdateTime = currentTime;
       
       // Check if intro section is visible in viewport
@@ -48,10 +49,15 @@ export function initIntroScrollAnimation() {
         const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
         
         if (isVisible) {
-          // Always update, even if timeline progress is 0 or undefined
-          const progress = introScrollTimeline ? introScrollTimeline.progress() : 0;
-          // Force update to override any other animations (like home-loop)
-          updateObjectsWalkBy(Math.max(0, progress));
+          // Only update if timeline hasn't updated recently (to prevent flickering)
+          const currentProgress = introScrollTimeline ? introScrollTimeline.progress() : 0;
+          if (Math.abs(currentProgress - lastTimelineProgress) < 0.001) {
+            // Timeline hasn't changed, apply current state
+            updateObjectsWalkBy(Math.max(0, currentProgress));
+          } else {
+            // Timeline changed, update our tracking
+            lastTimelineProgress = currentProgress;
+          }
         }
       }
     }
@@ -147,10 +153,8 @@ export function initIntroScrollAnimation() {
         immediateRender: false,
         onUpdate: function () {
           const progress = (this.targets()[0] as any).progress;
-          // Debug: Log progress updates
-          if (progress > 0 && progress < 0.1) {
-            console.log("🎬 Timeline update - Progress:", progress.toFixed(3));
-          }
+          // Update tracking variable to prevent continuous loop from interfering
+          lastTimelineProgress = progress;
           updateObjectsWalkBy(progress);
         },
         onStart: function () {
@@ -229,12 +233,6 @@ function resetGhostsForIntro() {
             return;
           }
           
-          // For ghosts: only show Ghost_Mesh parts
-          if (key !== "pacman" && !childName.startsWith("Ghost_Mesh")) {
-            mesh.visible = false;
-            return;
-          }
-          
           // For pacman: hide Shell and Bitcoin parts
           if (key === "pacman" && (
             childName.includes("Shell") || 
@@ -259,8 +257,9 @@ function resetGhostsForIntro() {
             (mesh.material as any).transparent = true;
           }
           
-          // Change ghost colors to bright colors for visibility
-          if (ghostColors[key] && childName.startsWith("Ghost_Mesh")) {
+          // Change ALL ghost mesh colors to bright colors for testing visibility
+          // (not just Ghost_Mesh parts - color everything visible)
+          if (ghostColors[key] && key !== "pacman") {
             const newColor = ghostColors[key];
             if (Array.isArray(mesh.material)) {
               mesh.material.forEach((mat: any) => {
@@ -393,12 +392,6 @@ function updateObjectsWalkBy(progress: number) {
           return;
         }
         
-        // For ghosts: only show Ghost_Mesh parts
-        if (key !== "pacman" && !childName.startsWith("Ghost_Mesh")) {
-          mesh.visible = false;
-          return;
-        }
-        
         // For pacman: hide Shell and Bitcoin parts
         if (key === "pacman" && (
           childName.includes("Shell") || 
@@ -423,8 +416,9 @@ function updateObjectsWalkBy(progress: number) {
           (mesh.material as any).transparent = true;
         }
         
-        // Change ghost colors to bright colors for visibility
-        if (ghostColors[key] && childName.startsWith("Ghost_Mesh")) {
+        // Change ALL ghost mesh colors to bright colors for testing visibility
+        // (not just Ghost_Mesh parts - color everything visible)
+        if (ghostColors[key] && key !== "pacman") {
           const newColor = ghostColors[key];
           if (Array.isArray(mesh.material)) {
             mesh.material.forEach((mat: any) => {
