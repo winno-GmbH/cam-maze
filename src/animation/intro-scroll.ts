@@ -6,151 +6,147 @@ import { scene } from "../core/scene";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 
-// Position adjuster for debugging
-let positionAdjuster = {
-  distanceBelow: 100,
-  distanceInFront: 50,
-  walkStartOffset: -5.0,
-  walkEndOffset: 0.0,
-  xOffset: 0,
-  yOffset: 0,
-  zOffset: 0,
+// Ghost position adjuster - simple X, Y, Z sliders
+let ghostPositionAdjuster = {
+  x: 0,
+  y: -100,
+  z: -50,
 };
 
-// Create position adjuster UI
+// Create simple position adjuster overlay
 function createPositionAdjusterUI() {
-  const panel = document.createElement("div");
-  panel.id = "intro-position-adjuster";
-  panel.style.cssText = `
+  // Remove existing overlay if any
+  const existing = document.getElementById("ghost-position-overlay");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "ghost-position-overlay";
+  overlay.style.cssText = `
     position: fixed;
     top: 20px;
     right: 20px;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(20, 20, 20, 0.95);
     color: white;
     padding: 20px;
-    border-radius: 8px;
-    font-family: monospace;
-    font-size: 12px;
+    border-radius: 10px;
+    font-family: 'Arial', sans-serif;
+    font-size: 14px;
     z-index: 10000;
-    min-width: 300px;
-    max-height: 80vh;
-    overflow-y: auto;
+    min-width: 280px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    border: 2px solid #444;
   `;
-  
-  panel.innerHTML = `
-    <h3 style="margin: 0 0 15px 0; color: #00ff00;">🎛️ Intro Position Adjuster</h3>
-    <div style="margin-bottom: 10px;">
-      <label>Distance Below: <span id="db-value">${positionAdjuster.distanceBelow}</span></label><br>
-      <input type="range" id="db-slider" min="0" max="200" value="${positionAdjuster.distanceBelow}" step="1" style="width: 100%;">
+
+  overlay.innerHTML = `
+    <h3 style="margin: 0 0 20px 0; color: #00ff00; font-size: 18px; text-align: center;">🎛️ Ghost Position Adjuster</h3>
+    
+    <div style="margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <label style="font-weight: bold; color: #ff6b6b;">X Axis:</label>
+        <span id="x-value-display" style="color: #ff6b6b; font-weight: bold;">${ghostPositionAdjuster.x.toFixed(2)}</span>
+      </div>
+      <input 
+        type="range" 
+        id="ghost-x-slider" 
+        min="-20" 
+        max="20" 
+        value="${ghostPositionAdjuster.x}" 
+        step="0.1" 
+        style="width: 100%; height: 8px; cursor: pointer;">
     </div>
-    <div style="margin-bottom: 10px;">
-      <label>Distance In Front: <span id="df-value">${positionAdjuster.distanceInFront}</span></label><br>
-      <input type="range" id="df-slider" min="0" max="100" value="${positionAdjuster.distanceInFront}" step="1" style="width: 100%;">
+
+    <div style="margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <label style="font-weight: bold; color: #4ecdc4;">Y Axis:</label>
+        <span id="y-value-display" style="color: #4ecdc4; font-weight: bold;">${ghostPositionAdjuster.y.toFixed(2)}</span>
+      </div>
+      <input 
+        type="range" 
+        id="ghost-y-slider" 
+        min="-200" 
+        max="0" 
+        value="${ghostPositionAdjuster.y}" 
+        step="1" 
+        style="width: 100%; height: 8px; cursor: pointer;">
     </div>
-    <div style="margin-bottom: 10px;">
-      <label>Walk Start Offset: <span id="ws-value">${positionAdjuster.walkStartOffset}</span></label><br>
-      <input type="range" id="ws-slider" min="-20" max="20" value="${positionAdjuster.walkStartOffset}" step="0.5" style="width: 100%;">
+
+    <div style="margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <label style="font-weight: bold; color: #95e1d3;">Z Axis:</label>
+        <span id="z-value-display" style="color: #95e1d3; font-weight: bold;">${ghostPositionAdjuster.z.toFixed(2)}</span>
+      </div>
+      <input 
+        type="range" 
+        id="ghost-z-slider" 
+        min="-100" 
+        max="0" 
+        value="${ghostPositionAdjuster.z}" 
+        step="1" 
+        style="width: 100%; height: 8px; cursor: pointer;">
     </div>
-    <div style="margin-bottom: 10px;">
-      <label>Walk End Offset: <span id="we-value">${positionAdjuster.walkEndOffset}</span></label><br>
-      <input type="range" id="we-slider" min="-20" max="20" value="${positionAdjuster.walkEndOffset}" step="0.5" style="width: 100%;">
-    </div>
-    <div style="margin-bottom: 10px;">
-      <label>X Offset: <span id="x-value">${positionAdjuster.xOffset}</span></label><br>
-      <input type="range" id="x-slider" min="-20" max="20" value="${positionAdjuster.xOffset}" step="0.5" style="width: 100%;">
-    </div>
-    <div style="margin-bottom: 10px;">
-      <label>Y Offset: <span id="y-value">${positionAdjuster.yOffset}</span></label><br>
-      <input type="range" id="y-slider" min="-50" max="50" value="${positionAdjuster.yOffset}" step="1" style="width: 100%;">
-    </div>
-    <div style="margin-bottom: 10px;">
-      <label>Z Offset: <span id="z-value">${positionAdjuster.zOffset}</span></label><br>
-      <input type="range" id="z-slider" min="-50" max="50" value="${positionAdjuster.zOffset}" step="1" style="width: 100%;">
-    </div>
-    <button id="reset-positions" style="width: 100%; padding: 8px; margin-top: 10px; background: #333; color: white; border: 1px solid #555; cursor: pointer;">Reset to Default</button>
-    <div style="margin-top: 10px; padding: 10px; background: #222; border-radius: 4px;">
-      <strong>Current Camera:</strong><br>
-      <span id="camera-pos">Calculating...</span>
+
+    <button 
+      id="reset-ghost-positions" 
+      style="width: 100%; padding: 10px; margin-top: 10px; background: #333; color: white; border: 2px solid #555; cursor: pointer; border-radius: 5px; font-weight: bold;">
+      Reset to Default
+    </button>
+
+    <div style="margin-top: 15px; padding: 10px; background: #111; border-radius: 5px; font-size: 12px;">
+      <div style="margin-bottom: 5px;"><strong>Camera Position:</strong></div>
+      <div id="camera-pos-display" style="color: #aaa;">Loading...</div>
     </div>
   `;
-  
-  document.body.appendChild(panel);
-  
-  // Set up event listeners
-  document.getElementById("db-slider")?.addEventListener("input", (e: any) => {
-    positionAdjuster.distanceBelow = parseFloat(e.target.value);
-    (document.getElementById("db-value") as HTMLElement).textContent = e.target.value;
+
+  document.body.appendChild(overlay);
+
+  // Event listeners for sliders
+  const xSlider = document.getElementById("ghost-x-slider") as HTMLInputElement;
+  const ySlider = document.getElementById("ghost-y-slider") as HTMLInputElement;
+  const zSlider = document.getElementById("ghost-z-slider") as HTMLInputElement;
+
+  xSlider?.addEventListener("input", (e: any) => {
+    ghostPositionAdjuster.x = parseFloat(e.target.value);
+    (document.getElementById("x-value-display") as HTMLElement).textContent = ghostPositionAdjuster.x.toFixed(2);
   });
-  
-  document.getElementById("df-slider")?.addEventListener("input", (e: any) => {
-    positionAdjuster.distanceInFront = parseFloat(e.target.value);
-    (document.getElementById("df-value") as HTMLElement).textContent = e.target.value;
+
+  ySlider?.addEventListener("input", (e: any) => {
+    ghostPositionAdjuster.y = parseFloat(e.target.value);
+    (document.getElementById("y-value-display") as HTMLElement).textContent = ghostPositionAdjuster.y.toFixed(2);
   });
-  
-  document.getElementById("ws-slider")?.addEventListener("input", (e: any) => {
-    positionAdjuster.walkStartOffset = parseFloat(e.target.value);
-    (document.getElementById("ws-value") as HTMLElement).textContent = e.target.value;
+
+  zSlider?.addEventListener("input", (e: any) => {
+    ghostPositionAdjuster.z = parseFloat(e.target.value);
+    (document.getElementById("z-value-display") as HTMLElement).textContent = ghostPositionAdjuster.z.toFixed(2);
   });
-  
-  document.getElementById("we-slider")?.addEventListener("input", (e: any) => {
-    positionAdjuster.walkEndOffset = parseFloat(e.target.value);
-    (document.getElementById("we-value") as HTMLElement).textContent = e.target.value;
+
+  // Reset button
+  document.getElementById("reset-ghost-positions")?.addEventListener("click", () => {
+    ghostPositionAdjuster = { x: 0, y: -100, z: -50 };
+    xSlider.value = ghostPositionAdjuster.x.toString();
+    ySlider.value = ghostPositionAdjuster.y.toString();
+    zSlider.value = ghostPositionAdjuster.z.toString();
+    (document.getElementById("x-value-display") as HTMLElement).textContent = ghostPositionAdjuster.x.toFixed(2);
+    (document.getElementById("y-value-display") as HTMLElement).textContent = ghostPositionAdjuster.y.toFixed(2);
+    (document.getElementById("z-value-display") as HTMLElement).textContent = ghostPositionAdjuster.z.toFixed(2);
   });
-  
-  document.getElementById("x-slider")?.addEventListener("input", (e: any) => {
-    positionAdjuster.xOffset = parseFloat(e.target.value);
-    (document.getElementById("x-value") as HTMLElement).textContent = e.target.value;
-  });
-  
-  document.getElementById("y-slider")?.addEventListener("input", (e: any) => {
-    positionAdjuster.yOffset = parseFloat(e.target.value);
-    (document.getElementById("y-value") as HTMLElement).textContent = e.target.value;
-  });
-  
-  document.getElementById("z-slider")?.addEventListener("input", (e: any) => {
-    positionAdjuster.zOffset = parseFloat(e.target.value);
-    (document.getElementById("z-value") as HTMLElement).textContent = e.target.value;
-  });
-  
-  document.getElementById("reset-positions")?.addEventListener("click", () => {
-    positionAdjuster = {
-      distanceBelow: 100,
-      distanceInFront: 50,
-      walkStartOffset: -5.0,
-      walkEndOffset: 0.0,
-      xOffset: 0,
-      yOffset: 0,
-      zOffset: 0,
-    };
-    // Update all sliders
-    (document.getElementById("db-slider") as HTMLInputElement).value = positionAdjuster.distanceBelow.toString();
-    (document.getElementById("df-slider") as HTMLInputElement).value = positionAdjuster.distanceInFront.toString();
-    (document.getElementById("ws-slider") as HTMLInputElement).value = positionAdjuster.walkStartOffset.toString();
-    (document.getElementById("we-slider") as HTMLInputElement).value = positionAdjuster.walkEndOffset.toString();
-    (document.getElementById("x-slider") as HTMLInputElement).value = positionAdjuster.xOffset.toString();
-    (document.getElementById("y-slider") as HTMLInputElement).value = positionAdjuster.yOffset.toString();
-    (document.getElementById("z-slider") as HTMLInputElement).value = positionAdjuster.zOffset.toString();
-    // Update all labels
-    (document.getElementById("db-value") as HTMLElement).textContent = positionAdjuster.distanceBelow.toString();
-    (document.getElementById("df-value") as HTMLElement).textContent = positionAdjuster.distanceInFront.toString();
-    (document.getElementById("ws-value") as HTMLElement).textContent = positionAdjuster.walkStartOffset.toString();
-    (document.getElementById("we-value") as HTMLElement).textContent = positionAdjuster.walkEndOffset.toString();
-    (document.getElementById("x-value") as HTMLElement).textContent = positionAdjuster.xOffset.toString();
-    (document.getElementById("y-value") as HTMLElement).textContent = positionAdjuster.yOffset.toString();
-    (document.getElementById("z-value") as HTMLElement).textContent = positionAdjuster.zOffset.toString();
-  });
-  
+
   // Update camera position display
   setInterval(() => {
     const camPos = camera.position;
-    (document.getElementById("camera-pos") as HTMLElement).textContent = 
-      `X: ${camPos.x.toFixed(2)}, Y: ${camPos.y.toFixed(2)}, Z: ${camPos.z.toFixed(2)}`;
+    const display = document.getElementById("camera-pos-display");
+    if (display) {
+      display.innerHTML = `
+        X: <span style="color: #ff6b6b;">${camPos.x.toFixed(2)}</span><br>
+        Y: <span style="color: #4ecdc4;">${camPos.y.toFixed(2)}</span><br>
+        Z: <span style="color: #95e1d3;">${camPos.z.toFixed(2)}</span>
+      `;
+    }
   }, 100);
 }
 
 export function initIntroScrollAnimation() {
   // Create position adjuster UI
-  if (!document.getElementById("intro-position-adjuster")) {
+  if (!document.getElementById("ghost-position-overlay")) {
     createPositionAdjusterUI();
   }
   
@@ -307,16 +303,16 @@ function updateObjectsWalkBy(progress: number) {
     console.log("🎬 Animation update - Progress:", progress.toFixed(3), "Camera:", camera.position);
   }
   
-  // Position objects using adjustable values
+  // Position objects using adjustable X, Y, Z values
   const centerPoint = new THREE.Vector3(
-    camera.position.x + positionAdjuster.xOffset,
-    camera.position.y - positionAdjuster.distanceBelow + positionAdjuster.yOffset,
-    camera.position.z - positionAdjuster.distanceInFront + positionAdjuster.zOffset
+    camera.position.x + ghostPositionAdjuster.x,
+    camera.position.y + ghostPositionAdjuster.y,
+    camera.position.z + ghostPositionAdjuster.z
   );
   
-  // Walk from left edge to center of viewfield using adjustable offsets
-  const walkStart = centerPoint.x + positionAdjuster.walkStartOffset;
-  const walkEnd = centerPoint.x + positionAdjuster.walkEndOffset;
+  // Walk from left edge to center of viewfield
+  const walkStart = centerPoint.x - 5.0;
+  const walkEnd = centerPoint.x;
   
   // Debug: Log positioning info
   if (progress < 0.05) {
