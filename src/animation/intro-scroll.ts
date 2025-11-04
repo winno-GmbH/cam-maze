@@ -130,9 +130,25 @@ function hideEverythingExceptObjects() {
 }
 
 function updateObjectsWalkBy(progress: number) {
-  // Animate objects from left edge to center of viewfield
-  const walkStart = -5.0; // Left edge of viewfield
-  const walkEnd = 0.0; // Center of viewfield (camera x position)
+  // Calculate camera's view direction to position objects correctly in front
+  const cameraDirection = new THREE.Vector3();
+  camera.getWorldDirection(cameraDirection);
+  
+  // Position objects much further down and in front of camera
+  const distanceBelow = 100; // Much further below camera
+  const distanceInFront = 50; // Much further in front of camera
+  
+  // Calculate a point in front of camera where objects will walk
+  // Camera looks down, so objects should be below camera and in front
+  const centerPoint = new THREE.Vector3(
+    camera.position.x,
+    camera.position.y - distanceBelow, // Below camera
+    camera.position.z - distanceInFront // In front of camera (camera looks toward negative Z)
+  );
+  
+  // Walk from left edge to center of viewfield
+  const walkStart = centerPoint.x - 5.0; // Left edge
+  const walkEnd = centerPoint.x; // Center (camera x position)
   
   const objectsToAnimate = [
     { key: "pacman", offset: 0 },
@@ -149,8 +165,8 @@ function updateObjectsWalkBy(progress: number) {
     
     // Calculate position from left to center
     const x = walkStart + (walkEnd - walkStart) * objectProgress;
-    // Move further down and away from camera
-    object.position.set(x, -80, -30);
+    // Position objects relative to camera's view direction
+    object.position.set(x, centerPoint.y, centerPoint.z);
     
     // Set opacity to 1 (like home-scroll.ts does)
     object.traverse((child) => {
