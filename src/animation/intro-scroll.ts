@@ -476,12 +476,12 @@ function updateObjectsWalkBy(progress: number) {
         object.position.copy(pacmanPosition);
       }
     } else {
-      // Ghosts position relative to pacman - 0.5 units behind in Z direction
+      // Ghosts position relative to pacman - behind in X direction (walking direction)
       if (pacmanPosition) {
         object.position.set(
-          pacmanPosition.x,
+          pacmanPosition.x + behindOffset,
           pacmanPosition.y,
-          pacmanPosition.z + behindOffset
+          pacmanPosition.z
         );
       }
     }
