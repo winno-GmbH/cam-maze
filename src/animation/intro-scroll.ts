@@ -75,7 +75,13 @@ function resetGhostsForIntro() {
       object.visible = true;
       object.scale.set(0.1, 0.1, 0.1);
 
-      // Set opacity to 1 for all meshes (like home-scroll.ts does)
+      // Set opacity to 1 and change colors for ghosts (like home-scroll.ts does)
+      const ghostColors: Record<string, number> = {
+        ghost1: 0xff0000, // Red
+        ghost2: 0x00ff00, // Green
+        ghost3: 0x0000ff, // Blue
+      };
+      
       object.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
           const mesh = child as THREE.Mesh;
@@ -105,12 +111,28 @@ function resetGhostsForIntro() {
           
           // Make visible and set opacity
           mesh.visible = true;
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              mat.opacity = 1;
-            });
+          
+          // Change ghost colors to bright colors for visibility
+          if (ghostColors[key] && childName.startsWith("Ghost_Mesh")) {
+            const newColor = ghostColors[key];
+            if (Array.isArray(mesh.material)) {
+              mesh.material.forEach((mat: any) => {
+                mat.color.setHex(newColor);
+                mat.opacity = 1;
+              });
+            } else {
+              (mesh.material as any).color.setHex(newColor);
+              (mesh.material as any).opacity = 1;
+            }
           } else {
-            (mesh.material as any).opacity = 1;
+            // Just set opacity for pacman
+            if (Array.isArray(mesh.material)) {
+              mesh.material.forEach((mat: any) => {
+                mat.opacity = 1;
+              });
+            } else {
+              (mesh.material as any).opacity = 1;
+            }
           }
         }
       });
@@ -185,7 +207,13 @@ function updateObjectsWalkBy(progress: number) {
       console.log(`🎬 ${key} positioned at:`, object.position, "visible:", object.visible);
     }
     
-    // Set opacity to 1 (like home-scroll.ts does)
+    // Set opacity to 1 and maintain ghost colors (like home-scroll.ts does)
+    const ghostColors: Record<string, number> = {
+      ghost1: 0xff0000, // Red
+      ghost2: 0x00ff00, // Green
+      ghost3: 0x0000ff, // Blue
+    };
+    
     object.traverse((child) => {
       if ((child as any).isMesh && (child as any).material) {
         const mesh = child as THREE.Mesh;
@@ -215,12 +243,28 @@ function updateObjectsWalkBy(progress: number) {
         
         // Make visible and set opacity
         mesh.visible = true;
-        if (Array.isArray(mesh.material)) {
-          mesh.material.forEach((mat: any) => {
-            mat.opacity = 1;
-          });
+        
+        // Change ghost colors to bright colors for visibility
+        if (ghostColors[key] && childName.startsWith("Ghost_Mesh")) {
+          const newColor = ghostColors[key];
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((mat: any) => {
+              mat.color.setHex(newColor);
+              mat.opacity = 1;
+            });
+          } else {
+            (mesh.material as any).color.setHex(newColor);
+            (mesh.material as any).opacity = 1;
+          }
         } else {
-          (mesh.material as any).opacity = 1;
+          // Just set opacity for pacman
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((mat: any) => {
+              mat.opacity = 1;
+            });
+          } else {
+            (mesh.material as any).opacity = 1;
+          }
         }
       }
     });
