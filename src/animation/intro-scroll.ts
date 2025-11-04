@@ -15,7 +15,7 @@ let ghostPositionAdjuster = {
 
 // Log current ghost positions for debugging
 function logCurrentGhostPositions() {
-  const objectsToCheck = ["pacman", "ghost1", "ghost2", "ghost3"];
+  const objectsToCheck = ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
   console.log("🎛️ Current Ghost Positions:");
   objectsToCheck.forEach((key) => {
     const obj = ghosts[key];
@@ -222,9 +222,10 @@ export function initIntroScrollAnimation() {
       const rect = introSection.getBoundingClientRect();
       const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
       
-      if (isVisible && introScrollTimeline) {
-        const progress = introScrollTimeline.progress();
-        // Force update even if progress is 0 (at start of section)
+      if (isVisible) {
+        // Always update, even if timeline progress is 0 or undefined
+        const progress = introScrollTimeline ? introScrollTimeline.progress() : 0;
+        // Force update to override any other animations (like home-loop)
         updateObjectsWalkBy(Math.max(0, progress));
       }
     }
@@ -345,7 +346,7 @@ function resetGhostsForIntro() {
   });
   
   // Make objects visible and set opacity (similar to home-scroll.ts approach)
-  const objectsToAnimate = ["pacman", "ghost1", "ghost2", "ghost3"];
+  const objectsToAnimate = ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
 
   Object.entries(ghosts).forEach(([key, object]) => {
     if (objectsToAnimate.includes(key)) {
@@ -369,6 +370,8 @@ function resetGhostsForIntro() {
         ghost1: 0xff0000, // Red
         ghost2: 0x00ff00, // Green
         ghost3: 0x0000ff, // Blue
+        ghost4: 0xffff00, // Yellow
+        ghost5: 0xff00ff, // Magenta
       };
       
       object.traverse((child) => {
@@ -444,9 +447,11 @@ function hideEverythingExceptObjects() {
 }
 
 function updateObjectsWalkBy(progress: number) {
-  // Debug: Log first few animation updates
-  if (progress < 0.1) {
-    console.log("🎬 Animation update - Progress:", progress.toFixed(3), "Camera:", camera.position);
+  // Log when function is called from slider changes (check if called recently)
+  const now = Date.now();
+  if (!(updateObjectsWalkBy as any).lastLogTime || now - (updateObjectsWalkBy as any).lastLogTime > 100) {
+    console.log(`🎬 updateObjectsWalkBy called - progress: ${progress.toFixed(3)}, adjuster:`, ghostPositionAdjuster);
+    (updateObjectsWalkBy as any).lastLogTime = now;
   }
   
   // Ensure floor plane stays semi-transparent red during animation
@@ -480,9 +485,11 @@ function updateObjectsWalkBy(progress: number) {
   
   const objectsToAnimate = [
     { key: "pacman", offset: 0 },
-    { key: "ghost1", offset: 0.25 },
-    { key: "ghost2", offset: 0.5 },
-    { key: "ghost3", offset: 0.75 },
+    { key: "ghost1", offset: 0.2 },
+    { key: "ghost2", offset: 0.4 },
+    { key: "ghost3", offset: 0.6 },
+    { key: "ghost4", offset: 0.8 },
+    { key: "ghost5", offset: 1.0 },
   ];
 
   // Debug: Check if all objects exist
@@ -515,14 +522,31 @@ function updateObjectsWalkBy(progress: number) {
     // Calculate base position from walk path
     const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
     
-    // CRITICAL: Apply adjuster values DIRECTLY as offsets to final positions
+    // CRITICAL: Calculate final positions with adjuster values DIRECTLY as offsets
     // This allows the sliders to directly control ghost positions in real-time
-    object.position.x = baseX + ghostPositionAdjuster.x;
-    object.position.y = baseCenter.y + ghostPositionAdjuster.y;
-    object.position.z = baseCenter.z + ghostPositionAdjuster.z;
+    const finalX = baseX + ghostPositionAdjuster.x;
+    const finalY = baseCenter.y + ghostPositionAdjuster.y;
+    const finalZ = baseCenter.z + ghostPositionAdjuster.z;
+    
+    // CRITICAL: Set positions directly
+    object.position.x = finalX;
+    object.position.y = finalY;
+    object.position.z = finalZ;
     
     // Force update matrix to ensure position is applied
     object.updateMatrixWorld(true);
+    
+    // Log position updates only when there's a mismatch or when slider changes
+    const positionMismatch = Math.abs(object.position.x - finalX) > 0.01 || 
+                             Math.abs(object.position.y - finalY) > 0.01 || 
+                             Math.abs(object.position.z - finalZ) > 0.01;
+    
+    if (progress < 0.1 || positionMismatch) {
+      console.log(`🎬 ${key} POSITION SET: X=${finalX.toFixed(2)}, Y=${finalY.toFixed(2)}, Z=${finalZ.toFixed(2)}, Actual: X=${object.position.x.toFixed(2)}, Y=${object.position.y.toFixed(2)}, Z=${object.position.z.toFixed(2)}`);
+      if (positionMismatch) {
+        console.warn(`⚠️ ${key} POSITION MISMATCH! Adjuster:`, ghostPositionAdjuster);
+      }
+    }
     
     // CRITICAL: Force visibility EVERY frame (in case something else is hiding it)
     object.visible = true;
@@ -537,26 +561,13 @@ function updateObjectsWalkBy(progress: number) {
       }
     });
     
-    // Debug: Log positions occasionally to verify they're being set
-    const finalX = baseX + ghostPositionAdjuster.x;
-    const finalY = baseCenter.y + ghostPositionAdjuster.y;
-    const finalZ = baseCenter.z + ghostPositionAdjuster.z;
-    
-    if (progress < 0.1 || Math.abs(object.position.x - finalX) > 0.1) {
-      console.log(`🎬 ${key} - SETTING position to X:${finalX.toFixed(2)}, Y:${finalY.toFixed(2)}, Z:${finalZ.toFixed(2)}, Actual after set:`, {
-        x: object.position.x.toFixed(2),
-        y: object.position.y.toFixed(2),
-        z: object.position.z.toFixed(2),
-        visible: object.visible,
-        adjuster: ghostPositionAdjuster
-      });
-    }
-    
     // Set opacity to 1 and maintain ghost colors (like home-scroll.ts does)
     const ghostColors: Record<string, number> = {
       ghost1: 0xff0000, // Red
       ghost2: 0x00ff00, // Green
       ghost3: 0x0000ff, // Blue
+      ghost4: 0xffff00, // Yellow
+      ghost5: 0xff00ff, // Magenta
     };
     
     object.traverse((child) => {
