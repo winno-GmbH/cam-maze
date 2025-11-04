@@ -17,57 +17,16 @@ const POSITION_OFFSET = {
   z: 0.00,
 };
 
-let continuousUpdateInterval: number | null = null;
-let isContinuousUpdateActive = false;
-let lastTimelineProgress = -1;
-
 export function initIntroScrollAnimation() {
-  // Stop any existing continuous update
-  if (continuousUpdateInterval !== null) {
-    cancelAnimationFrame(continuousUpdateInterval);
-    continuousUpdateInterval = null;
-  }
-  isContinuousUpdateActive = false;
-  lastTimelineProgress = -1;
-  
-  // Start continuous update loop ONLY when timeline is not active (to prevent flickering)
-  // This ensures positions are maintained when timeline updates are paused
-  isContinuousUpdateActive = true;
-  let lastUpdateTime = 0;
-  function continuousUpdate(currentTime: number) {
-    if (!isContinuousUpdateActive) return;
-    
-    const deltaTime = currentTime - lastUpdateTime;
-    // Update at ~30fps (every ~33ms) - slower to avoid conflicts
-    if (deltaTime >= 33) {
-      lastUpdateTime = currentTime;
-      
-      // Check if intro section is visible in viewport
-      const introSection = document.querySelector(".sc--intro");
-      if (introSection) {
-        const rect = introSection.getBoundingClientRect();
-        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-        
-        if (isVisible) {
-          // Only update if timeline hasn't updated recently (to prevent flickering)
-          const currentProgress = introScrollTimeline ? introScrollTimeline.progress() : 0;
-          if (Math.abs(currentProgress - lastTimelineProgress) < 0.001) {
-            // Timeline hasn't changed, apply current state
-            updateObjectsWalkBy(Math.max(0, currentProgress));
-          } else {
-            // Timeline changed, update our tracking
-            lastTimelineProgress = currentProgress;
-          }
-        }
-      }
-    }
-    
-    // Continue the loop
-    continuousUpdateInterval = requestAnimationFrame(continuousUpdate) as any;
-  }
-  
-  // Start the continuous update loop
-  continuousUpdateInterval = requestAnimationFrame(continuousUpdate) as any;
+  // EXPLANATION OF FLICKERING ISSUE:
+  // The flickering happens because multiple update sources are competing:
+  // 1. GSAP ScrollTrigger's onUpdate callback fires on every scroll event
+  // 2. A continuous requestAnimationFrame loop was ALSO updating positions
+  // 3. Both try to set positions/rotations/visibility simultaneously, causing race conditions
+  // 4. Additionally, home-loop animation might still be running and updating positions
+  // 
+  // SOLUTION: Remove the continuous loop entirely and rely ONLY on ScrollTrigger's onUpdate
+  // This ensures single source of truth for position updates during scrolling
   
   introScrollTimeline = gsap
     .timeline({
@@ -153,8 +112,6 @@ export function initIntroScrollAnimation() {
         immediateRender: false,
         onUpdate: function () {
           const progress = (this.targets()[0] as any).progress;
-          // Update tracking variable to prevent continuous loop from interfering
-          lastTimelineProgress = progress;
           updateObjectsWalkBy(progress);
         },
         onStart: function () {
@@ -222,8 +179,11 @@ function resetGhostsForIntro() {
         ghost5: 0xff00ff, // Magenta
       };
       
+      // Make ALL meshes visible for ghosts (for testing - color everything)
+      let meshCount = 0;
       object.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
+          meshCount++;
           const mesh = child as THREE.Mesh;
           const childName = child.name || "";
           
@@ -243,7 +203,7 @@ function resetGhostsForIntro() {
             return;
           }
           
-          // Make visible
+          // Make ALL meshes visible (including Groups and nested meshes)
           mesh.visible = true;
           
           // Ensure material opacity is set to 1 and transparent is true
@@ -258,7 +218,6 @@ function resetGhostsForIntro() {
           }
           
           // Change ALL ghost mesh colors to bright colors for testing visibility
-          // (not just Ghost_Mesh parts - color everything visible)
           if (ghostColors[key] && key !== "pacman") {
             const newColor = ghostColors[key];
             if (Array.isArray(mesh.material)) {
@@ -271,6 +230,11 @@ function resetGhostsForIntro() {
           }
         }
       });
+      
+      // Debug: Log mesh count for ghosts
+      if (key !== "pacman" && meshCount === 0) {
+        console.warn(`⚠️ ${key} has NO meshes found!`);
+      }
     }
   });
 }
@@ -314,14 +278,14 @@ function updateObjectsWalkBy(progress: number) {
   const walkStart = baseCenter.x - 5.0;
   const walkEnd = baseCenter.x;
   
-  // Objects to animate with staggered Z positions (behind each other)
+  // Objects to animate - ghosts walk directly behind pacman (same X, Y, staggered Z)
   const objectsToAnimate = [
     { key: "pacman", offset: 0, zOffset: 0 },
-    { key: "ghost1", offset: 0.2, zOffset: -2 },
-    { key: "ghost2", offset: 0.4, zOffset: -4 },
-    { key: "ghost3", offset: 0.6, zOffset: -6 },
-    { key: "ghost4", offset: 0.8, zOffset: -8 },
-    { key: "ghost5", offset: 1.0, zOffset: -10 },
+    { key: "ghost1", offset: 0, zOffset: -1 },   // Directly behind pacman
+    { key: "ghost2", offset: 0, zOffset: -2 },   // Behind ghost1
+    { key: "ghost3", offset: 0, zOffset: -3 },   // Behind ghost2
+    { key: "ghost4", offset: 0, zOffset: -4 },   // Behind ghost3
+    { key: "ghost5", offset: 0, zOffset: -5 },   // Behind ghost4
   ];
 
   objectsToAnimate.forEach(({ key, offset, zOffset }) => {
@@ -330,19 +294,11 @@ function updateObjectsWalkBy(progress: number) {
       return;
     }
 
-    // Calculate object progress - don't use modulo, let it extend beyond 1.0 for looping
-    const objectProgress = progress + offset;
+    // All objects use the same progress (walk together in a line)
+    // Since offset is 0 for all objects, they all move together
+    const normalizedProgress = Math.max(0, Math.min(1, progress));
     
-    // Only show object if it's in the visible range (0 to 1.2 for spacing)
-    if (objectProgress > 1.2) {
-      object.visible = false;
-      return;
-    }
-    
-    // Normalize progress for positioning (0 to 1)
-    const normalizedProgress = Math.max(0, Math.min(1, objectProgress));
-    
-    // Calculate base position from walk path
+    // Calculate base position from walk path (same for all objects)
     const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
     
     // Calculate final positions with position offset and staggered Z positions
@@ -381,6 +337,7 @@ function updateObjectsWalkBy(progress: number) {
       ghost5: 0xff00ff, // Magenta
     };
     
+    // Make ALL meshes visible for ghosts (for testing - color everything)
     object.traverse((child) => {
       if ((child as any).isMesh && (child as any).material) {
         const mesh = child as THREE.Mesh;
@@ -402,7 +359,7 @@ function updateObjectsWalkBy(progress: number) {
           return;
         }
         
-        // Make visible
+        // Make ALL meshes visible (including Groups and nested meshes)
         mesh.visible = true;
         
         // Ensure material opacity is set to 1 and transparent is true
@@ -417,7 +374,6 @@ function updateObjectsWalkBy(progress: number) {
         }
         
         // Change ALL ghost mesh colors to bright colors for testing visibility
-        // (not just Ghost_Mesh parts - color everything visible)
         if (ghostColors[key] && key !== "pacman") {
           const newColor = ghostColors[key];
           if (Array.isArray(mesh.material)) {
