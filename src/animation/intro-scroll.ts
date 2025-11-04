@@ -13,6 +13,32 @@ let ghostPositionAdjuster = {
   z: -50,
 };
 
+// Log current ghost positions for debugging
+function logCurrentGhostPositions() {
+  const objectsToCheck = ["pacman", "ghost1", "ghost2", "ghost3"];
+  console.log("🎛️ Current Ghost Positions:");
+  objectsToCheck.forEach((key) => {
+    const obj = ghosts[key];
+    if (obj) {
+      console.log(`  ${key}:`, {
+        x: obj.position.x.toFixed(2),
+        y: obj.position.y.toFixed(2),
+        z: obj.position.z.toFixed(2),
+        visible: obj.visible,
+        scale: `${obj.scale.x.toFixed(2)}, ${obj.scale.y.toFixed(2)}, ${obj.scale.z.toFixed(2)}`
+      });
+    } else {
+      console.log(`  ${key}: NOT FOUND`);
+    }
+  });
+  console.log("🎛️ Adjuster values:", ghostPositionAdjuster);
+  console.log("🎛️ Camera position:", {
+    x: camera.position.x.toFixed(2),
+    y: camera.position.y.toFixed(2),
+    z: camera.position.z.toFixed(2)
+  });
+}
+
 // Create simple position adjuster overlay
 function createPositionAdjusterUI() {
   // Remove existing overlay if any
@@ -99,6 +125,10 @@ function createPositionAdjusterUI() {
 
   document.body.appendChild(overlay);
 
+  // Log initial positions
+  console.log("🎛️ Position Adjuster Overlay Created");
+  logCurrentGhostPositions();
+
   // Event listeners for sliders
   const xSlider = document.getElementById("ghost-x-slider") as HTMLInputElement;
   const ySlider = document.getElementById("ghost-y-slider") as HTMLInputElement;
@@ -107,20 +137,27 @@ function createPositionAdjusterUI() {
   xSlider?.addEventListener("input", (e: any) => {
     ghostPositionAdjuster.x = parseFloat(e.target.value);
     (document.getElementById("x-value-display") as HTMLElement).textContent = ghostPositionAdjuster.x.toFixed(2);
+    console.log(`🎛️ X Position changed to: ${ghostPositionAdjuster.x.toFixed(2)}`);
+    logCurrentGhostPositions();
   });
 
   ySlider?.addEventListener("input", (e: any) => {
     ghostPositionAdjuster.y = parseFloat(e.target.value);
     (document.getElementById("y-value-display") as HTMLElement).textContent = ghostPositionAdjuster.y.toFixed(2);
+    console.log(`🎛️ Y Position changed to: ${ghostPositionAdjuster.y.toFixed(2)}`);
+    logCurrentGhostPositions();
   });
 
   zSlider?.addEventListener("input", (e: any) => {
     ghostPositionAdjuster.z = parseFloat(e.target.value);
     (document.getElementById("z-value-display") as HTMLElement).textContent = ghostPositionAdjuster.z.toFixed(2);
+    console.log(`🎛️ Z Position changed to: ${ghostPositionAdjuster.z.toFixed(2)}`);
+    logCurrentGhostPositions();
   });
 
   // Reset button
   document.getElementById("reset-ghost-positions")?.addEventListener("click", () => {
+    console.log("🎛️ Reset button clicked - Resetting to defaults");
     ghostPositionAdjuster = { x: 0, y: -100, z: -50 };
     xSlider.value = ghostPositionAdjuster.x.toString();
     ySlider.value = ghostPositionAdjuster.y.toString();
@@ -128,6 +165,7 @@ function createPositionAdjusterUI() {
     (document.getElementById("x-value-display") as HTMLElement).textContent = ghostPositionAdjuster.x.toFixed(2);
     (document.getElementById("y-value-display") as HTMLElement).textContent = ghostPositionAdjuster.y.toFixed(2);
     (document.getElementById("z-value-display") as HTMLElement).textContent = ghostPositionAdjuster.z.toFixed(2);
+    logCurrentGhostPositions();
   });
 
   // Update camera position display
