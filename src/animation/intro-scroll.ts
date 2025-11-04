@@ -205,6 +205,7 @@ function createPositionAdjusterUI() {
 }
 
 let continuousUpdateInterval: number | null = null;
+let isContinuousUpdateActive = false;
 
 export function initIntroScrollAnimation() {
   // Create position adjuster UI
@@ -213,27 +214,46 @@ export function initIntroScrollAnimation() {
   }
   
   // Stop any existing continuous update
-  if (continuousUpdateInterval) {
-    clearInterval(continuousUpdateInterval);
+  if (continuousUpdateInterval !== null) {
+    cancelAnimationFrame(continuousUpdateInterval);
+    continuousUpdateInterval = null;
   }
+  isContinuousUpdateActive = false;
   
   // Start continuous update loop to ensure positions are always set
   // This runs MORE frequently than home-loop to override any position updates
-  continuousUpdateInterval = setInterval(() => {
-    // Check if intro section is visible in viewport
-    const introSection = document.querySelector(".sc--intro");
-    if (introSection) {
-      const rect = introSection.getBoundingClientRect();
-      const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+  // Use requestAnimationFrame for smoother updates during scrolling
+  isContinuousUpdateActive = true;
+  let lastUpdateTime = 0;
+  function continuousUpdate(currentTime: number) {
+    if (!isContinuousUpdateActive) return;
+    
+    const deltaTime = currentTime - lastUpdateTime;
+    // Update at ~60fps (every ~16ms)
+    if (deltaTime >= 16) {
+      lastUpdateTime = currentTime;
       
-      if (isVisible) {
-        // Always update, even if timeline progress is 0 or undefined
-        const progress = introScrollTimeline ? introScrollTimeline.progress() : 0;
-        // Force update to override any other animations (like home-loop)
-        updateObjectsWalkBy(Math.max(0, progress));
+      // Check if intro section is visible in viewport
+      const introSection = document.querySelector(".sc--intro");
+      if (introSection) {
+        const rect = introSection.getBoundingClientRect();
+        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+        
+        if (isVisible) {
+          // Always update, even if timeline progress is 0 or undefined
+          const progress = introScrollTimeline ? introScrollTimeline.progress() : 0;
+          // Force update to override any other animations (like home-loop)
+          updateObjectsWalkBy(Math.max(0, progress));
+        }
       }
     }
-  }, 10) as any; // ~100fps - faster than home-loop to ensure our positions stick
+    
+    // Continue the loop
+    continuousUpdateInterval = requestAnimationFrame(continuousUpdate) as any;
+  }
+  
+  // Start the continuous update loop
+  continuousUpdateInterval = requestAnimationFrame(continuousUpdate) as any;
   
   introScrollTimeline = gsap
     .timeline({
@@ -242,6 +262,7 @@ export function initIntroScrollAnimation() {
         start: "top top",
       end: "bottom bottom",
       scrub: 0.5,
+      refreshPriority: 1, // Ensure ScrollTrigger refreshes properly
         onEnter: () => {
           console.log("🎬 Intro section ENTERED!");
           resetGhostsForIntro();
@@ -373,6 +394,10 @@ function resetGhostsForIntro() {
       
       // Apply laying down rotation (progress = 1.0 means fully laid down)
       slerpToLayDown(object, introInitialRotations[key], 1.0);
+      
+      // Apply additional 90-degree rotation on X axis
+      const xRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+      object.quaternion.multiply(xRotation90);
       
       object.updateMatrixWorld(true);
       
@@ -552,6 +577,10 @@ function updateObjectsWalkBy(progress: number) {
       introInitialRotations[key] = object.quaternion.clone();
     }
     slerpToLayDown(object, introInitialRotations[key], 1.0);
+    
+    // Apply additional 90-degree rotation on X axis
+    const xRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+    object.quaternion.multiply(xRotation90);
     
     // Force update matrix to ensure position is applied
     object.updateMatrixWorld(true);
