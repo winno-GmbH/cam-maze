@@ -87,33 +87,61 @@ export function initIntroScrollAnimation() {
       refreshPriority: 1, // Ensure ScrollTrigger refreshes properly
         onEnter: () => {
           console.log("🎬 Intro section ENTERED!");
-          console.log("🔍 DEBUGGING: Checking all objects before reset...");
-          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(key => {
+          
+          // CRITICAL: Immediately restore opacity to 1 for all objects
+          // home-scroll sets opacity to 0 at the end, we must override this immediately
+          const objectsToRestore = ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
+          objectsToRestore.forEach(key => {
             const obj = ghosts[key];
             if (obj) {
-              const debugInfo = debugObjectVisibility(key, obj);
-              console.log(`🔍 ${key}:`, debugInfo);
-            } else {
-              console.warn(`⚠️ ${key} does not exist in ghosts object!`);
+              // Force opacity to 1 immediately, before any other operations
+              obj.traverse((child) => {
+                if ((child as any).isMesh && (child as any).material) {
+                  const mesh = child as THREE.Mesh;
+                  if (Array.isArray(mesh.material)) {
+                    mesh.material.forEach((mat: any) => {
+                      mat.opacity = 1;
+                      mat.transparent = true;
+                    });
+                  } else {
+                    (mesh.material as any).opacity = 1;
+                    (mesh.material as any).transparent = true;
+                  }
+                }
+              });
             }
           });
+          
           resetGhostsForIntro();
           hideEverythingExceptObjects();
-          
-          // Debug after reset
-          console.log("🔍 DEBUGGING: Checking all objects AFTER reset...");
-          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(key => {
-            const obj = ghosts[key];
-            if (obj) {
-              const debugInfo = debugObjectVisibility(key, obj);
-              console.log(`🔍 ${key} AFTER RESET:`, debugInfo);
-              const inFrustum = isInCameraFrustum(obj);
-              console.log(`  📷 ${key} in camera frustum:`, inFrustum);
-            }
-          });
         },
         onEnterBack: () => {
           console.log("🎬 Intro section ENTERED BACK!");
+          
+          // CRITICAL: Immediately restore opacity to 1 for all objects
+          // home-scroll sets opacity to 0 at the end, we must override this immediately
+          const objectsToRestore = ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
+          objectsToRestore.forEach(key => {
+            const obj = ghosts[key];
+            if (obj) {
+              // Force opacity to 1 immediately, before any other operations
+              obj.traverse((child) => {
+                if ((child as any).isMesh && (child as any).material) {
+                  const mesh = child as THREE.Mesh;
+                  if (Array.isArray(mesh.material)) {
+                    mesh.material.forEach((mat: any) => {
+                      mat.opacity = 1;
+                      mat.transparent = true;
+                    });
+                  } else {
+                    (mesh.material as any).opacity = 1;
+                    (mesh.material as any).transparent = true;
+                  }
+                }
+              });
+            }
+          });
+          
           resetGhostsForIntro();
           hideEverythingExceptObjects();
         },
@@ -210,7 +238,8 @@ function resetGhostsForIntro() {
     }
   });
   
-  // Make objects visible and set opacity (similar to home-scroll.ts approach)
+  // CRITICAL: Restore opacity to 1 for all objects (they may have been set to 0 by home-scroll)
+  // This fixes the issue where objects are invisible after home-scroll ends
   const objectsToAnimate = ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
 
   Object.entries(ghosts).forEach(([key, object]) => {
@@ -223,6 +252,23 @@ function resetGhostsForIntro() {
       // CRITICAL: Force visibility and scale BEFORE anything else
       object.visible = true;
       object.scale.set(0.1, 0.1, 0.1);
+      
+      // CRITICAL: Restore opacity to 1 immediately (override home-scroll's opacity = 0)
+      // This must happen FIRST to ensure objects are visible
+      object.traverse((child) => {
+        if ((child as any).isMesh && (child as any).material) {
+          const mesh = child as THREE.Mesh;
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((mat: any) => {
+              mat.opacity = 1;
+              mat.transparent = true;
+            });
+          } else {
+            (mesh.material as any).opacity = 1;
+            (mesh.material as any).transparent = true;
+          }
+        }
+      });
       
       // Force initial position (far left, off-screen) with position offset applied
       const baseX = camera.position.x - 10;
@@ -447,7 +493,8 @@ function updateObjectsWalkBy(progress: number) {
     // Force update matrix to ensure position is applied
     object.updateMatrixWorld(true);
     
-    // Force visibility EVERY frame (in case something else is hiding it)
+    // CRITICAL: Force visibility and opacity EVERY frame to override home-scroll
+    // home-scroll sets opacity to 0 at the end (progress > 0.95), we must override this
     object.visible = true;
     
     // Ensure child meshes are visible and maintain ghost colors
@@ -489,7 +536,8 @@ function updateObjectsWalkBy(progress: number) {
         mesh.visible = true;
         meshInfo.visible++;
         
-        // Ensure material opacity is set to 1 and transparent is true
+        // CRITICAL: Force opacity to 1 EVERY frame to override home-scroll's opacity = 0
+        // This ensures objects are always visible during intro-scroll
         if (Array.isArray(mesh.material)) {
           mesh.material.forEach((mat: any) => {
             mat.opacity = 1;
