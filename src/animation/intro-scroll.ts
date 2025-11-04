@@ -9,11 +9,11 @@ let introScrollTimeline: gsap.core.Timeline | null = null;
 export function initIntroScrollAnimation() {
   introScrollTimeline = gsap
     .timeline({
-      scrollTrigger: {
-        trigger: ".sc--intro",
+    scrollTrigger: {
+      trigger: ".sc--intro",
         start: "top top",
-        end: "bottom bottom",
-        scrub: 0.5,
+      end: "bottom bottom",
+      scrub: 0.5,
         onEnter: () => {
           console.log("=".repeat(50));
           console.log("🎬 INTRO SECTION ENTERED!");
@@ -35,11 +35,11 @@ export function initIntroScrollAnimation() {
     .fromTo(
       ".sc_h--intro",
       { scale: 0.5, opacity: 0 },
-      {
-        keyframes: [
-          { scale: 0.5, opacity: 0, duration: 0 },
-          { scale: 0.8, opacity: 1, duration: 0.3 },
-          { scale: 1.2, opacity: 1, duration: 0.4 },
+    {
+      keyframes: [
+        { scale: 0.5, opacity: 0, duration: 0 },
+        { scale: 0.8, opacity: 1, duration: 0.3 },
+        { scale: 1.2, opacity: 1, duration: 0.4 },
           { scale: 1.5, opacity: 0, duration: 0.3 },
         ],
       }
@@ -47,11 +47,11 @@ export function initIntroScrollAnimation() {
     .fromTo(
       ".sc_b--intro",
       { scale: 0.5, opacity: 0 },
-      {
-        keyframes: [
-          { scale: 0.5, opacity: 0, duration: 0 },
-          { scale: 0.8, opacity: 1, duration: 0.3 },
-          { scale: 1.2, opacity: 1, duration: 0.4 },
+    {
+      keyframes: [
+        { scale: 0.5, opacity: 0, duration: 0 },
+        { scale: 0.8, opacity: 1, duration: 0.3 },
+        { scale: 1.2, opacity: 1, duration: 0.4 },
           { scale: 1.5, opacity: 0, duration: 0.3 },
         ],
       }
@@ -87,21 +87,43 @@ function resetGhostsForIntro() {
       object.visible = true;
       object.scale.set(0.1, 0.1, 0.1); // Use 0.1 instead of 0.01
 
-      // Reset material opacity to 1
+      // Reset material opacity to 1 and force visibility
       let meshCount = 0;
       object.traverse((child) => {
+        // Force visibility on ALL children, not just meshes
+        (child as any).visible = true;
+        
         if ((child as any).isMesh) {
           meshCount++;
           const mesh = child as THREE.Mesh;
+          
+          // Force mesh visibility
+          mesh.visible = true;
+          
           if (mesh.material) {
-            console.log(`  - Mesh ${meshCount} material:`, {
+            console.log(`  - Mesh ${meshCount} BEFORE:`, {
               opacity: (mesh.material as any).opacity,
               transparent: (mesh.material as any).transparent,
               visible: mesh.visible,
             });
+            
+            // Set material properties
             (mesh.material as any).opacity = 1;
             (mesh.material as any).transparent = true;
             mesh.visible = true;
+            
+            // If material is an array, update all materials
+            if (Array.isArray(mesh.material)) {
+              mesh.material.forEach((mat: any) => {
+                mat.opacity = 1;
+                mat.transparent = true;
+              });
+            }
+            
+            console.log(`  - Mesh ${meshCount} AFTER:`, {
+              opacity: (mesh.material as any).opacity,
+              visible: mesh.visible,
+            });
           }
         }
       });
@@ -209,13 +231,25 @@ function updateObjectsWalkBy(progress: number) {
       );
     }
 
-    // Ensure visibility on every frame
+    // Force visibility on every frame (critical for meshes with visible: false)
     object.visible = true;
     object.traverse((child) => {
+      // Force visibility on ALL children
+      (child as any).visible = true;
+      
       if ((child as any).isMesh) {
-        (child as any).visible = true;
-        if ((child as any).material) {
-          (child as any).material.opacity = 1;
+        const mesh = child as THREE.Mesh;
+        mesh.visible = true;
+        
+        if (mesh.material) {
+          (mesh.material as any).opacity = 1;
+          
+          // Handle material arrays
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((mat: any) => {
+              mat.opacity = 1;
+            });
+          }
         }
       }
     });
