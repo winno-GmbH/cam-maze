@@ -15,18 +15,10 @@ export function initIntroScrollAnimation() {
       end: "bottom bottom",
       scrub: 0.5,
         onEnter: () => {
-          console.log("=".repeat(50));
-          console.log("🎬 INTRO SECTION ENTERED!");
-          console.log("Camera position:", camera.position);
-          console.log("=".repeat(50));
           resetGhostsForIntro();
           hideEverythingExceptObjects();
         },
         onEnterBack: () => {
-          console.log(
-            "🎬 Intro section entered back - Camera pos:",
-            camera.position
-          );
           resetGhostsForIntro();
           hideEverythingExceptObjects();
         },
@@ -72,89 +64,53 @@ export function initIntroScrollAnimation() {
 }
 
 function resetGhostsForIntro() {
-  // Reset object materials to be visible for intro animation
-  const objectsToDebug = ["pacman", "ghost1", "ghost2", "ghost3"];
+  // Make objects visible and set opacity (similar to home-scroll.ts approach)
+  const objectsToAnimate = ["pacman", "ghost1", "ghost2", "ghost3"];
 
   Object.entries(ghosts).forEach(([key, object]) => {
-    if (objectsToDebug.includes(key)) {
-      console.log(`\n🔍 DEBUGGING ${key}:`);
-      console.log("  - Object exists:", !!object);
-      console.log("  - Object type:", object?.constructor?.name);
-      console.log("  - Visible BEFORE:", object.visible);
-      console.log("  - Scale BEFORE:", object.scale);
-      console.log("  - Position BEFORE:", object.position);
-
+    if (objectsToAnimate.includes(key)) {
       object.visible = true;
-      object.scale.set(0.1, 0.1, 0.1); // Use 0.1 instead of 0.01
+      object.scale.set(0.1, 0.1, 0.1);
 
-      // Reset material opacity to 1 and force visibility
-      // IMPORTANT: Hide currency symbols (EUR, CHF, YEN, USD, GBP) - they should stay invisible
-      let meshCount = 0;
+      // Set opacity to 1 for all meshes (like home-scroll.ts does)
       object.traverse((child) => {
-        if ((child as any).isMesh) {
-          meshCount++;
+        if ((child as any).isMesh && (child as any).material) {
           const mesh = child as THREE.Mesh;
           const childName = child.name || "";
           
-          // Currency symbols should remain hidden
+          // Keep currency symbols hidden
           if (["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName)) {
             mesh.visible = false;
-            console.log(`  - Mesh ${meshCount} (${childName}): HIDDEN (currency symbol)`);
             return;
           }
           
           // For ghosts: only show Ghost_Mesh parts
           if (key !== "pacman" && !childName.startsWith("Ghost_Mesh")) {
             mesh.visible = false;
-            console.log(`  - Mesh ${meshCount} (${childName}): HIDDEN (not Ghost_Mesh)`);
             return;
           }
           
-          // For pacman: hide Shell and Bitcoin parts (they should be invisible)
+          // For pacman: hide Shell and Bitcoin parts
           if (key === "pacman" && (
             childName.includes("Shell") || 
             childName.includes("Bitcoin_1") || 
             childName.includes("Bitcoin_2")
           )) {
             mesh.visible = false;
-            console.log(`  - Mesh ${meshCount} (${childName}): HIDDEN (pacman shell/bitcoin)`);
             return;
           }
           
-          // Show this mesh and set properties
+          // Make visible and set opacity
           mesh.visible = true;
-          
-          if (mesh.material) {
-            console.log(`  - Mesh ${meshCount} (${childName}) BEFORE:`, {
-              opacity: (mesh.material as any).opacity,
-              transparent: (mesh.material as any).transparent,
-              visible: mesh.visible,
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((mat: any) => {
+              mat.opacity = 1;
             });
-            
-            // Set material properties
+          } else {
             (mesh.material as any).opacity = 1;
-            (mesh.material as any).transparent = true;
-            
-            // If material is an array, update all materials
-            if (Array.isArray(mesh.material)) {
-              mesh.material.forEach((mat: any) => {
-                mat.opacity = 1;
-                mat.transparent = true;
-              });
-            }
-            
-            console.log(`  - Mesh ${meshCount} (${childName}) AFTER:`, {
-              opacity: (mesh.material as any).opacity,
-              visible: mesh.visible,
-            });
           }
         }
       });
-
-      console.log("  - Total meshes:", meshCount);
-      console.log("  - Visible AFTER:", object.visible);
-      console.log("  - Scale AFTER:", object.scale);
-      console.log("  - Children count:", object.children.length);
     }
   });
 }
@@ -171,57 +127,13 @@ function hideEverythingExceptObjects() {
     }
   });
 
-  // Don't create spheres - use actual objects instead
-  // createWorkingObjects();
-}
-
-let workingObjects: THREE.Mesh[] = [];
-
-function createWorkingObjects() {
-  // Remove existing objects
-  workingObjects.forEach((obj) => scene.remove(obj));
-  workingObjects = [];
-
-  // Create objects that look like pacman and ghosts
-  const pacmanGeometry = new THREE.SphereGeometry(0.1, 8, 8);
-  const pacmanMaterial = new THREE.MeshBasicMaterial({
-    color: 0xffff00, // Yellow like pacman
-    opacity: 1.0,
-    transparent: false,
-  });
-  const pacman = new THREE.Mesh(pacmanGeometry, pacmanMaterial);
-  pacman.visible = true;
-  workingObjects.push(pacman);
-
-  // Create 3 ghosts
-  for (let i = 0; i < 3; i++) {
-    const ghostGeometry = new THREE.SphereGeometry(0.1, 8, 8);
-    const ghostMaterial = new THREE.MeshBasicMaterial({
-      color: i === 0 ? 0xff0000 : i === 1 ? 0x00ff00 : 0x0000ff, // Red, Green, Blue
-      opacity: 1.0,
-      transparent: false,
-    });
-    const ghost = new THREE.Mesh(ghostGeometry, ghostMaterial);
-    ghost.visible = true;
-    workingObjects.push(ghost);
-  }
-
-  // Add all to scene
-  workingObjects.forEach((obj) => scene.add(obj));
-
-  console.log(
-    "Created",
-    workingObjects.length,
-    "working objects for intro animation"
-  );
 }
 
 function updateObjectsWalkBy(progress: number) {
-  // Animate actual pacman and ghosts (not spheres)
-  const walkWidth = 10.0;
-  const walkStart = -walkWidth / 2;
-  const walkEnd = walkWidth / 2;
-
+  // Animate objects from left edge to center of viewfield
+  const walkStart = -5.0; // Left edge of viewfield
+  const walkEnd = 0.0; // Center of viewfield (camera x position)
+  
   const objectsToAnimate = [
     { key: "pacman", offset: 0 },
     { key: "ghost1", offset: 0.25 },
@@ -231,37 +143,22 @@ function updateObjectsWalkBy(progress: number) {
 
   objectsToAnimate.forEach(({ key, offset }) => {
     const object = ghosts[key];
-    if (!object) {
-      console.warn(`⚠️ ${key} not found in ghosts object`);
-      return;
-    }
+    if (!object) return;
 
     const objectProgress = (progress + offset) % 1.0;
-
-    // Calculate position from left to right
+    
+    // Calculate position from left to center
     const x = walkStart + (walkEnd - walkStart) * objectProgress;
-    object.position.set(x, -50, -19.548);
-
-    // Debug first few frames
-    if (progress < 0.05 && key === "pacman") {
-      console.log(
-        `🎬 ${key} at position:`,
-        object.position,
-        "visible:",
-        object.visible,
-        "scale:",
-        object.scale.x
-      );
-    }
-
-    // Force visibility on every frame, but only for correct meshes
-    object.visible = true;
+    // Move further down and away from camera
+    object.position.set(x, -80, -30);
+    
+    // Set opacity to 1 (like home-scroll.ts does)
     object.traverse((child) => {
-      if ((child as any).isMesh) {
+      if ((child as any).isMesh && (child as any).material) {
         const mesh = child as THREE.Mesh;
         const childName = child.name || "";
         
-        // Currency symbols should remain hidden
+        // Keep currency symbols hidden
         if (["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName)) {
           mesh.visible = false;
           return;
@@ -283,18 +180,14 @@ function updateObjectsWalkBy(progress: number) {
           return;
         }
         
-        // Show this mesh and ensure opacity
+        // Make visible and set opacity
         mesh.visible = true;
-        
-        if (mesh.material) {
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((mat: any) => {
+            mat.opacity = 1;
+          });
+        } else {
           (mesh.material as any).opacity = 1;
-          
-          // Handle material arrays
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              mat.opacity = 1;
-            });
-          }
         }
       }
     });
