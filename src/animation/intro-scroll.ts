@@ -15,10 +15,10 @@ export function initIntroScrollAnimation() {
         end: "bottom bottom",
         scrub: 0.5,
         onEnter: () => {
-          console.log(
-            "🎬 Intro section entered - Camera pos:",
-            camera.position
-          );
+          console.log("=".repeat(50));
+          console.log("🎬 INTRO SECTION ENTERED!");
+          console.log("Camera position:", camera.position);
+          console.log("=".repeat(50));
           resetGhostsForIntro();
           hideEverythingExceptObjects();
         },
