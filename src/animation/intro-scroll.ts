@@ -491,13 +491,16 @@ function updateObjectsWalkBy(progress: number) {
     if (!introInitialRotations[key]) {
       introInitialRotations[key] = object.quaternion.clone();
     }
+    
+    // CRITICAL: Apply same rotation to both pacman and ghosts
+    // First: laying down rotation
     slerpToLayDown(object, introInitialRotations[key], 1.0);
     
-    // Apply additional 90-degree rotation on X axis
+    // Then: 90-degree rotation on X axis (same for pacman and ghosts)
     const xRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
     object.quaternion.multiply(xRotation90);
     
-    // Force update matrix to ensure position is applied
+    // Force update matrix to ensure rotation is applied
     object.updateMatrixWorld(true);
     
     // CRITICAL: Force visibility, scale, and opacity EVERY frame to override home-scroll
