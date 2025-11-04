@@ -229,6 +229,26 @@ export function initIntroScrollAnimation() {
           resetGhostsForIntro();
           hideEverythingExceptObjects();
         },
+        onLeave: () => {
+          console.log("🎬 Intro section LEFT!");
+          // Restore floor visibility when leaving intro section
+          scene.traverse((child) => {
+            if (child.name === "CAM-Floor") {
+              child.visible = true;
+              console.log("🎬 Restored floor plane:", child.name);
+            }
+          });
+        },
+        onLeaveBack: () => {
+          console.log("🎬 Intro section LEFT BACK!");
+          // Restore floor visibility when leaving intro section
+          scene.traverse((child) => {
+            if (child.name === "CAM-Floor") {
+              child.visible = true;
+              console.log("🎬 Restored floor plane:", child.name);
+            }
+          });
+        },
       },
     })
     .fromTo(
@@ -279,6 +299,15 @@ export function initIntroScrollAnimation() {
 
 function resetGhostsForIntro() {
   console.log("🎬 resetGhostsForIntro called");
+  
+  // Hide the floor plane that blocks the view
+  scene.traverse((child) => {
+    if (child.name === "CAM-Floor") {
+      child.visible = false;
+      console.log("🎬 Hid floor plane:", child.name);
+    }
+  });
+  
   // Make objects visible and set opacity (similar to home-scroll.ts approach)
   const objectsToAnimate = ["pacman", "ghost1", "ghost2", "ghost3"];
 
@@ -383,6 +412,13 @@ function updateObjectsWalkBy(progress: number) {
   if (progress < 0.1) {
     console.log("🎬 Animation update - Progress:", progress.toFixed(3), "Camera:", camera.position);
   }
+  
+  // Ensure floor plane stays hidden during animation
+  scene.traverse((child) => {
+    if (child.name === "CAM-Floor") {
+      child.visible = false;
+    }
+  });
   
   // Position objects using adjustable X, Y, Z values
   const centerPoint = new THREE.Vector3(
