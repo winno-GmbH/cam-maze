@@ -164,16 +164,16 @@ export function initIntroScrollAnimation() {
 function resetGhostsForIntro() {
   console.log("🎬 resetGhostsForIntro called");
   
-  // Make floor plane semi-transparent red so it's visible but doesn't block view
+  // Hide floor plane when entering intro section (white with opacity 0)
   scene.traverse((child) => {
     if (child.name === "CAM-Floor") {
       child.visible = true;
       if (child instanceof THREE.Mesh && child.material) {
         const material = child.material as THREE.MeshBasicMaterial;
-        material.color.setHex(0xff0000); // Red
-        material.opacity = 0.1;
+        material.color.setHex(0xffffff); // White
+        material.opacity = 0;
         material.transparent = true;
-        console.log("🎬 Made floor plane semi-transparent red:", child.name);
+        console.log("🎬 Made floor plane invisible:", child.name);
       }
     }
   });
@@ -280,14 +280,14 @@ function hideEverythingExceptObjects() {
 }
 
 function updateObjectsWalkBy(progress: number) {
-  // Ensure floor plane stays semi-transparent red during animation
+  // Ensure floor plane stays invisible (white with opacity 0) during animation
   scene.traverse((child) => {
     if (child.name === "CAM-Floor") {
       child.visible = true;
       if (child instanceof THREE.Mesh && child.material) {
         const material = child.material as THREE.MeshBasicMaterial;
-        material.color.setHex(0xff0000); // Red
-        material.opacity = 0.1;
+        material.color.setHex(0xffffff); // White
+        material.opacity = 0;
         material.transparent = true;
       }
     }
