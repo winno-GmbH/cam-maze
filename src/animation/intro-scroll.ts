@@ -291,9 +291,9 @@ function resetGhostsForIntro() {
         // Pacman: only laying down rotation, no additional 90-degree rotation
         // (pacman was working correctly before)
       } else {
-        // Ghosts: apply 90-degree rotation on X axis
-        const xRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
-        object.quaternion.multiply(xRotation90);
+        // Ghosts: apply 90-degree rotation on Y axis
+        const yRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+        object.quaternion.multiply(yRotation90);
       }
       
       object.updateMatrixWorld(true);
@@ -506,9 +506,9 @@ function updateObjectsWalkBy(progress: number) {
       // Pacman: only laying down rotation, no additional 90-degree rotation
       // (revert to original - pacman was working correctly)
     } else {
-      // Ghosts: apply 90-degree rotation on X axis
-      const xRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
-      object.quaternion.multiply(xRotation90);
+      // Ghosts: apply 90-degree rotation on Y axis
+      const yRotation90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+      object.quaternion.multiply(yRotation90);
     }
     
     // Force update matrix to ensure rotation is applied
