@@ -88,20 +88,44 @@ function resetGhostsForIntro() {
       object.scale.set(0.1, 0.1, 0.1); // Use 0.1 instead of 0.01
 
       // Reset material opacity to 1 and force visibility
+      // IMPORTANT: Hide currency symbols (EUR, CHF, YEN, USD, GBP) - they should stay invisible
       let meshCount = 0;
       object.traverse((child) => {
-        // Force visibility on ALL children, not just meshes
-        (child as any).visible = true;
-        
         if ((child as any).isMesh) {
           meshCount++;
           const mesh = child as THREE.Mesh;
+          const childName = child.name || "";
           
-          // Force mesh visibility
+          // Currency symbols should remain hidden
+          if (["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName)) {
+            mesh.visible = false;
+            console.log(`  - Mesh ${meshCount} (${childName}): HIDDEN (currency symbol)`);
+            return;
+          }
+          
+          // For ghosts: only show Ghost_Mesh parts
+          if (key !== "pacman" && !childName.startsWith("Ghost_Mesh")) {
+            mesh.visible = false;
+            console.log(`  - Mesh ${meshCount} (${childName}): HIDDEN (not Ghost_Mesh)`);
+            return;
+          }
+          
+          // For pacman: hide Shell and Bitcoin parts (they should be invisible)
+          if (key === "pacman" && (
+            childName.includes("Shell") || 
+            childName.includes("Bitcoin_1") || 
+            childName.includes("Bitcoin_2")
+          )) {
+            mesh.visible = false;
+            console.log(`  - Mesh ${meshCount} (${childName}): HIDDEN (pacman shell/bitcoin)`);
+            return;
+          }
+          
+          // Show this mesh and set properties
           mesh.visible = true;
           
           if (mesh.material) {
-            console.log(`  - Mesh ${meshCount} BEFORE:`, {
+            console.log(`  - Mesh ${meshCount} (${childName}) BEFORE:`, {
               opacity: (mesh.material as any).opacity,
               transparent: (mesh.material as any).transparent,
               visible: mesh.visible,
@@ -110,7 +134,6 @@ function resetGhostsForIntro() {
             // Set material properties
             (mesh.material as any).opacity = 1;
             (mesh.material as any).transparent = true;
-            mesh.visible = true;
             
             // If material is an array, update all materials
             if (Array.isArray(mesh.material)) {
@@ -120,7 +143,7 @@ function resetGhostsForIntro() {
               });
             }
             
-            console.log(`  - Mesh ${meshCount} AFTER:`, {
+            console.log(`  - Mesh ${meshCount} (${childName}) AFTER:`, {
               opacity: (mesh.material as any).opacity,
               visible: mesh.visible,
             });
@@ -231,14 +254,36 @@ function updateObjectsWalkBy(progress: number) {
       );
     }
 
-    // Force visibility on every frame (critical for meshes with visible: false)
+    // Force visibility on every frame, but only for correct meshes
     object.visible = true;
     object.traverse((child) => {
-      // Force visibility on ALL children
-      (child as any).visible = true;
-      
       if ((child as any).isMesh) {
         const mesh = child as THREE.Mesh;
+        const childName = child.name || "";
+        
+        // Currency symbols should remain hidden
+        if (["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName)) {
+          mesh.visible = false;
+          return;
+        }
+        
+        // For ghosts: only show Ghost_Mesh parts
+        if (key !== "pacman" && !childName.startsWith("Ghost_Mesh")) {
+          mesh.visible = false;
+          return;
+        }
+        
+        // For pacman: hide Shell and Bitcoin parts
+        if (key === "pacman" && (
+          childName.includes("Shell") || 
+          childName.includes("Bitcoin_1") || 
+          childName.includes("Bitcoin_2")
+        )) {
+          mesh.visible = false;
+          return;
+        }
+        
+        // Show this mesh and ensure opacity
         mesh.visible = true;
         
         if (mesh.material) {
