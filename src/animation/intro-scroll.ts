@@ -250,8 +250,9 @@ function resetGhostsForIntro() {
       }
       
       // CRITICAL: Force visibility and scale BEFORE anything else
+      // Use scale 1.0 to match home-loop scale (they were getting too small at 0.1)
       object.visible = true;
-      object.scale.set(0.1, 0.1, 0.1);
+      object.scale.set(1.0, 1.0, 1.0);
       
       // CRITICAL: Restore opacity to 1 immediately (override home-scroll's opacity = 0)
       // This must happen FIRST to ensure objects are visible
@@ -493,9 +494,11 @@ function updateObjectsWalkBy(progress: number) {
     // Force update matrix to ensure position is applied
     object.updateMatrixWorld(true);
     
-    // CRITICAL: Force visibility and opacity EVERY frame to override home-scroll
+    // CRITICAL: Force visibility, scale, and opacity EVERY frame to override home-scroll
     // home-scroll sets opacity to 0 at the end (progress > 0.95), we must override this
+    // Also ensure scale stays at 1.0 (objects might get scaled down when exiting home-scroll)
     object.visible = true;
+    object.scale.set(1.0, 1.0, 1.0);
     
     // Ensure child meshes are visible and maintain ghost colors
     const ghostColors: Record<string, number> = {
