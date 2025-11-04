@@ -73,23 +73,43 @@ export function initIntroScrollAnimation() {
 
 function resetGhostsForIntro() {
   // Reset object materials to be visible for intro animation
+  const objectsToDebug = ["pacman", "ghost1", "ghost2", "ghost3"];
+
   Object.entries(ghosts).forEach(([key, object]) => {
-    if (
-      key === "pacman" ||
-      key === "ghost1" ||
-      key === "ghost2" ||
-      key === "ghost3"
-    ) {
+    if (objectsToDebug.includes(key)) {
+      console.log(`\n🔍 DEBUGGING ${key}:`);
+      console.log("  - Object exists:", !!object);
+      console.log("  - Object type:", object?.constructor?.name);
+      console.log("  - Visible BEFORE:", object.visible);
+      console.log("  - Scale BEFORE:", object.scale);
+      console.log("  - Position BEFORE:", object.position);
+
       object.visible = true;
-      object.scale.set(0.01, 0.01, 0.01);
+      object.scale.set(0.1, 0.1, 0.1); // Use 0.1 instead of 0.01
 
       // Reset material opacity to 1
+      let meshCount = 0;
       object.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          (child as any).material.opacity = 1;
-          (child as any).material.transparent = true;
+        if ((child as any).isMesh) {
+          meshCount++;
+          const mesh = child as THREE.Mesh;
+          if (mesh.material) {
+            console.log(`  - Mesh ${meshCount} material:`, {
+              opacity: (mesh.material as any).opacity,
+              transparent: (mesh.material as any).transparent,
+              visible: mesh.visible,
+            });
+            (mesh.material as any).opacity = 1;
+            (mesh.material as any).transparent = true;
+            mesh.visible = true;
+          }
         }
       });
+
+      console.log("  - Total meshes:", meshCount);
+      console.log("  - Visible AFTER:", object.visible);
+      console.log("  - Scale AFTER:", object.scale);
+      console.log("  - Children count:", object.children.length);
     }
   });
 }
@@ -106,8 +126,8 @@ function hideEverythingExceptObjects() {
     }
   });
 
-  // Create working test objects
-  createWorkingObjects();
+  // Don't create spheres - use actual objects instead
+  // createWorkingObjects();
 }
 
 let workingObjects: THREE.Mesh[] = [];
@@ -152,19 +172,52 @@ function createWorkingObjects() {
 }
 
 function updateObjectsWalkBy(progress: number) {
-  // Animate working objects (pacman + 3 ghosts)
-  if (workingObjects.length === 0) return;
-
+  // Animate actual pacman and ghosts (not spheres)
   const walkWidth = 10.0;
   const walkStart = -walkWidth / 2;
   const walkEnd = walkWidth / 2;
 
-  workingObjects.forEach((object, index) => {
-    const offset = index * 0.25; // Stagger the objects
+  const objectsToAnimate = [
+    { key: "pacman", offset: 0 },
+    { key: "ghost1", offset: 0.25 },
+    { key: "ghost2", offset: 0.5 },
+    { key: "ghost3", offset: 0.75 },
+  ];
+
+  objectsToAnimate.forEach(({ key, offset }) => {
+    const object = ghosts[key];
+    if (!object) {
+      console.warn(`⚠️ ${key} not found in ghosts object`);
+      return;
+    }
+
     const objectProgress = (progress + offset) % 1.0;
 
     // Calculate position from left to right
     const x = walkStart + (walkEnd - walkStart) * objectProgress;
     object.position.set(x, -50, -19.548);
+
+    // Debug first few frames
+    if (progress < 0.05 && key === "pacman") {
+      console.log(
+        `🎬 ${key} at position:`,
+        object.position,
+        "visible:",
+        object.visible,
+        "scale:",
+        object.scale.x
+      );
+    }
+
+    // Ensure visibility on every frame
+    object.visible = true;
+    object.traverse((child) => {
+      if ((child as any).isMesh) {
+        (child as any).visible = true;
+        if ((child as any).material) {
+          (child as any).material.opacity = 1;
+        }
+      }
+    });
   });
 }
