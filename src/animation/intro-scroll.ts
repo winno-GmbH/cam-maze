@@ -248,6 +248,17 @@ function resetGhostsForIntro() {
           // Make visible
           mesh.visible = true;
           
+          // Ensure material opacity is set to 1 and transparent is true
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((mat: any) => {
+              mat.opacity = 1;
+              mat.transparent = true;
+            });
+          } else {
+            (mesh.material as any).opacity = 1;
+            (mesh.material as any).transparent = true;
+          }
+          
           // Change ghost colors to bright colors for visibility
           if (ghostColors[key] && childName.startsWith("Ghost_Mesh")) {
             const newColor = ghostColors[key];
@@ -400,6 +411,17 @@ function updateObjectsWalkBy(progress: number) {
         
         // Make visible
         mesh.visible = true;
+        
+        // Ensure material opacity is set to 1 and transparent is true
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((mat: any) => {
+            mat.opacity = 1;
+            mat.transparent = true;
+          });
+        } else {
+          (mesh.material as any).opacity = 1;
+          (mesh.material as any).transparent = true;
+        }
         
         // Change ghost colors to bright colors for visibility
         if (ghostColors[key] && childName.startsWith("Ghost_Mesh")) {
