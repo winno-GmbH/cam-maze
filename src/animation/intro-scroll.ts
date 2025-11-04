@@ -5,6 +5,55 @@ import { ghosts } from "../core/objects";
 import { scene } from "../core/scene";
 import { slerpToLayDown } from "./util";
 
+// Debug helper function to check visibility issues
+function debugObjectVisibility(key: string, object: THREE.Object3D) {
+  const info: any = {
+    key,
+    exists: !!object,
+    visible: object?.visible,
+    scale: object?.scale ? `${object.scale.x.toFixed(2)}, ${object.scale.y.toFixed(2)}, ${object.scale.z.toFixed(2)}` : 'N/A',
+    position: object?.position ? `${object.position.x.toFixed(2)}, ${object.position.y.toFixed(2)}, ${object.position.z.toFixed(2)}` : 'N/A',
+    meshCount: 0,
+    visibleMeshCount: 0,
+    hiddenMeshCount: 0,
+    meshes: [] as string[],
+  };
+
+  if (object) {
+    object.traverse((child) => {
+      if ((child as any).isMesh) {
+        info.meshCount++;
+        const mesh = child as THREE.Mesh;
+        const childName = child.name || "unnamed";
+        
+        if (mesh.visible) {
+          info.visibleMeshCount++;
+        } else {
+          info.hiddenMeshCount++;
+        }
+        
+        const meshInfo = {
+          name: childName,
+          visible: mesh.visible,
+          material: mesh.material ? (Array.isArray(mesh.material) ? `Array[${mesh.material.length}]` : mesh.material.type) : 'No material',
+          opacity: (mesh.material as any)?.opacity !== undefined ? (mesh.material as any).opacity : 'N/A',
+        };
+        info.meshes.push(meshInfo);
+      }
+    });
+  }
+
+  return info;
+}
+
+// Check if object is in camera frustum
+function isInCameraFrustum(object: THREE.Object3D): boolean {
+  const frustum = new THREE.Frustum();
+  const matrix = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  frustum.setFromProjectionMatrix(matrix);
+  return frustum.containsPoint(object.position);
+}
+
 let introScrollTimeline: gsap.core.Timeline | null = null;
 
 // Store initial rotations when entering intro section (like pausedRotations in home-scroll)
@@ -38,8 +87,30 @@ export function initIntroScrollAnimation() {
       refreshPriority: 1, // Ensure ScrollTrigger refreshes properly
         onEnter: () => {
           console.log("🎬 Intro section ENTERED!");
+          console.log("🔍 DEBUGGING: Checking all objects before reset...");
+          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(key => {
+            const obj = ghosts[key];
+            if (obj) {
+              const debugInfo = debugObjectVisibility(key, obj);
+              console.log(`🔍 ${key}:`, debugInfo);
+            } else {
+              console.warn(`⚠️ ${key} does not exist in ghosts object!`);
+            }
+          });
           resetGhostsForIntro();
           hideEverythingExceptObjects();
+          
+          // Debug after reset
+          console.log("🔍 DEBUGGING: Checking all objects AFTER reset...");
+          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(key => {
+            const obj = ghosts[key];
+            if (obj) {
+              const debugInfo = debugObjectVisibility(key, obj);
+              console.log(`🔍 ${key} AFTER RESET:`, debugInfo);
+              const inFrustum = isInCameraFrustum(obj);
+              console.log(`  📷 ${key} in camera frustum:`, inFrustum);
+            }
+          });
         },
         onEnterBack: () => {
           console.log("🎬 Intro section ENTERED BACK!");
@@ -254,6 +325,20 @@ function hideEverythingExceptObjects() {
 }
 
 function updateObjectsWalkBy(progress: number) {
+  // CRITICAL: Check for interfering animations (like home-loop)
+  // If home-loop is running, it might be overriding our positions
+  if (progress < 0.1 || progress > 0.9) {
+    // Check if any objects are being moved by other animations
+    const pacmanObj = ghosts.pacman;
+    if (pacmanObj) {
+      const ourX = camera.position.x - 5.0 + POSITION_OFFSET.x + (camera.position.x - (camera.position.x - 5.0)) * progress;
+      const xDiff = Math.abs(pacmanObj.position.x - ourX);
+      if (xDiff > 0.5) {
+        console.warn(`⚠️ INTERFERENCE DETECTED! Pacman X position differs by ${xDiff.toFixed(2)}. Our calc: ${ourX.toFixed(2)}, Actual: ${pacmanObj.position.x.toFixed(2)}`);
+      }
+    }
+  }
+
   // Ensure floor plane stays invisible (white with opacity 0) during animation
   scene.traverse((child) => {
     if (child.name === "CAM-Floor") {
@@ -266,6 +351,28 @@ function updateObjectsWalkBy(progress: number) {
       }
     }
   });
+  
+  // Check for other potentially blocking objects
+  if (progress < 0.05) {
+    console.log("🔍 DEBUGGING: Checking for blocking objects...");
+    const blockingObjects: string[] = [];
+    scene.traverse((child) => {
+      if (child instanceof THREE.Mesh && child.visible && child.name) {
+        // Check if object is between camera and our ghosts
+        const objPos = child.position;
+        const camPos = camera.position;
+        const ghostZ = camera.position.z + POSITION_OFFSET.z;
+        
+        // If object is in front of ghosts and visible, it might block
+        if (objPos.z > ghostZ && objPos.z < camPos.z && child.name !== "CAM-Floor") {
+          blockingObjects.push(`${child.name} (Z: ${objPos.z.toFixed(2)})`);
+        }
+      }
+    });
+    if (blockingObjects.length > 0) {
+      console.warn("⚠️ POTENTIALLY BLOCKING OBJECTS:", blockingObjects);
+    }
+  }
   
   // Calculate base center point for walk path
   const baseCenter = new THREE.Vector3(
@@ -291,25 +398,40 @@ function updateObjectsWalkBy(progress: number) {
   objectsToAnimate.forEach(({ key, offset, zOffset }) => {
     const object = ghosts[key];
     if (!object) {
+      if (progress < 0.1) {
+        console.warn(`⚠️ ${key} object not found in ghosts!`);
+      }
       return;
     }
 
-    // All objects use the same progress (walk together in a line)
-    // Since offset is 0 for all objects, they all move together
-    const normalizedProgress = Math.max(0, Math.min(1, progress));
-    
-    // Calculate base position from walk path (same for all objects)
-    const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
-    
-    // Calculate final positions with position offset and staggered Z positions
-    const finalX = baseX + POSITION_OFFSET.x;
-    const finalY = baseCenter.y + POSITION_OFFSET.y;
-    const finalZ = baseCenter.z + POSITION_OFFSET.z + zOffset;
-    
-    // Set positions directly
-    object.position.x = finalX;
-    object.position.y = finalY;
-    object.position.z = finalZ;
+    // TEST: Position ghosts at EXACT same spot as pacman to verify visibility
+    // If ghosts are visible at same position, then positioning is the issue
+    // If still not visible, then it's a different issue (materials, visibility flags, etc.)
+    const useTestPosition = false; // Set to true for debugging
+    if (useTestPosition && key !== "pacman") {
+      const pacmanObj = ghosts.pacman;
+      if (pacmanObj) {
+        object.position.copy(pacmanObj.position);
+        console.log(`🧪 TEST: ${key} positioned at same spot as pacman:`, pacmanObj.position);
+      }
+    } else {
+      // All objects use the same progress (walk together in a line)
+      // Since offset is 0 for all objects, they all move together
+      const normalizedProgress = Math.max(0, Math.min(1, progress));
+      
+      // Calculate base position from walk path (same for all objects)
+      const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
+      
+      // Calculate final positions with position offset and staggered Z positions
+      const finalX = baseX + POSITION_OFFSET.x;
+      const finalY = baseCenter.y + POSITION_OFFSET.y;
+      const finalZ = baseCenter.z + POSITION_OFFSET.z + zOffset;
+      
+      // Set positions directly
+      object.position.x = finalX;
+      object.position.y = finalY;
+      object.position.z = finalZ;
+    }
     
     // Apply laying down rotation (progress = 1.0 means fully laid down)
     // Ensure we have initial rotation stored
@@ -338,14 +460,17 @@ function updateObjectsWalkBy(progress: number) {
     };
     
     // Make ALL meshes visible for ghosts (for testing - color everything)
+    let meshInfo = { total: 0, visible: 0, hidden: 0 };
     object.traverse((child) => {
       if ((child as any).isMesh && (child as any).material) {
+        meshInfo.total++;
         const mesh = child as THREE.Mesh;
         const childName = child.name || "";
         
         // Keep currency symbols hidden
         if (["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName)) {
           mesh.visible = false;
+          meshInfo.hidden++;
           return;
         }
         
@@ -356,11 +481,13 @@ function updateObjectsWalkBy(progress: number) {
           childName.includes("Bitcoin_2")
         )) {
           mesh.visible = false;
+          meshInfo.hidden++;
           return;
         }
         
         // Make ALL meshes visible (including Groups and nested meshes)
         mesh.visible = true;
+        meshInfo.visible++;
         
         // Ensure material opacity is set to 1 and transparent is true
         if (Array.isArray(mesh.material)) {
@@ -386,5 +513,18 @@ function updateObjectsWalkBy(progress: number) {
         }
       }
     });
+    
+    // Debug logging for ghosts
+    if (key !== "pacman" && (progress < 0.1 || progress > 0.9)) {
+      const inFrustum = isInCameraFrustum(object);
+      const debugInfo = debugObjectVisibility(key, object);
+      console.log(`🔍 ${key} UPDATE [progress: ${progress.toFixed(3)}]:`, {
+        position: `${object.position.x.toFixed(2)}, ${object.position.y.toFixed(2)}, ${object.position.z.toFixed(2)}`,
+        visible: object.visible,
+        inFrustum,
+        meshInfo,
+        meshes: debugInfo.meshes.slice(0, 3), // Show first 3 meshes
+      });
+    }
   });
 }
