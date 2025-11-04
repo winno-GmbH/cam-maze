@@ -353,13 +353,13 @@ function resetGhostsForIntro() {
       object.visible = true;
       object.scale.set(0.1, 0.1, 0.1);
       
-      // Force initial position (far left, off-screen)
-      const centerPoint = new THREE.Vector3(
-        camera.position.x + ghostPositionAdjuster.x,
+      // Force initial position (far left, off-screen) with adjuster applied
+      const baseX = camera.position.x - 10;
+      object.position.set(
+        baseX + ghostPositionAdjuster.x,
         camera.position.y + ghostPositionAdjuster.y,
         camera.position.z + ghostPositionAdjuster.z
       );
-      object.position.set(centerPoint.x - 10, centerPoint.y, centerPoint.z);
       object.updateMatrixWorld(true);
       
       console.log(`🎬 ${key} reset - Position set to:`, object.position, "Visible:", object.visible);
@@ -462,20 +462,20 @@ function updateObjectsWalkBy(progress: number) {
     }
   });
   
-  // Position objects using adjustable X, Y, Z values
-  const centerPoint = new THREE.Vector3(
-    camera.position.x + ghostPositionAdjuster.x,
-    camera.position.y + ghostPositionAdjuster.y,
-    camera.position.z + ghostPositionAdjuster.z
+  // Calculate base center point (without adjuster) for walk path
+  const baseCenter = new THREE.Vector3(
+    camera.position.x,
+    camera.position.y,
+    camera.position.z
   );
   
   // Walk from left edge to center of viewfield
-  const walkStart = centerPoint.x - 5.0;
-  const walkEnd = centerPoint.x;
+  const walkStart = baseCenter.x - 5.0;
+  const walkEnd = baseCenter.x;
   
   // Debug: Log positioning info
   if (progress < 0.05) {
-    console.log("🎬 Center point:", centerPoint, "Walk:", walkStart, "to", walkEnd);
+    console.log("🎬 Base center:", baseCenter, "Walk:", walkStart, "to", walkEnd, "Adjuster:", ghostPositionAdjuster);
   }
   
   const objectsToAnimate = [
@@ -512,13 +512,14 @@ function updateObjectsWalkBy(progress: number) {
     // Normalize progress for positioning (0 to 1)
     const normalizedProgress = Math.max(0, Math.min(1, objectProgress));
     
-    // Calculate position from left to center
-    const x = walkStart + (walkEnd - walkStart) * normalizedProgress;
+    // Calculate base position from walk path
+    const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
     
-    // CRITICAL: Force position update - use direct assignment to ensure it sticks
-    object.position.x = x;
-    object.position.y = centerPoint.y;
-    object.position.z = centerPoint.z;
+    // CRITICAL: Apply adjuster values DIRECTLY as offsets to final positions
+    // This allows the sliders to directly control ghost positions in real-time
+    object.position.x = baseX + ghostPositionAdjuster.x;
+    object.position.y = baseCenter.y + ghostPositionAdjuster.y;
+    object.position.z = baseCenter.z + ghostPositionAdjuster.z;
     
     // Force update matrix to ensure position is applied
     object.updateMatrixWorld(true);
@@ -537,12 +538,17 @@ function updateObjectsWalkBy(progress: number) {
     });
     
     // Debug: Log positions occasionally to verify they're being set
-    if (progress < 0.1 || Math.abs(object.position.x - x) > 0.1) {
-      console.log(`🎬 ${key} - SETTING position to X:${x.toFixed(2)}, Y:${centerPoint.y.toFixed(2)}, Z:${centerPoint.z.toFixed(2)}, Actual after set:`, {
+    const finalX = baseX + ghostPositionAdjuster.x;
+    const finalY = baseCenter.y + ghostPositionAdjuster.y;
+    const finalZ = baseCenter.z + ghostPositionAdjuster.z;
+    
+    if (progress < 0.1 || Math.abs(object.position.x - finalX) > 0.1) {
+      console.log(`🎬 ${key} - SETTING position to X:${finalX.toFixed(2)}, Y:${finalY.toFixed(2)}, Z:${finalZ.toFixed(2)}, Actual after set:`, {
         x: object.position.x.toFixed(2),
         y: object.position.y.toFixed(2),
         z: object.position.z.toFixed(2),
-        visible: object.visible
+        visible: object.visible,
+        adjuster: ghostPositionAdjuster
       });
     }
     
