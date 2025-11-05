@@ -67,10 +67,25 @@ export function applyHomeLoopPreset(
       gsap.set(object.scale, { x: 1, y: 1, z: 1 });
     }
 
-    // Ensure all meshes are visible and opaque
+    // Ensure all meshes are visible and opaque (except currencies)
     object.traverse((child) => {
       if ((child as any).isMesh && (child as any).material) {
         const mesh = child as THREE.Mesh;
+        const childName = child.name || "";
+
+        // Keep currency symbols hidden in all scenes - check both exact match and includes
+        if (
+          ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
+          childName.includes("EUR") ||
+          childName.includes("CHF") ||
+          childName.includes("YEN") ||
+          childName.includes("USD") ||
+          childName.includes("GBP")
+        ) {
+          mesh.visible = false;
+          return;
+        }
+
         mesh.visible = true;
 
         if (Array.isArray(mesh.material)) {
@@ -135,6 +150,14 @@ export function applyHomeScrollPreset(
       object.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
           const mesh = child as THREE.Mesh;
+          const childName = child.name || "";
+
+          // Keep currency symbols hidden in all scenes
+          if (["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName)) {
+            mesh.visible = false;
+            return;
+          }
+
           mesh.visible = true;
 
           if (Array.isArray(mesh.material)) {
@@ -293,6 +316,13 @@ export function applyIntroScrollPreset(
       object.quaternion.copy(ghostTargetQuaternion);
     }
 
+    // Set scale - use direct setting for pacman to ensure it's applied immediately
+    if (key === "pacman") {
+      object.scale.set(0.1, 0.1, 0.1);
+    } else {
+      object.scale.set(1.0, 1.0, 1.0);
+    }
+    // Also set via gsap for consistency
     gsap.set(object.scale, {
       x: key === "pacman" ? 0.1 : 1.0,
       y: key === "pacman" ? 0.1 : 1.0,
@@ -307,8 +337,15 @@ export function applyIntroScrollPreset(
         const mesh = child as THREE.Mesh;
         const childName = child.name || "";
 
-        // Keep currency symbols hidden
-        if (["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName)) {
+        // Keep currency symbols hidden - check both exact match and includes
+        if (
+          ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
+          childName.includes("EUR") ||
+          childName.includes("CHF") ||
+          childName.includes("YEN") ||
+          childName.includes("USD") ||
+          childName.includes("GBP")
+        ) {
           mesh.visible = false;
           return;
         }

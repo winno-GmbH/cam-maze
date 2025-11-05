@@ -268,8 +268,15 @@ function updateObjectsWalkBy(progress: number) {
         const mesh = child as THREE.Mesh;
         const childName = child.name || "";
         
-        // Keep currency symbols hidden
-        if (["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName)) {
+        // Keep currency symbols hidden - check both exact match and includes
+        if (
+          ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
+          childName.includes("EUR") ||
+          childName.includes("CHF") ||
+          childName.includes("YEN") ||
+          childName.includes("USD") ||
+          childName.includes("GBP")
+        ) {
           mesh.visible = false;
           return;
         }
