@@ -409,10 +409,6 @@ export function initIntroScrollAnimation() {
         onLeave: () => {
           isIntroScrollActive = false;
 
-          // Restore camera rotation via preset
-          const scrollDir = getScrollDirection();
-          applyIntroScrollPreset(false, scrollDir);
-
           // Restore floor to original appearance when leaving intro section
           scene.traverse((child) => {
             if (child.name === "CAM-Floor") {
@@ -428,10 +424,6 @@ export function initIntroScrollAnimation() {
         },
         onLeaveBack: () => {
           isIntroScrollActive = false;
-
-          // Restore camera rotation via preset
-          const scrollDir = getScrollDirection();
-          applyIntroScrollPreset(false, scrollDir);
 
           // Restore floor to original appearance when leaving intro section
           scene.traverse((child) => {

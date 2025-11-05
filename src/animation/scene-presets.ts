@@ -228,20 +228,7 @@ export function applyIntroScrollPreset(
   isEntering: boolean,
   scrollDirection?: "up" | "down"
 ) {
-  if (!isEntering) {
-    // When leaving intro-scroll, restore camera rotation
-    camera.rotation.y = camera.rotation.y - Math.PI;
-    camera.updateProjectionMatrix();
-    console.log("🔄 Camera rotation restored (rotated -180° on Y-axis)");
-    return;
-  }
-
-  // CRITICAL: Rotate camera 180 degrees on Y-axis for intro-scroll
-  // This ensures objects are visible and walk in the correct direction
-  const currentRotation = camera.rotation.clone();
-  camera.rotation.y = currentRotation.y + Math.PI; // Rotate 180 degrees on Y-axis
-  camera.updateProjectionMatrix();
-  console.log("🔄 Camera rotation applied (rotated +180° on Y-axis)");
+  if (!isEntering) return;
 
   // Calculate target quaternions ONCE (they don't change during scroll)
   // Rotate objects 180 degrees to match camera rotation
