@@ -99,6 +99,10 @@ function updateScrollAnimation(
     );
     const lookAtPoint = lookAtCurve.getPoint(progress);
     camera.lookAt(lookAtPoint);
+    console.log("🔄 Camera rotation changed in home-scroll (via lookAt):", {
+      rotationY: camera.rotation.y,
+      rotationYDegrees: (camera.rotation.y * 180) / Math.PI,
+    });
     camera.updateProjectionMatrix();
   }
 

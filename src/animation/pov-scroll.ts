@@ -283,6 +283,10 @@ function updateCamera(
   const customLookAt = getCustomLookAtForProgress(progress, povPaths);
   if (customLookAt) {
     camera.lookAt(customLookAt);
+    console.log("🔄 Camera rotation changed in pov-scroll (via customLookAt):", {
+      rotationY: camera.rotation.y,
+      rotationYDegrees: (camera.rotation.y * 180) / Math.PI,
+    });
     camera.updateProjectionMatrix();
     return;
   }
@@ -336,6 +340,10 @@ function handleDefaultOrientation(
 
   if (!rotationStarted && !startedInitEndScreen) {
     camera.lookAt(defaultLookAt);
+    console.log("🔄 Camera rotation changed in pov-scroll (via defaultLookAt):", {
+      rotationY: camera.rotation.y,
+      rotationYDegrees: (camera.rotation.y * 180) / Math.PI,
+    });
   }
 }
 
