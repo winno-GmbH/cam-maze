@@ -592,6 +592,22 @@ function updateObjectsWalkBy(progress: number) {
       gsap.killTweensOf(object.position);
       gsap.killTweensOf(object.quaternion);
 
+      // CRITICAL: Kill any opacity/material animations that might be interfering
+      object.traverse((child) => {
+        if ((child as any).isMesh && (child as any).material) {
+          const mesh = child as THREE.Mesh;
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((mat: any) => {
+              gsap.killTweensOf(mat);
+              gsap.killTweensOf(mat.opacity);
+            });
+          } else {
+            gsap.killTweensOf(mesh.material);
+            gsap.killTweensOf((mesh.material as any).opacity);
+          }
+        }
+      });
+
       // Calculate position
       const finalX = pacmanX + behindOffset;
       const finalY = pacmanY;
@@ -632,7 +648,6 @@ function updateObjectsWalkBy(progress: number) {
         ghost5: 0xff00ff, // Magenta
       };
 
-      let meshIndex = 0; // Track mesh index for logging
       object.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
           const mesh = child as THREE.Mesh;
@@ -667,59 +682,26 @@ function updateObjectsWalkBy(progress: number) {
           const cachedState = cachedObjectStates[cacheKey];
 
           // CRITICAL: Force visibility EVERY frame (don't check, just set it)
-          const beforeVisible = mesh.visible;
           mesh.visible = true;
 
-          // Log visibility/opacity for first few meshes of first object only
-          if (key === "pacman" && meshIndex < 3) {
-            let currentOpacity = 0;
-            if (Array.isArray(mesh.material)) {
-              currentOpacity = mesh.material[0]?.opacity || 0;
-            } else {
-              currentOpacity = (mesh.material as any).opacity || 0;
-            }
-            console.log(
-              `🔍 [updateObjectsWalkBy] ${key} mesh "${childName}" (progress: ${progress.toFixed(
-                3
-              )}):`,
-              {
-                beforeVisible,
-                afterVisible: mesh.visible,
-                currentOpacity,
-                targetOpacity,
-                transparent: Array.isArray(mesh.material)
-                  ? mesh.material[0]?.transparent
-                  : (mesh.material as any).transparent,
+          // CRITICAL: Force opacity EVERY frame (always set it, don't check cache or conditions)
+          // This ensures opacity is always correct even if something overrides it
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((mat: any) => {
+              mat.opacity = targetOpacity;
+              mat.transparent = true;
+              // Force material update
+              if (mat.needsUpdate !== undefined) {
+                mat.needsUpdate = true;
               }
-            );
-            meshIndex++;
-          }
-
-          // Only update opacity if changed (prevents flickering from redundant updates)
-          if (!cachedState || cachedState.opacity !== targetOpacity) {
-            if (Array.isArray(mesh.material)) {
-              mesh.material.forEach((mat: any) => {
-                if (mat.opacity !== targetOpacity) {
-                  mat.opacity = targetOpacity;
-                  mat.transparent = true;
-                }
-              });
-            } else {
-              const mat = mesh.material as any;
-              if (mat.opacity !== targetOpacity) {
-                mat.opacity = targetOpacity;
-                mat.transparent = true;
-              }
-            }
-
-            // Update cache
-            if (!cachedObjectStates[cacheKey]) {
-              cachedObjectStates[cacheKey] = {
-                opacity: targetOpacity,
-                visible: true,
-              };
-            } else {
-              cachedObjectStates[cacheKey].opacity = targetOpacity;
+            });
+          } else {
+            const mat = mesh.material as any;
+            mat.opacity = targetOpacity;
+            mat.transparent = true;
+            // Force material update
+            if (mat.needsUpdate !== undefined) {
+              mat.needsUpdate = true;
             }
           }
 
