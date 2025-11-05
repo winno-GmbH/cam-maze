@@ -18,25 +18,25 @@ let previousCameraRotation: THREE.Euler | null = null;
 
 function checkAndLogCameraRotationChange(context: string) {
   const currentRotation = camera.rotation.clone();
-  
+
   if (previousCameraRotation) {
     // Calculate difference in radians for each axis
     const diffX = Math.abs(currentRotation.x - previousCameraRotation.x);
     const diffY = Math.abs(currentRotation.y - previousCameraRotation.y);
     const diffZ = Math.abs(currentRotation.z - previousCameraRotation.z);
-    
+
     // Normalize differences to account for wrapping (e.g., 359° to 1° = 2°, not 358°)
     const normalizedDiffX = Math.min(diffX, Math.PI * 2 - diffX);
     const normalizedDiffY = Math.min(diffY, Math.PI * 2 - diffY);
     const normalizedDiffZ = Math.min(diffZ, Math.PI * 2 - diffZ);
-    
+
     // Check if any axis changed by approximately 180 degrees (Math.PI radians)
     const PI_THRESHOLD = Math.PI * 0.9; // Allow some tolerance (90% of 180°)
-    const has180DegreeChange = 
-      normalizedDiffX >= PI_THRESHOLD || 
-      normalizedDiffY >= PI_THRESHOLD || 
+    const has180DegreeChange =
+      normalizedDiffX >= PI_THRESHOLD ||
+      normalizedDiffY >= PI_THRESHOLD ||
       normalizedDiffZ >= PI_THRESHOLD;
-    
+
     if (has180DegreeChange) {
       console.log(`🔄 Camera 180° rotation detected in ${context}:`, {
         previousRotation: {
@@ -66,7 +66,7 @@ function checkAndLogCameraRotationChange(context: string) {
       });
     }
   }
-  
+
   previousCameraRotation = currentRotation.clone();
 }
 
@@ -339,7 +339,51 @@ function updateCamera(
   // Check for custom lookAt at current path point
   const customLookAt = getCustomLookAtForProgress(progress, povPaths);
   if (customLookAt) {
+    // Store rotation before lookAt
+    const rotationBefore = camera.rotation.clone();
     camera.lookAt(customLookAt);
+    const rotationAfter = camera.rotation.clone();
+
+    // Calculate rotation change
+    const rotationChangeY = Math.abs(rotationAfter.y - rotationBefore.y);
+    const normalizedChangeY = Math.min(
+      rotationChangeY,
+      Math.PI * 2 - rotationChangeY
+    );
+
+    // Log rotation details
+    console.log(`🔄 Camera rotation in pov-scroll (via customLookAt):`, {
+      progress: progress.toFixed(3),
+      customLookAt: customLookAt.clone(),
+      cameraPosition: camera.position.clone(),
+      rotationBefore: {
+        x: rotationBefore.x,
+        y: rotationBefore.y,
+        z: rotationBefore.z,
+        xDegrees: (rotationBefore.x * 180) / Math.PI,
+        yDegrees: (rotationBefore.y * 180) / Math.PI,
+        zDegrees: (rotationBefore.z * 180) / Math.PI,
+      },
+      rotationAfter: {
+        x: rotationAfter.x,
+        y: rotationAfter.y,
+        z: rotationAfter.z,
+        xDegrees: (rotationAfter.x * 180) / Math.PI,
+        yDegrees: (rotationAfter.y * 180) / Math.PI,
+        zDegrees: (rotationAfter.z * 180) / Math.PI,
+      },
+      rotationChange: {
+        x: Math.abs(rotationAfter.x - rotationBefore.x),
+        y: normalizedChangeY,
+        z: Math.abs(rotationAfter.z - rotationBefore.z),
+        xDegrees:
+          (Math.abs(rotationAfter.x - rotationBefore.x) * 180) / Math.PI,
+        yDegrees: (normalizedChangeY * 180) / Math.PI,
+        zDegrees:
+          (Math.abs(rotationAfter.z - rotationBefore.z) * 180) / Math.PI,
+      },
+    });
+
     checkAndLogCameraRotationChange("pov-scroll (via customLookAt)");
     camera.updateProjectionMatrix();
     return;
