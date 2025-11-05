@@ -245,6 +245,11 @@ export function applyIntroScrollPreset(
   // Calculate target quaternions ONCE (they don't change during scroll)
   // Rotate objects 180 degrees to match camera rotation
   if (!pacmanTargetQuaternion || !ghostTargetQuaternion) {
+    // Create rotation quaternions once
+    const xRotation180 = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(Math.PI, 0, 0)
+    );
+
     const pacmanObj = ghosts.pacman;
     if (pacmanObj) {
       if (!introInitialRotations["pacman"]) {
@@ -263,6 +268,8 @@ export function applyIntroScrollPreset(
         new THREE.Euler(0, Math.PI, 0)
       );
       pacmanObj.quaternion.multiply(pacmanRotationY180);
+      // Rotate 180 degrees on X-axis to fix upside-down orientation
+      pacmanObj.quaternion.multiply(xRotation180);
       pacmanTargetQuaternion = pacmanObj.quaternion.clone();
       pacmanObj.quaternion.copy(introInitialRotations["pacman"]);
     }
@@ -276,9 +283,6 @@ export function applyIntroScrollPreset(
       ghostTargetQuaternion = introInitialRotations["ghost1"].clone();
       slerpToLayDown(ghostObj, introInitialRotations["ghost1"], 1.0);
       // Apply 180 degrees on X-axis (current rotation that makes heads face down)
-      const xRotation180 = new THREE.Quaternion().setFromEuler(
-        new THREE.Euler(Math.PI, 0, 0)
-      );
       ghostObj.quaternion.multiply(xRotation180);
       // Add another 180 degrees on X-axis to flip them up
       ghostObj.quaternion.multiply(xRotation180);
@@ -287,6 +291,8 @@ export function applyIntroScrollPreset(
         new THREE.Euler(0, Math.PI, 0)
       );
       ghostObj.quaternion.multiply(ghostRotationY180);
+      // Rotate another 180 degrees on X-axis to fix upside-down orientation
+      ghostObj.quaternion.multiply(xRotation180);
       ghostTargetQuaternion = ghostObj.quaternion.clone();
       ghostObj.quaternion.copy(introInitialRotations["ghost1"]);
     }

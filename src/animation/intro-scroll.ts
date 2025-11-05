@@ -632,10 +632,8 @@ function updateObjectsWalkBy(progress: number) {
           const cacheKey = `${key}_${childName}`;
           const cachedState = cachedObjectStates[cacheKey];
 
-          // Only update visibility if changed
-          if (!mesh.visible) {
-            mesh.visible = true;
-          }
+          // CRITICAL: Force visibility EVERY frame (don't check, just set it)
+          mesh.visible = true;
 
           // Only update opacity if changed (prevents flickering from redundant updates)
           if (!cachedState || cachedState.opacity !== targetOpacity) {
