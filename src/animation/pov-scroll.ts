@@ -1,4 +1,5 @@
 import gsap from "gsap";
+import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
@@ -10,6 +11,8 @@ import {
 import { DOM_ELEMENTS } from "../config/dom-elements";
 import { calculateObjectOrientation } from "./util";
 import { applyPovScrollPreset, getScrollDirection } from "./scene-presets";
+
+gsap.registerPlugin(ScrollTrigger);
 
 let povScrollTimeline: gsap.core.Timeline | null = null;
 
@@ -306,6 +309,15 @@ function updateCamera(
   povPaths: Record<string, THREE.CurvePath<THREE.Vector3>>,
   position: THREE.Vector3
 ) {
+  // CRITICAL: Don't update camera if intro-scroll is active
+  // This prevents camera rotation issues when scrolling back up from POV to intro
+  const introScrollTrigger = ScrollTrigger.getById("introScroll");
+  const isIntroScrollActive = introScrollTrigger && introScrollTrigger.isActive;
+
+  if (isIntroScrollActive) {
+    return;
+  }
+
   camera.position.copy(position);
   camera.fov = wideFOV;
 
