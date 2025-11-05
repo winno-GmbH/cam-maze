@@ -227,7 +227,23 @@ export function initIntroScrollAnimation() {
             }
           );
 
+          // CRITICAL: Reset update flags to ensure first update runs
+          isUpdating = false;
+          lastUpdateTime = 0;
+          cachedObjectStates = {};
+
           // Immediately update objects to ensure they're visible and at correct position
+          // Call synchronously first, then also in requestAnimationFrame for safety
+          const scrollTrigger = ScrollTrigger.getById("introScroll");
+          if (scrollTrigger && typeof scrollTrigger.progress === "number") {
+            lastIntroProgress = scrollTrigger.progress;
+            updateObjectsWalkBy(scrollTrigger.progress);
+          } else {
+            lastIntroProgress = 0;
+            updateObjectsWalkBy(0);
+          }
+
+          // Also call in requestAnimationFrame to ensure it runs after any pending updates
           requestAnimationFrame(() => {
             const scrollTrigger = ScrollTrigger.getById("introScroll");
             if (scrollTrigger && typeof scrollTrigger.progress === "number") {
@@ -364,14 +380,31 @@ export function initIntroScrollAnimation() {
             }
           );
 
+          // CRITICAL: Reset update flags to ensure first update runs
+          isUpdating = false;
+          lastUpdateTime = 0;
+          cachedObjectStates = {};
+
           // Immediately update objects to ensure they're visible and at correct position
+          // Call synchronously first, then also in requestAnimationFrame for safety
+          const scrollTrigger = ScrollTrigger.getById("introScroll");
+          if (scrollTrigger && typeof scrollTrigger.progress === "number") {
+            lastIntroProgress = scrollTrigger.progress;
+            updateObjectsWalkBy(scrollTrigger.progress);
+          } else {
+            lastIntroProgress = 0;
+            updateObjectsWalkBy(0);
+          }
+
+          // Also call in requestAnimationFrame to ensure it runs after any pending updates
           requestAnimationFrame(() => {
             const scrollTrigger = ScrollTrigger.getById("introScroll");
             if (scrollTrigger && typeof scrollTrigger.progress === "number") {
               lastIntroProgress = scrollTrigger.progress;
               updateObjectsWalkBy(scrollTrigger.progress);
             } else {
-              updateObjectsWalkBy(lastIntroProgress);
+              lastIntroProgress = 0;
+              updateObjectsWalkBy(0);
             }
           });
         },
