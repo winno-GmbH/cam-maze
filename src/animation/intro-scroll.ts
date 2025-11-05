@@ -4,12 +4,12 @@ import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
 import { scene } from "../core/scene";
-import { 
-  applyIntroScrollPreset, 
+import {
+  applyIntroScrollPreset,
   getScrollDirection,
   getPacmanTargetQuaternion,
   getGhostTargetQuaternion,
-  INTRO_POSITION_OFFSET
+  INTRO_POSITION_OFFSET,
 } from "./scene-presets";
 
 // Debug helper function to check visibility issues
@@ -18,8 +18,16 @@ function debugObjectVisibility(key: string, object: THREE.Object3D) {
     key,
     exists: !!object,
     visible: object?.visible,
-    scale: object?.scale ? `${object.scale.x.toFixed(2)}, ${object.scale.y.toFixed(2)}, ${object.scale.z.toFixed(2)}` : 'N/A',
-    position: object?.position ? `${object.position.x.toFixed(2)}, ${object.position.y.toFixed(2)}, ${object.position.z.toFixed(2)}` : 'N/A',
+    scale: object?.scale
+      ? `${object.scale.x.toFixed(2)}, ${object.scale.y.toFixed(
+          2
+        )}, ${object.scale.z.toFixed(2)}`
+      : "N/A",
+    position: object?.position
+      ? `${object.position.x.toFixed(2)}, ${object.position.y.toFixed(
+          2
+        )}, ${object.position.z.toFixed(2)}`
+      : "N/A",
     meshCount: 0,
     visibleMeshCount: 0,
     hiddenMeshCount: 0,
@@ -32,18 +40,25 @@ function debugObjectVisibility(key: string, object: THREE.Object3D) {
         info.meshCount++;
         const mesh = child as THREE.Mesh;
         const childName = child.name || "unnamed";
-        
+
         if (mesh.visible) {
           info.visibleMeshCount++;
         } else {
           info.hiddenMeshCount++;
         }
-        
+
         const meshInfo = {
           name: childName,
           visible: mesh.visible,
-          material: mesh.material ? (Array.isArray(mesh.material) ? `Array[${mesh.material.length}]` : mesh.material.type) : 'No material',
-          opacity: (mesh.material as any)?.opacity !== undefined ? (mesh.material as any).opacity : 'N/A',
+          material: mesh.material
+            ? Array.isArray(mesh.material)
+              ? `Array[${mesh.material.length}]`
+              : mesh.material.type
+            : "No material",
+          opacity:
+            (mesh.material as any)?.opacity !== undefined
+              ? (mesh.material as any).opacity
+              : "N/A",
         };
         info.meshes.push(meshInfo);
       }
@@ -56,7 +71,10 @@ function debugObjectVisibility(key: string, object: THREE.Object3D) {
 // Check if object is in camera frustum
 function isInCameraFrustum(object: THREE.Object3D): boolean {
   const frustum = new THREE.Frustum();
-  const matrix = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  const matrix = new THREE.Matrix4().multiplyMatrices(
+    camera.projectionMatrix,
+    camera.matrixWorldInverse
+  );
   frustum.setFromProjectionMatrix(matrix);
   return frustum.containsPoint(object.position);
 }
@@ -71,19 +89,19 @@ export function initIntroScrollAnimation() {
     introScrollTimeline.kill();
     introScrollTimeline = null;
   }
-  
+
   introScrollTimeline = gsap
     .timeline({
-    scrollTrigger: {
-      trigger: ".sc--intro",
+      scrollTrigger: {
+        trigger: ".sc--intro",
         start: "top top",
-      end: "bottom bottom",
-      scrub: 0.5,
-      refreshPriority: 1,
+        end: "bottom bottom",
+        scrub: 0.5,
+        refreshPriority: 1,
         onEnter: () => {
           console.log("🎬 Intro section ENTERED!");
           isIntroScrollActive = true;
-          
+
           // CRITICAL: Kill any home-scroll animations that might interfere
           const homeScrollTrigger = gsap.getById("homeScroll");
           if (homeScrollTrigger) {
@@ -93,25 +111,27 @@ export function initIntroScrollAnimation() {
               homeTimeline.pause();
             }
           }
-          
+
           // Kill any GSAP animations on objects
-          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(key => {
-            const obj = ghosts[key];
-            if (obj) {
-              gsap.killTweensOf(obj);
-              gsap.killTweensOf(obj.scale);
-              gsap.killTweensOf(obj.position);
-              gsap.killTweensOf(obj.quaternion);
+          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(
+            (key) => {
+              const obj = ghosts[key];
+              if (obj) {
+                gsap.killTweensOf(obj);
+                gsap.killTweensOf(obj.scale);
+                gsap.killTweensOf(obj.position);
+                gsap.killTweensOf(obj.quaternion);
+              }
             }
-          });
-          
+          );
+
           const scrollDir = getScrollDirection();
           applyIntroScrollPreset(true, scrollDir);
-          
+
           // Immediately update objects to ensure they're visible
           requestAnimationFrame(() => {
-            const scrollTrigger = gsap.getById("introScroll") as ScrollTrigger;
-            if (scrollTrigger && typeof scrollTrigger.progress === 'number') {
+            const scrollTrigger = ScrollTrigger.getById("introScroll");
+            if (scrollTrigger && typeof scrollTrigger.progress === "number") {
               updateObjectsWalkBy(scrollTrigger.progress);
             } else {
               updateObjectsWalkBy(0);
@@ -121,7 +141,7 @@ export function initIntroScrollAnimation() {
         onEnterBack: () => {
           console.log("🎬 Intro section ENTERED BACK!");
           isIntroScrollActive = true;
-          
+
           // CRITICAL: Kill any home-scroll animations that might interfere
           const homeScrollTrigger = gsap.getById("homeScroll");
           if (homeScrollTrigger) {
@@ -131,25 +151,27 @@ export function initIntroScrollAnimation() {
               homeTimeline.pause();
             }
           }
-          
+
           // Kill any GSAP animations on objects
-          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(key => {
-            const obj = ghosts[key];
-            if (obj) {
-              gsap.killTweensOf(obj);
-              gsap.killTweensOf(obj.scale);
-              gsap.killTweensOf(obj.position);
-              gsap.killTweensOf(obj.quaternion);
+          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(
+            (key) => {
+              const obj = ghosts[key];
+              if (obj) {
+                gsap.killTweensOf(obj);
+                gsap.killTweensOf(obj.scale);
+                gsap.killTweensOf(obj.position);
+                gsap.killTweensOf(obj.quaternion);
+              }
             }
-          });
-          
+          );
+
           const scrollDir = getScrollDirection();
           applyIntroScrollPreset(true, scrollDir);
-          
+
           // Immediately update objects to ensure they're visible
           requestAnimationFrame(() => {
-            const scrollTrigger = gsap.getById("introScroll") as ScrollTrigger;
-            if (scrollTrigger && typeof scrollTrigger.progress === 'number') {
+            const scrollTrigger = ScrollTrigger.getById("introScroll");
+            if (scrollTrigger && typeof scrollTrigger.progress === "number") {
               updateObjectsWalkBy(scrollTrigger.progress);
             } else {
               updateObjectsWalkBy(lastIntroProgress);
@@ -210,11 +232,11 @@ export function initIntroScrollAnimation() {
     .fromTo(
       ".sc_h--intro",
       { scale: 0.5, opacity: 0 },
-    {
-      keyframes: [
-        { scale: 0.5, opacity: 0, duration: 0 },
-        { scale: 0.8, opacity: 1, duration: 0.3 },
-        { scale: 1.2, opacity: 1, duration: 0.4 },
+      {
+        keyframes: [
+          { scale: 0.5, opacity: 0, duration: 0 },
+          { scale: 0.8, opacity: 1, duration: 0.3 },
+          { scale: 1.2, opacity: 1, duration: 0.4 },
           { scale: 1.5, opacity: 0, duration: 0.3 },
         ],
       }
@@ -222,11 +244,11 @@ export function initIntroScrollAnimation() {
     .fromTo(
       ".sc_b--intro",
       { scale: 0.5, opacity: 0 },
-    {
-      keyframes: [
-        { scale: 0.5, opacity: 0, duration: 0 },
-        { scale: 0.8, opacity: 1, duration: 0.3 },
-        { scale: 1.2, opacity: 1, duration: 0.4 },
+      {
+        keyframes: [
+          { scale: 0.5, opacity: 0, duration: 0 },
+          { scale: 0.8, opacity: 1, duration: 0.3 },
+          { scale: 1.2, opacity: 1, duration: 0.4 },
           { scale: 1.5, opacity: 0, duration: 0.3 },
         ],
       }
@@ -265,11 +287,10 @@ export function initIntroScrollAnimation() {
     );
 }
 
-
 function updateObjectsWalkBy(progress: number) {
   // CRITICAL: Only update if intro-scroll is active
   if (!isIntroScrollActive) return;
-  
+
   // Ensure floor plane stays invisible (white with opacity 0) during animation
   scene.traverse((child) => {
     if (child.name === "CAM-Floor") {
@@ -282,18 +303,18 @@ function updateObjectsWalkBy(progress: number) {
       }
     }
   });
-  
+
   // Calculate base center point for walk path
   const baseCenter = new THREE.Vector3(
     camera.position.x,
     camera.position.y,
     camera.position.z
   );
-  
+
   // Walk from left edge to center of viewfield
   const walkStart = baseCenter.x - 5.0;
   const walkEnd = baseCenter.x;
-  
+
   // Objects to animate - ghosts walk 0.5 units behind pacman
   const objectsToAnimate = [
     { key: "pacman", behindOffset: 0 },
@@ -313,9 +334,10 @@ function updateObjectsWalkBy(progress: number) {
 
   // Smooth fade-in for ghosts based on progress
   const fadeInDuration = 0.2; // Fade in over 20% of progress
-  const ghostOpacity = normalizedProgress < fadeInDuration 
-    ? normalizedProgress / fadeInDuration 
-    : 1.0;
+  const ghostOpacity =
+    normalizedProgress < fadeInDuration
+      ? normalizedProgress / fadeInDuration
+      : 1.0;
 
   objectsToAnimate.forEach(({ key, behindOffset }) => {
     const object = ghosts[key];
@@ -331,10 +353,10 @@ function updateObjectsWalkBy(progress: number) {
     const finalX = pacmanX + behindOffset;
     const finalY = pacmanY;
     const finalZ = pacmanZ;
-    
+
     // Update position directly (no GSAP interpolation for smoother updates)
     object.position.set(finalX, finalY, finalZ);
-    
+
     // Set rotation quaternion directly (no recalculation - use pre-calculated quaternions)
     const pacmanQuat = getPacmanTargetQuaternion();
     const ghostQuat = getGhostTargetQuaternion();
@@ -343,10 +365,10 @@ function updateObjectsWalkBy(progress: number) {
     } else if (ghostQuat) {
       object.quaternion.copy(ghostQuat);
     }
-    
+
     // Force update matrix to ensure rotation is applied
     object.updateMatrixWorld(true);
-    
+
     // CRITICAL: Force visibility, scale EVERY frame to override home-scroll
     object.visible = true;
     if (key === "pacman") {
@@ -354,10 +376,10 @@ function updateObjectsWalkBy(progress: number) {
     } else {
       object.scale.set(1.0, 1.0, 1.0);
     }
-    
+
     // Update opacity for meshes
     const targetOpacity = key === "pacman" ? 1.0 : ghostOpacity;
-    
+
     // Ensure child meshes are visible and maintain ghost colors
     const ghostColors: Record<string, number> = {
       ghost1: 0xff0000, // Red
@@ -366,12 +388,12 @@ function updateObjectsWalkBy(progress: number) {
       ghost4: 0xffff00, // Yellow
       ghost5: 0xff00ff, // Magenta
     };
-    
+
     object.traverse((child) => {
       if ((child as any).isMesh && (child as any).material) {
         const mesh = child as THREE.Mesh;
         const childName = child.name || "";
-        
+
         // Keep currency symbols hidden - check both exact match and includes
         if (
           ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
@@ -384,20 +406,21 @@ function updateObjectsWalkBy(progress: number) {
           mesh.visible = false;
           return;
         }
-        
+
         // For pacman: hide Shell and Bitcoin parts
-        if (key === "pacman" && (
-          childName.includes("Shell") || 
-          childName.includes("Bitcoin_1") || 
-          childName.includes("Bitcoin_2")
-        )) {
+        if (
+          key === "pacman" &&
+          (childName.includes("Shell") ||
+            childName.includes("Bitcoin_1") ||
+            childName.includes("Bitcoin_2"))
+        ) {
           mesh.visible = false;
           return;
         }
-        
+
         // CRITICAL: Force mesh visibility EVERY frame
         mesh.visible = true;
-        
+
         // Set opacity - CRITICAL: Always ensure opacity is set
         if (Array.isArray(mesh.material)) {
           mesh.material.forEach((mat: any) => {
@@ -408,7 +431,7 @@ function updateObjectsWalkBy(progress: number) {
           (mesh.material as any).opacity = targetOpacity;
           (mesh.material as any).transparent = true;
         }
-        
+
         // Set ghost colors
         if (ghostColors[key] && key !== "pacman") {
           const newColor = ghostColors[key];
@@ -422,7 +445,7 @@ function updateObjectsWalkBy(progress: number) {
         }
       }
     });
-    
+
     // CRITICAL: Force matrix update after all changes
     object.updateMatrixWorld(true);
   });
