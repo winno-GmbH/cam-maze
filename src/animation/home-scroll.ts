@@ -81,6 +81,11 @@ function updateScrollAnimation(
   pausedRotations: Record<string, THREE.Quaternion>,
   cameraPathPoints: any[]
 ) {
+  // CRITICAL: Check if intro-scroll is active - if so, don't update objects
+  // This prevents conflicts when scrolling between sections
+  const introScrollTrigger = gsap.getById("introScroll");
+  const isIntroScrollActive = introScrollTrigger && introScrollTrigger.isActive;
+  
   // Camera animation (unchanged)
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
@@ -95,6 +100,11 @@ function updateScrollAnimation(
     const lookAtPoint = lookAtCurve.getPoint(progress);
     camera.lookAt(lookAtPoint);
     camera.updateProjectionMatrix();
+  }
+
+  // CRITICAL: Don't update object opacity/position if intro-scroll is active
+  if (isIntroScrollActive) {
+    return;
   }
 
   // Opacity calculation (unchanged)

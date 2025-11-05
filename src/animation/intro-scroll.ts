@@ -61,17 +61,15 @@ function isInCameraFrustum(object: THREE.Object3D): boolean {
 }
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
+let isIntroScrollActive = false;
+let lastIntroProgress = 0;
 
 export function initIntroScrollAnimation() {
-  // EXPLANATION OF FLICKERING ISSUE:
-  // The flickering happens because multiple update sources are competing:
-  // 1. GSAP ScrollTrigger's onUpdate callback fires on every scroll event
-  // 2. A continuous requestAnimationFrame loop was ALSO updating positions
-  // 3. Both try to set positions/rotations/visibility simultaneously, causing race conditions
-  // 4. Additionally, home-loop animation might still be running and updating positions
-  // 
-  // SOLUTION: Remove the continuous loop entirely and rely ONLY on ScrollTrigger's onUpdate
-  // This ensures single source of truth for position updates during scrolling
+  // Kill any existing timeline
+  if (introScrollTimeline) {
+    introScrollTimeline.kill();
+    introScrollTimeline = null;
+  }
   
   introScrollTimeline = gsap
     .timeline({
@@ -80,19 +78,86 @@ export function initIntroScrollAnimation() {
         start: "top top",
       end: "bottom bottom",
       scrub: 0.5,
-      refreshPriority: 1, // Ensure ScrollTrigger refreshes properly
+      refreshPriority: 1,
         onEnter: () => {
           console.log("🎬 Intro section ENTERED!");
+          isIntroScrollActive = true;
+          
+          // CRITICAL: Kill any home-scroll animations that might interfere
+          const homeScrollTrigger = gsap.getById("homeScroll");
+          if (homeScrollTrigger) {
+            const homeTimeline = homeScrollTrigger.animation;
+            if (homeTimeline) {
+              homeTimeline.pause();
+            }
+          }
+          
+          // Kill any GSAP animations on objects
+          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(key => {
+            const obj = ghosts[key];
+            if (obj) {
+              gsap.killTweensOf(obj);
+              gsap.killTweensOf(obj.scale);
+              gsap.killTweensOf(obj.position);
+              gsap.killTweensOf(obj.quaternion);
+            }
+          });
+          
           const scrollDir = getScrollDirection();
           applyIntroScrollPreset(true, scrollDir);
+          
+          // Immediately update objects to ensure they're visible
+          requestAnimationFrame(() => {
+            const scrollTrigger = gsap.getById("introScroll");
+            if (scrollTrigger && scrollTrigger.progress !== undefined) {
+              updateObjectsWalkBy(scrollTrigger.progress);
+            } else {
+              // Fallback: update with progress 0
+              updateObjectsWalkBy(0);
+            }
+          });
         },
         onEnterBack: () => {
           console.log("🎬 Intro section ENTERED BACK!");
+          isIntroScrollActive = true;
+          
+          // CRITICAL: Kill any home-scroll animations that might interfere
+          const homeScrollTrigger = gsap.getById("homeScroll");
+          if (homeScrollTrigger) {
+            const homeTimeline = homeScrollTrigger.animation;
+            if (homeTimeline) {
+              homeTimeline.pause();
+            }
+          }
+          
+          // Kill any GSAP animations on objects
+          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(key => {
+            const obj = ghosts[key];
+            if (obj) {
+              gsap.killTweensOf(obj);
+              gsap.killTweensOf(obj.scale);
+              gsap.killTweensOf(obj.position);
+              gsap.killTweensOf(obj.quaternion);
+            }
+          });
+          
           const scrollDir = getScrollDirection();
           applyIntroScrollPreset(true, scrollDir);
+          
+          // Immediately update objects to ensure they're visible
+          requestAnimationFrame(() => {
+            const scrollTrigger = gsap.getById("introScroll");
+            if (scrollTrigger && scrollTrigger.progress !== undefined) {
+              updateObjectsWalkBy(scrollTrigger.progress);
+            } else {
+              // Fallback: update with last known progress
+              updateObjectsWalkBy(lastIntroProgress);
+            }
+          });
         },
         onLeave: () => {
           console.log("🎬 Intro section LEFT!");
+          isIntroScrollActive = false;
           // Restore floor to original appearance when leaving intro section
           scene.traverse((child) => {
             if (child.name === "CAM-Floor") {
@@ -109,6 +174,7 @@ export function initIntroScrollAnimation() {
         },
         onLeaveBack: () => {
           console.log("🎬 Intro section LEFT BACK!");
+          isIntroScrollActive = false;
           // Restore floor to original appearance when leaving intro section
           scene.traverse((child) => {
             if (child.name === "CAM-Floor") {
@@ -123,6 +189,21 @@ export function initIntroScrollAnimation() {
             }
           });
         },
+        onUpdate: (self) => {
+          // CRITICAL: Also update on every scroll event to ensure smooth updates
+          if (isIntroScrollActive && self.progress !== undefined) {
+            lastIntroProgress = self.progress;
+            updateObjectsWalkBy(self.progress);
+          }
+        },
+        onRefresh: (self) => {
+          // CRITICAL: Update objects when ScrollTrigger refreshes
+          if (isIntroScrollActive && self.progress !== undefined) {
+            lastIntroProgress = self.progress;
+            updateObjectsWalkBy(self.progress);
+          }
+        },
+        id: "introScroll",
       },
     })
     .fromTo(
@@ -156,11 +237,27 @@ export function initIntroScrollAnimation() {
         duration: 1,
         immediateRender: false,
         onUpdate: function () {
+          // CRITICAL: Update objects on every timeline update
           const progress = (this.targets()[0] as any).progress;
-          updateObjectsWalkBy(progress);
+          if (progress !== undefined && isIntroScrollActive) {
+            lastIntroProgress = progress;
+            updateObjectsWalkBy(progress);
+          }
         },
         onStart: function () {
           console.log("🎬 Animation timeline STARTED!");
+        },
+        onComplete: function () {
+          // CRITICAL: Ensure objects are visible even when animation completes
+          if (isIntroScrollActive) {
+            updateObjectsWalkBy(lastIntroProgress);
+          }
+        },
+        onReverseComplete: function () {
+          // CRITICAL: Ensure objects are visible even when animation reverses
+          if (isIntroScrollActive) {
+            updateObjectsWalkBy(lastIntroProgress);
+          }
         },
       },
       0 // Start at the same time as the other animations
@@ -169,6 +266,9 @@ export function initIntroScrollAnimation() {
 
 
 function updateObjectsWalkBy(progress: number) {
+  // CRITICAL: Only update if intro-scroll is active
+  if (!isIntroScrollActive) return;
+  
   // Ensure floor plane stays invisible (white with opacity 0) during animation
   scene.traverse((child) => {
     if (child.name === "CAM-Floor") {
@@ -181,9 +281,6 @@ function updateObjectsWalkBy(progress: number) {
       }
     }
   });
-  
-  // Ensure preset is applied (target quaternions will be calculated by preset)
-  // This check ensures preset is called if scroll starts mid-section
   
   // Calculate base center point for walk path
   const baseCenter = new THREE.Vector3(
@@ -223,12 +320,18 @@ function updateObjectsWalkBy(progress: number) {
     const object = ghosts[key];
     if (!object) return;
 
+    // CRITICAL: Kill any GSAP animations that might interfere
+    gsap.killTweensOf(object);
+    gsap.killTweensOf(object.scale);
+    gsap.killTweensOf(object.position);
+    gsap.killTweensOf(object.quaternion);
+
     // Calculate position
     const finalX = pacmanX + behindOffset;
     const finalY = pacmanY;
     const finalZ = pacmanZ;
     
-    // Update position (GSAP will handle smooth interpolation via ScrollTrigger scrub)
+    // Update position directly (no GSAP interpolation for smoother updates)
     object.position.set(finalX, finalY, finalZ);
     
     // Set rotation quaternion directly (no recalculation - use pre-calculated quaternions)
@@ -246,10 +349,7 @@ function updateObjectsWalkBy(progress: number) {
     // CRITICAL: Force visibility, scale EVERY frame to override home-scroll
     object.visible = true;
     if (key === "pacman") {
-      // CRITICAL: Kill any GSAP animations that might be overriding pacman scale
-      gsap.killTweensOf(object.scale);
       object.scale.set(0.1, 0.1, 0.1);
-      object.updateMatrixWorld(true);
     } else {
       object.scale.set(1.0, 1.0, 1.0);
     }
@@ -294,9 +394,10 @@ function updateObjectsWalkBy(progress: number) {
           return;
         }
         
+        // CRITICAL: Force mesh visibility EVERY frame
         mesh.visible = true;
         
-        // Set opacity
+        // Set opacity - CRITICAL: Always ensure opacity is set
         if (Array.isArray(mesh.material)) {
           mesh.material.forEach((mat: any) => {
             mat.opacity = targetOpacity;
@@ -320,5 +421,8 @@ function updateObjectsWalkBy(progress: number) {
         }
       }
     });
+    
+    // CRITICAL: Force matrix update after all changes
+    object.updateMatrixWorld(true);
   });
 }
