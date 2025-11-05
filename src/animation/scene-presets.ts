@@ -246,6 +246,11 @@ export function applyIntroScrollPreset(
 
       pacmanTargetQuaternion = introInitialRotations["pacman"].clone();
       slerpToLayDown(pacmanObj, introInitialRotations["pacman"], 1.0);
+      // Add +90 degrees rotation on X-axis (or try Y/Z if needed)
+      const pacmanRotation90 = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(Math.PI / 2, 0, 0)
+      );
+      pacmanObj.quaternion.multiply(pacmanRotation90);
       pacmanTargetQuaternion = pacmanObj.quaternion.clone();
       pacmanObj.quaternion.copy(introInitialRotations["pacman"]);
     }
