@@ -347,6 +347,23 @@ export function applyIntroScrollPreset(
       gsap.killTweensOf(object.quaternion);
     }
 
+    // CRITICAL: Kill any opacity/material animations that might be interfering
+    // Traverse and kill tweens on all materials
+    object.traverse((child) => {
+      if ((child as any).isMesh && (child as any).material) {
+        const mesh = child as THREE.Mesh;
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((mat: any) => {
+            gsap.killTweensOf(mat);
+            gsap.killTweensOf(mat.opacity);
+          });
+        } else {
+          gsap.killTweensOf(mesh.material);
+          gsap.killTweensOf((mesh.material as any).opacity);
+        }
+      }
+    });
+
     // Calculate position with stagger
     const behindOffset = index === 0 ? 0 : -0.5 * index;
     const pos = new THREE.Vector3(
@@ -385,7 +402,7 @@ export function applyIntroScrollPreset(
 
     gsap.set(object, { visible: true });
 
-    // Set opacity and visibility for all meshes
+    // CRITICAL: Set opacity and visibility for all meshes IMMEDIATELY and EXPLICITLY
     object.traverse((child) => {
       if ((child as any).isMesh && (child as any).material) {
         const mesh = child as THREE.Mesh;
@@ -415,17 +432,27 @@ export function applyIntroScrollPreset(
           return;
         }
 
+        // CRITICAL: Force visibility and opacity IMMEDIATELY
         mesh.visible = true;
 
-        // Set opacity
+        // Set opacity DIRECTLY on material (not via GSAP to ensure immediate effect)
         if (Array.isArray(mesh.material)) {
           mesh.material.forEach((mat: any) => {
             mat.opacity = 1;
             mat.transparent = true;
+            // Force material update
+            if (mat.needsUpdate !== undefined) {
+              mat.needsUpdate = true;
+            }
           });
         } else {
-          (mesh.material as any).opacity = 1;
-          (mesh.material as any).transparent = true;
+          const mat = mesh.material as any;
+          mat.opacity = 1;
+          mat.transparent = true;
+          // Force material update
+          if (mat.needsUpdate !== undefined) {
+            mat.needsUpdate = true;
+          }
         }
 
         // Set ghost colors
