@@ -103,7 +103,6 @@ export function initIntroScrollAnimation() {
         scrub: 0.5,
         refreshPriority: 1,
         onEnter: () => {
-          console.log("🎬 Intro section ENTERED!");
           isIntroScrollActive = true;
 
           // CRITICAL: Kill any home-scroll animations that might interfere
@@ -256,7 +255,6 @@ export function initIntroScrollAnimation() {
           });
         },
         onEnterBack: () => {
-          console.log("🎬 Intro section ENTERED BACK!");
           isIntroScrollActive = true;
 
           // CRITICAL: Kill any home-scroll animations that might interfere
@@ -409,13 +407,13 @@ export function initIntroScrollAnimation() {
           });
         },
         onLeave: () => {
-          console.log("🎬 Intro section LEFT!");
           isIntroScrollActive = false;
 
           // CRITICAL: Restore camera rotation IMMEDIATELY when leaving intro-scroll
           // This must happen BEFORE the next preset is applied to ensure objects are positioned correctly
           camera.rotation.y = camera.rotation.y - Math.PI;
           camera.updateProjectionMatrix();
+          console.log("🔄 Camera rotation restored (rotated -180° on Y-axis)");
 
           // Restore floor to original appearance when leaving intro section
           scene.traverse((child) => {
@@ -426,19 +424,18 @@ export function initIntroScrollAnimation() {
                 material.color.setHex(0xffffff); // White
                 material.opacity = 1;
                 material.transparent = false;
-                console.log("🎬 Restored floor plane:", child.name);
               }
             }
           });
         },
         onLeaveBack: () => {
-          console.log("🎬 Intro section LEFT BACK!");
           isIntroScrollActive = false;
 
           // CRITICAL: Restore camera rotation IMMEDIATELY when leaving intro-scroll
           // This must happen BEFORE the next preset is applied to ensure objects are positioned correctly
           camera.rotation.y = camera.rotation.y - Math.PI;
           camera.updateProjectionMatrix();
+          console.log("🔄 Camera rotation restored (rotated -180° on Y-axis)");
 
           // Restore floor to original appearance when leaving intro section
           scene.traverse((child) => {
@@ -449,7 +446,6 @@ export function initIntroScrollAnimation() {
                 material.color.setHex(0xffffff); // White
                 material.opacity = 1;
                 material.transparent = false;
-                console.log("🎬 Restored floor plane:", child.name);
               }
             }
           });
@@ -505,9 +501,7 @@ export function initIntroScrollAnimation() {
         immediateRender: false,
         // Remove onUpdate here - ScrollTrigger's onUpdate handles all updates
         // This prevents double updates that cause flickering
-        onStart: function () {
-          console.log("🎬 Animation timeline STARTED!");
-        },
+        onStart: function () {},
         onComplete: function () {
           // CRITICAL: Ensure objects are visible even when animation completes
           if (isIntroScrollActive) {
@@ -552,11 +546,11 @@ function updateObjectsWalkBy(progress: number) {
       camera.position.z
     );
 
-    // Walk path symmetric around center - REVERSED due to camera rotation
-    // Start 10 units right of center, end 10 units left of center (reversed from normal)
+    // Walk path symmetric around center
+    // Start 10 units left of center, end 10 units right of center
     const walkDistance = 10.0;
-    const walkStart = baseCenter.x + walkDistance; // Start from right (reversed)
-    const walkEnd = baseCenter.x - walkDistance; // End at left (reversed)
+    const walkStart = baseCenter.x - walkDistance; // Start from left
+    const walkEnd = baseCenter.x + walkDistance; // End at right
 
     // Objects to animate - ghosts walk 0.5 units behind pacman
     const objectsToAnimate = [

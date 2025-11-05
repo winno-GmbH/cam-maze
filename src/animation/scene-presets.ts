@@ -54,8 +54,6 @@ export function applyHomeLoopPreset(
 ) {
   if (!isEntering) return;
 
-  console.log("🎬 Applying HOME LOOP preset");
-
   // Home loop uses paths, so positions/rotations are handled by home-loop.ts
   // Here we just ensure visibility and scale settings
   // Pacman scale should be 0.05 (original model size), ghosts are 1.0
@@ -130,8 +128,6 @@ export function applyHomeScrollPreset(
   pausedRotations?: Record<string, THREE.Quaternion>
 ) {
   if (!isEntering) return;
-
-  console.log("🎬 Applying HOME SCROLL preset", { scrollDirection });
 
   // Use paused positions/rotations if provided (from home-loop)
   if (pausedPositions && pausedRotations) {
@@ -234,13 +230,12 @@ export function applyIntroScrollPreset(
 ) {
   if (!isEntering) return;
 
-  console.log("🎬 Applying INTRO SCROLL preset", { scrollDirection });
-
   // CRITICAL: Rotate camera 180 degrees on Y-axis for intro-scroll
   // This ensures objects are visible and walk in the correct direction
   const currentRotation = camera.rotation.clone();
   camera.rotation.y = currentRotation.y + Math.PI; // Rotate 180 degrees on Y-axis
   camera.updateProjectionMatrix();
+  console.log("🔄 Camera rotation applied (rotated +180° on Y-axis)");
 
   // Calculate target quaternions ONCE (they don't change during scroll)
   // Rotate objects 180 degrees to match camera rotation
@@ -268,6 +263,8 @@ export function applyIntroScrollPreset(
         new THREE.Euler(0, Math.PI, 0)
       );
       pacmanObj.quaternion.multiply(pacmanRotationY180);
+      // Rotate another 180 degrees on Y-axis (total 360° = 0°, but adds to match camera)
+      pacmanObj.quaternion.multiply(pacmanRotationY180);
       // Rotate 180 degrees on X-axis to fix upside-down orientation
       pacmanObj.quaternion.multiply(xRotation180);
       pacmanTargetQuaternion = pacmanObj.quaternion.clone();
@@ -290,6 +287,8 @@ export function applyIntroScrollPreset(
       const ghostRotationY180 = new THREE.Quaternion().setFromEuler(
         new THREE.Euler(0, Math.PI, 0)
       );
+      ghostObj.quaternion.multiply(ghostRotationY180);
+      // Rotate another 180 degrees on Y-axis (total 360° = 0°, but adds to match camera)
       ghostObj.quaternion.multiply(ghostRotationY180);
       // Rotate another 180 degrees on X-axis to fix upside-down orientation
       ghostObj.quaternion.multiply(xRotation180);
@@ -495,8 +494,6 @@ export function applyPovScrollPreset(
 ) {
   if (!isEntering) return;
 
-  console.log("🎬 Applying POV SCROLL preset", { scrollDirection });
-
   // Hide pacman during POV section
   if (ghosts.pacman) {
     gsap.set(ghosts.pacman, { visible: false });
@@ -549,8 +546,6 @@ export function applyOutroScrollPreset(
   scrollDirection?: "up" | "down"
 ) {
   if (!isEntering) return;
-
-  console.log("🎬 Applying OUTRO SCROLL preset", { scrollDirection });
 
   // Outro scroll doesn't manipulate 3D objects directly
   // This is where you can add any outro-specific object settings
