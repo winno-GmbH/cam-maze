@@ -85,6 +85,26 @@ export function setupLighting(): void {
   directionalLight.castShadow = true;
 }
 
+export function createDebugLines(): void {
+  // Red line at z: +5
+  const redLineGeometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-20, 0, 5),
+    new THREE.Vector3(20, 0, 5),
+  ]);
+  const redLineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+  const redLine = new THREE.Line(redLineGeometry, redLineMaterial);
+  scene.add(redLine);
+
+  // Green line at z: -5
+  const greenLineGeometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-20, 0, -5),
+    new THREE.Vector3(20, 0, -5),
+  ]);
+  const greenLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+  const greenLine = new THREE.Line(greenLineGeometry, greenLineMaterial);
+  scene.add(greenLine);
+}
+
 export function startRenderLoop(): void {
   const render = () => {
     frameCallbacks.forEach((callback) => callback());

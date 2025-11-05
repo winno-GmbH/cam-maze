@@ -3,6 +3,7 @@ import {
   initRenderer,
   setupLighting,
   scene,
+  createDebugLines,
 } from "./core/scene";
 import {
   homeLoopHandler,
@@ -39,6 +40,7 @@ async function main() {
   initRenderer();
   setupLighting();
   setupCamera();
+  createDebugLines();
   await loadModel(scene);
 
   homeLoopHandler();
