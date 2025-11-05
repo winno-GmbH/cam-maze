@@ -1,4 +1,5 @@
 import gsap from "gsap";
+import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
@@ -86,8 +87,9 @@ export function initIntroScrollAnimation() {
           // CRITICAL: Kill any home-scroll animations that might interfere
           const homeScrollTrigger = gsap.getById("homeScroll");
           if (homeScrollTrigger) {
-            const homeTimeline = homeScrollTrigger.animation;
-            if (homeTimeline) {
+            // Get the timeline from ScrollTrigger's timeline property
+            const homeTimeline = (homeScrollTrigger as any).timeline;
+            if (homeTimeline && homeTimeline.pause) {
               homeTimeline.pause();
             }
           }
@@ -108,11 +110,10 @@ export function initIntroScrollAnimation() {
           
           // Immediately update objects to ensure they're visible
           requestAnimationFrame(() => {
-            const scrollTrigger = gsap.getById("introScroll");
-            if (scrollTrigger && scrollTrigger.progress !== undefined) {
+            const scrollTrigger = gsap.getById("introScroll") as ScrollTrigger;
+            if (scrollTrigger && typeof scrollTrigger.progress === 'number') {
               updateObjectsWalkBy(scrollTrigger.progress);
             } else {
-              // Fallback: update with progress 0
               updateObjectsWalkBy(0);
             }
           });
@@ -124,8 +125,9 @@ export function initIntroScrollAnimation() {
           // CRITICAL: Kill any home-scroll animations that might interfere
           const homeScrollTrigger = gsap.getById("homeScroll");
           if (homeScrollTrigger) {
-            const homeTimeline = homeScrollTrigger.animation;
-            if (homeTimeline) {
+            // Get the timeline from ScrollTrigger's timeline property
+            const homeTimeline = (homeScrollTrigger as any).timeline;
+            if (homeTimeline && homeTimeline.pause) {
               homeTimeline.pause();
             }
           }
@@ -146,11 +148,10 @@ export function initIntroScrollAnimation() {
           
           // Immediately update objects to ensure they're visible
           requestAnimationFrame(() => {
-            const scrollTrigger = gsap.getById("introScroll");
-            if (scrollTrigger && scrollTrigger.progress !== undefined) {
+            const scrollTrigger = gsap.getById("introScroll") as ScrollTrigger;
+            if (scrollTrigger && typeof scrollTrigger.progress === 'number') {
               updateObjectsWalkBy(scrollTrigger.progress);
             } else {
-              // Fallback: update with last known progress
               updateObjectsWalkBy(lastIntroProgress);
             }
           });
