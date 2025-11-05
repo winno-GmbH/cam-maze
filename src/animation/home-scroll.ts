@@ -6,6 +6,7 @@ import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import { getHomeScrollPaths } from "../paths/paths";
 import { homeLoopHandler } from "./home-loop";
 import { slerpToLayDown } from "./util";
+import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
@@ -39,6 +40,16 @@ export function initHomeScrollAnimation(
         start: "top top",
         end: "bottom top",
         scrub: 0.5,
+        onEnter: () => {
+          console.log("🎬 Home scroll section ENTERED!");
+          const scrollDir = getScrollDirection();
+          applyHomeScrollPreset(true, scrollDir, pausedPositions, pausedRotations);
+        },
+        onEnterBack: () => {
+          console.log("🎬 Home scroll section ENTERED BACK!");
+          const scrollDir = getScrollDirection();
+          applyHomeScrollPreset(true, scrollDir, pausedPositions, pausedRotations);
+        },
         onScrubComplete: () => {
           homeLoopHandler();
         },

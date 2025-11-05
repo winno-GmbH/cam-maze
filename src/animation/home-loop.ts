@@ -4,6 +4,7 @@ import { clock, onFrame } from "../core/scene";
 import { getHomePaths, TangentSmoother } from "../paths/paths";
 import { initHomeScrollAnimation } from "./home-scroll";
 import { calculateObjectOrientation } from "./util";
+import { applyHomeLoopPreset } from "./scene-presets";
 
 const LOOP_DURATION = 50;
 const ROTATION_TRANSITION_DURATION = 1.5; // Seconds to transition from laying down to upright
@@ -87,6 +88,9 @@ function startHomeLoop() {
   animationTime = pausedT * LOOP_DURATION;
   rotationTransitionTime = 0;
   startRotations = {};
+
+  // Apply home loop preset
+  applyHomeLoopPreset(true);
 
   // Initialize smooth tangent smoothers for home loop
   initializeHomeLoopTangentSmoothers();

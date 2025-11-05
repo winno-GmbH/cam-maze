@@ -1,3 +1,6 @@
+import gsap from "gsap";
+import { applyOutroScrollPreset, getScrollDirection } from "./scene-presets";
+
 let outroScrollTimeline: gsap.core.Timeline | null = null;
 
 export function initOutroScrollAnimation() {
@@ -7,6 +10,16 @@ export function initOutroScrollAnimation() {
       start: "top center",
       end: "bottom bottom",
       scrub: 0.5,
+      onEnter: () => {
+        console.log("🎬 Outro scroll section ENTERED!");
+        const scrollDir = getScrollDirection();
+        applyOutroScrollPreset(true, scrollDir);
+      },
+      onEnterBack: () => {
+        console.log("🎬 Outro scroll section ENTERED BACK!");
+        const scrollDir = getScrollDirection();
+        applyOutroScrollPreset(true, scrollDir);
+      },
     }
   }).fromTo(
     ".sc_b--outro", { scale: 0.5, opacity: 0 },

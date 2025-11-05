@@ -9,6 +9,7 @@ import {
 } from "../paths/pathpoints";
 import { DOM_ELEMENTS } from "../config/dom-elements";
 import { calculateObjectOrientation } from "./util";
+import { applyPovScrollPreset, getScrollDirection } from "./scene-presets";
 
 let povScrollTimeline: gsap.core.Timeline | null = null;
 
@@ -190,6 +191,16 @@ export function initPovScrollAnimation() {
         markers: true,
         scrub: 0.5,
         toggleActions: "play none none reverse",
+        onEnter: () => {
+          console.log("🎬 POV scroll section ENTERED!");
+          const scrollDir = getScrollDirection();
+          applyPovScrollPreset(true, scrollDir);
+        },
+        onEnterBack: () => {
+          console.log("🎬 POV scroll section ENTERED BACK!");
+          const scrollDir = getScrollDirection();
+          applyPovScrollPreset(true, scrollDir);
+        },
       },
     })
     .to(

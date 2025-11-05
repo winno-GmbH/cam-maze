@@ -3,7 +3,13 @@ import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
 import { scene } from "../core/scene";
-import { slerpToLayDown } from "./util";
+import { 
+  applyIntroScrollPreset, 
+  getScrollDirection,
+  getPacmanTargetQuaternion,
+  getGhostTargetQuaternion,
+  INTRO_POSITION_OFFSET
+} from "./scene-presets";
 
 // Debug helper function to check visibility issues
 function debugObjectVisibility(key: string, object: THREE.Object3D) {
@@ -56,22 +62,6 @@ function isInCameraFrustum(object: THREE.Object3D): boolean {
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 
-// Store initial rotations when entering intro section (like pausedRotations in home-scroll)
-// These are stored ONCE when entering intro-scroll and never changed
-let introInitialRotations: Record<string, THREE.Quaternion> = {};
-let introInitialPositions: Record<string, THREE.Vector3> = {};
-
-// Store target quaternions for pacman and ghosts (calculated once)
-let pacmanTargetQuaternion: THREE.Quaternion | null = null;
-let ghostTargetQuaternion: THREE.Quaternion | null = null;
-
-// Position offsets (hardcoded from previous adjuster values)
-const POSITION_OFFSET = {
-  x: 4.30,
-  y: -2.00,
-  z: 0.00,
-};
-
 export function initIntroScrollAnimation() {
   // EXPLANATION OF FLICKERING ISSUE:
   // The flickering happens because multiple update sources are competing:
@@ -93,11 +83,13 @@ export function initIntroScrollAnimation() {
       refreshPriority: 1, // Ensure ScrollTrigger refreshes properly
         onEnter: () => {
           console.log("🎬 Intro section ENTERED!");
-          initializeIntroSection();
+          const scrollDir = getScrollDirection();
+          applyIntroScrollPreset(true, scrollDir);
         },
         onEnterBack: () => {
           console.log("🎬 Intro section ENTERED BACK!");
-          initializeIntroSection();
+          const scrollDir = getScrollDirection();
+          applyIntroScrollPreset(true, scrollDir);
         },
         onLeave: () => {
           console.log("🎬 Intro section LEFT!");
@@ -175,192 +167,6 @@ export function initIntroScrollAnimation() {
     );
 }
 
-// Initialize intro section - called onEnter and onEnterBack
-// Uses gsap.set to immediately set all properties for consistent state
-function initializeIntroSection() {
-  console.log("🎬 initializeIntroSection called");
-  
-  // Hide floor plane when entering intro section (white with opacity 0)
-  scene.traverse((child) => {
-    if (child.name === "CAM-Floor") {
-      child.visible = true;
-      if (child instanceof THREE.Mesh && child.material) {
-        const material = child.material as THREE.MeshBasicMaterial;
-        material.color.setHex(0xffffff); // White
-        material.opacity = 0;
-        material.transparent = true;
-        console.log("🎬 Made floor plane invisible:", child.name);
-      }
-    }
-  });
-  
-  const objectsToAnimate = ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
-  
-  // Calculate target quaternions ONCE (they don't change during scroll)
-  if (!pacmanTargetQuaternion || !ghostTargetQuaternion) {
-    const pacmanObj = ghosts.pacman;
-    if (pacmanObj) {
-      // Store initial rotation
-      if (!introInitialRotations["pacman"]) {
-        introInitialRotations["pacman"] = pacmanObj.quaternion.clone();
-      }
-      
-      // Calculate pacman target quaternion (laying down)
-      pacmanTargetQuaternion = introInitialRotations["pacman"].clone();
-      slerpToLayDown(pacmanObj, introInitialRotations["pacman"], 1.0);
-      pacmanTargetQuaternion = pacmanObj.quaternion.clone();
-      
-      // Reset to initial for now
-      pacmanObj.quaternion.copy(introInitialRotations["pacman"]);
-    }
-    
-    const ghostObj = ghosts.ghost1;
-    if (ghostObj) {
-      // Store initial rotation
-      if (!introInitialRotations["ghost1"]) {
-        introInitialRotations["ghost1"] = ghostObj.quaternion.clone();
-      }
-      
-      // Calculate ghost target quaternion (laying down + 180 degrees X)
-      ghostTargetQuaternion = introInitialRotations["ghost1"].clone();
-      slerpToLayDown(ghostObj, introInitialRotations["ghost1"], 1.0);
-      const xRotation180 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));
-      ghostObj.quaternion.multiply(xRotation180);
-      ghostTargetQuaternion = ghostObj.quaternion.clone();
-      
-      // Reset to initial for now
-      ghostObj.quaternion.copy(introInitialRotations["ghost1"]);
-    }
-    
-    // Store initial rotations for all ghosts
-    objectsToAnimate.forEach(key => {
-      const obj = ghosts[key];
-      if (obj && !introInitialRotations[key]) {
-        introInitialRotations[key] = obj.quaternion.clone();
-      }
-    });
-  }
-  
-  // Calculate start position (far left)
-  const baseX = camera.position.x - 5.0;
-  const startPosition = new THREE.Vector3(
-    baseX + POSITION_OFFSET.x,
-    camera.position.y + POSITION_OFFSET.y,
-    camera.position.z + POSITION_OFFSET.z
-  );
-  
-  // Use gsap.set to immediately set all properties
-  objectsToAnimate.forEach((key, index) => {
-    const object = ghosts[key];
-    if (!object) return;
-    
-    // Calculate position with stagger
-    const behindOffset = index === 0 ? 0 : -0.5 * index;
-    const pos = new THREE.Vector3(
-      startPosition.x + behindOffset,
-      startPosition.y,
-      startPosition.z
-    );
-    
-    // Store initial position
-    introInitialPositions[key] = pos.clone();
-    
-    // Set position, rotation, scale, visibility using gsap.set
-    gsap.set(object.position, {
-      x: pos.x,
-      y: pos.y,
-      z: pos.z,
-    });
-    
-    // Set rotation quaternion directly
-    if (key === "pacman" && pacmanTargetQuaternion) {
-      object.quaternion.copy(pacmanTargetQuaternion);
-    } else if (ghostTargetQuaternion) {
-      object.quaternion.copy(ghostTargetQuaternion);
-    }
-    
-    gsap.set(object.scale, {
-      x: key === "pacman" ? 0.1 : 1.0,
-      y: key === "pacman" ? 0.1 : 1.0,
-      z: key === "pacman" ? 0.1 : 1.0,
-    });
-    
-    gsap.set(object, { visible: true });
-    
-    // Set opacity and visibility for all meshes
-    const ghostColors: Record<string, number> = {
-      ghost1: 0xff0000, // Red
-      ghost2: 0x00ff00, // Green
-      ghost3: 0x0000ff, // Blue
-      ghost4: 0xffff00, // Yellow
-      ghost5: 0xff00ff, // Magenta
-    };
-    
-    object.traverse((child) => {
-      if ((child as any).isMesh && (child as any).material) {
-        const mesh = child as THREE.Mesh;
-        const childName = child.name || "";
-        
-        // Keep currency symbols hidden
-        if (["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName)) {
-          mesh.visible = false;
-          return;
-        }
-        
-        // For pacman: hide Shell and Bitcoin parts
-        if (key === "pacman" && (
-          childName.includes("Shell") || 
-          childName.includes("Bitcoin_1") || 
-          childName.includes("Bitcoin_2")
-        )) {
-          mesh.visible = false;
-          return;
-        }
-        
-        mesh.visible = true;
-        
-        // Set opacity
-        if (Array.isArray(mesh.material)) {
-          mesh.material.forEach((mat: any) => {
-            mat.opacity = 1;
-            mat.transparent = true;
-          });
-        } else {
-          (mesh.material as any).opacity = 1;
-          (mesh.material as any).transparent = true;
-        }
-        
-        // Set ghost colors
-        if (ghostColors[key] && key !== "pacman") {
-          const newColor = ghostColors[key];
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              mat.color.setHex(newColor);
-            });
-          } else {
-            (mesh.material as any).color.setHex(newColor);
-          }
-        }
-      }
-    });
-    
-    object.updateMatrixWorld(true);
-  });
-}
-
-// Hide everything except pacman and ghosts for testing
-function hideEverythingExceptObjects() {
-  // Commented out - might be causing rendering issues
-  // scene.traverse((child) => {
-  //   if (
-  //     child.name &&
-  //     !child.name.includes("pacman") &&
-  //     !child.name.includes("Ghost")
-  //   ) {
-  //     child.visible = false;
-  //   }
-  // });
-}
 
 function updateObjectsWalkBy(progress: number) {
   // Ensure floor plane stays invisible (white with opacity 0) during animation
@@ -376,10 +182,8 @@ function updateObjectsWalkBy(progress: number) {
     }
   });
   
-  // Ensure target quaternions are calculated
-  if (!pacmanTargetQuaternion || !ghostTargetQuaternion) {
-    initializeIntroSection();
-  }
+  // Ensure preset is applied (target quaternions will be calculated by preset)
+  // This check ensures preset is called if scroll starts mid-section
   
   // Calculate base center point for walk path
   const baseCenter = new THREE.Vector3(
@@ -405,9 +209,9 @@ function updateObjectsWalkBy(progress: number) {
   // Calculate pacman's position using smooth interpolation
   const normalizedProgress = Math.max(0, Math.min(1, progress));
   const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
-  const pacmanX = baseX + POSITION_OFFSET.x;
-  const pacmanY = baseCenter.y + POSITION_OFFSET.y;
-  const pacmanZ = baseCenter.z + POSITION_OFFSET.z;
+  const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
+  const pacmanY = baseCenter.y + INTRO_POSITION_OFFSET.y;
+  const pacmanZ = baseCenter.z + INTRO_POSITION_OFFSET.z;
 
   // Smooth fade-in for ghosts based on progress
   const fadeInDuration = 0.2; // Fade in over 20% of progress
@@ -428,10 +232,12 @@ function updateObjectsWalkBy(progress: number) {
     object.position.set(finalX, finalY, finalZ);
     
     // Set rotation quaternion directly (no recalculation - use pre-calculated quaternions)
-    if (key === "pacman" && pacmanTargetQuaternion) {
-      object.quaternion.copy(pacmanTargetQuaternion);
-    } else if (ghostTargetQuaternion) {
-      object.quaternion.copy(ghostTargetQuaternion);
+    const pacmanQuat = getPacmanTargetQuaternion();
+    const ghostQuat = getGhostTargetQuaternion();
+    if (key === "pacman" && pacmanQuat) {
+      object.quaternion.copy(pacmanQuat);
+    } else if (ghostQuat) {
+      object.quaternion.copy(ghostQuat);
     }
     
     // Force update matrix to ensure rotation is applied
