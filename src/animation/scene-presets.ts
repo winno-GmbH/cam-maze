@@ -258,9 +258,13 @@ export function applyIntroScrollPreset(
 
       ghostTargetQuaternion = introInitialRotations["ghost1"].clone();
       slerpToLayDown(ghostObj, introInitialRotations["ghost1"], 1.0);
+      // Apply 180 degrees on X-axis (current rotation that makes heads face down)
       const xRotation180 = new THREE.Quaternion().setFromEuler(
         new THREE.Euler(Math.PI, 0, 0)
       );
+      ghostObj.quaternion.multiply(xRotation180);
+      // Add another 180 degrees on X-axis to flip them up
+      // Since +180 made them face down, we need to flip them, so rotate another 180
       ghostObj.quaternion.multiply(xRotation180);
       ghostTargetQuaternion = ghostObj.quaternion.clone();
       ghostObj.quaternion.copy(introInitialRotations["ghost1"]);
