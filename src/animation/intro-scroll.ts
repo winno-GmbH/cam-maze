@@ -136,10 +136,30 @@ export function initIntroScrollAnimation() {
 
                 // CRITICAL: Immediately set visibility and opacity to ensure objects are visible
                 // This overrides any opacity/visibility set by home-scroll
+                // Must traverse ALL nested meshes to restore visibility
                 obj.visible = true;
                 obj.traverse((child) => {
                   if ((child as any).isMesh && (child as any).material) {
                     const mesh = child as THREE.Mesh;
+                    const childName = child.name || "";
+
+                    // Skip currency symbols and pacman parts - they stay hidden
+                    if (
+                      ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
+                      childName.includes("EUR") ||
+                      childName.includes("CHF") ||
+                      childName.includes("YEN") ||
+                      childName.includes("USD") ||
+                      childName.includes("GBP") ||
+                      (key === "pacman" &&
+                        (childName.includes("Shell") ||
+                          childName.includes("Bitcoin_1") ||
+                          childName.includes("Bitcoin_2")))
+                    ) {
+                      return; // Skip these, keep them hidden
+                    }
+
+                    // Force visibility and opacity for all other meshes
                     mesh.visible = true;
                     if (Array.isArray(mesh.material)) {
                       mesh.material.forEach((mat: any) => {
@@ -152,6 +172,9 @@ export function initIntroScrollAnimation() {
                     }
                   }
                 });
+
+                // Force update matrix to ensure changes are applied
+                obj.updateMatrixWorld(true);
               }
             }
           );
@@ -208,10 +231,30 @@ export function initIntroScrollAnimation() {
 
                 // CRITICAL: Immediately set visibility and opacity to ensure objects are visible
                 // This overrides any opacity/visibility set by home-scroll
+                // Must traverse ALL nested meshes to restore visibility
                 obj.visible = true;
                 obj.traverse((child) => {
                   if ((child as any).isMesh && (child as any).material) {
                     const mesh = child as THREE.Mesh;
+                    const childName = child.name || "";
+
+                    // Skip currency symbols and pacman parts - they stay hidden
+                    if (
+                      ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
+                      childName.includes("EUR") ||
+                      childName.includes("CHF") ||
+                      childName.includes("YEN") ||
+                      childName.includes("USD") ||
+                      childName.includes("GBP") ||
+                      (key === "pacman" &&
+                        (childName.includes("Shell") ||
+                          childName.includes("Bitcoin_1") ||
+                          childName.includes("Bitcoin_2")))
+                    ) {
+                      return; // Skip these, keep them hidden
+                    }
+
+                    // Force visibility and opacity for all other meshes
                     mesh.visible = true;
                     if (Array.isArray(mesh.material)) {
                       mesh.material.forEach((mat: any) => {
@@ -224,6 +267,9 @@ export function initIntroScrollAnimation() {
                     }
                   }
                 });
+
+                // Force update matrix to ensure changes are applied
+                obj.updateMatrixWorld(true);
               }
             }
           );

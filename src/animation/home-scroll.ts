@@ -134,10 +134,19 @@ function updateScrollAnimation(
       // Apply bidirectional laying down animation
       slerpToLayDown(pacman, pausedRotations["pacman"], rotationProgress);
 
-      // Animate pacman opacity
+      // Animate pacman opacity - traverse all nested meshes
       pacman.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
-          (child as any).material.opacity = opacity;
+          const mesh = child as THREE.Mesh;
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((mat: any) => {
+              mat.opacity = opacity;
+              mat.transparent = true;
+            });
+          } else {
+            (mesh.material as any).opacity = opacity;
+            (mesh.material as any).transparent = true;
+          }
         }
       });
     }
@@ -158,10 +167,21 @@ function updateScrollAnimation(
         // Apply bidirectional laying down animation
         slerpToLayDown(ghost, pausedRotations[key], rotationProgress);
 
-        // Animate ghost opacity
-        if ((ghost as any).material) {
-          (ghost as any).material.opacity = opacity;
+      // Animate ghost opacity - traverse all nested meshes
+      ghost.traverse((child) => {
+        if ((child as any).isMesh && (child as any).material) {
+          const mesh = child as THREE.Mesh;
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((mat: any) => {
+              mat.opacity = opacity;
+              mat.transparent = true;
+            });
+          } else {
+            (mesh.material as any).opacity = opacity;
+            (mesh.material as any).transparent = true;
+          }
         }
+      });
       }
     }
   });
