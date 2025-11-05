@@ -88,8 +88,8 @@ export function setupLighting(): void {
 export function createDebugLines(): void {
   // Red line at z: 0.5, lying along x-axis at y: 0.55 (same height as ghosts)
   const redLineGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-5, 0.55, 0.5),
-    new THREE.Vector3(5, 0.55, 0.5),
+    new THREE.Vector3(-5, 0.55, 0),
+    new THREE.Vector3(5, 0.55, 0),
   ]);
   const redLineMaterial = new THREE.LineBasicMaterial({
     color: 0xff0000,
