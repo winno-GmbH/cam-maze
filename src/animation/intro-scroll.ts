@@ -283,17 +283,15 @@ function resetGhostsForIntro() {
         camera.position.z + POSITION_OFFSET.z
       );
       
-      // Apply laying down rotation (progress = 1.0 means fully laid down)
-      slerpToLayDown(object, introInitialRotations[key], 1.0);
-      
       // Different rotations for pacman vs ghosts
       if (key === "pacman") {
-        // Pacman: only laying down rotation, no additional 90-degree rotation
-        // (pacman was working correctly before)
+        // Pacman: only laying down rotation, ensure it's fully applied
+        slerpToLayDown(object, introInitialRotations[key], 1.0);
       } else {
-        // Ghosts: apply -180-degree rotation on X axis
-        const xRotationNeg180 = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI, 0, 0));
-        object.quaternion.multiply(xRotationNeg180);
+        // Ghosts: first apply laying down rotation, then add +180-degree rotation on X axis
+        slerpToLayDown(object, introInitialRotations[key], 1.0);
+        const xRotation180 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));
+        object.quaternion.multiply(xRotation180);
       }
       
       object.updateMatrixWorld(true);
@@ -498,17 +496,15 @@ function updateObjectsWalkBy(progress: number) {
       introInitialRotations[key] = object.quaternion.clone();
     }
     
-    // Apply laying down rotation (progress = 1.0 means fully laid down)
-    slerpToLayDown(object, introInitialRotations[key], 1.0);
-    
     // Different rotations for pacman vs ghosts
     if (key === "pacman") {
-      // Pacman: only laying down rotation, no additional 90-degree rotation
-      // (revert to original - pacman was working correctly)
+      // Pacman: only laying down rotation, ensure it's fully applied
+      slerpToLayDown(object, introInitialRotations[key], 1.0);
     } else {
-      // Ghosts: apply -180-degree rotation on X axis
-      const xRotationNeg180 = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI, 0, 0));
-      object.quaternion.multiply(xRotationNeg180);
+      // Ghosts: first apply laying down rotation, then add +180-degree rotation on X axis
+      slerpToLayDown(object, introInitialRotations[key], 1.0);
+      const xRotation180 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));
+      object.quaternion.multiply(xRotation180);
     }
     
     // Force update matrix to ensure rotation is applied
