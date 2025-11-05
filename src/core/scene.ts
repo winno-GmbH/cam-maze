@@ -86,7 +86,7 @@ export function setupLighting(): void {
 }
 
 export function createDebugLines(): void {
-  // Red line at z: +5
+  // Red line at z: +5, lying along x-axis at y: 0 (same height as objects)
   const redLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(-20, 0, 5),
     new THREE.Vector3(20, 0, 5),
@@ -95,7 +95,7 @@ export function createDebugLines(): void {
   const redLine = new THREE.Line(redLineGeometry, redLineMaterial);
   scene.add(redLine);
 
-  // Green line at z: -5
+  // Green line at z: -5, lying along x-axis at y: 0 (same height as objects)
   const greenLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(-20, 0, -5),
     new THREE.Vector3(20, 0, -5),
