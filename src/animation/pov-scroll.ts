@@ -339,48 +339,20 @@ function updateCamera(
   // Check for custom lookAt at current path point
   const customLookAt = getCustomLookAtForProgress(progress, povPaths);
   if (customLookAt) {
-    // Store rotation before lookAt
-    const rotationBefore = camera.rotation.clone();
     camera.lookAt(customLookAt);
-    const rotationAfter = camera.rotation.clone();
 
-    // Calculate rotation change
-    const rotationChangeY = Math.abs(rotationAfter.y - rotationBefore.y);
-    const normalizedChangeY = Math.min(
-      rotationChangeY,
-      Math.PI * 2 - rotationChangeY
-    );
-
-    // Log rotation details
+    // Log current rotation state
     console.log(`🔄 Camera rotation in pov-scroll (via customLookAt):`, {
       progress: progress.toFixed(3),
       customLookAt: customLookAt.clone(),
       cameraPosition: camera.position.clone(),
-      rotationBefore: {
-        x: rotationBefore.x,
-        y: rotationBefore.y,
-        z: rotationBefore.z,
-        xDegrees: (rotationBefore.x * 180) / Math.PI,
-        yDegrees: (rotationBefore.y * 180) / Math.PI,
-        zDegrees: (rotationBefore.z * 180) / Math.PI,
-      },
-      rotationAfter: {
-        x: rotationAfter.x,
-        y: rotationAfter.y,
-        z: rotationAfter.z,
-        xDegrees: (rotationAfter.x * 180) / Math.PI,
-        yDegrees: (rotationAfter.y * 180) / Math.PI,
-        zDegrees: (rotationAfter.z * 180) / Math.PI,
-      },
-      rotationChange: {
-        x: Math.abs(rotationAfter.x - rotationBefore.x),
-        y: normalizedChangeY,
-        z: Math.abs(rotationAfter.z - rotationBefore.z),
-        xDegrees:
-          (Math.abs(rotationAfter.x - rotationBefore.x) * 180) / Math.PI,
-        yDegrees: (normalizedChangeY * 180) / Math.PI,
-        zDegrees:
-          (Math.abs(rotationAfter.z - rotationBefore.z) * 180) / Math.PI,
+      rotation: {
+        x: camera.rotation.x,
+        y: camera.rotation.y,
+        z: camera.rotation.z,
+        xDegrees: (camera.rotation.x * 180) / Math.PI,
+        yDegrees: (camera.rotation.y * 180) / Math.PI,
+        zDegrees: (camera.rotation.z * 180) / Math.PI,
       },
     });
 

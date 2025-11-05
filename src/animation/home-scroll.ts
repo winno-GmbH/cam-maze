@@ -156,47 +156,31 @@ function updateScrollAnimation(
     );
     const lookAtPoint = lookAtCurve.getPoint(progress);
     
-    // Store rotation before lookAt
-    const rotationBefore = camera.rotation.clone();
     camera.lookAt(lookAtPoint);
-    const rotationAfter = camera.rotation.clone();
     
-    // Calculate rotation change
-    const rotationChangeY = Math.abs(rotationAfter.y - rotationBefore.y);
-    const normalizedChangeY = Math.min(rotationChangeY, Math.PI * 2 - rotationChangeY);
-    
-    // Log if there's a significant rotation change (tracking cumulative changes)
-    if (normalizedChangeY > 0.01) { // Log any noticeable change
-      const cumulativeChange = Math.abs(rotationAfter.y);
-      if (Math.abs(cumulativeChange - Math.PI) < 0.1 || Math.abs(cumulativeChange) < 0.1) {
-        console.log(`🔄 Camera rotation in home-scroll (via lookAt interpolation):`, {
-          progress: progress.toFixed(3),
-          lookAtPoint: lookAtPoint.clone(),
-          cameraPosition: camera.position.clone(),
-          rotationBefore: {
-            y: rotationBefore.y,
-            yDegrees: (rotationBefore.y * 180) / Math.PI,
-          },
-          rotationAfter: {
-            y: rotationAfter.y,
-            yDegrees: (rotationAfter.y * 180) / Math.PI,
-          },
-          rotationChange: {
-            y: normalizedChangeY,
-            yDegrees: (normalizedChangeY * 180) / Math.PI,
-          },
-          cumulativeRotation: {
-            y: rotationAfter.y,
-            yDegrees: (rotationAfter.y * 180) / Math.PI,
-          },
-          lookAtPoints: {
-            start: cameraPathPoints[0].lookAt.clone(),
-            second: cameraPathPoints[1].lookAt.clone(),
-            third: cameraPathPoints[2].lookAt.clone(),
-            end: cameraPathPoints[3].lookAt.clone(),
-          },
-        });
-      }
+    // Log if rotation is near 0° or 180° (to track gradual 180° rotations)
+    const rotationY = camera.rotation.y;
+    const rotationYDegrees = (rotationY * 180) / Math.PI;
+    if (Math.abs(Math.abs(rotationY) - Math.PI) < 0.1 || Math.abs(rotationY) < 0.1) {
+      console.log(`🔄 Camera rotation in home-scroll (via lookAt interpolation):`, {
+        progress: progress.toFixed(3),
+        lookAtPoint: lookAtPoint.clone(),
+        cameraPosition: camera.position.clone(),
+        rotation: {
+          x: camera.rotation.x,
+          y: camera.rotation.y,
+          z: camera.rotation.z,
+          xDegrees: (camera.rotation.x * 180) / Math.PI,
+          yDegrees: rotationYDegrees,
+          zDegrees: (camera.rotation.z * 180) / Math.PI,
+        },
+        lookAtPoints: {
+          start: cameraPathPoints[0].lookAt.clone(),
+          second: cameraPathPoints[1].lookAt.clone(),
+          third: cameraPathPoints[2].lookAt.clone(),
+          end: cameraPathPoints[3].lookAt.clone(),
+        },
+      });
     }
     
     checkAndLogCameraRotationChange("home-scroll (via lookAt)");
