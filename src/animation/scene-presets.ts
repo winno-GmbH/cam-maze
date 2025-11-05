@@ -133,11 +133,6 @@ export function applyHomeScrollPreset(
 
   console.log("🎬 Applying HOME SCROLL preset", { scrollDirection });
 
-  // CRITICAL: Restore camera rotation when leaving intro-scroll (coming back to home-scroll)
-  // Rotate camera back 180 degrees on Y-axis
-  camera.rotation.y = camera.rotation.y - Math.PI;
-  camera.updateProjectionMatrix();
-
   // Use paused positions/rotations if provided (from home-loop)
   if (pausedPositions && pausedRotations) {
     Object.entries(ghosts).forEach(([key, object]) => {
@@ -501,11 +496,6 @@ export function applyPovScrollPreset(
   if (!isEntering) return;
 
   console.log("🎬 Applying POV SCROLL preset", { scrollDirection });
-
-  // CRITICAL: Restore camera rotation when leaving intro-scroll (going to pov-scroll)
-  // Rotate camera back 180 degrees on Y-axis
-  camera.rotation.y = camera.rotation.y - Math.PI;
-  camera.updateProjectionMatrix();
 
   // Hide pacman during POV section
   if (ghosts.pacman) {

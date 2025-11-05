@@ -412,6 +412,11 @@ export function initIntroScrollAnimation() {
           console.log("🎬 Intro section LEFT!");
           isIntroScrollActive = false;
 
+          // CRITICAL: Restore camera rotation IMMEDIATELY when leaving intro-scroll
+          // This must happen BEFORE the next preset is applied to ensure objects are positioned correctly
+          camera.rotation.y = camera.rotation.y - Math.PI;
+          camera.updateProjectionMatrix();
+
           // Restore floor to original appearance when leaving intro section
           scene.traverse((child) => {
             if (child.name === "CAM-Floor") {
@@ -429,6 +434,11 @@ export function initIntroScrollAnimation() {
         onLeaveBack: () => {
           console.log("🎬 Intro section LEFT BACK!");
           isIntroScrollActive = false;
+
+          // CRITICAL: Restore camera rotation IMMEDIATELY when leaving intro-scroll
+          // This must happen BEFORE the next preset is applied to ensure objects are positioned correctly
+          camera.rotation.y = camera.rotation.y - Math.PI;
+          camera.updateProjectionMatrix();
 
           // Restore floor to original appearance when leaving intro section
           scene.traverse((child) => {
