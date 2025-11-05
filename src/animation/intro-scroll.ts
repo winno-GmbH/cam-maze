@@ -57,7 +57,13 @@ function isInCameraFrustum(object: THREE.Object3D): boolean {
 let introScrollTimeline: gsap.core.Timeline | null = null;
 
 // Store initial rotations when entering intro section (like pausedRotations in home-scroll)
+// These are stored ONCE when entering intro-scroll and never changed
 let introInitialRotations: Record<string, THREE.Quaternion> = {};
+let introInitialPositions: Record<string, THREE.Vector3> = {};
+
+// Store target quaternions for pacman and ghosts (calculated once)
+let pacmanTargetQuaternion: THREE.Quaternion | null = null;
+let ghostTargetQuaternion: THREE.Quaternion | null = null;
 
 // Position offsets (hardcoded from previous adjuster values)
 const POSITION_OFFSET = {
@@ -87,63 +93,11 @@ export function initIntroScrollAnimation() {
       refreshPriority: 1, // Ensure ScrollTrigger refreshes properly
         onEnter: () => {
           console.log("🎬 Intro section ENTERED!");
-          
-          // CRITICAL: Immediately restore opacity to 1 for all objects
-          // home-scroll sets opacity to 0 at the end, we must override this immediately
-          const objectsToRestore = ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
-          objectsToRestore.forEach(key => {
-            const obj = ghosts[key];
-            if (obj) {
-              // Force opacity to 1 immediately, before any other operations
-              obj.traverse((child) => {
-                if ((child as any).isMesh && (child as any).material) {
-                  const mesh = child as THREE.Mesh;
-                  if (Array.isArray(mesh.material)) {
-                    mesh.material.forEach((mat: any) => {
-                      mat.opacity = 1;
-                      mat.transparent = true;
-                    });
-                  } else {
-                    (mesh.material as any).opacity = 1;
-                    (mesh.material as any).transparent = true;
-                  }
-                }
-              });
-            }
-          });
-          
-          resetGhostsForIntro();
-          hideEverythingExceptObjects();
+          initializeIntroSection();
         },
         onEnterBack: () => {
           console.log("🎬 Intro section ENTERED BACK!");
-          
-          // CRITICAL: Immediately restore opacity to 1 for all objects
-          // home-scroll sets opacity to 0 at the end, we must override this immediately
-          const objectsToRestore = ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
-          objectsToRestore.forEach(key => {
-            const obj = ghosts[key];
-            if (obj) {
-              // Force opacity to 1 immediately, before any other operations
-              obj.traverse((child) => {
-                if ((child as any).isMesh && (child as any).material) {
-                  const mesh = child as THREE.Mesh;
-                  if (Array.isArray(mesh.material)) {
-                    mesh.material.forEach((mat: any) => {
-                      mat.opacity = 1;
-                      mat.transparent = true;
-                    });
-                  } else {
-                    (mesh.material as any).opacity = 1;
-                    (mesh.material as any).transparent = true;
-                  }
-                }
-              });
-            }
-          });
-          
-          resetGhostsForIntro();
-          hideEverythingExceptObjects();
+          initializeIntroSection();
         },
         onLeave: () => {
           console.log("🎬 Intro section LEFT!");
@@ -221,8 +175,10 @@ export function initIntroScrollAnimation() {
     );
 }
 
-function resetGhostsForIntro() {
-  console.log("🎬 resetGhostsForIntro called");
+// Initialize intro section - called onEnter and onEnterBack
+// Uses gsap.set to immediately set all properties for consistent state
+function initializeIntroSection() {
+  console.log("🎬 initializeIntroSection called");
   
   // Hide floor plane when entering intro section (white with opacity 0)
   scene.traverse((child) => {
@@ -238,130 +194,157 @@ function resetGhostsForIntro() {
     }
   });
   
-  // CRITICAL: Restore opacity to 1 for all objects (they may have been set to 0 by home-scroll)
-  // This fixes the issue where objects are invisible after home-scroll ends
   const objectsToAnimate = ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"];
-
-  Object.entries(ghosts).forEach(([key, object]) => {
-    if (objectsToAnimate.includes(key)) {
-      // CRITICAL: Store initial rotation before applying laying down rotation
-      if (!introInitialRotations[key]) {
-        introInitialRotations[key] = object.quaternion.clone();
+  
+  // Calculate target quaternions ONCE (they don't change during scroll)
+  if (!pacmanTargetQuaternion || !ghostTargetQuaternion) {
+    const pacmanObj = ghosts.pacman;
+    if (pacmanObj) {
+      // Store initial rotation
+      if (!introInitialRotations["pacman"]) {
+        introInitialRotations["pacman"] = pacmanObj.quaternion.clone();
       }
       
-      // CRITICAL: Force visibility and scale BEFORE anything else
-      // Pacman uses smaller scale (0.1), ghosts use normal scale (1.0)
-      object.visible = true;
-      if (key === "pacman") {
-        object.scale.set(0.1, 0.1, 0.1);
-      } else {
-        object.scale.set(1.0, 1.0, 1.0);
-      }
+      // Calculate pacman target quaternion (laying down)
+      pacmanTargetQuaternion = introInitialRotations["pacman"].clone();
+      slerpToLayDown(pacmanObj, introInitialRotations["pacman"], 1.0);
+      pacmanTargetQuaternion = pacmanObj.quaternion.clone();
       
-      // CRITICAL: Restore opacity to 1 immediately (override home-scroll's opacity = 0)
-      // This must happen FIRST to ensure objects are visible
-      object.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          const mesh = child as THREE.Mesh;
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              mat.opacity = 1;
-              mat.transparent = true;
-            });
-          } else {
-            (mesh.material as any).opacity = 1;
-            (mesh.material as any).transparent = true;
-          }
-        }
-      });
-      
-      // Force initial position (far left, off-screen) with position offset applied
-      const baseX = camera.position.x - 10;
-      object.position.set(
-        baseX + POSITION_OFFSET.x,
-        camera.position.y + POSITION_OFFSET.y,
-        camera.position.z + POSITION_OFFSET.z
-      );
-      
-      // Different rotations for pacman vs ghosts
-      if (key === "pacman") {
-        // Pacman: only laying down rotation, ensure it's fully applied
-        slerpToLayDown(object, introInitialRotations[key], 1.0);
-      } else {
-        // Ghosts: first apply laying down rotation, then add +180-degree rotation on X axis
-        slerpToLayDown(object, introInitialRotations[key], 1.0);
-        const xRotation180 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));
-        object.quaternion.multiply(xRotation180);
-      }
-      
-      object.updateMatrixWorld(true);
-      
-      // Set ghost colors for visibility
-      const ghostColors: Record<string, number> = {
-        ghost1: 0xff0000, // Red
-        ghost2: 0x00ff00, // Green
-        ghost3: 0x0000ff, // Blue
-        ghost4: 0xffff00, // Yellow
-        ghost5: 0xff00ff, // Magenta
-      };
-      
-      // Make ALL meshes visible for ghosts (for testing - color everything)
-      let meshCount = 0;
-      object.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          meshCount++;
-          const mesh = child as THREE.Mesh;
-          const childName = child.name || "";
-          
-          // Keep currency symbols hidden
-          if (["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName)) {
-            mesh.visible = false;
-            return;
-          }
-          
-          // For pacman: hide Shell and Bitcoin parts
-          if (key === "pacman" && (
-            childName.includes("Shell") || 
-            childName.includes("Bitcoin_1") || 
-            childName.includes("Bitcoin_2")
-          )) {
-            mesh.visible = false;
-            return;
-          }
-          
-          // Make ALL meshes visible (including Groups and nested meshes)
-          mesh.visible = true;
-          
-          // Ensure material opacity is set to 1 and transparent is true
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              mat.opacity = 1;
-              mat.transparent = true;
-            });
-          } else {
-            (mesh.material as any).opacity = 1;
-            (mesh.material as any).transparent = true;
-          }
-          
-          // Change ALL ghost mesh colors to bright colors for testing visibility
-          if (ghostColors[key] && key !== "pacman") {
-            const newColor = ghostColors[key];
-            if (Array.isArray(mesh.material)) {
-              mesh.material.forEach((mat: any) => {
-                mat.color.setHex(newColor);
-              });
-            } else {
-              (mesh.material as any).color.setHex(newColor);
-            }
-          }
-        }
-      });
-      
-      // Debug: Log mesh count for ghosts
-      if (key !== "pacman" && meshCount === 0) {
-        console.warn(`⚠️ ${key} has NO meshes found!`);
-      }
+      // Reset to initial for now
+      pacmanObj.quaternion.copy(introInitialRotations["pacman"]);
     }
+    
+    const ghostObj = ghosts.ghost1;
+    if (ghostObj) {
+      // Store initial rotation
+      if (!introInitialRotations["ghost1"]) {
+        introInitialRotations["ghost1"] = ghostObj.quaternion.clone();
+      }
+      
+      // Calculate ghost target quaternion (laying down + 180 degrees X)
+      ghostTargetQuaternion = introInitialRotations["ghost1"].clone();
+      slerpToLayDown(ghostObj, introInitialRotations["ghost1"], 1.0);
+      const xRotation180 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));
+      ghostObj.quaternion.multiply(xRotation180);
+      ghostTargetQuaternion = ghostObj.quaternion.clone();
+      
+      // Reset to initial for now
+      ghostObj.quaternion.copy(introInitialRotations["ghost1"]);
+    }
+    
+    // Store initial rotations for all ghosts
+    objectsToAnimate.forEach(key => {
+      const obj = ghosts[key];
+      if (obj && !introInitialRotations[key]) {
+        introInitialRotations[key] = obj.quaternion.clone();
+      }
+    });
+  }
+  
+  // Calculate start position (far left)
+  const baseX = camera.position.x - 5.0;
+  const startPosition = new THREE.Vector3(
+    baseX + POSITION_OFFSET.x,
+    camera.position.y + POSITION_OFFSET.y,
+    camera.position.z + POSITION_OFFSET.z
+  );
+  
+  // Use gsap.set to immediately set all properties
+  objectsToAnimate.forEach((key, index) => {
+    const object = ghosts[key];
+    if (!object) return;
+    
+    // Calculate position with stagger
+    const behindOffset = index === 0 ? 0 : -0.5 * index;
+    const pos = new THREE.Vector3(
+      startPosition.x + behindOffset,
+      startPosition.y,
+      startPosition.z
+    );
+    
+    // Store initial position
+    introInitialPositions[key] = pos.clone();
+    
+    // Set position, rotation, scale, visibility using gsap.set
+    gsap.set(object.position, {
+      x: pos.x,
+      y: pos.y,
+      z: pos.z,
+    });
+    
+    // Set rotation quaternion directly
+    if (key === "pacman" && pacmanTargetQuaternion) {
+      object.quaternion.copy(pacmanTargetQuaternion);
+    } else if (ghostTargetQuaternion) {
+      object.quaternion.copy(ghostTargetQuaternion);
+    }
+    
+    gsap.set(object.scale, {
+      x: key === "pacman" ? 0.1 : 1.0,
+      y: key === "pacman" ? 0.1 : 1.0,
+      z: key === "pacman" ? 0.1 : 1.0,
+    });
+    
+    gsap.set(object, { visible: true });
+    
+    // Set opacity and visibility for all meshes
+    const ghostColors: Record<string, number> = {
+      ghost1: 0xff0000, // Red
+      ghost2: 0x00ff00, // Green
+      ghost3: 0x0000ff, // Blue
+      ghost4: 0xffff00, // Yellow
+      ghost5: 0xff00ff, // Magenta
+    };
+    
+    object.traverse((child) => {
+      if ((child as any).isMesh && (child as any).material) {
+        const mesh = child as THREE.Mesh;
+        const childName = child.name || "";
+        
+        // Keep currency symbols hidden
+        if (["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName)) {
+          mesh.visible = false;
+          return;
+        }
+        
+        // For pacman: hide Shell and Bitcoin parts
+        if (key === "pacman" && (
+          childName.includes("Shell") || 
+          childName.includes("Bitcoin_1") || 
+          childName.includes("Bitcoin_2")
+        )) {
+          mesh.visible = false;
+          return;
+        }
+        
+        mesh.visible = true;
+        
+        // Set opacity
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((mat: any) => {
+            mat.opacity = 1;
+            mat.transparent = true;
+          });
+        } else {
+          (mesh.material as any).opacity = 1;
+          (mesh.material as any).transparent = true;
+        }
+        
+        // Set ghost colors
+        if (ghostColors[key] && key !== "pacman") {
+          const newColor = ghostColors[key];
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((mat: any) => {
+              mat.color.setHex(newColor);
+            });
+          } else {
+            (mesh.material as any).color.setHex(newColor);
+          }
+        }
+      }
+    });
+    
+    object.updateMatrixWorld(true);
   });
 }
 
@@ -380,20 +363,6 @@ function hideEverythingExceptObjects() {
 }
 
 function updateObjectsWalkBy(progress: number) {
-  // CRITICAL: Check for interfering animations (like home-loop)
-  // If home-loop is running, it might be overriding our positions
-  if (progress < 0.1 || progress > 0.9) {
-    // Check if any objects are being moved by other animations
-    const pacmanObj = ghosts.pacman;
-    if (pacmanObj) {
-      const ourX = camera.position.x - 5.0 + POSITION_OFFSET.x + (camera.position.x - (camera.position.x - 5.0)) * progress;
-      const xDiff = Math.abs(pacmanObj.position.x - ourX);
-      if (xDiff > 0.5) {
-        console.warn(`⚠️ INTERFERENCE DETECTED! Pacman X position differs by ${xDiff.toFixed(2)}. Our calc: ${ourX.toFixed(2)}, Actual: ${pacmanObj.position.x.toFixed(2)}`);
-      }
-    }
-  }
-
   // Ensure floor plane stays invisible (white with opacity 0) during animation
   scene.traverse((child) => {
     if (child.name === "CAM-Floor") {
@@ -407,26 +376,9 @@ function updateObjectsWalkBy(progress: number) {
     }
   });
   
-  // Check for other potentially blocking objects
-  if (progress < 0.05) {
-    console.log("🔍 DEBUGGING: Checking for blocking objects...");
-    const blockingObjects: string[] = [];
-    scene.traverse((child) => {
-      if (child instanceof THREE.Mesh && child.visible && child.name) {
-        // Check if object is between camera and our ghosts
-        const objPos = child.position;
-        const camPos = camera.position;
-        const ghostZ = camera.position.z + POSITION_OFFSET.z;
-        
-        // If object is in front of ghosts and visible, it might block
-        if (objPos.z > ghostZ && objPos.z < camPos.z && child.name !== "CAM-Floor") {
-          blockingObjects.push(`${child.name} (Z: ${objPos.z.toFixed(2)})`);
-        }
-      }
-    });
-    if (blockingObjects.length > 0) {
-      console.warn("⚠️ POTENTIALLY BLOCKING OBJECTS:", blockingObjects);
-    }
+  // Ensure target quaternions are calculated
+  if (!pacmanTargetQuaternion || !ghostTargetQuaternion) {
+    initializeIntroSection();
   }
   
   // Calculate base center point for walk path
@@ -442,77 +394,50 @@ function updateObjectsWalkBy(progress: number) {
   
   // Objects to animate - ghosts walk 0.5 units behind pacman
   const objectsToAnimate = [
-    { key: "pacman", offset: 0, behindOffset: 0 },
-    { key: "ghost1", offset: 0, behindOffset: -0.5 },   // 0.5 units behind pacman
-    { key: "ghost2", offset: 0, behindOffset: -1.0 },   // 1.0 units behind pacman
-    { key: "ghost3", offset: 0, behindOffset: -1.5 },   // 1.5 units behind pacman
-    { key: "ghost4", offset: 0, behindOffset: -2.0 },   // 2.0 units behind pacman
-    { key: "ghost5", offset: 0, behindOffset: -2.5 },   // 2.5 units behind pacman
+    { key: "pacman", behindOffset: 0 },
+    { key: "ghost1", behindOffset: -0.5 },
+    { key: "ghost2", behindOffset: -1.0 },
+    { key: "ghost3", behindOffset: -1.5 },
+    { key: "ghost4", behindOffset: -2.0 },
+    { key: "ghost5", behindOffset: -2.5 },
   ];
 
-  // First, calculate pacman's position
-  const pacmanObj = ghosts.pacman;
-  let pacmanPosition: THREE.Vector3 | null = null;
-  
-  if (pacmanObj) {
-    const normalizedProgress = Math.max(0, Math.min(1, progress));
-    const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
-    pacmanPosition = new THREE.Vector3(
-      baseX + POSITION_OFFSET.x,
-      baseCenter.y + POSITION_OFFSET.y,
-      baseCenter.z + POSITION_OFFSET.z
-    );
-    pacmanObj.position.copy(pacmanPosition);
-  }
+  // Calculate pacman's position using smooth interpolation
+  const normalizedProgress = Math.max(0, Math.min(1, progress));
+  const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
+  const pacmanX = baseX + POSITION_OFFSET.x;
+  const pacmanY = baseCenter.y + POSITION_OFFSET.y;
+  const pacmanZ = baseCenter.z + POSITION_OFFSET.z;
 
-  objectsToAnimate.forEach(({ key, offset, behindOffset }) => {
+  // Smooth fade-in for ghosts based on progress
+  const fadeInDuration = 0.2; // Fade in over 20% of progress
+  const ghostOpacity = normalizedProgress < fadeInDuration 
+    ? normalizedProgress / fadeInDuration 
+    : 1.0;
+
+  objectsToAnimate.forEach(({ key, behindOffset }) => {
     const object = ghosts[key];
-    if (!object) {
-      if (progress < 0.1) {
-        console.warn(`⚠️ ${key} object not found in ghosts!`);
-      }
-      return;
-    }
+    if (!object) return;
 
-    if (key === "pacman") {
-      // Pacman uses calculated position
-      if (pacmanPosition) {
-        object.position.copy(pacmanPosition);
-      }
-    } else {
-      // Ghosts position relative to pacman - behind in X direction (walking direction)
-      if (pacmanPosition) {
-        object.position.set(
-          pacmanPosition.x + behindOffset,
-          pacmanPosition.y,
-          pacmanPosition.z
-        );
-      }
-    }
+    // Calculate position
+    const finalX = pacmanX + behindOffset;
+    const finalY = pacmanY;
+    const finalZ = pacmanZ;
     
-    // Apply laying down rotation (progress = 1.0 means fully laid down)
-    // Ensure we have initial rotation stored
-    if (!introInitialRotations[key]) {
-      introInitialRotations[key] = object.quaternion.clone();
-    }
+    // Update position (GSAP will handle smooth interpolation via ScrollTrigger scrub)
+    object.position.set(finalX, finalY, finalZ);
     
-    // Different rotations for pacman vs ghosts
-    if (key === "pacman") {
-      // Pacman: only laying down rotation, ensure it's fully applied
-      slerpToLayDown(object, introInitialRotations[key], 1.0);
-    } else {
-      // Ghosts: first apply laying down rotation, then add +180-degree rotation on X axis
-      slerpToLayDown(object, introInitialRotations[key], 1.0);
-      const xRotation180 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));
-      object.quaternion.multiply(xRotation180);
+    // Set rotation quaternion directly (no recalculation - use pre-calculated quaternions)
+    if (key === "pacman" && pacmanTargetQuaternion) {
+      object.quaternion.copy(pacmanTargetQuaternion);
+    } else if (ghostTargetQuaternion) {
+      object.quaternion.copy(ghostTargetQuaternion);
     }
     
     // Force update matrix to ensure rotation is applied
     object.updateMatrixWorld(true);
     
-    // CRITICAL: Force visibility, scale, and opacity EVERY frame to override home-scroll
-    // home-scroll sets opacity to 0 at the end (progress > 0.95), we must override this
-    // Also ensure scale stays correct (pacman: 0.1, ghosts: 1.0)
+    // CRITICAL: Force visibility, scale EVERY frame to override home-scroll
     object.visible = true;
     if (key === "pacman") {
       object.scale.set(0.1, 0.1, 0.1);
@@ -520,15 +445,8 @@ function updateObjectsWalkBy(progress: number) {
       object.scale.set(1.0, 1.0, 1.0);
     }
     
-    // Smooth fade-in for ghosts based on progress
-    // Fade in over first 20% of animation for smooth appearance
-    let targetOpacity = 1.0;
-    if (key !== "pacman") {
-      const fadeInDuration = 0.2; // Fade in over 20% of progress
-      if (progress < fadeInDuration) {
-        targetOpacity = progress / fadeInDuration;
-      }
-    }
+    // Update opacity for meshes
+    const targetOpacity = key === "pacman" ? 1.0 : ghostOpacity;
     
     // Ensure child meshes are visible and maintain ghost colors
     const ghostColors: Record<string, number> = {
@@ -539,18 +457,14 @@ function updateObjectsWalkBy(progress: number) {
       ghost5: 0xff00ff, // Magenta
     };
     
-    // Make ALL meshes visible for ghosts (for testing - color everything)
-    let meshInfo = { total: 0, visible: 0, hidden: 0 };
     object.traverse((child) => {
       if ((child as any).isMesh && (child as any).material) {
-        meshInfo.total++;
         const mesh = child as THREE.Mesh;
         const childName = child.name || "";
         
         // Keep currency symbols hidden
         if (["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName)) {
           mesh.visible = false;
-          meshInfo.hidden++;
           return;
         }
         
@@ -561,16 +475,12 @@ function updateObjectsWalkBy(progress: number) {
           childName.includes("Bitcoin_2")
         )) {
           mesh.visible = false;
-          meshInfo.hidden++;
           return;
         }
         
-        // Make ALL meshes visible (including Groups and nested meshes)
         mesh.visible = true;
-        meshInfo.visible++;
         
-        // CRITICAL: Force opacity to targetOpacity EVERY frame to override home-scroll's opacity = 0
-        // Use smooth fade-in for ghosts, full opacity for pacman
+        // Set opacity
         if (Array.isArray(mesh.material)) {
           mesh.material.forEach((mat: any) => {
             mat.opacity = targetOpacity;
@@ -581,7 +491,7 @@ function updateObjectsWalkBy(progress: number) {
           (mesh.material as any).transparent = true;
         }
         
-        // Change ALL ghost mesh colors to bright colors for testing visibility
+        // Set ghost colors
         if (ghostColors[key] && key !== "pacman") {
           const newColor = ghostColors[key];
           if (Array.isArray(mesh.material)) {
@@ -594,18 +504,5 @@ function updateObjectsWalkBy(progress: number) {
         }
       }
     });
-    
-    // Debug logging for ghosts
-    if (key !== "pacman" && (progress < 0.1 || progress > 0.9)) {
-      const inFrustum = isInCameraFrustum(object);
-      const debugInfo = debugObjectVisibility(key, object);
-      console.log(`🔍 ${key} UPDATE [progress: ${progress.toFixed(3)}]:`, {
-        position: `${object.position.x.toFixed(2)}, ${object.position.y.toFixed(2)}, ${object.position.z.toFixed(2)}`,
-        visible: object.visible,
-        inFrustum,
-        meshInfo,
-        meshes: debugInfo.meshes.slice(0, 3), // Show first 3 meshes
-      });
-    }
   });
 }
