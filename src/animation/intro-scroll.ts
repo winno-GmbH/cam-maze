@@ -106,10 +106,18 @@ export function initIntroScrollAnimation() {
           // CRITICAL: Kill any home-scroll animations that might interfere
           const homeScrollTrigger = gsap.getById("homeScroll");
           if (homeScrollTrigger) {
-            // Get the timeline from ScrollTrigger's timeline property
             const homeTimeline = (homeScrollTrigger as any).timeline;
             if (homeTimeline && homeTimeline.pause) {
               homeTimeline.pause();
+            }
+          }
+
+          // CRITICAL: Kill any pov-scroll animations that might interfere
+          const povScrollTrigger = ScrollTrigger.getById("povScroll");
+          if (povScrollTrigger) {
+            const povTimeline = (povScrollTrigger as any).timeline;
+            if (povTimeline && povTimeline.pause) {
+              povTimeline.pause();
             }
           }
 
@@ -128,6 +136,9 @@ export function initIntroScrollAnimation() {
 
           const scrollDir = getScrollDirection();
           applyIntroScrollPreset(true, scrollDir);
+
+          // CRITICAL: Reset progress when entering to ensure consistent animation
+          lastIntroProgress = 0;
 
           // Immediately update objects to ensure they're visible
           requestAnimationFrame(() => {
@@ -146,10 +157,18 @@ export function initIntroScrollAnimation() {
           // CRITICAL: Kill any home-scroll animations that might interfere
           const homeScrollTrigger = gsap.getById("homeScroll");
           if (homeScrollTrigger) {
-            // Get the timeline from ScrollTrigger's timeline property
             const homeTimeline = (homeScrollTrigger as any).timeline;
             if (homeTimeline && homeTimeline.pause) {
               homeTimeline.pause();
+            }
+          }
+
+          // CRITICAL: Kill any pov-scroll animations that might interfere
+          const povScrollTrigger = ScrollTrigger.getById("povScroll");
+          if (povScrollTrigger) {
+            const povTimeline = (povScrollTrigger as any).timeline;
+            if (povTimeline && povTimeline.pause) {
+              povTimeline.pause();
             }
           }
 
@@ -169,13 +188,16 @@ export function initIntroScrollAnimation() {
           const scrollDir = getScrollDirection();
           applyIntroScrollPreset(true, scrollDir);
 
+          // CRITICAL: Reset progress when entering back to ensure consistent animation
+          lastIntroProgress = 0;
+
           // Immediately update objects to ensure they're visible
           requestAnimationFrame(() => {
             const scrollTrigger = ScrollTrigger.getById("introScroll");
             if (scrollTrigger && typeof scrollTrigger.progress === "number") {
               updateObjectsWalkBy(scrollTrigger.progress);
             } else {
-              updateObjectsWalkBy(lastIntroProgress);
+              updateObjectsWalkBy(0);
             }
           });
         },
@@ -311,9 +333,11 @@ function updateObjectsWalkBy(progress: number) {
       camera.position.z
     );
 
-    // Walk from left edge to center of viewfield
-    const walkStart = baseCenter.x - 5.0;
-    const walkEnd = baseCenter.x;
+    // Walk path symmetric around center - equal distance on both sides
+    // Start 5 units left of center, end 5 units right of center
+    const walkDistance = 5.0;
+    const walkStart = baseCenter.x - walkDistance;
+    const walkEnd = baseCenter.x + walkDistance;
 
     // Objects to animate - ghosts walk 0.5 units behind pacman
     const objectsToAnimate = [
