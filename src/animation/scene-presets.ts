@@ -294,6 +294,14 @@ export function applyIntroScrollPreset(
     const object = ghosts[key];
     if (!object) return;
 
+    // CRITICAL: For pacman, kill ALL GSAP animations first to prevent interference
+    if (key === "pacman") {
+      gsap.killTweensOf(object);
+      gsap.killTweensOf(object.scale);
+      gsap.killTweensOf(object.position);
+      gsap.killTweensOf(object.quaternion);
+    }
+
     // Calculate position with stagger
     const behindOffset = index === 0 ? 0 : -0.5 * index;
     const pos = new THREE.Vector3(
@@ -316,18 +324,19 @@ export function applyIntroScrollPreset(
       object.quaternion.copy(ghostTargetQuaternion);
     }
 
-    // Set scale - use direct setting for pacman to ensure it's applied immediately
+    // CRITICAL: Set pacman scale BEFORE any other operations
+    // Must be 0.1 for intro-scroll - set directly and kill any tweens
     if (key === "pacman") {
+      // Force set scale immediately
       object.scale.set(0.1, 0.1, 0.1);
+      object.updateMatrixWorld(true);
+      // Use gsap.set as backup
+      gsap.set(object.scale, { x: 0.1, y: 0.1, z: 0.1 });
     } else {
       object.scale.set(1.0, 1.0, 1.0);
+      object.updateMatrixWorld(true);
+      gsap.set(object.scale, { x: 1.0, y: 1.0, z: 1.0 });
     }
-    // Also set via gsap for consistency
-    gsap.set(object.scale, {
-      x: key === "pacman" ? 0.1 : 1.0,
-      y: key === "pacman" ? 0.1 : 1.0,
-      z: key === "pacman" ? 0.1 : 1.0,
-    });
 
     gsap.set(object, { visible: true });
 

@@ -246,7 +246,10 @@ function updateObjectsWalkBy(progress: number) {
     // CRITICAL: Force visibility, scale EVERY frame to override home-scroll
     object.visible = true;
     if (key === "pacman") {
+      // CRITICAL: Kill any GSAP animations that might be overriding pacman scale
+      gsap.killTweensOf(object.scale);
       object.scale.set(0.1, 0.1, 0.1);
+      object.updateMatrixWorld(true);
     } else {
       object.scale.set(1.0, 1.0, 1.0);
     }
