@@ -340,6 +340,22 @@ function updateCamera(
   const customLookAt = getCustomLookAtForProgress(progress, povPaths);
   if (customLookAt) {
     camera.lookAt(customLookAt);
+
+    // Log current rotation state
+    console.log(`🔄 Camera rotation in pov-scroll (via customLookAt):`, {
+      progress: progress.toFixed(3),
+      customLookAt: customLookAt.clone(),
+      cameraPosition: camera.position.clone(),
+      rotation: {
+        x: camera.rotation.x,
+        y: camera.rotation.y,
+        z: camera.rotation.z,
+        xDegrees: (camera.rotation.x * 180) / Math.PI,
+        yDegrees: (camera.rotation.y * 180) / Math.PI,
+        zDegrees: (camera.rotation.z * 180) / Math.PI,
+      },
+    });
+
     checkAndLogCameraRotationChange("pov-scroll (via customLookAt)");
     camera.updateProjectionMatrix();
     return;

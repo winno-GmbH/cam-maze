@@ -155,34 +155,7 @@ function updateScrollAnimation(
       cameraPathPoints[3].lookAt
     );
     const lookAtPoint = lookAtCurve.getPoint(progress);
-    
     camera.lookAt(lookAtPoint);
-    
-    // Log if rotation is near 0° or 180° (to track gradual 180° rotations)
-    const rotationY = camera.rotation.y;
-    const rotationYDegrees = (rotationY * 180) / Math.PI;
-    if (Math.abs(Math.abs(rotationY) - Math.PI) < 0.1 || Math.abs(rotationY) < 0.1) {
-      console.log(`🔄 Camera rotation in home-scroll (via lookAt interpolation):`, {
-        progress: progress.toFixed(3),
-        lookAtPoint: lookAtPoint.clone(),
-        cameraPosition: camera.position.clone(),
-        rotation: {
-          x: camera.rotation.x,
-          y: camera.rotation.y,
-          z: camera.rotation.z,
-          xDegrees: (camera.rotation.x * 180) / Math.PI,
-          yDegrees: rotationYDegrees,
-          zDegrees: (camera.rotation.z * 180) / Math.PI,
-        },
-        lookAtPoints: {
-          start: cameraPathPoints[0].lookAt.clone(),
-          second: cameraPathPoints[1].lookAt.clone(),
-          third: cameraPathPoints[2].lookAt.clone(),
-          end: cameraPathPoints[3].lookAt.clone(),
-        },
-      });
-    }
-    
     checkAndLogCameraRotationChange("home-scroll (via lookAt)");
     camera.updateProjectionMatrix();
   }
