@@ -1,4 +1,5 @@
 import gsap from "gsap";
+import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
@@ -10,6 +11,8 @@ import {
 import { DOM_ELEMENTS } from "../config/dom-elements";
 import { calculateObjectOrientation } from "./util";
 import { applyPovScrollPreset, getScrollDirection } from "./scene-presets";
+
+gsap.registerPlugin(ScrollTrigger);
 
 let povScrollTimeline: gsap.core.Timeline | null = null;
 
@@ -67,3 +70,103 @@ const ghostStates: Record<string, any> = {};
 
 // Tangent smoothers for POV scroll (separate from home loop smoothers)
 const povTangentSmoothers: Record<string, TangentSmoother> = {};
+
+// Initialize POV tangent smoothers
+function initializePovTangentSmoothers() {
+  // Camera smoother - most important for smooth user experience
+  povTangentSmoothers.camera = new TangentSmoother(
+    new THREE.Vector3(0, 0, -1),
+    0.08
+  );
+
+  // Ghost smoothers
+  povTangentSmoothers.ghost1 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.08
+  );
+  povTangentSmoothers.ghost2 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.08
+  );
+  povTangentSmoothers.ghost3 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.08
+  );
+  povTangentSmoothers.ghost4 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.08
+  );
+  povTangentSmoothers.ghost5 = new TangentSmoother(
+    new THREE.Vector3(1, 0, 0),
+    0.08
+  );
+}
+
+export function initPovScrollAnimation() {
+  if (povScrollTimeline) {
+    povScrollTimeline.kill();
+    povScrollTimeline = null;
+  }
+
+  // Initialize tangent smoothers for POV scroll
+  initializePovTangentSmoothers();
+
+  // Initialize ghost states
+  Object.keys(povTriggerPositions).forEach((key) => {
+    ghostStates[key] = {
+      hasBeenTriggered: false,
+      hasBeenDeactivated: false,
+      triggerCameraProgress: null,
+      ghostStartFadeInProgress: null,
+      ghostEndFadeInProgress: null,
+      ghostStartFadeOutProgress: null,
+      camStartFadeInProgress: null,
+      camEndFadeInProgress: null,
+      camStartFadeOutProgress: null,
+      endCameraProgress: null,
+      currentPathT: 0,
+      ghostTextOpacity: 0,
+      camTextOpacity: 0,
+      lastProgress: 0,
+    };
+  });
+
+  povScrollTimeline = gsap
+    .timeline({
+      scrollTrigger: {
+        id: "povScroll",
+        trigger: DOM_ELEMENTS.povSection,
+        start: "top bottom",
+        end: "bottom top",
+        markers: true,
+        scrub: 0.5,
+        toggleActions: "play none none reverse",
+        onEnter: () => {
+          const scrollDir = getScrollDirection();
+          applyPovScrollPreset(true, scrollDir);
+        },
+        onEnterBack: () => {
+          const scrollDir = getScrollDirection();
+          applyPovScrollPreset(true, scrollDir);
+        },
+      },
+    })
+    .to(
+      { progress: 0 },
+      {
+        progress: 1,
+        immediateRender: false,
+        onStart: () => {},
+        onUpdate: function () {
+          const progress = (this.targets()[0] as any).progress;
+          // Placeholder - full implementation needed
+        },
+        onReverseComplete: () => {
+          // Reset state
+        },
+        onComplete: () => {
+          // Reset state
+        },
+      }
+    );
+}
