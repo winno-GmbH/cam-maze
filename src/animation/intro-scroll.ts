@@ -83,6 +83,9 @@ let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
 let lastIntroProgress = 0;
 let isUpdating = false; // Prevent concurrent updates
+let lastUpdateTime = 0; // Throttle updates to prevent flickering
+let cachedObjectStates: Record<string, { opacity: number; visible: boolean }> =
+  {}; // Cache to avoid redundant updates
 
 export function initIntroScrollAnimation() {
   // Kill any existing timeline
@@ -139,6 +142,8 @@ export function initIntroScrollAnimation() {
 
           // CRITICAL: Reset progress when entering to ensure consistent animation
           lastIntroProgress = 0;
+          lastUpdateTime = 0; // Reset throttling
+          cachedObjectStates = {}; // Clear cache
 
           // Immediately update objects to ensure they're visible
           requestAnimationFrame(() => {
@@ -237,12 +242,15 @@ export function initIntroScrollAnimation() {
         },
         onUpdate: (self) => {
           // CRITICAL: Update on every scroll event - this is the primary update source
-          // Prevent concurrent updates to avoid flickering
+          // Throttle updates to prevent flickering (max 60fps)
+          const now = performance.now();
           if (
             isIntroScrollActive &&
             typeof self.progress === "number" &&
-            !isUpdating
+            !isUpdating &&
+            now - lastUpdateTime >= 16 // ~60fps max
           ) {
+            lastUpdateTime = now;
             lastIntroProgress = self.progress;
             updateObjectsWalkBy(self.progress);
           }
@@ -334,8 +342,8 @@ function updateObjectsWalkBy(progress: number) {
     );
 
     // Walk path symmetric around center - equal distance on both sides
-    // Start 5 units left of center, end 5 units right of center
-    const walkDistance = 5.0;
+    // Start 10 units left of center, end 10 units right of center
+    const walkDistance = 10.0;
     const walkStart = baseCenter.x - walkDistance;
     const walkEnd = baseCenter.x + walkDistance;
 
@@ -442,37 +450,73 @@ function updateObjectsWalkBy(progress: number) {
             return;
           }
 
-          // CRITICAL: Force mesh visibility EVERY frame
-          mesh.visible = true;
+          // Cache key for this mesh to avoid redundant updates
+          const cacheKey = `${key}_${childName}`;
+          const cachedState = cachedObjectStates[cacheKey];
 
-          // Set opacity - CRITICAL: Always ensure opacity is set
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              mat.opacity = targetOpacity;
-              mat.transparent = true;
-            });
-          } else {
-            (mesh.material as any).opacity = targetOpacity;
-            (mesh.material as any).transparent = true;
+          // Only update visibility if changed
+          if (!mesh.visible) {
+            mesh.visible = true;
           }
 
-          // Set ghost colors
+          // Only update opacity if changed (prevents flickering from redundant updates)
+          if (!cachedState || cachedState.opacity !== targetOpacity) {
+            if (Array.isArray(mesh.material)) {
+              mesh.material.forEach((mat: any) => {
+                if (mat.opacity !== targetOpacity) {
+                  mat.opacity = targetOpacity;
+                  mat.transparent = true;
+                }
+              });
+            } else {
+              const mat = mesh.material as any;
+              if (mat.opacity !== targetOpacity) {
+                mat.opacity = targetOpacity;
+                mat.transparent = true;
+              }
+            }
+
+            // Update cache
+            if (!cachedObjectStates[cacheKey]) {
+              cachedObjectStates[cacheKey] = {
+                opacity: targetOpacity,
+                visible: true,
+              };
+            } else {
+              cachedObjectStates[cacheKey].opacity = targetOpacity;
+            }
+          }
+
+          // Set ghost colors (only if needed)
           if (ghostColors[key] && key !== "pacman") {
             const newColor = ghostColors[key];
             if (Array.isArray(mesh.material)) {
               mesh.material.forEach((mat: any) => {
-                mat.color.setHex(newColor);
+                if (mat.color.getHex() !== newColor) {
+                  mat.color.setHex(newColor);
+                }
               });
             } else {
-              (mesh.material as any).color.setHex(newColor);
+              const mat = mesh.material as any;
+              if (mat.color.getHex() !== newColor) {
+                mat.color.setHex(newColor);
+              }
             }
           }
         }
       });
 
-      // CRITICAL: Force matrix update after all changes
+      // CRITICAL: Force matrix update after all changes (only once per object)
       object.updateMatrixWorld(true);
     });
+
+    // Clear cache periodically to prevent memory buildup (every 100 frames)
+    if (Math.floor(normalizedProgress * 100) % 10 === 0) {
+      // Keep cache size reasonable
+      if (Object.keys(cachedObjectStates).length > 100) {
+        cachedObjectStates = {};
+      }
+    }
   } finally {
     isUpdating = false;
   }
