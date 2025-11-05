@@ -291,9 +291,9 @@ function resetGhostsForIntro() {
         // Pacman: only laying down rotation, no additional 90-degree rotation
         // (pacman was working correctly before)
       } else {
-        // Ghosts: apply 180-degree rotation on X axis
-        const xRotation180 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));
-        object.quaternion.multiply(xRotation180);
+        // Ghosts: apply -180-degree rotation on X axis
+        const xRotationNeg180 = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI, 0, 0));
+        object.quaternion.multiply(xRotationNeg180);
       }
       
       object.updateMatrixWorld(true);
@@ -506,9 +506,9 @@ function updateObjectsWalkBy(progress: number) {
       // Pacman: only laying down rotation, no additional 90-degree rotation
       // (revert to original - pacman was working correctly)
     } else {
-      // Ghosts: apply 180-degree rotation on X axis
-      const xRotation180 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0));
-      object.quaternion.multiply(xRotation180);
+      // Ghosts: apply -180-degree rotation on X axis
+      const xRotationNeg180 = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI, 0, 0));
+      object.quaternion.multiply(xRotationNeg180);
     }
     
     // Force update matrix to ensure rotation is applied
@@ -522,6 +522,16 @@ function updateObjectsWalkBy(progress: number) {
       object.scale.set(0.1, 0.1, 0.1);
     } else {
       object.scale.set(1.0, 1.0, 1.0);
+    }
+    
+    // Smooth fade-in for ghosts based on progress
+    // Fade in over first 20% of animation for smooth appearance
+    let targetOpacity = 1.0;
+    if (key !== "pacman") {
+      const fadeInDuration = 0.2; // Fade in over 20% of progress
+      if (progress < fadeInDuration) {
+        targetOpacity = progress / fadeInDuration;
+      }
     }
     
     // Ensure child meshes are visible and maintain ghost colors
@@ -563,15 +573,15 @@ function updateObjectsWalkBy(progress: number) {
         mesh.visible = true;
         meshInfo.visible++;
         
-        // CRITICAL: Force opacity to 1 EVERY frame to override home-scroll's opacity = 0
-        // This ensures objects are always visible during intro-scroll
+        // CRITICAL: Force opacity to targetOpacity EVERY frame to override home-scroll's opacity = 0
+        // Use smooth fade-in for ghosts, full opacity for pacman
         if (Array.isArray(mesh.material)) {
           mesh.material.forEach((mat: any) => {
-            mat.opacity = 1;
+            mat.opacity = targetOpacity;
             mat.transparent = true;
           });
         } else {
-          (mesh.material as any).opacity = 1;
+          (mesh.material as any).opacity = targetOpacity;
           (mesh.material as any).transparent = true;
         }
         
