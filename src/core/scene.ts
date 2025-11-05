@@ -87,8 +87,8 @@ export function setupLighting(): void {
 
 export function createDebugLines(): void {
   const redLineGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-5, -1.55, -1.5),
-    new THREE.Vector3(5, -1.55, -1.5),
+    new THREE.Vector3(-5, -0.55, -1.5),
+    new THREE.Vector3(5, -0.55, -1.5),
   ]);
   const redLineMaterial = new THREE.LineBasicMaterial({
     color: 0xff0000,
