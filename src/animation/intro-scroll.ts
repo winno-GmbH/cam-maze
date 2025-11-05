@@ -409,11 +409,9 @@ export function initIntroScrollAnimation() {
         onLeave: () => {
           isIntroScrollActive = false;
 
-          // CRITICAL: Restore camera rotation IMMEDIATELY when leaving intro-scroll
-          // This must happen BEFORE the next preset is applied to ensure objects are positioned correctly
-          camera.rotation.y = camera.rotation.y - Math.PI;
-          camera.updateProjectionMatrix();
-          console.log("🔄 Camera rotation restored (rotated -180° on Y-axis)");
+          // Restore camera rotation via preset
+          const scrollDir = getScrollDirection();
+          applyIntroScrollPreset(false, scrollDir);
 
           // Restore floor to original appearance when leaving intro section
           scene.traverse((child) => {
@@ -431,11 +429,9 @@ export function initIntroScrollAnimation() {
         onLeaveBack: () => {
           isIntroScrollActive = false;
 
-          // CRITICAL: Restore camera rotation IMMEDIATELY when leaving intro-scroll
-          // This must happen BEFORE the next preset is applied to ensure objects are positioned correctly
-          camera.rotation.y = camera.rotation.y - Math.PI;
-          camera.updateProjectionMatrix();
-          console.log("🔄 Camera rotation restored (rotated -180° on Y-axis)");
+          // Restore camera rotation via preset
+          const scrollDir = getScrollDirection();
+          applyIntroScrollPreset(false, scrollDir);
 
           // Restore floor to original appearance when leaving intro section
           scene.traverse((child) => {

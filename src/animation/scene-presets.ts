@@ -228,7 +228,13 @@ export function applyIntroScrollPreset(
   isEntering: boolean,
   scrollDirection?: "up" | "down"
 ) {
-  if (!isEntering) return;
+  if (!isEntering) {
+    // When leaving intro-scroll, restore camera rotation
+    camera.rotation.y = camera.rotation.y - Math.PI;
+    camera.updateProjectionMatrix();
+    console.log("🔄 Camera rotation restored (rotated -180° on Y-axis)");
+    return;
+  }
 
   // CRITICAL: Rotate camera 180 degrees on Y-axis for intro-scroll
   // This ensures objects are visible and walk in the correct direction
