@@ -13,6 +13,63 @@ import { applyPovScrollPreset, getScrollDirection } from "./scene-presets";
 
 let povScrollTimeline: gsap.core.Timeline | null = null;
 
+// Track previous camera rotation to detect 180-degree changes
+let previousCameraRotation: THREE.Euler | null = null;
+
+function checkAndLogCameraRotationChange(context: string) {
+  const currentRotation = camera.rotation.clone();
+  
+  if (previousCameraRotation) {
+    // Calculate difference in radians for each axis
+    const diffX = Math.abs(currentRotation.x - previousCameraRotation.x);
+    const diffY = Math.abs(currentRotation.y - previousCameraRotation.y);
+    const diffZ = Math.abs(currentRotation.z - previousCameraRotation.z);
+    
+    // Normalize differences to account for wrapping (e.g., 359° to 1° = 2°, not 358°)
+    const normalizedDiffX = Math.min(diffX, Math.PI * 2 - diffX);
+    const normalizedDiffY = Math.min(diffY, Math.PI * 2 - diffY);
+    const normalizedDiffZ = Math.min(diffZ, Math.PI * 2 - diffZ);
+    
+    // Check if any axis changed by approximately 180 degrees (Math.PI radians)
+    const PI_THRESHOLD = Math.PI * 0.9; // Allow some tolerance (90% of 180°)
+    const has180DegreeChange = 
+      normalizedDiffX >= PI_THRESHOLD || 
+      normalizedDiffY >= PI_THRESHOLD || 
+      normalizedDiffZ >= PI_THRESHOLD;
+    
+    if (has180DegreeChange) {
+      console.log(`🔄 Camera 180° rotation detected in ${context}:`, {
+        previousRotation: {
+          x: previousCameraRotation.x,
+          y: previousCameraRotation.y,
+          z: previousCameraRotation.z,
+          xDegrees: (previousCameraRotation.x * 180) / Math.PI,
+          yDegrees: (previousCameraRotation.y * 180) / Math.PI,
+          zDegrees: (previousCameraRotation.z * 180) / Math.PI,
+        },
+        currentRotation: {
+          x: currentRotation.x,
+          y: currentRotation.y,
+          z: currentRotation.z,
+          xDegrees: (currentRotation.x * 180) / Math.PI,
+          yDegrees: (currentRotation.y * 180) / Math.PI,
+          zDegrees: (currentRotation.z * 180) / Math.PI,
+        },
+        rotationDelta: {
+          x: normalizedDiffX,
+          y: normalizedDiffY,
+          z: normalizedDiffZ,
+          xDegrees: (normalizedDiffX * 180) / Math.PI,
+          yDegrees: (normalizedDiffY * 180) / Math.PI,
+          zDegrees: (normalizedDiffZ * 180) / Math.PI,
+        },
+      });
+    }
+  }
+  
+  previousCameraRotation = currentRotation.clone();
+}
+
 // Animation state
 let previousCameraPosition: THREE.Vector3 | null = null;
 let rotationStarted = false;
@@ -283,10 +340,7 @@ function updateCamera(
   const customLookAt = getCustomLookAtForProgress(progress, povPaths);
   if (customLookAt) {
     camera.lookAt(customLookAt);
-    console.log("🔄 Camera rotation changed in pov-scroll (via customLookAt):", {
-      rotationY: camera.rotation.y,
-      rotationYDegrees: (camera.rotation.y * 180) / Math.PI,
-    });
+    checkAndLogCameraRotationChange("pov-scroll (via customLookAt)");
     camera.updateProjectionMatrix();
     return;
   }
@@ -340,10 +394,7 @@ function handleDefaultOrientation(
 
   if (!rotationStarted && !startedInitEndScreen) {
     camera.lookAt(defaultLookAt);
-    console.log("🔄 Camera rotation changed in pov-scroll (via defaultLookAt):", {
-      rotationY: camera.rotation.y,
-      rotationYDegrees: (camera.rotation.y * 180) / Math.PI,
-    });
+    checkAndLogCameraRotationChange("pov-scroll (via defaultLookAt)");
   }
 }
 
