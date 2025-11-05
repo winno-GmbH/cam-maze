@@ -101,8 +101,8 @@ export function createDebugLines(): void {
 
   // Green line at z: 1.5, lying along x-axis at y: 0.55 (same height as ghosts)
   const greenLineGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-5, -0.55, 1),
-    new THREE.Vector3(5, -0.55, 1),
+    new THREE.Vector3(-5, -0.55, 0.75),
+    new THREE.Vector3(5, -0.55, 0.75),
   ]);
   const greenLineMaterial = new THREE.LineBasicMaterial({
     color: 0x00ff00,
