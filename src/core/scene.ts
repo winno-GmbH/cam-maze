@@ -86,9 +86,10 @@ export function setupLighting(): void {
 }
 
 export function createDebugLines(): void {
+  // Red line at z: 0.5, lying along x-axis at y: 0.55 (same height as ghosts)
   const redLineGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-5, -0.55, -1.5),
-    new THREE.Vector3(5, -0.55, -1.5),
+    new THREE.Vector3(-5, 0.55, 0.5),
+    new THREE.Vector3(5, 0.55, 0.5),
   ]);
   const redLineMaterial = new THREE.LineBasicMaterial({
     color: 0xff0000,
@@ -100,8 +101,8 @@ export function createDebugLines(): void {
 
   // Green line at z: 1.5, lying along x-axis at y: 0.55 (same height as ghosts)
   const greenLineGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-5, -1.55, 1.5),
-    new THREE.Vector3(5, -1.55, 1.5),
+    new THREE.Vector3(-5, 0.55, 1.5),
+    new THREE.Vector3(5, 0.55, 1.5),
   ]);
   const greenLineMaterial = new THREE.LineBasicMaterial({
     color: 0x00ff00,
