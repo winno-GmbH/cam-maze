@@ -133,6 +133,25 @@ export function initIntroScrollAnimation() {
                 gsap.killTweensOf(obj.scale);
                 gsap.killTweensOf(obj.position);
                 gsap.killTweensOf(obj.quaternion);
+
+                // CRITICAL: Immediately set visibility and opacity to ensure objects are visible
+                // This overrides any opacity/visibility set by home-scroll
+                obj.visible = true;
+                obj.traverse((child) => {
+                  if ((child as any).isMesh && (child as any).material) {
+                    const mesh = child as THREE.Mesh;
+                    mesh.visible = true;
+                    if (Array.isArray(mesh.material)) {
+                      mesh.material.forEach((mat: any) => {
+                        mat.opacity = 1;
+                        mat.transparent = true;
+                      });
+                    } else {
+                      (mesh.material as any).opacity = 1;
+                      (mesh.material as any).transparent = true;
+                    }
+                  }
+                });
               }
             }
           );
@@ -140,17 +159,17 @@ export function initIntroScrollAnimation() {
           const scrollDir = getScrollDirection();
           applyIntroScrollPreset(true, scrollDir);
 
-          // CRITICAL: Reset progress when entering to ensure consistent animation
-          lastIntroProgress = 0;
-          lastUpdateTime = 0; // Reset throttling
+          // CRITICAL: Use actual scroll progress for bidirectional animation (don't reset to 0)
           cachedObjectStates = {}; // Clear cache
 
-          // Immediately update objects to ensure they're visible
+          // Immediately update objects to ensure they're visible and at correct position
           requestAnimationFrame(() => {
             const scrollTrigger = ScrollTrigger.getById("introScroll");
             if (scrollTrigger && typeof scrollTrigger.progress === "number") {
+              lastIntroProgress = scrollTrigger.progress;
               updateObjectsWalkBy(scrollTrigger.progress);
             } else {
+              lastIntroProgress = 0;
               updateObjectsWalkBy(0);
             }
           });
@@ -186,6 +205,25 @@ export function initIntroScrollAnimation() {
                 gsap.killTweensOf(obj.scale);
                 gsap.killTweensOf(obj.position);
                 gsap.killTweensOf(obj.quaternion);
+
+                // CRITICAL: Immediately set visibility and opacity to ensure objects are visible
+                // This overrides any opacity/visibility set by home-scroll
+                obj.visible = true;
+                obj.traverse((child) => {
+                  if ((child as any).isMesh && (child as any).material) {
+                    const mesh = child as THREE.Mesh;
+                    mesh.visible = true;
+                    if (Array.isArray(mesh.material)) {
+                      mesh.material.forEach((mat: any) => {
+                        mat.opacity = 1;
+                        mat.transparent = true;
+                      });
+                    } else {
+                      (mesh.material as any).opacity = 1;
+                      (mesh.material as any).transparent = true;
+                    }
+                  }
+                });
               }
             }
           );
@@ -193,16 +231,17 @@ export function initIntroScrollAnimation() {
           const scrollDir = getScrollDirection();
           applyIntroScrollPreset(true, scrollDir);
 
-          // CRITICAL: Reset progress when entering back to ensure consistent animation
-          lastIntroProgress = 0;
+          // CRITICAL: Use actual scroll progress for bidirectional animation (don't reset to 0)
+          cachedObjectStates = {}; // Clear cache
 
-          // Immediately update objects to ensure they're visible
+          // Immediately update objects to ensure they're visible and at correct position
           requestAnimationFrame(() => {
             const scrollTrigger = ScrollTrigger.getById("introScroll");
             if (scrollTrigger && typeof scrollTrigger.progress === "number") {
+              lastIntroProgress = scrollTrigger.progress;
               updateObjectsWalkBy(scrollTrigger.progress);
             } else {
-              updateObjectsWalkBy(0);
+              updateObjectsWalkBy(lastIntroProgress);
             }
           });
         },
@@ -242,15 +281,12 @@ export function initIntroScrollAnimation() {
         },
         onUpdate: (self) => {
           // CRITICAL: Update on every scroll event - this is the primary update source
-          // Throttle updates to prevent flickering (max 60fps)
-          const now = performance.now();
+          // Update bidirectionally based on scroll progress (works for both scroll up and down)
           if (
             isIntroScrollActive &&
             typeof self.progress === "number" &&
-            !isUpdating &&
-            now - lastUpdateTime >= 16 // ~60fps max
+            !isUpdating
           ) {
-            lastUpdateTime = now;
             lastIntroProgress = self.progress;
             updateObjectsWalkBy(self.progress);
           }
