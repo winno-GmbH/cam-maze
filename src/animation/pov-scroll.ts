@@ -6,8 +6,6 @@ import { getPovPaths, TangentSmoother } from "../paths/paths";
 import {
   povTriggerPositions,
   povPaths as pathPointsData,
-  getStartPosition,
-  getLookAtPosition,
 } from "../paths/pathpoints";
 import { DOM_ELEMENTS } from "../config/dom-elements";
 import { calculateObjectOrientation } from "./util";
@@ -232,22 +230,6 @@ export function initPovScrollAnimation() {
         onEnterBack: () => {
           const scrollDir = getScrollDirection();
           applyPovScrollPreset(true, scrollDir);
-        },
-        onLeaveBack: () => {
-          // When scrolling back up from POV scroll, restore camera rotation
-          // This prevents camera rotation issues when transitioning to intro scroll
-          // Restore camera to initial position/lookAt that intro-scroll expects
-          const startPosition = getStartPosition();
-          const lookAtPosition = getLookAtPosition();
-
-          // Restore camera position and rotation to what intro-scroll expects
-          camera.position.copy(startPosition);
-          camera.lookAt(lookAtPosition);
-          camera.fov = 50; // Restore original FOV
-          camera.updateProjectionMatrix();
-
-          handleLeavePOV();
-          resetState();
         },
       },
     })
