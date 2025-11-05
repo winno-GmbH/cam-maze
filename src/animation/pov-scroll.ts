@@ -38,32 +38,7 @@ function checkAndLogCameraRotationChange(context: string) {
       normalizedDiffZ >= PI_THRESHOLD;
 
     if (has180DegreeChange) {
-      console.log(`🔄 Camera 180° rotation detected in ${context}:`, {
-        previousRotation: {
-          x: previousCameraRotation.x,
-          y: previousCameraRotation.y,
-          z: previousCameraRotation.z,
-          xDegrees: (previousCameraRotation.x * 180) / Math.PI,
-          yDegrees: (previousCameraRotation.y * 180) / Math.PI,
-          zDegrees: (previousCameraRotation.z * 180) / Math.PI,
-        },
-        currentRotation: {
-          x: currentRotation.x,
-          y: currentRotation.y,
-          z: currentRotation.z,
-          xDegrees: (currentRotation.x * 180) / Math.PI,
-          yDegrees: (currentRotation.y * 180) / Math.PI,
-          zDegrees: (currentRotation.z * 180) / Math.PI,
-        },
-        rotationDelta: {
-          x: normalizedDiffX,
-          y: normalizedDiffY,
-          z: normalizedDiffZ,
-          xDegrees: (normalizedDiffX * 180) / Math.PI,
-          yDegrees: (normalizedDiffY * 180) / Math.PI,
-          zDegrees: (normalizedDiffZ * 180) / Math.PI,
-        },
-      });
+      // Camera rotation change detected (logging removed)
     }
   }
 
@@ -249,12 +224,10 @@ export function initPovScrollAnimation() {
         scrub: 0.5,
         toggleActions: "play none none reverse",
         onEnter: () => {
-          console.log("🎬 POV scroll section ENTERED!");
           const scrollDir = getScrollDirection();
           applyPovScrollPreset(true, scrollDir);
         },
         onEnterBack: () => {
-          console.log("🎬 POV scroll section ENTERED BACK!");
           const scrollDir = getScrollDirection();
           applyPovScrollPreset(true, scrollDir);
         },
@@ -340,22 +313,6 @@ function updateCamera(
   const customLookAt = getCustomLookAtForProgress(progress, povPaths);
   if (customLookAt) {
     camera.lookAt(customLookAt);
-
-    // Log current rotation state
-    console.log(`🔄 Camera rotation in pov-scroll (via customLookAt):`, {
-      progress: progress.toFixed(3),
-      customLookAt: customLookAt.clone(),
-      cameraPosition: camera.position.clone(),
-      rotation: {
-        x: camera.rotation.x,
-        y: camera.rotation.y,
-        z: camera.rotation.z,
-        xDegrees: (camera.rotation.x * 180) / Math.PI,
-        yDegrees: (camera.rotation.y * 180) / Math.PI,
-        zDegrees: (camera.rotation.z * 180) / Math.PI,
-      },
-    });
-
     checkAndLogCameraRotationChange("pov-scroll (via customLookAt)");
     camera.updateProjectionMatrix();
     return;

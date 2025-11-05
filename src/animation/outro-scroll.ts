@@ -11,12 +11,10 @@ export function initOutroScrollAnimation() {
       end: "bottom bottom",
       scrub: 0.5,
       onEnter: () => {
-        console.log("🎬 Outro scroll section ENTERED!");
         const scrollDir = getScrollDirection();
         applyOutroScrollPreset(true, scrollDir);
       },
       onEnterBack: () => {
-        console.log("🎬 Outro scroll section ENTERED BACK!");
         const scrollDir = getScrollDirection();
         applyOutroScrollPreset(true, scrollDir);
       },

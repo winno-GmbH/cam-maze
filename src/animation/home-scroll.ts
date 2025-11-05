@@ -36,32 +36,7 @@ function checkAndLogCameraRotationChange(context: string) {
       normalizedDiffZ >= PI_THRESHOLD;
     
     if (has180DegreeChange) {
-      console.log(`🔄 Camera 180° rotation detected in ${context}:`, {
-        previousRotation: {
-          x: previousCameraRotation.x,
-          y: previousCameraRotation.y,
-          z: previousCameraRotation.z,
-          xDegrees: (previousCameraRotation.x * 180) / Math.PI,
-          yDegrees: (previousCameraRotation.y * 180) / Math.PI,
-          zDegrees: (previousCameraRotation.z * 180) / Math.PI,
-        },
-        currentRotation: {
-          x: currentRotation.x,
-          y: currentRotation.y,
-          z: currentRotation.z,
-          xDegrees: (currentRotation.x * 180) / Math.PI,
-          yDegrees: (currentRotation.y * 180) / Math.PI,
-          zDegrees: (currentRotation.z * 180) / Math.PI,
-        },
-        rotationDelta: {
-          x: normalizedDiffX,
-          y: normalizedDiffY,
-          z: normalizedDiffZ,
-          xDegrees: (normalizedDiffX * 180) / Math.PI,
-          yDegrees: (normalizedDiffY * 180) / Math.PI,
-          zDegrees: (normalizedDiffZ * 180) / Math.PI,
-        },
-      });
+      // Camera rotation change detected (logging removed)
     }
   }
   
@@ -98,12 +73,10 @@ export function initHomeScrollAnimation(
         end: "bottom top",
         scrub: 0.5,
         onEnter: () => {
-          console.log("🎬 Home scroll section ENTERED!");
           const scrollDir = getScrollDirection();
           applyHomeScrollPreset(true, scrollDir, pausedPositions, pausedRotations);
         },
         onEnterBack: () => {
-          console.log("🎬 Home scroll section ENTERED BACK!");
           const scrollDir = getScrollDirection();
           applyHomeScrollPreset(true, scrollDir, pausedPositions, pausedRotations);
         },
