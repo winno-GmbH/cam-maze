@@ -86,22 +86,30 @@ export function setupLighting(): void {
 }
 
 export function createDebugLines(): void {
-  // Red line at z: +5, lying along x-axis at y: 0.55 (same height as ghosts)
+  // Red line at z: 0.5, lying along x-axis at y: 0.55 (same height as ghosts)
   const redLineGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-20, 0.55, 5),
-    new THREE.Vector3(20, 0.55, 5),
+    new THREE.Vector3(-5, 0.55, 0.5),
+    new THREE.Vector3(5, 0.55, 0.5),
   ]);
-  const redLineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+  const redLineMaterial = new THREE.LineBasicMaterial({ 
+    color: 0xff0000,
+    linewidth: 3
+  });
   const redLine = new THREE.Line(redLineGeometry, redLineMaterial);
+  redLine.renderOrder = 999; // Render on top
   scene.add(redLine);
 
-  // Green line at z: -5, lying along x-axis at y: 0.55 (same height as ghosts)
+  // Green line at z: 1.5, lying along x-axis at y: 0.55 (same height as ghosts)
   const greenLineGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-20, 0.55, -5),
-    new THREE.Vector3(20, 0.55, -5),
+    new THREE.Vector3(-5, 0.55, 1.5),
+    new THREE.Vector3(5, 0.55, 1.5),
   ]);
-  const greenLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+  const greenLineMaterial = new THREE.LineBasicMaterial({ 
+    color: 0x00ff00,
+    linewidth: 3
+  });
   const greenLine = new THREE.Line(greenLineGeometry, greenLineMaterial);
+  greenLine.renderOrder = 999; // Render on top
   scene.add(greenLine);
 }
 
