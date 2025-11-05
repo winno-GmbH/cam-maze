@@ -236,7 +236,14 @@ export function applyIntroScrollPreset(
 
   console.log("🎬 Applying INTRO SCROLL preset", { scrollDirection });
 
+  // CRITICAL: Rotate camera 180 degrees on Y-axis for intro-scroll
+  // This ensures objects are visible and walk in the correct direction
+  const currentRotation = camera.rotation.clone();
+  camera.rotation.y = currentRotation.y + Math.PI; // Rotate 180 degrees on Y-axis
+  camera.updateProjectionMatrix();
+
   // Calculate target quaternions ONCE (they don't change during scroll)
+  // Rotate objects 180 degrees to match camera rotation
   if (!pacmanTargetQuaternion || !ghostTargetQuaternion) {
     const pacmanObj = ghosts.pacman;
     if (pacmanObj) {
@@ -246,11 +253,16 @@ export function applyIntroScrollPreset(
 
       pacmanTargetQuaternion = introInitialRotations["pacman"].clone();
       slerpToLayDown(pacmanObj, introInitialRotations["pacman"], 1.0);
-      // Add +90 degrees rotation on X-axis (or try Y/Z if needed)
+      // Add +90 degrees rotation on X-axis
       const pacmanRotation90 = new THREE.Quaternion().setFromEuler(
         new THREE.Euler(Math.PI / 2, 0, 0)
       );
       pacmanObj.quaternion.multiply(pacmanRotation90);
+      // Rotate 180 degrees on Y-axis to match camera rotation
+      const pacmanRotationY180 = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(0, Math.PI, 0)
+      );
+      pacmanObj.quaternion.multiply(pacmanRotationY180);
       pacmanTargetQuaternion = pacmanObj.quaternion.clone();
       pacmanObj.quaternion.copy(introInitialRotations["pacman"]);
     }
@@ -269,8 +281,12 @@ export function applyIntroScrollPreset(
       );
       ghostObj.quaternion.multiply(xRotation180);
       // Add another 180 degrees on X-axis to flip them up
-      // Since +180 made them face down, we need to flip them, so rotate another 180
       ghostObj.quaternion.multiply(xRotation180);
+      // Rotate 180 degrees on Y-axis to match camera rotation
+      const ghostRotationY180 = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(0, Math.PI, 0)
+      );
+      ghostObj.quaternion.multiply(ghostRotationY180);
       ghostTargetQuaternion = ghostObj.quaternion.clone();
       ghostObj.quaternion.copy(introInitialRotations["ghost1"]);
     }

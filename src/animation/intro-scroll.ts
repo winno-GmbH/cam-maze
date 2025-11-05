@@ -378,6 +378,12 @@ export function initIntroScrollAnimation() {
         onLeave: () => {
           console.log("🎬 Intro section LEFT!");
           isIntroScrollActive = false;
+
+          // CRITICAL: Restore camera rotation when leaving intro-scroll
+          // Rotate camera back 180 degrees on Y-axis
+          camera.rotation.y = camera.rotation.y - Math.PI;
+          camera.updateProjectionMatrix();
+
           // Restore floor to original appearance when leaving intro section
           scene.traverse((child) => {
             if (child.name === "CAM-Floor") {
@@ -395,6 +401,12 @@ export function initIntroScrollAnimation() {
         onLeaveBack: () => {
           console.log("🎬 Intro section LEFT BACK!");
           isIntroScrollActive = false;
+
+          // CRITICAL: Restore camera rotation when leaving intro-scroll
+          // Rotate camera back 180 degrees on Y-axis
+          camera.rotation.y = camera.rotation.y - Math.PI;
+          camera.updateProjectionMatrix();
+
           // Restore floor to original appearance when leaving intro section
           scene.traverse((child) => {
             if (child.name === "CAM-Floor") {
@@ -507,11 +519,11 @@ function updateObjectsWalkBy(progress: number) {
       camera.position.z
     );
 
-    // Walk path symmetric around center - equal distance on both sides
-    // Start 10 units left of center, end 10 units right of center
+    // Walk path symmetric around center - REVERSED due to camera rotation
+    // Start 10 units right of center, end 10 units left of center (reversed from normal)
     const walkDistance = 10.0;
-    const walkStart = baseCenter.x - walkDistance;
-    const walkEnd = baseCenter.x + walkDistance;
+    const walkStart = baseCenter.x + walkDistance; // Start from right (reversed)
+    const walkEnd = baseCenter.x - walkDistance; // End at left (reversed)
 
     // Objects to animate - ghosts walk 0.5 units behind pacman
     const objectsToAnimate = [
