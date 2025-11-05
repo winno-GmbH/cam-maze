@@ -632,6 +632,7 @@ function updateObjectsWalkBy(progress: number) {
         ghost5: 0xff00ff, // Magenta
       };
 
+      let meshIndex = 0; // Track mesh index for logging
       object.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
           const mesh = child as THREE.Mesh;
@@ -666,7 +667,33 @@ function updateObjectsWalkBy(progress: number) {
           const cachedState = cachedObjectStates[cacheKey];
 
           // CRITICAL: Force visibility EVERY frame (don't check, just set it)
+          const beforeVisible = mesh.visible;
           mesh.visible = true;
+
+          // Log visibility/opacity for first few meshes of first object only
+          if (key === "pacman" && meshIndex < 3) {
+            let currentOpacity = 0;
+            if (Array.isArray(mesh.material)) {
+              currentOpacity = mesh.material[0]?.opacity || 0;
+            } else {
+              currentOpacity = (mesh.material as any).opacity || 0;
+            }
+            console.log(
+              `🔍 [updateObjectsWalkBy] ${key} mesh "${childName}" (progress: ${progress.toFixed(
+                3
+              )}):`,
+              {
+                beforeVisible,
+                afterVisible: mesh.visible,
+                currentOpacity,
+                targetOpacity,
+                transparent: Array.isArray(mesh.material)
+                  ? mesh.material[0]?.transparent
+                  : (mesh.material as any).transparent,
+              }
+            );
+            meshIndex++;
+          }
 
           // Only update opacity if changed (prevents flickering from redundant updates)
           if (!cachedState || cachedState.opacity !== targetOpacity) {
