@@ -182,8 +182,50 @@ export function initIntroScrollAnimation() {
           const scrollDir = getScrollDirection();
           applyIntroScrollPreset(true, scrollDir);
 
-          // CRITICAL: Use actual scroll progress for bidirectional animation (don't reset to 0)
-          cachedObjectStates = {}; // Clear cache
+          // CRITICAL: After preset is applied, FORCE visibility again to ensure objects are visible
+          // This is necessary because home-scroll makes objects invisible (opacity 0 or visible false)
+          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(
+            (key) => {
+              const obj = ghosts[key];
+              if (obj) {
+                obj.visible = true;
+                obj.traverse((child) => {
+                  if ((child as any).isMesh && (child as any).material) {
+                    const mesh = child as THREE.Mesh;
+                    const childName = child.name || "";
+
+                    // Skip currency symbols and pacman parts
+                    if (
+                      ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
+                      childName.includes("EUR") ||
+                      childName.includes("CHF") ||
+                      childName.includes("YEN") ||
+                      childName.includes("USD") ||
+                      childName.includes("GBP") ||
+                      (key === "pacman" &&
+                        (childName.includes("Shell") ||
+                          childName.includes("Bitcoin_1") ||
+                          childName.includes("Bitcoin_2")))
+                    ) {
+                      return;
+                    }
+
+                    mesh.visible = true;
+                    if (Array.isArray(mesh.material)) {
+                      mesh.material.forEach((mat: any) => {
+                        mat.opacity = 1;
+                        mat.transparent = true;
+                      });
+                    } else {
+                      (mesh.material as any).opacity = 1;
+                      (mesh.material as any).transparent = true;
+                    }
+                  }
+                });
+                obj.updateMatrixWorld(true);
+              }
+            }
+          );
 
           // Immediately update objects to ensure they're visible and at correct position
           requestAnimationFrame(() => {
@@ -277,8 +319,50 @@ export function initIntroScrollAnimation() {
           const scrollDir = getScrollDirection();
           applyIntroScrollPreset(true, scrollDir);
 
-          // CRITICAL: Use actual scroll progress for bidirectional animation (don't reset to 0)
-          cachedObjectStates = {}; // Clear cache
+          // CRITICAL: After preset is applied, FORCE visibility again to ensure objects are visible
+          // This is necessary because home-scroll makes objects invisible (opacity 0 or visible false)
+          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(
+            (key) => {
+              const obj = ghosts[key];
+              if (obj) {
+                obj.visible = true;
+                obj.traverse((child) => {
+                  if ((child as any).isMesh && (child as any).material) {
+                    const mesh = child as THREE.Mesh;
+                    const childName = child.name || "";
+
+                    // Skip currency symbols and pacman parts
+                    if (
+                      ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
+                      childName.includes("EUR") ||
+                      childName.includes("CHF") ||
+                      childName.includes("YEN") ||
+                      childName.includes("USD") ||
+                      childName.includes("GBP") ||
+                      (key === "pacman" &&
+                        (childName.includes("Shell") ||
+                          childName.includes("Bitcoin_1") ||
+                          childName.includes("Bitcoin_2")))
+                    ) {
+                      return;
+                    }
+
+                    mesh.visible = true;
+                    if (Array.isArray(mesh.material)) {
+                      mesh.material.forEach((mat: any) => {
+                        mat.opacity = 1;
+                        mat.transparent = true;
+                      });
+                    } else {
+                      (mesh.material as any).opacity = 1;
+                      (mesh.material as any).transparent = true;
+                    }
+                  }
+                });
+                obj.updateMatrixWorld(true);
+              }
+            }
+          );
 
           // Immediately update objects to ensure they're visible and at correct position
           requestAnimationFrame(() => {
