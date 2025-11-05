@@ -109,6 +109,9 @@ function startHomeLoop() {
       if (key !== "pacman") {
         ghost.visible = true;
         ghost.scale.set(1, 1, 1);
+      } else {
+        // CRITICAL: Pacman scale should be 0.05 (original model size)
+        ghost.scale.set(0.05, 0.05, 0.05);
       }
 
       // Reset the smoother with initial tangent
@@ -151,6 +154,14 @@ function updateHomeLoop(delta: number) {
     if (path) {
       const position = path.getPointAt(t);
       if (position) ghost.position.copy(position);
+
+      // CRITICAL: Maintain correct scale every frame
+      // Pacman should be 0.05 (original model size), ghosts should be 1.0
+      if (key === "pacman") {
+        ghost.scale.set(0.05, 0.05, 0.05);
+      } else {
+        ghost.scale.set(1.0, 1.0, 1.0);
+      }
 
       // Calculate target rotation from path tangent
       const targetQuat = new THREE.Quaternion();

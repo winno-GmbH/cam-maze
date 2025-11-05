@@ -58,11 +58,16 @@ export function applyHomeLoopPreset(
 
   // Home loop uses paths, so positions/rotations are handled by home-loop.ts
   // Here we just ensure visibility and scale settings
+  // Pacman scale should be 0.05 (original model size), ghosts are 1.0
   Object.entries(ghosts).forEach(([key, object]) => {
     gsap.set(object, { visible: true });
 
     if (key === "pacman") {
-      gsap.set(object.scale, { x: 1, y: 1, z: 1 });
+      // CRITICAL: Pacman default scale is 0.05 (from model loading)
+      // Kill any GSAP animations that might interfere
+      gsap.killTweensOf(object.scale);
+      object.scale.set(0.05, 0.05, 0.05);
+      object.updateMatrixWorld(true);
     } else {
       gsap.set(object.scale, { x: 1, y: 1, z: 1 });
     }
@@ -144,7 +149,16 @@ export function applyHomeScrollPreset(
       }
 
       gsap.set(object, { visible: true });
-      gsap.set(object.scale, { x: 1, y: 1, z: 1 });
+
+      // CRITICAL: Set correct scales - pacman should be 0.05 (original size), ghosts 1.0
+      if (key === "pacman") {
+        // Kill any GSAP animations that might interfere
+        gsap.killTweensOf(object.scale);
+        object.scale.set(0.05, 0.05, 0.05);
+        object.updateMatrixWorld(true);
+      } else {
+        gsap.set(object.scale, { x: 1, y: 1, z: 1 });
+      }
 
       // Set opacity to 1 initially (will be animated by home-scroll.ts)
       object.traverse((child) => {
