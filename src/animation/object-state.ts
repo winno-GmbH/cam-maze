@@ -16,6 +16,20 @@ export interface ObjectState {
   opacity: number; // Material opacity (0-1)
 }
 
+// Home-loop specific state - stores the t-value used for path calculations
+// This ensures home-scroll uses the exact same positions as home-loop
+export interface HomeLoopState {
+  t: number; // Current t-value (0-1) for home-loop paths
+  pausedT: number; // Last paused t-value when home-loop stopped
+  animationTime: number; // Current animation time
+}
+
+export const homeLoopState: HomeLoopState = {
+  t: 0,
+  pausedT: 0,
+  animationTime: 0,
+};
+
 // Current state - always reflects actual object positions
 export const currentObjectStates: Record<string, ObjectState> = {};
 
@@ -28,6 +42,32 @@ export function setHomeLoopActive(active: boolean) {
 
 export function getIsHomeLoopActive(): boolean {
   return isHomeLoopActive;
+}
+
+// Update home-loop t-value (called by home-loop every frame)
+export function updateHomeLoopT(t: number, animationTime: number) {
+  homeLoopState.t = t;
+  homeLoopState.animationTime = animationTime;
+}
+
+// Update paused t-value (called when home-loop stops)
+export function updateHomeLoopPausedT(pausedT: number) {
+  homeLoopState.pausedT = pausedT;
+}
+
+// Get current home-loop t-value (for active loop)
+export function getHomeLoopT(): number {
+  return homeLoopState.t;
+}
+
+// Get paused t-value (for when loop is stopped)
+export function getHomeLoopPausedT(): number {
+  return homeLoopState.pausedT;
+}
+
+// Get current home-loop animation time
+export function getHomeLoopAnimationTime(): number {
+  return homeLoopState.animationTime;
 }
 
 // Initialize state for all objects

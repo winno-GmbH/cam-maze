@@ -13,7 +13,11 @@ import {
   updateObjectOpacity,
   getCurrentPositions,
   getCurrentRotations,
+  getHomeLoopT,
+  getHomeLoopPausedT,
+  getIsHomeLoopActive,
 } from "./object-state";
+import { getHomePaths } from "../paths/paths";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
@@ -33,9 +37,28 @@ export function initHomeScrollAnimation() {
     homeScrollTimeline = null;
   }
 
-  // CRITICAL: Always use current state - this is the ONLY source of truth
-  // Positions and rotations are ONLY updated by home-loop, so we read them from state
-  const currentPositions = getCurrentPositions();
+  // CRITICAL: Use the EXACT same paths and t-value as home-loop
+  // This guarantees 100% identical positions
+  const homePaths = getHomePaths();
+
+  // Use pausedT if loop is stopped, otherwise use current t
+  // This ensures we always use the exact same t-value that home-loop used
+  const isLoopActive = getIsHomeLoopActive();
+  const t = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
+
+  // Calculate positions from the same paths with the same t-value
+  // This ensures they are EXACTLY the same as home-loop
+  const currentPositions: Record<string, THREE.Vector3> = {};
+  Object.entries(ghosts).forEach(([key, _]) => {
+    const path = homePaths[key];
+    if (path) {
+      const position = path.getPointAt(t);
+      if (position) {
+        currentPositions[key] = position;
+      }
+    }
+  });
+
   const currentRotations = getCurrentRotations();
 
   // CRITICAL: Ensure opacity starts at 100% when entering home-scroll

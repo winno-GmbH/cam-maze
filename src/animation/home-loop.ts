@@ -12,6 +12,8 @@ import {
   updateObjectPosition,
   updateObjectRotation,
   setHomeLoopActive,
+  updateHomeLoopT,
+  updateHomeLoopPausedT,
 } from "./object-state";
 import { isCurrencySymbol } from "./util";
 
@@ -62,6 +64,9 @@ function stopHomeLoop() {
   setHomeLoopActive(false); // Notify state manager that home-loop is inactive
   hasBeenPausedBefore = true;
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
+
+  // CRITICAL: Store pausedT in state so home-scroll can use the exact same value
+  updateHomeLoopPausedT(pausedT);
 
   // CRITICAL: State is already updated every frame in updateHomeLoop()
   // Just ensure we have the absolute latest by syncing one more time
@@ -212,6 +217,10 @@ function updateHomeLoop(delta: number) {
   rotationTransitionTime += delta;
 
   const t = (animationTime % LOOP_DURATION) / LOOP_DURATION;
+
+  // CRITICAL: Update t-value in state so home-scroll can use the exact same value
+  updateHomeLoopT(t, animationTime);
+
   const homePaths = getHomePaths();
   if (pacmanMixer) {
     pacmanMixer.update(delta);
