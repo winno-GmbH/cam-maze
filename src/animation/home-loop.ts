@@ -5,14 +5,19 @@ import { getHomePaths, TangentSmoother } from "../paths/paths";
 import { initHomeScrollAnimation } from "./home-scroll";
 import { calculateObjectOrientation } from "./util";
 import { applyHomeLoopPreset } from "./scene-presets";
+import {
+  syncStateFromObjects,
+  getCurrentPositions,
+  getCurrentRotations,
+  updateObjectPosition,
+  updateObjectRotation,
+} from "./object-state";
 
 const LOOP_DURATION = 50;
 const ROTATION_TRANSITION_DURATION = 1.5; // Seconds to transition from laying down to upright
 let isHomeLoopActive = true;
 let animationTime = 0;
 let pausedT = 0;
-let pausedPositions: Record<string, THREE.Vector3> = {};
-let pausedRotations: Record<string, THREE.Quaternion> = {};
 let homeLoopFrameRegistered = false;
 let rotationTransitionTime = 0;
 let startRotations: Record<string, THREE.Quaternion> = {};
@@ -52,16 +57,19 @@ function initializeHomeLoopTangentSmoothers() {
 function stopHomeLoop() {
   if (!isHomeLoopActive) return;
   isHomeLoopActive = false;
-  hasBeenPausedBefore = true; // Mark that we've paused (scrolled)
+  hasBeenPausedBefore = true;
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
-  pausedPositions = {};
-  pausedRotations = {};
+
+  // CRITICAL: Sync state from actual object positions before stopping
+  // This ensures pausedPositions always reflects the exact current positions
+  syncStateFromObjects();
 
   const homePaths = getHomePaths();
-  Object.entries(ghosts).forEach(([key, ghost]) => {
-    pausedPositions[key] = ghost.position.clone();
+  const pausedPositions = getCurrentPositions();
+  const pausedRotations: Record<string, THREE.Quaternion> = {};
 
-    // Store the target tangent-based rotation, not the current transitioning rotation
+  // Calculate proper rotations based on path tangents
+  Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path && homeLoopTangentSmoothers[key]) {
       const rawTangent = path.getTangentAt(pausedT);
@@ -69,23 +77,64 @@ function stopHomeLoop() {
         const smoothTangent = homeLoopTangentSmoothers[key].getCurrentTangent();
         const objectType = key === "pacman" ? "pacman" : "ghost";
 
-        // Create temp object to calculate target quaternion
         const tempObject = new THREE.Object3D();
         calculateObjectOrientation(tempObject, smoothTangent, objectType);
         pausedRotations[key] = tempObject.quaternion.clone();
+        updateObjectRotation(key, pausedRotations[key]);
       } else {
         pausedRotations[key] = ghost.quaternion.clone();
+        updateObjectRotation(key, pausedRotations[key]);
       }
     } else {
       pausedRotations[key] = ghost.quaternion.clone();
+      updateObjectRotation(key, pausedRotations[key]);
     }
   });
+
   initHomeScrollAnimation(pausedPositions, pausedRotations);
 }
 
 function startHomeLoop() {
   isHomeLoopActive = true;
-  animationTime = pausedT * LOOP_DURATION;
+
+  // CRITICAL: When returning from scroll, sync state from actual object positions
+  // This ensures we start from where objects actually are, not where they were
+  if (hasBeenPausedBefore) {
+    syncStateFromObjects();
+    // Recalculate pausedT from actual positions to keep in sync
+    const homePaths = getHomePaths();
+    const currentPositions = getCurrentPositions();
+
+    // Find closest t value for each object and use average
+    let totalT = 0;
+    let count = 0;
+    Object.entries(currentPositions).forEach(([key, pos]) => {
+      const path = homePaths[key];
+      if (path) {
+        // Simple approximation: find closest point on path
+        let closestT = 0;
+        let closestDist = Infinity;
+        for (let i = 0; i <= 100; i++) {
+          const t = i / 100;
+          const pathPoint = path.getPointAt(t);
+          if (pathPoint) {
+            const dist = pathPoint.distanceTo(pos);
+            if (dist < closestDist) {
+              closestDist = dist;
+              closestT = t;
+            }
+          }
+        }
+        totalT += closestT;
+        count++;
+      }
+    });
+    if (count > 0) {
+      pausedT = totalT / count;
+    }
+    animationTime = pausedT * LOOP_DURATION;
+  }
+
   rotationTransitionTime = 0;
   startRotations = {};
 
@@ -96,27 +145,38 @@ function startHomeLoop() {
   initializeHomeLoopTangentSmoothers();
 
   const homePaths = getHomePaths();
+  const currentPositions = getCurrentPositions();
+
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
+      // Use current position from state if available, otherwise use path position
+      const savedPosition = currentPositions[key];
+      if (savedPosition && hasBeenPausedBefore) {
+        ghost.position.copy(savedPosition);
+      } else {
+        const position = path.getPointAt(pausedT);
+        if (position) {
+          ghost.position.copy(position);
+          updateObjectPosition(key, position);
+        }
+      }
+
       // Only store current rotation for transition if we're returning from scroll
       if (hasBeenPausedBefore) {
         startRotations[key] = ghost.quaternion.clone();
       }
 
-      const position = path.getPointAt(0);
-      if (position) ghost.position.copy(position);
       if (key !== "pacman") {
         ghost.visible = true;
         ghost.scale.set(1, 1, 1);
       } else {
-        // CRITICAL: Pacman scale should be 0.05 (original model size)
         ghost.scale.set(0.05, 0.05, 0.05);
       }
 
       // Reset the smoother with initial tangent
       if (homeLoopTangentSmoothers[key]) {
-        const initialTangent = path.getTangentAt(0);
+        const initialTangent = path.getTangentAt(pausedT);
         if (initialTangent) {
           homeLoopTangentSmoothers[key].reset(initialTangent);
         }
@@ -153,7 +213,11 @@ function updateHomeLoop(delta: number) {
     const path = homePaths[key];
     if (path) {
       const position = path.getPointAt(t);
-      if (position) ghost.position.copy(position);
+      if (position) {
+        ghost.position.copy(position);
+        // CRITICAL: Update state every frame to keep it in sync
+        updateObjectPosition(key, position);
+      }
 
       // CRITICAL: Maintain correct scale every frame
       // Pacman should be 0.05 (original model size), ghosts should be 1.0
@@ -193,6 +257,9 @@ function updateHomeLoop(delta: number) {
         // After transition or on first load, use normal rotation
         ghost.quaternion.copy(targetQuat);
       }
+
+      // CRITICAL: Update state every frame to keep it in sync
+      updateObjectRotation(key, ghost.quaternion);
     }
   });
 }

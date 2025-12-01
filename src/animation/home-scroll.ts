@@ -7,6 +7,11 @@ import { getHomeScrollPaths } from "../paths/paths";
 import { homeLoopHandler } from "./home-loop";
 import { slerpToLayDown } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
+import {
+  syncStateFromObjects,
+  updateObjectPosition,
+  updateObjectRotation,
+} from "./object-state";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
@@ -42,13 +47,26 @@ export function initHomeScrollAnimation(
         scrub: 0.5,
         onEnter: () => {
           const scrollDir = getScrollDirection();
-          applyHomeScrollPreset(true, scrollDir, pausedPositions, pausedRotations);
+          applyHomeScrollPreset(
+            true,
+            scrollDir,
+            pausedPositions,
+            pausedRotations
+          );
         },
         onEnterBack: () => {
           const scrollDir = getScrollDirection();
-          applyHomeScrollPreset(true, scrollDir, pausedPositions, pausedRotations);
+          applyHomeScrollPreset(
+            true,
+            scrollDir,
+            pausedPositions,
+            pausedRotations
+          );
         },
         onScrubComplete: () => {
+          // CRITICAL: Sync state from actual object positions before returning to home-loop
+          // This ensures positions are up-to-date when scrolling back
+          syncStateFromObjects();
           homeLoopHandler();
         },
       },
@@ -83,7 +101,7 @@ function updateScrollAnimation(
   // This prevents conflicts when scrolling between sections
   const introScrollTrigger = gsap.getById("introScroll");
   const isIntroScrollActive = introScrollTrigger && introScrollTrigger.isActive;
-  
+
   // Camera animation (unchanged)
   if (paths.camera) {
     const cameraPoint = paths.camera.getPointAt(progress);
@@ -128,9 +146,11 @@ function updateScrollAnimation(
 
     if (pacmanPoint) {
       pacman.position.copy(pacmanPoint);
+      updateObjectPosition("pacman", pacmanPoint);
 
       // Apply bidirectional laying down animation
       slerpToLayDown(pacman, pausedRotations["pacman"], rotationProgress);
+      updateObjectRotation("pacman", pacman.quaternion);
 
       // Animate pacman opacity - traverse all nested meshes
       pacman.traverse((child) => {
@@ -161,25 +181,27 @@ function updateScrollAnimation(
 
       if (ghostPoint) {
         ghost.position.copy(ghostPoint);
+        updateObjectPosition(key, ghostPoint);
 
         // Apply bidirectional laying down animation
         slerpToLayDown(ghost, pausedRotations[key], rotationProgress);
+        updateObjectRotation(key, ghost.quaternion);
 
-      // Animate ghost opacity - traverse all nested meshes
-      ghost.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          const mesh = child as THREE.Mesh;
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              mat.opacity = opacity;
-              mat.transparent = true;
-            });
-          } else {
-            (mesh.material as any).opacity = opacity;
-            (mesh.material as any).transparent = true;
+        // Animate ghost opacity - traverse all nested meshes
+        ghost.traverse((child) => {
+          if ((child as any).isMesh && (child as any).material) {
+            const mesh = child as THREE.Mesh;
+            if (Array.isArray(mesh.material)) {
+              mesh.material.forEach((mat: any) => {
+                mat.opacity = opacity;
+                mat.transparent = true;
+              });
+            } else {
+              (mesh.material as any).opacity = opacity;
+              (mesh.material as any).transparent = true;
+            }
           }
-        }
-      });
+        });
       }
     }
   });
