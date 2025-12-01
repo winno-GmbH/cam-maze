@@ -11,9 +11,8 @@ import {
 } from "./animation/home-loop";
 import { initPovScrollAnimation } from "./animation/pov-scroll";
 import { loadModel } from "./core/objects";
-import { setupCamera, camera } from "./core/camera";
-import * as THREE from "three";
-import { X, XCoordKey, Z, ZCoordKey } from "./paths/coordinates";
+import { setupCamera } from "./core/camera";
+import { XCoordKey, ZCoordKey } from "./paths/coordinates";
 import { initIntroScrollAnimation } from "./animation/intro-scroll";
 import { initOutroScrollAnimation } from "./animation/outro-scroll";
 

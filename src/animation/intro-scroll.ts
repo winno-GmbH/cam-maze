@@ -12,80 +12,10 @@ import {
   INTRO_POSITION_OFFSET,
 } from "./scene-presets";
 
-// Debug helper function to check visibility issues
-function debugObjectVisibility(key: string, object: THREE.Object3D) {
-  const info: any = {
-    key,
-    exists: !!object,
-    visible: object?.visible,
-    scale: object?.scale
-      ? `${object.scale.x.toFixed(2)}, ${object.scale.y.toFixed(
-          2
-        )}, ${object.scale.z.toFixed(2)}`
-      : "N/A",
-    position: object?.position
-      ? `${object.position.x.toFixed(2)}, ${object.position.y.toFixed(
-          2
-        )}, ${object.position.z.toFixed(2)}`
-      : "N/A",
-    meshCount: 0,
-    visibleMeshCount: 0,
-    hiddenMeshCount: 0,
-    meshes: [] as string[],
-  };
-
-  if (object) {
-    object.traverse((child) => {
-      if ((child as any).isMesh) {
-        info.meshCount++;
-        const mesh = child as THREE.Mesh;
-        const childName = child.name || "unnamed";
-
-        if (mesh.visible) {
-          info.visibleMeshCount++;
-        } else {
-          info.hiddenMeshCount++;
-        }
-
-        const meshInfo = {
-          name: childName,
-          visible: mesh.visible,
-          material: mesh.material
-            ? Array.isArray(mesh.material)
-              ? `Array[${mesh.material.length}]`
-              : mesh.material.type
-            : "No material",
-          opacity:
-            (mesh.material as any)?.opacity !== undefined
-              ? (mesh.material as any).opacity
-              : "N/A",
-        };
-        info.meshes.push(meshInfo);
-      }
-    });
-  }
-
-  return info;
-}
-
-// Check if object is in camera frustum
-function isInCameraFrustum(object: THREE.Object3D): boolean {
-  const frustum = new THREE.Frustum();
-  const matrix = new THREE.Matrix4().multiplyMatrices(
-    camera.projectionMatrix,
-    camera.matrixWorldInverse
-  );
-  frustum.setFromProjectionMatrix(matrix);
-  return frustum.containsPoint(object.position);
-}
-
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
 let lastIntroProgress = 0;
 let isUpdating = false; // Prevent concurrent updates
-let lastUpdateTime = 0; // Throttle updates to prevent flickering
-let cachedObjectStates: Record<string, { opacity: number; visible: boolean }> =
-  {}; // Cache to avoid redundant updates
 
 export function initIntroScrollAnimation() {
   // Kill any existing timeline
@@ -96,11 +26,11 @@ export function initIntroScrollAnimation() {
 
   introScrollTimeline = gsap
     .timeline({
-      scrollTrigger: {
-        trigger: ".sc--intro",
+    scrollTrigger: {
+      trigger: ".sc--intro",
         start: "top top",
-        end: "bottom bottom",
-        scrub: 0.5,
+      end: "bottom bottom",
+      scrub: 0.5,
         refreshPriority: 1,
         onEnter: () => {
           isIntroScrollActive = true;
@@ -228,8 +158,6 @@ export function initIntroScrollAnimation() {
 
           // CRITICAL: Reset update flags to ensure first update runs
           isUpdating = false;
-          lastUpdateTime = 0;
-          cachedObjectStates = {};
 
           // Immediately update objects to ensure they're visible and at correct position
           // Call synchronously first, then also in requestAnimationFrame for safety
@@ -380,8 +308,6 @@ export function initIntroScrollAnimation() {
 
           // CRITICAL: Reset update flags to ensure first update runs
           isUpdating = false;
-          lastUpdateTime = 0;
-          cachedObjectStates = {};
 
           // Immediately update objects to ensure they're visible and at correct position
           // Call synchronously first, then also in requestAnimationFrame for safety
@@ -460,11 +386,11 @@ export function initIntroScrollAnimation() {
     .fromTo(
       ".sc_h--intro",
       { scale: 0.5, opacity: 0 },
-      {
-        keyframes: [
-          { scale: 0.5, opacity: 0, duration: 0 },
-          { scale: 0.8, opacity: 1, duration: 0.3 },
-          { scale: 1.2, opacity: 1, duration: 0.4 },
+    {
+      keyframes: [
+        { scale: 0.5, opacity: 0, duration: 0 },
+        { scale: 0.8, opacity: 1, duration: 0.3 },
+        { scale: 1.2, opacity: 1, duration: 0.4 },
           { scale: 1.5, opacity: 0, duration: 0.3 },
         ],
       }
@@ -472,11 +398,11 @@ export function initIntroScrollAnimation() {
     .fromTo(
       ".sc_b--intro",
       { scale: 0.5, opacity: 0 },
-      {
-        keyframes: [
-          { scale: 0.5, opacity: 0, duration: 0 },
-          { scale: 0.8, opacity: 1, duration: 0.3 },
-          { scale: 1.2, opacity: 1, duration: 0.4 },
+    {
+      keyframes: [
+        { scale: 0.5, opacity: 0, duration: 0 },
+        { scale: 0.8, opacity: 1, duration: 0.3 },
+        { scale: 1.2, opacity: 1, duration: 0.4 },
           { scale: 1.5, opacity: 0, duration: 0.3 },
         ],
       }
@@ -659,10 +585,6 @@ function updateObjectsWalkBy(progress: number) {
             return;
           }
 
-          // Cache key for this mesh to avoid redundant updates
-          const cacheKey = `${key}_${childName}`;
-          const cachedState = cachedObjectStates[cacheKey];
-
           // CRITICAL: Force visibility EVERY frame (don't check, just set it)
           mesh.visible = true;
 
@@ -709,14 +631,6 @@ function updateObjectsWalkBy(progress: number) {
       // CRITICAL: Force matrix update after all changes (only once per object)
       object.updateMatrixWorld(true);
     });
-
-    // Clear cache periodically to prevent memory buildup (every 100 frames)
-    if (Math.floor(normalizedProgress * 100) % 10 === 0) {
-      // Keep cache size reasonable
-      if (Object.keys(cachedObjectStates).length > 100) {
-        cachedObjectStates = {};
-      }
-    }
   } finally {
     isUpdating = false;
   }
