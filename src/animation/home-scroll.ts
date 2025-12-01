@@ -78,36 +78,96 @@ export function initHomeScrollAnimation(
         end: "bottom top",
         scrub: 0.5,
         onEnter: () => {
-          // CRITICAL: Always get fresh positions from state before applying preset
-          // Use requestAnimationFrame to ensure state is synced after any pending updates
-          requestAnimationFrame(() => {
-            syncStateFromObjects();
-            const freshPositions = getCurrentPositions();
-            const freshRotations = getCurrentRotations();
-            const scrollDir = getScrollDirection();
-            applyHomeScrollPreset(
-              true,
-              scrollDir,
-              freshPositions,
-              freshRotations
-            );
+          // DEBUG: Log when entering home-scroll
+          console.log("[home-scroll] onEnter called");
+
+          // Check for any active GSAP tweens on opacity
+          Object.entries(ghosts).forEach(([key, object]) => {
+            object.traverse((child) => {
+              if ((child as any).isMesh && (child as any).material) {
+                const mesh = child as THREE.Mesh;
+                if (Array.isArray(mesh.material)) {
+                  mesh.material.forEach((mat: any) => {
+                    const activeTweens = gsap.getTweensOf(mat.opacity);
+                    if (activeTweens.length > 0) {
+                      console.log(
+                        `[home-scroll] Found active tweens on ${key} material opacity:`,
+                        activeTweens
+                      );
+                    }
+                  });
+                } else {
+                  const activeTweens = gsap.getTweensOf(
+                    (mesh.material as any).opacity
+                  );
+                  if (activeTweens.length > 0) {
+                    console.log(
+                      `[home-scroll] Found active tweens on ${key} material opacity:`,
+                      activeTweens
+                    );
+                  }
+                }
+              }
+            });
           });
+
+          // Then get fresh positions and apply preset
+          syncStateFromObjects();
+          const freshPositions = getCurrentPositions();
+          const freshRotations = getCurrentRotations();
+          const scrollDir = getScrollDirection();
+          applyHomeScrollPreset(
+            true,
+            scrollDir,
+            freshPositions,
+            freshRotations
+          );
         },
         onEnterBack: () => {
-          // CRITICAL: Always get fresh positions from state before applying preset
-          // Use requestAnimationFrame to ensure state is synced after any pending updates
-          requestAnimationFrame(() => {
-            syncStateFromObjects();
-            const freshPositions = getCurrentPositions();
-            const freshRotations = getCurrentRotations();
-            const scrollDir = getScrollDirection();
-            applyHomeScrollPreset(
-              true,
-              scrollDir,
-              freshPositions,
-              freshRotations
-            );
+          // DEBUG: Log when entering back
+          console.log("[home-scroll] onEnterBack called");
+
+          // Check for any active GSAP tweens on opacity
+          Object.entries(ghosts).forEach(([key, object]) => {
+            object.traverse((child) => {
+              if ((child as any).isMesh && (child as any).material) {
+                const mesh = child as THREE.Mesh;
+                if (Array.isArray(mesh.material)) {
+                  mesh.material.forEach((mat: any) => {
+                    const activeTweens = gsap.getTweensOf(mat.opacity);
+                    if (activeTweens.length > 0) {
+                      console.log(
+                        `[home-scroll] Found active tweens on ${key} material opacity:`,
+                        activeTweens
+                      );
+                    }
+                  });
+                } else {
+                  const activeTweens = gsap.getTweensOf(
+                    (mesh.material as any).opacity
+                  );
+                  if (activeTweens.length > 0) {
+                    console.log(
+                      `[home-scroll] Found active tweens on ${key} material opacity:`,
+                      activeTweens
+                    );
+                  }
+                }
+              }
+            });
           });
+
+          // Then get fresh positions and apply preset
+          syncStateFromObjects();
+          const freshPositions = getCurrentPositions();
+          const freshRotations = getCurrentRotations();
+          const scrollDir = getScrollDirection();
+          applyHomeScrollPreset(
+            true,
+            scrollDir,
+            freshPositions,
+            freshRotations
+          );
         },
         onScrubComplete: () => {
           // CRITICAL: Sync state from actual object positions before returning to home-loop
@@ -127,6 +187,10 @@ export function initHomeScrollAnimation(
         immediateRender: false,
         onUpdate: function () {
           const progress = this.targets()[0].progress;
+          // DEBUG: Log progress to see if it starts at 0
+          if (progress < 0.1) {
+            console.log("[home-scroll] Progress:", progress);
+          }
           camera.fov = originalFOV;
           camera.updateProjectionMatrix();
           // CRITICAL: Always get fresh rotations from state (they're updated in updateScrollAnimation)
@@ -209,15 +273,32 @@ function updateScrollAnimation(
   // Opacity calculation: start at 100% (progress 0), fade to 0% (progress 0.85-0.95)
   const fadeStartProgress = 0.85;
   const fadeEndProgress = 0.95;
-  // CRITICAL: At progress 0, opacity should be 1.0 (100%)
+  // CRITICAL: At progress 0 or very close to 0, opacity should ALWAYS be 1.0 (100%)
   // Fade from 1.0 to 0.0 between fadeStartProgress and fadeEndProgress
-  const opacity =
-    progress < fadeStartProgress
-      ? 1.0
-      : progress > fadeEndProgress
-      ? 0.0
-      : 1.0 -
-        (progress - fadeStartProgress) / (fadeEndProgress - fadeStartProgress);
+  // Use a small threshold (0.01) to handle floating point precision issues
+  let opacity: number;
+  if (progress <= 0.01) {
+    // At the very start, always 100%
+    opacity = 1.0;
+  } else if (progress < fadeStartProgress) {
+    // Before fade starts, stay at 100%
+    opacity = 1.0;
+  } else if (progress > fadeEndProgress) {
+    // After fade ends, stay at 0%
+    opacity = 0.0;
+  } else {
+    // During fade, interpolate from 1.0 to 0.0
+    opacity =
+      1.0 -
+      (progress - fadeStartProgress) / (fadeEndProgress - fadeStartProgress);
+  }
+
+  // DEBUG: Log opacity calculation when it's not 1.0 at the start
+  if (progress < 0.1 && opacity !== 1.0) {
+    console.log(
+      `[home-scroll] Progress: ${progress}, Calculated Opacity: ${opacity}`
+    );
+  }
 
   // Apply smooth easing to rotation progress (bidirectional - reverses when scrolling up)
   const rotationProgress = Math.pow(progress, 1.5);
@@ -243,10 +324,24 @@ function updateScrollAnimation(
           const mesh = child as THREE.Mesh;
           if (Array.isArray(mesh.material)) {
             mesh.material.forEach((mat: any) => {
+              // DEBUG: Log when opacity is set to a non-1.0 value at low progress
+              if (progress < 0.1 && mat.opacity !== opacity) {
+                console.log(
+                  `[home-scroll] Pacman material opacity changed from ${mat.opacity} to ${opacity} (progress: ${progress})`
+                );
+              }
               mat.opacity = opacity;
               mat.transparent = true;
             });
           } else {
+            // DEBUG: Log when opacity is set to a non-1.0 value at low progress
+            if (progress < 0.1 && (mesh.material as any).opacity !== opacity) {
+              console.log(
+                `[home-scroll] Pacman material opacity changed from ${
+                  (mesh.material as any).opacity
+                } to ${opacity} (progress: ${progress})`
+              );
+            }
             (mesh.material as any).opacity = opacity;
             (mesh.material as any).transparent = true;
           }
