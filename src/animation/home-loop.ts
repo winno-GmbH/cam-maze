@@ -107,14 +107,11 @@ function startHomeLoop() {
   isHomeLoopActive = true;
   setHomeLoopActive(true); // Notify state manager that home-loop is active
 
-  // CRITICAL: Always sync state before starting loop to ensure we have latest positions
-  // This is especially important when returning from scroll
-  syncStateFromObjects();
-
-  // CRITICAL: When returning from scroll, recalculate pausedT from actual positions
+  // CRITICAL: When returning from scroll, recalculate pausedT from state positions
+  // We use state positions because they are the ONLY source of truth (set by home-loop)
   if (hasBeenPausedBefore) {
     const homePaths = getHomePaths();
-    const currentPositions = getCurrentPositions();
+    const currentPositions = getCurrentPositions(); // Read from state (last updated by home-loop)
 
     // Find closest t value for each object and use average
     let totalT = 0;
@@ -157,8 +154,8 @@ function startHomeLoop() {
 
   const homePaths = getHomePaths();
 
-  // CRITICAL: Always sync state before using it to ensure we have latest positions
-  syncStateFromObjects();
+  // CRITICAL: Read positions from state (which were last updated by home-loop)
+  // Do NOT sync here - we will set objects to these positions and THEN sync
   const currentPositions = getCurrentPositions();
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
@@ -168,7 +165,7 @@ function startHomeLoop() {
       const savedPosition = currentPositions[key];
       if (savedPosition && hasBeenPausedBefore) {
         ghost.position.copy(savedPosition);
-        // CRITICAL: Ensure state is updated when we copy from saved position
+        // CRITICAL: Update state with the position we just set
         updateObjectPosition(key, savedPosition);
       } else {
         const position = path.getPointAt(pausedT);
@@ -202,6 +199,10 @@ function startHomeLoop() {
       }
     }
   });
+
+  // CRITICAL: Now sync state AFTER we've set all object positions
+  // This ensures state matches the actual object positions
+  syncStateFromObjects();
 
   if (!homeLoopFrameRegistered) {
     onFrame(() => updateHomeLoop(clock.getDelta()));
