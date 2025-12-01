@@ -9,7 +9,6 @@ import { slerpToLayDown } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import {
   syncStateFromObjects,
-  updateObjectPosition,
   updateObjectRotation,
   updateObjectOpacity,
   getCurrentPositions,
@@ -39,7 +38,8 @@ export function initHomeScrollAnimation(
 
   // CRITICAL: Always use current state, not the passed parameters
   // This ensures we always have the latest positions even if loop was running
-  syncStateFromObjects();
+  // Note: We don't call syncStateFromObjects() here because it only works when home-loop is active
+  // We just read the current positions from state (which were last updated by home-loop)
   const currentPositions = getCurrentPositions();
   const currentRotations = getCurrentRotations();
 
@@ -79,7 +79,7 @@ export function initHomeScrollAnimation(
         end: "bottom top",
         scrub: 0.5,
         onEnter: () => {
-          syncStateFromObjects();
+          // CRITICAL: Only read positions from state, don't sync (only home-loop should sync)
           const freshPositions = getCurrentPositions();
           const freshRotations = getCurrentRotations();
           const scrollDir = getScrollDirection();
@@ -89,62 +89,8 @@ export function initHomeScrollAnimation(
             freshPositions,
             freshRotations
           );
-        },
-        onEnterBack: () => {
-          syncStateFromObjects();
-          const freshPositions = getCurrentPositions();
-          const freshRotations = getCurrentRotations();
-          const scrollDir = getScrollDirection();
-          applyHomeScrollPreset(
-            true,
-            scrollDir,
-            freshPositions,
-            freshRotations
-          );
-        },
-        onScrubComplete: () => {
-          // CRITICAL: Sync state from actual object positions before returning to home-loop
-          // This ensures positions are up-to-date when scrolling back
-          // Use requestAnimationFrame to ensure this happens after all position updates
-          requestAnimationFrame(() => {
-            syncStateFromObjects();
-            homeLoopHandler();
-          });
-        },
-      },
-    })
-    .to(
-      { progress: 0 },
-      {
-        progress: 1,
-        immediateRender: false,
-        onUpdate: function () {
-          const progress = this.targets()[0].progress;
-          camera.fov = originalFOV;
-          camera.updateProjectionMatrix();
-          const currentRotations = getCurrentRotations();
-          updateScrollAnimation(
-            progress,
-            scrollPaths,
-            currentRotations,
-            cameraPathPoints
-          );
-        },
-        onEnter: () => {
-          syncStateFromObjects();
-          const freshPositions = getCurrentPositions();
-          const freshRotations = getCurrentRotations();
-          const scrollDir = getScrollDirection();
-          applyHomeScrollPreset(
-            true,
-            scrollDir,
-            freshPositions,
-            freshRotations
-          );
-        },
-        onStart: () => {
-          // CRITICAL: When scroll animation starts (progress = 0), ensure opacity is 100%
-          // Kill any opacity tweens and set to 1.0
+
+          // Ensure opacity starts at 100% when entering
           Object.entries(ghosts).forEach(([key, object]) => {
             gsap.killTweensOf(object);
             object.traverse((child) => {
@@ -167,12 +113,66 @@ export function initHomeScrollAnimation(
             });
           });
         },
-        onReverseComplete: () => {
-          // CRITICAL: When scrolling back up (reverse), sync state immediately
-          // Use requestAnimationFrame to ensure this happens after all updates
-          requestAnimationFrame(() => {
-            syncStateFromObjects();
+        onEnterBack: () => {
+          // CRITICAL: Only read positions from state, don't sync (only home-loop should sync)
+          const freshPositions = getCurrentPositions();
+          const freshRotations = getCurrentRotations();
+          const scrollDir = getScrollDirection();
+          applyHomeScrollPreset(
+            true,
+            scrollDir,
+            freshPositions,
+            freshRotations
+          );
+
+          // Ensure opacity starts at 100% when entering back
+          Object.entries(ghosts).forEach(([key, object]) => {
+            gsap.killTweensOf(object);
+            object.traverse((child) => {
+              if ((child as any).isMesh && (child as any).material) {
+                const mesh = child as THREE.Mesh;
+                if (Array.isArray(mesh.material)) {
+                  mesh.material.forEach((mat: any) => {
+                    gsap.killTweensOf(mat);
+                    gsap.killTweensOf(mat.opacity);
+                    mat.opacity = 1.0;
+                    mat.transparent = true;
+                  });
+                } else {
+                  gsap.killTweensOf(mesh.material);
+                  gsap.killTweensOf((mesh.material as any).opacity);
+                  (mesh.material as any).opacity = 1.0;
+                  (mesh.material as any).transparent = true;
+                }
+              }
+            });
           });
+        },
+        onScrubComplete: () => {
+          // CRITICAL: When returning to home-loop, it will sync state itself
+          // We don't sync here because only home-loop should update positions
+          requestAnimationFrame(() => {
+            homeLoopHandler();
+          });
+        },
+      },
+    })
+    .to(
+      { progress: 0 },
+      {
+        progress: 1,
+        immediateRender: false,
+        onUpdate: function () {
+          const progress = this.targets()[0].progress;
+          camera.fov = originalFOV;
+          camera.updateProjectionMatrix();
+          const currentRotations = getCurrentRotations();
+          updateScrollAnimation(
+            progress,
+            scrollPaths,
+            currentRotations,
+            cameraPathPoints
+          );
         },
       }
     );
@@ -246,7 +246,8 @@ function updateScrollAnimation(
 
     if (pacmanPoint) {
       pacman.position.copy(pacmanPoint);
-      updateObjectPosition("pacman", pacmanPoint);
+      // CRITICAL: Do NOT update state position here - only home-loop should update positions
+      // We only update the visual position for the scroll animation
 
       // Apply bidirectional laying down animation
       slerpToLayDown(pacman, pausedRotations["pacman"], rotationProgress);
@@ -268,7 +269,8 @@ function updateScrollAnimation(
 
       if (ghostPoint) {
         ghost.position.copy(ghostPoint);
-        updateObjectPosition(key, ghostPoint);
+        // CRITICAL: Do NOT update state position here - only home-loop should update positions
+        // We only update the visual position for the scroll animation
 
         // Apply bidirectional laying down animation
         slerpToLayDown(ghost, pausedRotations[key], rotationProgress);

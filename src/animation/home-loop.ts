@@ -11,6 +11,7 @@ import {
   getCurrentRotations,
   updateObjectPosition,
   updateObjectRotation,
+  setHomeLoopActive,
 } from "./object-state";
 import { isCurrencySymbol } from "./util";
 
@@ -58,13 +59,17 @@ function initializeHomeLoopTangentSmoothers() {
 function stopHomeLoop() {
   if (!isHomeLoopActive) return;
   isHomeLoopActive = false;
+  setHomeLoopActive(false); // Notify state manager that home-loop is inactive
   hasBeenPausedBefore = true;
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
 
   // CRITICAL: State is already updated every frame in updateHomeLoop()
   // Just ensure we have the absolute latest by syncing one more time
   // This catches any edge cases where updateHomeLoop() hasn't run yet this frame
+  // Temporarily set active to allow this final sync
+  setHomeLoopActive(true);
   syncStateFromObjects();
+  setHomeLoopActive(false);
 
   const homePaths = getHomePaths();
   // CRITICAL: Get positions from state (which is updated every frame in updateHomeLoop)
@@ -100,6 +105,7 @@ function stopHomeLoop() {
 
 function startHomeLoop() {
   isHomeLoopActive = true;
+  setHomeLoopActive(true); // Notify state manager that home-loop is active
 
   // CRITICAL: Always sync state before starting loop to ensure we have latest positions
   // This is especially important when returning from scroll
@@ -279,7 +285,7 @@ function updateHomeLoop(delta: number) {
         if ((child as any).isMesh && (child as any).material) {
           const mesh = child as THREE.Mesh;
           const childName = child.name || "";
-          
+
           // Skip currency symbols
           if (isCurrencySymbol(childName)) {
             return;

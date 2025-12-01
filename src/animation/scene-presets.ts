@@ -5,7 +5,6 @@ import { ghosts } from "../core/objects";
 import { scene } from "../core/scene";
 import { slerpToLayDown, OBJECT_KEYS, GHOST_COLORS, isCurrencySymbol, isPacmanPart } from "./util";
 import {
-  updateObjectPosition,
   updateObjectRotation,
   syncStateFromObjects,
 } from "./object-state";
@@ -131,14 +130,13 @@ export function applyHomeScrollPreset(
   if (pausedPositions && pausedRotations) {
     Object.entries(ghosts).forEach(([key, object]) => {
       if (pausedPositions[key]) {
-        // CRITICAL: Set position directly AND update state immediately
-        // This ensures state is always in sync, even if gsap.set() is async
+        // CRITICAL: Set position directly for visual update
+        // Do NOT update state position here - only home-loop should update positions
         object.position.set(
           pausedPositions[key].x,
           pausedPositions[key].y,
           pausedPositions[key].z
         );
-        updateObjectPosition(key, pausedPositions[key]);
         
         // Also use gsap.set for any GSAP tracking
         gsap.set(object.position, {

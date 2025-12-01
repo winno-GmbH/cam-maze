@@ -19,6 +19,17 @@ export interface ObjectState {
 // Current state - always reflects actual object positions
 export const currentObjectStates: Record<string, ObjectState> = {};
 
+// Flag to track if home-loop is active (only home-loop should update positions)
+let isHomeLoopActive = false;
+
+export function setHomeLoopActive(active: boolean) {
+  isHomeLoopActive = active;
+}
+
+export function getIsHomeLoopActive(): boolean {
+  return isHomeLoopActive;
+}
+
 // Initialize state for all objects
 export function initializeObjectStates() {
   Object.entries(ghosts).forEach(([key, object]) => {
@@ -48,10 +59,16 @@ export function initializeObjectStates() {
   });
 }
 
-// Update state from actual object positions (call this when objects move)
-// CRITICAL: Position/rotation/scale/visible are always synced
-// Opacity is only synced if state already exists (to avoid expensive traverse on every call)
+// Update state from actual object positions
+// CRITICAL: This should ONLY be called by home-loop when it's active
+// Other parts should only READ positions, not write them
 export function syncStateFromObjects() {
+  // Only allow syncing if home-loop is active
+  // This ensures positions are only updated by home-loop
+  if (!isHomeLoopActive) {
+    return;
+  }
+
   Object.entries(ghosts).forEach(([key, object]) => {
     if (currentObjectStates[key]) {
       // Fast path: just update position/rotation/scale/visible
@@ -137,7 +154,14 @@ export function getCurrentRotations(): Record<string, THREE.Quaternion> {
 }
 
 // Update position for a specific object
+// CRITICAL: This should ONLY be called by home-loop
+// Other parts should NOT update positions - they should only read them
 export function updateObjectPosition(key: string, position: THREE.Vector3) {
+  // Only allow position updates if home-loop is active
+  if (!isHomeLoopActive) {
+    return;
+  }
+
   if (currentObjectStates[key]) {
     currentObjectStates[key].position.copy(position);
   }
