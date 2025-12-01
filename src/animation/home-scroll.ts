@@ -248,7 +248,23 @@ function updateScrollAnimation(
   }
 
   // Apply smooth easing to rotation progress (bidirectional - reverses when scrolling up)
-  const rotationProgress = Math.pow(progress, 1.5);
+  // Rotation animates from start rotation (from home-loop) to laying down
+  // Use easing to make the rotation animation smooth and timed
+  const rotationStartProgress = 0.0; // Start rotation animation immediately
+  const rotationEndProgress = 0.5; // Complete rotation by 50% of scroll
+  let rotationProgress = 0;
+
+  if (progress <= rotationStartProgress) {
+    rotationProgress = 0; // Start at initial rotation
+  } else if (progress >= rotationEndProgress) {
+    rotationProgress = 1; // Fully laid down
+  } else {
+    // Animate rotation between start and end
+    const normalizedProgress =
+      (progress - rotationStartProgress) /
+      (rotationEndProgress - rotationStartProgress);
+    rotationProgress = Math.pow(normalizedProgress, 1.5); // Smooth easing
+  }
 
   // Pacman animation
   if (paths.pacman && pacman) {
