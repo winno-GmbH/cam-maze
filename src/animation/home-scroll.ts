@@ -54,36 +54,45 @@ export function initHomeScrollAnimation(
         end: "bottom top",
         scrub: 0.5,
         onEnter: () => {
-          // CRITICAL: Always get fresh positions from state
-          syncStateFromObjects();
-          const freshPositions = getCurrentPositions();
-          const freshRotations = getCurrentRotations();
-          const scrollDir = getScrollDirection();
-          applyHomeScrollPreset(
-            true,
-            scrollDir,
-            freshPositions,
-            freshRotations
-          );
+          // CRITICAL: Always get fresh positions from state before applying preset
+          // Use requestAnimationFrame to ensure state is synced after any pending updates
+          requestAnimationFrame(() => {
+            syncStateFromObjects();
+            const freshPositions = getCurrentPositions();
+            const freshRotations = getCurrentRotations();
+            const scrollDir = getScrollDirection();
+            applyHomeScrollPreset(
+              true,
+              scrollDir,
+              freshPositions,
+              freshRotations
+            );
+          });
         },
         onEnterBack: () => {
-          // CRITICAL: Always get fresh positions from state
-          syncStateFromObjects();
-          const freshPositions = getCurrentPositions();
-          const freshRotations = getCurrentRotations();
-          const scrollDir = getScrollDirection();
-          applyHomeScrollPreset(
-            true,
-            scrollDir,
-            freshPositions,
-            freshRotations
-          );
+          // CRITICAL: Always get fresh positions from state before applying preset
+          // Use requestAnimationFrame to ensure state is synced after any pending updates
+          requestAnimationFrame(() => {
+            syncStateFromObjects();
+            const freshPositions = getCurrentPositions();
+            const freshRotations = getCurrentRotations();
+            const scrollDir = getScrollDirection();
+            applyHomeScrollPreset(
+              true,
+              scrollDir,
+              freshPositions,
+              freshRotations
+            );
+          });
         },
         onScrubComplete: () => {
           // CRITICAL: Sync state from actual object positions before returning to home-loop
           // This ensures positions are up-to-date when scrolling back
-          syncStateFromObjects();
-          homeLoopHandler();
+          // Use requestAnimationFrame to ensure this happens after all position updates
+          requestAnimationFrame(() => {
+            syncStateFromObjects();
+            homeLoopHandler();
+          });
         },
       },
     })
@@ -96,7 +105,7 @@ export function initHomeScrollAnimation(
           const progress = this.targets()[0].progress;
           camera.fov = originalFOV;
           camera.updateProjectionMatrix();
-          // CRITICAL: Use current rotations from state, not stale pausedRotations
+          // CRITICAL: Always get fresh rotations from state (they're updated in updateScrollAnimation)
           const currentRotations = getCurrentRotations();
           updateScrollAnimation(
             progress,
@@ -104,6 +113,13 @@ export function initHomeScrollAnimation(
             currentRotations,
             cameraPathPoints
           );
+        },
+        onReverseComplete: () => {
+          // CRITICAL: When scrolling back up (reverse), sync state immediately
+          // Use requestAnimationFrame to ensure this happens after all updates
+          requestAnimationFrame(() => {
+            syncStateFromObjects();
+          });
         },
       }
     );

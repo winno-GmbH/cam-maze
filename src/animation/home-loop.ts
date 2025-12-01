@@ -100,11 +100,12 @@ function stopHomeLoop() {
 function startHomeLoop() {
   isHomeLoopActive = true;
 
-  // CRITICAL: When returning from scroll, sync state from actual object positions
-  // This ensures we start from where objects actually are, not where they were
+  // CRITICAL: Always sync state before starting loop to ensure we have latest positions
+  // This is especially important when returning from scroll
+  syncStateFromObjects();
+
+  // CRITICAL: When returning from scroll, recalculate pausedT from actual positions
   if (hasBeenPausedBefore) {
-    syncStateFromObjects();
-    // Recalculate pausedT from actual positions to keep in sync
     const homePaths = getHomePaths();
     const currentPositions = getCurrentPositions();
 
@@ -148,6 +149,9 @@ function startHomeLoop() {
   initializeHomeLoopTangentSmoothers();
 
   const homePaths = getHomePaths();
+
+  // CRITICAL: Always sync state before using it to ensure we have latest positions
+  syncStateFromObjects();
   const currentPositions = getCurrentPositions();
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
@@ -157,6 +161,8 @@ function startHomeLoop() {
       const savedPosition = currentPositions[key];
       if (savedPosition && hasBeenPausedBefore) {
         ghost.position.copy(savedPosition);
+        // CRITICAL: Ensure state is updated when we copy from saved position
+        updateObjectPosition(key, savedPosition);
       } else {
         const position = path.getPointAt(pausedT);
         if (position) {
@@ -164,6 +170,9 @@ function startHomeLoop() {
           updateObjectPosition(key, position);
         }
       }
+
+      // CRITICAL: Also update rotation in state
+      updateObjectRotation(key, ghost.quaternion);
 
       // Only store current rotation for transition if we're returning from scroll
       if (hasBeenPausedBefore) {

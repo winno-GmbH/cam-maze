@@ -4,6 +4,11 @@ import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
 import { scene } from "../core/scene";
 import { slerpToLayDown, OBJECT_KEYS, GHOST_COLORS, isCurrencySymbol, isPacmanPart } from "./util";
+import {
+  updateObjectPosition,
+  updateObjectRotation,
+  syncStateFromObjects,
+} from "./object-state";
 
 /**
  * SCENE PRESETS
@@ -126,6 +131,16 @@ export function applyHomeScrollPreset(
   if (pausedPositions && pausedRotations) {
     Object.entries(ghosts).forEach(([key, object]) => {
       if (pausedPositions[key]) {
+        // CRITICAL: Set position directly AND update state immediately
+        // This ensures state is always in sync, even if gsap.set() is async
+        object.position.set(
+          pausedPositions[key].x,
+          pausedPositions[key].y,
+          pausedPositions[key].z
+        );
+        updateObjectPosition(key, pausedPositions[key]);
+        
+        // Also use gsap.set for any GSAP tracking
         gsap.set(object.position, {
           x: pausedPositions[key].x,
           y: pausedPositions[key].y,
@@ -134,7 +149,9 @@ export function applyHomeScrollPreset(
       }
 
       if (pausedRotations[key]) {
+        // CRITICAL: Set rotation directly AND update state immediately
         object.quaternion.copy(pausedRotations[key]);
+        updateObjectRotation(key, pausedRotations[key]);
       }
 
       gsap.set(object, { visible: true });
