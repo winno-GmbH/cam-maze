@@ -79,50 +79,6 @@ export function initHomeScrollAnimation(
         end: "bottom top",
         scrub: 0.5,
         onEnter: () => {
-          // DEBUG: Log when entering home-scroll
-          console.log("[home-scroll] onEnter called");
-
-          // Check for any active GSAP tweens on opacity and log current opacity values
-          Object.entries(ghosts).forEach(([key, object]) => {
-            object.traverse((child) => {
-              if ((child as any).isMesh && (child as any).material) {
-                const mesh = child as THREE.Mesh;
-                if (Array.isArray(mesh.material)) {
-                  mesh.material.forEach((mat: any) => {
-                    const activeTweens = gsap.getTweensOf(mat.opacity);
-                    if (activeTweens.length > 0) {
-                      console.log(
-                        `[home-scroll] Found active tweens on ${key} material opacity:`,
-                        activeTweens
-                      );
-                    }
-                    // DEBUG: Log current opacity value in onEnter
-                    console.log(
-                      `[home-scroll] onEnter - ${key} material opacity: ${mat.opacity}`
-                    );
-                  });
-                } else {
-                  const activeTweens = gsap.getTweensOf(
-                    (mesh.material as any).opacity
-                  );
-                  if (activeTweens.length > 0) {
-                    console.log(
-                      `[home-scroll] Found active tweens on ${key} material opacity:`,
-                      activeTweens
-                    );
-                  }
-                  // DEBUG: Log current opacity value in onEnter
-                  console.log(
-                    `[home-scroll] onEnter - ${key} material opacity: ${
-                      (mesh.material as any).opacity
-                    }`
-                  );
-                }
-              }
-            });
-          });
-
-          // Then get fresh positions and apply preset
           syncStateFromObjects();
           const freshPositions = getCurrentPositions();
           const freshRotations = getCurrentRotations();
@@ -135,40 +91,6 @@ export function initHomeScrollAnimation(
           );
         },
         onEnterBack: () => {
-          // DEBUG: Log when entering back
-          console.log("[home-scroll] onEnterBack called");
-
-          // Check for any active GSAP tweens on opacity
-          Object.entries(ghosts).forEach(([key, object]) => {
-            object.traverse((child) => {
-              if ((child as any).isMesh && (child as any).material) {
-                const mesh = child as THREE.Mesh;
-                if (Array.isArray(mesh.material)) {
-                  mesh.material.forEach((mat: any) => {
-                    const activeTweens = gsap.getTweensOf(mat.opacity);
-                    if (activeTweens.length > 0) {
-                      console.log(
-                        `[home-scroll] Found active tweens on ${key} material opacity:`,
-                        activeTweens
-                      );
-                    }
-                  });
-                } else {
-                  const activeTweens = gsap.getTweensOf(
-                    (mesh.material as any).opacity
-                  );
-                  if (activeTweens.length > 0) {
-                    console.log(
-                      `[home-scroll] Found active tweens on ${key} material opacity:`,
-                      activeTweens
-                    );
-                  }
-                }
-              }
-            });
-          });
-
-          // Then get fresh positions and apply preset
           syncStateFromObjects();
           const freshPositions = getCurrentPositions();
           const freshRotations = getCurrentRotations();
@@ -198,13 +120,8 @@ export function initHomeScrollAnimation(
         immediateRender: false,
         onUpdate: function () {
           const progress = this.targets()[0].progress;
-          // DEBUG: Log progress to see if it starts at 0
-          if (progress < 0.1) {
-            console.log("[home-scroll] Progress:", progress);
-          }
           camera.fov = originalFOV;
           camera.updateProjectionMatrix();
-          // CRITICAL: Always get fresh rotations from state (they're updated in updateScrollAnimation)
           const currentRotations = getCurrentRotations();
           updateScrollAnimation(
             progress,
@@ -212,76 +129,8 @@ export function initHomeScrollAnimation(
             currentRotations,
             cameraPathPoints
           );
-
-          // DEBUG: Log actual material opacity AFTER updateScrollAnimation
-          if (progress < 0.1) {
-            Object.entries(ghosts).forEach(([key, object]) => {
-              object.traverse((child) => {
-                if ((child as any).isMesh && (child as any).material) {
-                  const mesh = child as THREE.Mesh;
-                  if (Array.isArray(mesh.material)) {
-                    mesh.material.forEach((mat: any, index: number) => {
-                      console.log(
-                        `[home-scroll] onUpdate AFTER - ${key} material[${index}] opacity: ${mat.opacity}`
-                      );
-                    });
-                  } else {
-                    console.log(
-                      `[home-scroll] onUpdate AFTER - ${key} material opacity: ${
-                        (mesh.material as any).opacity
-                      }`
-                    );
-                  }
-                }
-              });
-            });
-          }
         },
         onEnter: () => {
-          // DEBUG: Log when entering home-scroll
-          console.log("[home-scroll] onEnter called");
-
-          // Check for any active GSAP tweens on opacity
-          Object.entries(ghosts).forEach(([key, object]) => {
-            object.traverse((child) => {
-              if ((child as any).isMesh && (child as any).material) {
-                const mesh = child as THREE.Mesh;
-                if (Array.isArray(mesh.material)) {
-                  mesh.material.forEach((mat: any) => {
-                    const activeTweens = gsap.getTweensOf(mat.opacity);
-                    if (activeTweens.length > 0) {
-                      console.log(
-                        `[home-scroll] Found active tweens on ${key} material opacity:`,
-                        activeTweens
-                      );
-                    }
-                    // DEBUG: Log current opacity value
-                    console.log(
-                      `[home-scroll] onEnter - ${key} material opacity before:`,
-                      mat.opacity
-                    );
-                  });
-                } else {
-                  const activeTweens = gsap.getTweensOf(
-                    (mesh.material as any).opacity
-                  );
-                  if (activeTweens.length > 0) {
-                    console.log(
-                      `[home-scroll] Found active tweens on ${key} material opacity:`,
-                      activeTweens
-                    );
-                  }
-                  // DEBUG: Log current opacity value
-                  console.log(
-                    `[home-scroll] onEnter - ${key} material opacity before:`,
-                    (mesh.material as any).opacity
-                  );
-                }
-              }
-            });
-          });
-
-          // Then get fresh positions and apply preset
           syncStateFromObjects();
           const freshPositions = getCurrentPositions();
           const freshRotations = getCurrentRotations();
@@ -383,15 +232,6 @@ function updateScrollAnimation(
     opacity =
       1.0 -
       (progress - fadeStartProgress) / (fadeEndProgress - fadeStartProgress);
-  }
-
-  // DEBUG: Log opacity calculation when it's not 1.0 at the start
-  if (progress < 0.1) {
-    console.log(
-      `[home-scroll] Progress: ${progress.toFixed(
-        6
-      )}, Calculated Opacity: ${opacity.toFixed(3)}`
-    );
   }
 
   // Apply smooth easing to rotation progress (bidirectional - reverses when scrolling up)

@@ -49,37 +49,41 @@ export function initializeObjectStates() {
 }
 
 // Update state from actual object positions (call this when objects move)
+// CRITICAL: Position/rotation/scale/visible are always synced
+// Opacity is only synced if state already exists (to avoid expensive traverse on every call)
 export function syncStateFromObjects() {
   Object.entries(ghosts).forEach(([key, object]) => {
-    // Get current opacity from first material found
-    let currentOpacity = 1.0;
-    object.traverse((child) => {
-      if ((child as any).isMesh && (child as any).material) {
-        const mesh = child as THREE.Mesh;
-        if (Array.isArray(mesh.material)) {
-          if (mesh.material.length > 0) {
-            currentOpacity = (mesh.material[0] as any).opacity ?? 1.0;
-          }
-        } else {
-          currentOpacity = ((mesh.material as any).opacity ?? 1.0);
-        }
-        return; // Only need first material
-      }
-    });
-
     if (currentObjectStates[key]) {
+      // Fast path: just update position/rotation/scale/visible
       currentObjectStates[key].position.copy(object.position);
       currentObjectStates[key].rotation.copy(object.quaternion);
       currentObjectStates[key].scale.copy(object.scale);
       currentObjectStates[key].visible = object.visible;
-      currentObjectStates[key].opacity = currentOpacity;
+      // Opacity is managed separately via updateObjectOpacity() - don't sync it here
+      // This avoids expensive traverse() calls on every position update
     } else {
+      // Initial state creation: get opacity from first material
+      let initialOpacity = 1.0;
+      object.traverse((child) => {
+        if ((child as any).isMesh && (child as any).material) {
+          const mesh = child as THREE.Mesh;
+          if (Array.isArray(mesh.material)) {
+            if (mesh.material.length > 0) {
+              initialOpacity = (mesh.material[0] as any).opacity ?? 1.0;
+            }
+          } else {
+            initialOpacity = ((mesh.material as any).opacity ?? 1.0);
+          }
+          return; // Only need first material
+        }
+      });
+
       currentObjectStates[key] = {
         position: object.position.clone(),
         rotation: object.quaternion.clone(),
         scale: object.scale.clone(),
         visible: object.visible,
-        opacity: currentOpacity,
+        opacity: initialOpacity,
       };
     }
   });
