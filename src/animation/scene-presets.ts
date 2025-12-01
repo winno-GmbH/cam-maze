@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
 import { scene } from "../core/scene";
-import { slerpToLayDown } from "./util";
+import { slerpToLayDown, OBJECT_KEYS, GHOST_COLORS, isCurrencySymbol, isPacmanPart } from "./util";
 
 /**
  * SCENE PRESETS
@@ -76,15 +76,8 @@ export function applyHomeLoopPreset(
         const mesh = child as THREE.Mesh;
         const childName = child.name || "";
 
-        // Keep currency symbols hidden in all scenes - check both exact match and includes
-        if (
-          ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
-          childName.includes("EUR") ||
-          childName.includes("CHF") ||
-          childName.includes("YEN") ||
-          childName.includes("USD") ||
-          childName.includes("GBP")
-        ) {
+        // Keep currency symbols hidden in all scenes
+        if (isCurrencySymbol(childName)) {
           mesh.visible = false;
           return;
         }
@@ -163,7 +156,7 @@ export function applyHomeScrollPreset(
           const childName = child.name || "";
 
           // Keep currency symbols hidden in all scenes
-          if (["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName)) {
+          if (isCurrencySymbol(childName)) {
             mesh.visible = false;
             return;
           }
@@ -290,14 +283,12 @@ export function applyIntroScrollPreset(
     }
 
     // Store initial rotations for all objects
-    ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(
-      (key) => {
-        const obj = ghosts[key];
-        if (obj && !introInitialRotations[key]) {
-          introInitialRotations[key] = obj.quaternion.clone();
-        }
+    OBJECT_KEYS.forEach((key) => {
+      const obj = ghosts[key];
+      if (obj && !introInitialRotations[key]) {
+        introInitialRotations[key] = obj.quaternion.clone();
       }
-    );
+    });
   }
 
   // Calculate start position (far left)
@@ -308,23 +299,7 @@ export function applyIntroScrollPreset(
     camera.position.z + INTRO_POSITION_OFFSET.z
   );
 
-  const objectsToAnimate = [
-    "pacman",
-    "ghost1",
-    "ghost2",
-    "ghost3",
-    "ghost4",
-    "ghost5",
-  ];
-
-  // Ghost colors for testing
-  const ghostColors: Record<string, number> = {
-    ghost1: 0xff0000, // Red
-    ghost2: 0x00ff00, // Green
-    ghost3: 0x0000ff, // Blue
-    ghost4: 0xffff00, // Yellow
-    ghost5: 0xff00ff, // Magenta
-  };
+  const objectsToAnimate = OBJECT_KEYS;
 
   // Use gsap.set to immediately set all properties
   objectsToAnimate.forEach((key, index) => {
@@ -400,26 +375,8 @@ export function applyIntroScrollPreset(
         const mesh = child as THREE.Mesh;
         const childName = child.name || "";
 
-        // Keep currency symbols hidden - check both exact match and includes
-        if (
-          ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
-          childName.includes("EUR") ||
-          childName.includes("CHF") ||
-          childName.includes("YEN") ||
-          childName.includes("USD") ||
-          childName.includes("GBP")
-        ) {
-          mesh.visible = false;
-          return;
-        }
-
-        // For pacman: hide Shell and Bitcoin parts
-        if (
-          key === "pacman" &&
-          (childName.includes("Shell") ||
-            childName.includes("Bitcoin_1") ||
-            childName.includes("Bitcoin_2"))
-        ) {
+        // Keep currency symbols and pacman parts hidden
+        if (isCurrencySymbol(childName) || (key === "pacman" && isPacmanPart(childName))) {
           mesh.visible = false;
           return;
         }
@@ -448,8 +405,8 @@ export function applyIntroScrollPreset(
         }
 
         // Set ghost colors
-        if (ghostColors[key] && key !== "pacman") {
-          const newColor = ghostColors[key];
+        if (GHOST_COLORS[key] && key !== "pacman") {
+          const newColor = GHOST_COLORS[key];
           if (Array.isArray(mesh.material)) {
             mesh.material.forEach((mat: any) => {
               mat.color.setHex(newColor);

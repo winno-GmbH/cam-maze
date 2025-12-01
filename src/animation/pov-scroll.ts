@@ -12,6 +12,16 @@ import { DOM_ELEMENTS } from "../config/dom-elements";
 import { calculateObjectOrientation } from "./util";
 import { applyPovScrollPreset, getScrollDirection } from "./scene-presets";
 
+// Cache for DOM elements to avoid repeated queries
+const domElementCache: Record<
+  number,
+  {
+    parent: HTMLElement | null;
+    povElements: NodeListOf<Element>;
+    camElements: NodeListOf<Element>;
+  }
+> = {};
+
 gsap.registerPlugin(ScrollTrigger);
 
 let povScrollTimeline: gsap.core.Timeline | null = null;
@@ -124,33 +134,18 @@ function getCustomLookAtForProgress(
 
 // Initialize POV tangent smoothers
 function initializePovTangentSmoothers() {
-  // Camera smoother - most important for smooth user experience
   povTangentSmoothers.camera = new TangentSmoother(
     new THREE.Vector3(0, 0, -1),
     0.08
   );
 
-  // Ghost smoothers
-  povTangentSmoothers.ghost1 = new TangentSmoother(
-    new THREE.Vector3(1, 0, 0),
-    0.08
-  );
-  povTangentSmoothers.ghost2 = new TangentSmoother(
-    new THREE.Vector3(1, 0, 0),
-    0.08
-  );
-  povTangentSmoothers.ghost3 = new TangentSmoother(
-    new THREE.Vector3(1, 0, 0),
-    0.08
-  );
-  povTangentSmoothers.ghost4 = new TangentSmoother(
-    new THREE.Vector3(1, 0, 0),
-    0.08
-  );
-  povTangentSmoothers.ghost5 = new TangentSmoother(
-    new THREE.Vector3(1, 0, 0),
-    0.08
-  );
+  // Initialize ghost smoothers with loop
+  for (let i = 1; i <= 5; i++) {
+    povTangentSmoothers[`ghost${i}`] = new TangentSmoother(
+      new THREE.Vector3(1, 0, 0),
+      0.08
+    );
+  }
 }
 
 export function initPovScrollAnimation() {
@@ -319,12 +314,13 @@ function handleDefaultOrientation(
   progress: number,
   defaultLookAt: THREE.Vector3
 ) {
+  const povPaths = getPovPaths();
   const startRotationProgress = findClosestProgressOnPath(
-    getPovPaths().camera,
+    povPaths.camera,
     startRotationPoint
   );
   const endRotationProgress = findClosestProgressOnPath(
-    getPovPaths().camera,
+    povPaths.camera,
     endRotationPoint
   );
 
@@ -387,71 +383,71 @@ function updateGhost(
   } = triggerData;
   const state = ghostStates[key];
 
-  // Get DOM elements specific to this ghost
-  const parentElements = document.querySelectorAll(".cmp--pov.cmp");
+  // Get DOM elements with caching
   const ghostIndex = parseInt(key.replace("ghost", "")) - 1;
-  const parent = parentElements[ghostIndex] as HTMLElement;
+  let cached = domElementCache[ghostIndex];
 
-  if (!parent) return;
+  if (!cached) {
+    const parentElements = document.querySelectorAll(".cmp--pov.cmp");
+    const parent = parentElements[ghostIndex] as HTMLElement;
+    cached = {
+      parent: parent || null,
+      povElements: parent ? parent.querySelectorAll(".pov") : ([] as any),
+      camElements: parent ? parent.querySelectorAll(".cam") : ([] as any),
+    };
+    domElementCache[ghostIndex] = cached;
+  }
 
-  // Get POV and CAM elements specifically within this ghost's parent container
-  const povElements = parent.querySelectorAll(".pov");
-  const camElements = parent.querySelectorAll(".cam");
-
-  if (
-    !povElements ||
-    !camElements ||
-    povElements.length === 0 ||
-    camElements.length === 0
-  )
-    return;
+  const { parent, povElements, camElements } = cached;
+  if (!parent || !povElements.length || !camElements.length) return;
 
   // Initialize state if needed
+  const povPaths = getPovPaths();
   if (state.triggerCameraProgress === null) {
     state.triggerCameraProgress = findClosestProgressOnPath(
-      getPovPaths().camera,
+      povPaths.camera,
       triggerPos,
       800
     );
     state.ghostStartFadeInProgress = findClosestProgressOnPath(
-      getPovPaths().camera,
+      povPaths.camera,
       ghostStartFadeIn,
       800
     );
     state.ghostEndFadeInProgress = findClosestProgressOnPath(
-      getPovPaths().camera,
+      povPaths.camera,
       ghostEndFadeIn,
       800
     );
     state.ghostStartFadeOutProgress = findClosestProgressOnPath(
-      getPovPaths().camera,
+      povPaths.camera,
       ghostStartFadeOut,
       800
     );
     state.camStartFadeInProgress = findClosestProgressOnPath(
-      getPovPaths().camera,
+      povPaths.camera,
       camStartFadeIn,
       800
     );
     state.camEndFadeInProgress = findClosestProgressOnPath(
-      getPovPaths().camera,
+      povPaths.camera,
       camEndFadeIn,
       800
     );
     state.camStartFadeOutProgress = findClosestProgressOnPath(
-      getPovPaths().camera,
+      povPaths.camera,
       camStartFadeOut,
       800
     );
     state.endCameraProgress = findClosestProgressOnPath(
-      getPovPaths().camera,
+      povPaths.camera,
       endPosition,
       800
     );
   }
 
   const currentCameraProgress = findClosestProgressOnPath(
-    getPovPaths().camera,
+    povPaths.camera,
     cameraPosition,
     800
   );
@@ -547,19 +543,8 @@ function updateTextVisibility(
   if (forceEndProgress) {
     parent.style.opacity = "0";
     parent.classList.add("no-visibility");
-
-    povElements.forEach((povElement) => {
-      const element = povElement as HTMLElement;
-      element.classList.add("no-visibility");
-      element.style.opacity = "0";
-    });
-
-    camElements.forEach((camElement) => {
-      const element = camElement as HTMLElement;
-      element.classList.add("no-visibility");
-      element.style.opacity = "0";
-    });
-
+    hideTextElements(povElements);
+    hideTextElements(camElements);
     return;
   }
 
@@ -626,15 +611,12 @@ function updateTextVisibility(
   }
 
   const isPassed = targetCamOpacity > 0.01 && targetGhostOpacity > 0.01;
+  const hasNoVisibility = parent.classList.contains("no-visibility");
 
-  if (isPassed) {
-    if (!parent.classList.contains("no-visibility")) {
-      parent.classList.add("no-visibility");
-    }
-  } else {
-    if (!parent.classList.contains("no-visibility")) {
-      parent.classList.remove("no-visibility");
-    }
+  if (isPassed && !hasNoVisibility) {
+    parent.classList.add("no-visibility");
+  } else if (!isPassed && hasNoVisibility) {
+    parent.classList.remove("no-visibility");
   }
 
   // Update all POV elements (ghost text)
@@ -681,6 +663,14 @@ function resetTangentSmoothers() {
   });
 }
 
+function hideTextElements(elements: NodeListOf<Element>) {
+  elements.forEach((element) => {
+    const el = element as HTMLElement;
+    el.classList.add("no-visibility");
+    el.style.opacity = "0";
+  });
+}
+
 function handleLeavePOV() {
   // Reset all ghost states
   Object.entries(ghosts).forEach(([key, ghost]) => {
@@ -688,29 +678,12 @@ function handleLeavePOV() {
       ghost.visible = false;
 
       const ghostIndex = parseInt(key.replace("ghost", "")) - 1;
-      const parentElements = document.querySelectorAll(".cmp--pov.cmp");
-      const parent = parentElements[ghostIndex] as HTMLElement;
+      const cached = domElementCache[ghostIndex];
 
-      if (parent) {
-        // Hide all POV and CAM elements
-        const povElements = document.querySelectorAll(".pov");
-        const camElements = document.querySelectorAll(".cam");
-
-        povElements.forEach((povElement) => {
-          const element = povElement as HTMLElement;
-          element.classList.add("no-visibility");
-          element.style.opacity = "0";
-        });
-
-        camElements.forEach((camElement) => {
-          const element = camElement as HTMLElement;
-          element.classList.add("no-visibility");
-          element.style.opacity = "0";
-        });
-      }
-
-      if (!parent.classList.contains("no-visibility")) {
-        parent.classList.add("no-visibility");
+      if (cached?.parent) {
+        hideTextElements(cached.povElements);
+        hideTextElements(cached.camElements);
+        cached.parent.classList.add("no-visibility");
       }
 
       // Reset ghost material opacity

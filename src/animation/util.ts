@@ -1,5 +1,38 @@
 import * as THREE from "three";
 
+// Shared constants
+export const OBJECT_KEYS = [
+  "pacman",
+  "ghost1",
+  "ghost2",
+  "ghost3",
+  "ghost4",
+  "ghost5",
+] as const;
+export const GHOST_COLORS: Record<string, number> = {
+  ghost1: 0xff0000,
+  ghost2: 0x00ff00,
+  ghost3: 0x0000ff,
+  ghost4: 0xffff00,
+  ghost5: 0xff00ff,
+};
+
+const CURRENCY_SYMBOLS = ["EUR", "CHF", "YEN", "USD", "GBP"] as const;
+
+export function isCurrencySymbol(name: string): boolean {
+  return CURRENCY_SYMBOLS.some(
+    (symbol) => name === symbol || name.includes(symbol)
+  );
+}
+
+export function isPacmanPart(name: string): boolean {
+  return (
+    name.includes("Shell") ||
+    name.includes("Bitcoin_1") ||
+    name.includes("Bitcoin_2")
+  );
+}
+
 export function calculateObjectOrientation(
   object: THREE.Object3D,
   tangent: THREE.Vector3,

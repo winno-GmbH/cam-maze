@@ -11,6 +11,12 @@ import {
   getGhostTargetQuaternion,
   INTRO_POSITION_OFFSET,
 } from "./scene-presets";
+import {
+  OBJECT_KEYS,
+  GHOST_COLORS,
+  isCurrencySymbol,
+  isPacmanPart,
+} from "./util";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -51,16 +57,8 @@ function setObjectVisibilityAndOpacity(key: string, obj: THREE.Object3D) {
 
       // Skip currency symbols and pacman parts
       if (
-        ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
-        childName.includes("EUR") ||
-        childName.includes("CHF") ||
-        childName.includes("YEN") ||
-        childName.includes("USD") ||
-        childName.includes("GBP") ||
-        (key === "pacman" &&
-          (childName.includes("Shell") ||
-            childName.includes("Bitcoin_1") ||
-            childName.includes("Bitcoin_2")))
+        isCurrencySymbol(childName) ||
+        (key === "pacman" && isPacmanPart(childName))
       ) {
         return;
       }
@@ -84,27 +82,16 @@ function setObjectVisibilityAndOpacity(key: string, obj: THREE.Object3D) {
 function initializeIntroScrollState() {
   pauseOtherScrollTriggers();
 
-  ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(
-    (key) => {
+  const setVisibilityForAll = () => {
+    OBJECT_KEYS.forEach((key) => {
       const obj = ghosts[key];
-      if (obj) {
-        setObjectVisibilityAndOpacity(key, obj);
-      }
-    }
-  );
+      if (obj) setObjectVisibilityAndOpacity(key, obj);
+    });
+  };
 
-  const scrollDir = getScrollDirection();
-  applyIntroScrollPreset(true, scrollDir);
-
-  // Force visibility again after preset
-  ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(
-    (key) => {
-      const obj = ghosts[key];
-      if (obj) {
-        setObjectVisibilityAndOpacity(key, obj);
-      }
-    }
-  );
+  setVisibilityForAll();
+  applyIntroScrollPreset(true, getScrollDirection());
+  setVisibilityForAll(); // Force visibility again after preset
 
   isUpdating = false;
 
@@ -349,39 +336,15 @@ function updateObjectsWalkBy(progress: number) {
       // Update opacity for meshes
       const targetOpacity = key === "pacman" ? 1.0 : ghostOpacity;
 
-      // Ghost colors (matching scene-presets.ts)
-      const ghostColors: Record<string, number> = {
-        ghost1: 0xff0000,
-        ghost2: 0x00ff00,
-        ghost3: 0x0000ff,
-        ghost4: 0xffff00,
-        ghost5: 0xff00ff,
-      };
-
       object.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
           const mesh = child as THREE.Mesh;
           const childName = child.name || "";
 
-          // Keep currency symbols hidden - check both exact match and includes
+          // Keep currency symbols and pacman parts hidden
           if (
-            ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
-            childName.includes("EUR") ||
-            childName.includes("CHF") ||
-            childName.includes("YEN") ||
-            childName.includes("USD") ||
-            childName.includes("GBP")
-          ) {
-            mesh.visible = false;
-            return;
-          }
-
-          // For pacman: hide Shell and Bitcoin parts
-          if (
-            key === "pacman" &&
-            (childName.includes("Shell") ||
-              childName.includes("Bitcoin_1") ||
-              childName.includes("Bitcoin_2"))
+            isCurrencySymbol(childName) ||
+            (key === "pacman" && isPacmanPart(childName))
           ) {
             mesh.visible = false;
             return;
@@ -412,8 +375,8 @@ function updateObjectsWalkBy(progress: number) {
           }
 
           // Set ghost colors (only if needed)
-          if (ghostColors[key] && key !== "pacman") {
-            const newColor = ghostColors[key];
+          if (GHOST_COLORS[key] && key !== "pacman") {
+            const newColor = GHOST_COLORS[key];
             if (Array.isArray(mesh.material)) {
               mesh.material.forEach((mat: any) => {
                 if (mat.color.getHex() !== newColor) {
