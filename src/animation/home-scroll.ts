@@ -211,6 +211,30 @@ export function initHomeScrollAnimation(
             currentRotations,
             cameraPathPoints
           );
+
+          // DEBUG: Log actual material opacity AFTER updateScrollAnimation
+          if (progress < 0.1) {
+            Object.entries(ghosts).forEach(([key, object]) => {
+              object.traverse((child) => {
+                if ((child as any).isMesh && (child as any).material) {
+                  const mesh = child as THREE.Mesh;
+                  if (Array.isArray(mesh.material)) {
+                    mesh.material.forEach((mat: any, index: number) => {
+                      console.log(
+                        `[home-scroll] onUpdate AFTER - ${key} material[${index}] opacity: ${mat.opacity}`
+                      );
+                    });
+                  } else {
+                    console.log(
+                      `[home-scroll] onUpdate AFTER - ${key} material opacity: ${
+                        (mesh.material as any).opacity
+                      }`
+                    );
+                  }
+                }
+              });
+            });
+          }
         },
         onEnter: () => {
           // DEBUG: Log when entering home-scroll
@@ -392,23 +416,25 @@ function updateScrollAnimation(
         if ((child as any).isMesh && (child as any).material) {
           const mesh = child as THREE.Mesh;
           if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              // DEBUG: Log when opacity is set to a non-1.0 value at low progress
-              if (progress < 0.1 && mat.opacity !== opacity) {
+            mesh.material.forEach((mat: any, index: number) => {
+              // DEBUG: Log when opacity is set at low progress
+              if (progress < 0.1) {
                 console.log(
-                  `[home-scroll] Pacman material opacity changed from ${mat.opacity} to ${opacity} (progress: ${progress})`
+                  `[home-scroll] updateScrollAnimation - Pacman material[${index}] opacity: ${
+                    mat.opacity
+                  } -> ${opacity} (progress: ${progress.toFixed(6)})`
                 );
               }
               mat.opacity = opacity;
               mat.transparent = true;
             });
           } else {
-            // DEBUG: Log when opacity is set to a non-1.0 value at low progress
-            if (progress < 0.1 && (mesh.material as any).opacity !== opacity) {
+            // DEBUG: Log when opacity is set at low progress
+            if (progress < 0.1) {
               console.log(
-                `[home-scroll] Pacman material opacity changed from ${
+                `[home-scroll] updateScrollAnimation - Pacman material opacity: ${
                   (mesh.material as any).opacity
-                } to ${opacity} (progress: ${progress})`
+                } -> ${opacity} (progress: ${progress.toFixed(6)})`
               );
             }
             (mesh.material as any).opacity = opacity;
