@@ -81,7 +81,7 @@ export function initHomeScrollAnimation(
           // DEBUG: Log when entering home-scroll
           console.log("[home-scroll] onEnter called");
 
-          // Check for any active GSAP tweens on opacity
+          // Check for any active GSAP tweens on opacity and log current opacity values
           Object.entries(ghosts).forEach(([key, object]) => {
             object.traverse((child) => {
               if ((child as any).isMesh && (child as any).material) {
@@ -95,6 +95,10 @@ export function initHomeScrollAnimation(
                         activeTweens
                       );
                     }
+                    // DEBUG: Log current opacity value in onEnter
+                    console.log(
+                      `[home-scroll] onEnter - ${key} material opacity: ${mat.opacity}`
+                    );
                   });
                 } else {
                   const activeTweens = gsap.getTweensOf(
@@ -106,6 +110,12 @@ export function initHomeScrollAnimation(
                       activeTweens
                     );
                   }
+                  // DEBUG: Log current opacity value in onEnter
+                  console.log(
+                    `[home-scroll] onEnter - ${key} material opacity: ${
+                      (mesh.material as any).opacity
+                    }`
+                  );
                 }
               }
             });
@@ -202,6 +212,62 @@ export function initHomeScrollAnimation(
             cameraPathPoints
           );
         },
+        onEnter: () => {
+          // DEBUG: Log when entering home-scroll
+          console.log("[home-scroll] onEnter called");
+
+          // Check for any active GSAP tweens on opacity
+          Object.entries(ghosts).forEach(([key, object]) => {
+            object.traverse((child) => {
+              if ((child as any).isMesh && (child as any).material) {
+                const mesh = child as THREE.Mesh;
+                if (Array.isArray(mesh.material)) {
+                  mesh.material.forEach((mat: any) => {
+                    const activeTweens = gsap.getTweensOf(mat.opacity);
+                    if (activeTweens.length > 0) {
+                      console.log(
+                        `[home-scroll] Found active tweens on ${key} material opacity:`,
+                        activeTweens
+                      );
+                    }
+                    // DEBUG: Log current opacity value
+                    console.log(
+                      `[home-scroll] onEnter - ${key} material opacity before:`,
+                      mat.opacity
+                    );
+                  });
+                } else {
+                  const activeTweens = gsap.getTweensOf(
+                    (mesh.material as any).opacity
+                  );
+                  if (activeTweens.length > 0) {
+                    console.log(
+                      `[home-scroll] Found active tweens on ${key} material opacity:`,
+                      activeTweens
+                    );
+                  }
+                  // DEBUG: Log current opacity value
+                  console.log(
+                    `[home-scroll] onEnter - ${key} material opacity before:`,
+                    (mesh.material as any).opacity
+                  );
+                }
+              }
+            });
+          });
+
+          // Then get fresh positions and apply preset
+          syncStateFromObjects();
+          const freshPositions = getCurrentPositions();
+          const freshRotations = getCurrentRotations();
+          const scrollDir = getScrollDirection();
+          applyHomeScrollPreset(
+            true,
+            scrollDir,
+            freshPositions,
+            freshRotations
+          );
+        },
         onStart: () => {
           // CRITICAL: When scroll animation starts (progress = 0), ensure opacity is 100%
           // Kill any opacity tweens and set to 1.0
@@ -275,10 +341,11 @@ function updateScrollAnimation(
   const fadeEndProgress = 0.95;
   // CRITICAL: At progress 0 or very close to 0, opacity should ALWAYS be 1.0 (100%)
   // Fade from 1.0 to 0.0 between fadeStartProgress and fadeEndProgress
-  // Use a small threshold (0.01) to handle floating point precision issues
+  // Use a threshold (0.01) to handle floating point precision issues
+  // Since progress starts at ~0.001844, we need to ensure opacity is 1.0 for very small values
   let opacity: number;
   if (progress <= 0.01) {
-    // At the very start, always 100%
+    // At the very start (progress <= 0.01), always 100%
     opacity = 1.0;
   } else if (progress < fadeStartProgress) {
     // Before fade starts, stay at 100%
@@ -294,9 +361,11 @@ function updateScrollAnimation(
   }
 
   // DEBUG: Log opacity calculation when it's not 1.0 at the start
-  if (progress < 0.1 && opacity !== 1.0) {
+  if (progress < 0.1) {
     console.log(
-      `[home-scroll] Progress: ${progress}, Calculated Opacity: ${opacity}`
+      `[home-scroll] Progress: ${progress.toFixed(
+        6
+      )}, Calculated Opacity: ${opacity.toFixed(3)}`
     );
   }
 
