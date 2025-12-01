@@ -166,7 +166,6 @@ export function initPovScrollAnimation() {
   Object.keys(povTriggerPositions).forEach((key) => {
     ghostStates[key] = {
       hasBeenTriggered: false,
-      hasBeenDeactivated: false,
       triggerCameraProgress: null,
       ghostStartFadeInProgress: null,
       ghostEndFadeInProgress: null,
@@ -176,9 +175,6 @@ export function initPovScrollAnimation() {
       camStartFadeOutProgress: null,
       endCameraProgress: null,
       currentPathT: 0,
-      ghostTextOpacity: 0,
-      camTextOpacity: 0,
-      lastProgress: 0,
     };
   });
 
@@ -672,6 +668,19 @@ function updateTextVisibility(
   });
 }
 
+// Helper function to reset tangent smoothers
+function resetTangentSmoothers() {
+  Object.keys(povTangentSmoothers).forEach((key) => {
+    if (povTangentSmoothers[key]) {
+      const resetVector =
+        key === "camera"
+          ? new THREE.Vector3(0, 0, -1)
+          : new THREE.Vector3(1, 0, 0);
+      povTangentSmoothers[key].reset(resetVector);
+    }
+  });
+}
+
 function handleLeavePOV() {
   // Reset all ghost states
   Object.entries(ghosts).forEach(([key, ghost]) => {
@@ -717,16 +726,7 @@ function handleLeavePOV() {
     ghosts.pacman.visible = true;
   }
 
-  // Reset tangent smoothers
-  Object.keys(povTangentSmoothers).forEach((key) => {
-    if (povTangentSmoothers[key]) {
-      const resetVector =
-        key === "camera"
-          ? new THREE.Vector3(0, 0, -1)
-          : new THREE.Vector3(1, 0, 0);
-      povTangentSmoothers[key].reset(resetVector);
-    }
-  });
+  resetTangentSmoothers();
 }
 
 function resetState() {
@@ -743,7 +743,6 @@ function resetState() {
   Object.keys(ghostStates).forEach((key) => {
     ghostStates[key] = {
       hasBeenTriggered: false,
-      hasBeenDeactivated: false,
       triggerCameraProgress: null,
       ghostStartFadeInProgress: null,
       ghostEndFadeInProgress: null,
@@ -753,21 +752,10 @@ function resetState() {
       camStartFadeOutProgress: null,
       endCameraProgress: null,
       currentPathT: 0,
-      ghostTextOpacity: 0,
-      camTextOpacity: 0,
-      lastProgress: 0,
     };
-
-    // Reset tangent smoothers
-    if (povTangentSmoothers[key]) {
-      povTangentSmoothers[key].reset(new THREE.Vector3(1, 0, 0));
-    }
   });
 
-  // Reset camera tangent smoother
-  if (povTangentSmoothers.camera) {
-    povTangentSmoothers.camera.reset(new THREE.Vector3(0, 0, -1));
-  }
+  resetTangentSmoothers();
 }
 
 // Utility functions

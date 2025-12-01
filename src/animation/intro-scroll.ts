@@ -17,6 +17,133 @@ let isIntroScrollActive = false;
 let lastIntroProgress = 0;
 let isUpdating = false; // Prevent concurrent updates
 
+// Helper function to pause other scroll triggers
+function pauseOtherScrollTriggers() {
+  const homeScrollTrigger = gsap.getById("homeScroll");
+  if (homeScrollTrigger) {
+    const homeTimeline = (homeScrollTrigger as any).timeline;
+    if (homeTimeline?.pause) {
+      homeTimeline.pause();
+    }
+  }
+
+  const povScrollTrigger = ScrollTrigger.getById("povScroll");
+  if (povScrollTrigger) {
+    const povTimeline = (povScrollTrigger as any).timeline;
+    if (povTimeline?.pause) {
+      povTimeline.pause();
+    }
+  }
+}
+
+// Helper function to set object visibility and opacity
+function setObjectVisibilityAndOpacity(key: string, obj: THREE.Object3D) {
+  gsap.killTweensOf(obj);
+  gsap.killTweensOf(obj.scale);
+  gsap.killTweensOf(obj.position);
+  gsap.killTweensOf(obj.quaternion);
+
+  obj.visible = true;
+  obj.traverse((child) => {
+    if ((child as any).isMesh && (child as any).material) {
+      const mesh = child as THREE.Mesh;
+      const childName = child.name || "";
+
+      // Skip currency symbols and pacman parts
+      if (
+        ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
+        childName.includes("EUR") ||
+        childName.includes("CHF") ||
+        childName.includes("YEN") ||
+        childName.includes("USD") ||
+        childName.includes("GBP") ||
+        (key === "pacman" &&
+          (childName.includes("Shell") ||
+            childName.includes("Bitcoin_1") ||
+            childName.includes("Bitcoin_2")))
+      ) {
+        return;
+      }
+
+      mesh.visible = true;
+      if (Array.isArray(mesh.material)) {
+        mesh.material.forEach((mat: any) => {
+          mat.opacity = 1;
+          mat.transparent = true;
+        });
+      } else {
+        (mesh.material as any).opacity = 1;
+        (mesh.material as any).transparent = true;
+      }
+    }
+  });
+  obj.updateMatrixWorld(true);
+}
+
+// Helper function to initialize intro scroll state
+function initializeIntroScrollState() {
+  pauseOtherScrollTriggers();
+
+  ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(
+    (key) => {
+      const obj = ghosts[key];
+      if (obj) {
+        setObjectVisibilityAndOpacity(key, obj);
+      }
+    }
+  );
+
+  const scrollDir = getScrollDirection();
+  applyIntroScrollPreset(true, scrollDir);
+
+  // Force visibility again after preset
+  ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(
+    (key) => {
+      const obj = ghosts[key];
+      if (obj) {
+        setObjectVisibilityAndOpacity(key, obj);
+      }
+    }
+  );
+
+  isUpdating = false;
+
+  // Update objects immediately
+  const scrollTrigger = ScrollTrigger.getById("introScroll");
+  const progress =
+    scrollTrigger && typeof scrollTrigger.progress === "number"
+      ? scrollTrigger.progress
+      : 0;
+  lastIntroProgress = progress;
+  updateObjectsWalkBy(progress);
+
+  // Also update in next frame
+  requestAnimationFrame(() => {
+    const scrollTrigger = ScrollTrigger.getById("introScroll");
+    const progress =
+      scrollTrigger && typeof scrollTrigger.progress === "number"
+        ? scrollTrigger.progress
+        : 0;
+    lastIntroProgress = progress;
+    updateObjectsWalkBy(progress);
+  });
+}
+
+// Helper function to restore floor
+function restoreFloor() {
+  scene.traverse((child) => {
+    if (child.name === "CAM-Floor") {
+      child.visible = true;
+      if (child instanceof THREE.Mesh && child.material) {
+        const material = child.material as THREE.MeshBasicMaterial;
+        material.color.setHex(0xffffff);
+        material.opacity = 1;
+        material.transparent = false;
+      }
+    }
+  });
+}
+
 export function initIntroScrollAnimation() {
   // Kill any existing timeline
   if (introScrollTimeline) {
@@ -26,343 +153,27 @@ export function initIntroScrollAnimation() {
 
   introScrollTimeline = gsap
     .timeline({
-    scrollTrigger: {
-      trigger: ".sc--intro",
+      scrollTrigger: {
+        trigger: ".sc--intro",
         start: "top top",
-      end: "bottom bottom",
-      scrub: 0.5,
+        end: "bottom bottom",
+        scrub: 0.5,
         refreshPriority: 1,
         onEnter: () => {
           isIntroScrollActive = true;
-
-          // CRITICAL: Kill any home-scroll animations that might interfere
-          const homeScrollTrigger = gsap.getById("homeScroll");
-          if (homeScrollTrigger) {
-            const homeTimeline = (homeScrollTrigger as any).timeline;
-            if (homeTimeline && homeTimeline.pause) {
-              homeTimeline.pause();
-            }
-          }
-
-          // CRITICAL: Kill any pov-scroll animations that might interfere
-          const povScrollTrigger = ScrollTrigger.getById("povScroll");
-          if (povScrollTrigger) {
-            const povTimeline = (povScrollTrigger as any).timeline;
-            if (povTimeline && povTimeline.pause) {
-              povTimeline.pause();
-            }
-          }
-
-          // Kill any GSAP animations on objects
-          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(
-            (key) => {
-              const obj = ghosts[key];
-              if (obj) {
-                gsap.killTweensOf(obj);
-                gsap.killTweensOf(obj.scale);
-                gsap.killTweensOf(obj.position);
-                gsap.killTweensOf(obj.quaternion);
-
-                // CRITICAL: Immediately set visibility and opacity to ensure objects are visible
-                // This overrides any opacity/visibility set by home-scroll
-                // Must traverse ALL nested meshes to restore visibility
-                obj.visible = true;
-                obj.traverse((child) => {
-                  if ((child as any).isMesh && (child as any).material) {
-                    const mesh = child as THREE.Mesh;
-                    const childName = child.name || "";
-
-                    // Skip currency symbols and pacman parts - they stay hidden
-                    if (
-                      ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
-                      childName.includes("EUR") ||
-                      childName.includes("CHF") ||
-                      childName.includes("YEN") ||
-                      childName.includes("USD") ||
-                      childName.includes("GBP") ||
-                      (key === "pacman" &&
-                        (childName.includes("Shell") ||
-                          childName.includes("Bitcoin_1") ||
-                          childName.includes("Bitcoin_2")))
-                    ) {
-                      return; // Skip these, keep them hidden
-                    }
-
-                    // Force visibility and opacity for all other meshes
-                    mesh.visible = true;
-                    if (Array.isArray(mesh.material)) {
-                      mesh.material.forEach((mat: any) => {
-                        mat.opacity = 1;
-                        mat.transparent = true;
-                      });
-                    } else {
-                      (mesh.material as any).opacity = 1;
-                      (mesh.material as any).transparent = true;
-                    }
-                  }
-                });
-
-                // Force update matrix to ensure changes are applied
-                obj.updateMatrixWorld(true);
-              }
-            }
-          );
-
-          const scrollDir = getScrollDirection();
-          applyIntroScrollPreset(true, scrollDir);
-
-          // CRITICAL: After preset is applied, FORCE visibility again to ensure objects are visible
-          // This is necessary because home-scroll makes objects invisible (opacity 0 or visible false)
-          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(
-            (key) => {
-              const obj = ghosts[key];
-              if (obj) {
-                obj.visible = true;
-                obj.traverse((child) => {
-                  if ((child as any).isMesh && (child as any).material) {
-                    const mesh = child as THREE.Mesh;
-                    const childName = child.name || "";
-
-                    // Skip currency symbols and pacman parts
-                    if (
-                      ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
-                      childName.includes("EUR") ||
-                      childName.includes("CHF") ||
-                      childName.includes("YEN") ||
-                      childName.includes("USD") ||
-                      childName.includes("GBP") ||
-                      (key === "pacman" &&
-                        (childName.includes("Shell") ||
-                          childName.includes("Bitcoin_1") ||
-                          childName.includes("Bitcoin_2")))
-                    ) {
-                      return;
-                    }
-
-                    mesh.visible = true;
-                    if (Array.isArray(mesh.material)) {
-                      mesh.material.forEach((mat: any) => {
-                        mat.opacity = 1;
-                        mat.transparent = true;
-                      });
-                    } else {
-                      (mesh.material as any).opacity = 1;
-                      (mesh.material as any).transparent = true;
-                    }
-                  }
-                });
-                obj.updateMatrixWorld(true);
-              }
-            }
-          );
-
-          // CRITICAL: Reset update flags to ensure first update runs
-          isUpdating = false;
-
-          // Immediately update objects to ensure they're visible and at correct position
-          // Call synchronously first, then also in requestAnimationFrame for safety
-          const scrollTrigger = ScrollTrigger.getById("introScroll");
-          if (scrollTrigger && typeof scrollTrigger.progress === "number") {
-            lastIntroProgress = scrollTrigger.progress;
-            updateObjectsWalkBy(scrollTrigger.progress);
-          } else {
-            lastIntroProgress = 0;
-            updateObjectsWalkBy(0);
-          }
-
-          // Also call in requestAnimationFrame to ensure it runs after any pending updates
-          requestAnimationFrame(() => {
-            const scrollTrigger = ScrollTrigger.getById("introScroll");
-            if (scrollTrigger && typeof scrollTrigger.progress === "number") {
-              lastIntroProgress = scrollTrigger.progress;
-              updateObjectsWalkBy(scrollTrigger.progress);
-            } else {
-              lastIntroProgress = 0;
-              updateObjectsWalkBy(0);
-            }
-          });
+          initializeIntroScrollState();
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
-
-          // CRITICAL: Kill any home-scroll animations that might interfere
-          const homeScrollTrigger = gsap.getById("homeScroll");
-          if (homeScrollTrigger) {
-            const homeTimeline = (homeScrollTrigger as any).timeline;
-            if (homeTimeline && homeTimeline.pause) {
-              homeTimeline.pause();
-            }
-          }
-
-          // CRITICAL: Kill any pov-scroll animations that might interfere
-          const povScrollTrigger = ScrollTrigger.getById("povScroll");
-          if (povScrollTrigger) {
-            const povTimeline = (povScrollTrigger as any).timeline;
-            if (povTimeline && povTimeline.pause) {
-              povTimeline.pause();
-            }
-          }
-
-          // Kill any GSAP animations on objects
-          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(
-            (key) => {
-              const obj = ghosts[key];
-              if (obj) {
-                gsap.killTweensOf(obj);
-                gsap.killTweensOf(obj.scale);
-                gsap.killTweensOf(obj.position);
-                gsap.killTweensOf(obj.quaternion);
-
-                // CRITICAL: Immediately set visibility and opacity to ensure objects are visible
-                // This overrides any opacity/visibility set by home-scroll
-                // Must traverse ALL nested meshes to restore visibility
-                obj.visible = true;
-                obj.traverse((child) => {
-                  if ((child as any).isMesh && (child as any).material) {
-                    const mesh = child as THREE.Mesh;
-                    const childName = child.name || "";
-
-                    // Skip currency symbols and pacman parts - they stay hidden
-                    if (
-                      ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
-                      childName.includes("EUR") ||
-                      childName.includes("CHF") ||
-                      childName.includes("YEN") ||
-                      childName.includes("USD") ||
-                      childName.includes("GBP") ||
-                      (key === "pacman" &&
-                        (childName.includes("Shell") ||
-                          childName.includes("Bitcoin_1") ||
-                          childName.includes("Bitcoin_2")))
-                    ) {
-                      return; // Skip these, keep them hidden
-                    }
-
-                    // Force visibility and opacity for all other meshes
-                    mesh.visible = true;
-                    if (Array.isArray(mesh.material)) {
-                      mesh.material.forEach((mat: any) => {
-                        mat.opacity = 1;
-                        mat.transparent = true;
-                      });
-                    } else {
-                      (mesh.material as any).opacity = 1;
-                      (mesh.material as any).transparent = true;
-                    }
-                  }
-                });
-
-                // Force update matrix to ensure changes are applied
-                obj.updateMatrixWorld(true);
-              }
-            }
-          );
-
-          const scrollDir = getScrollDirection();
-          applyIntroScrollPreset(true, scrollDir);
-
-          // CRITICAL: After preset is applied, FORCE visibility again to ensure objects are visible
-          // This is necessary because home-scroll makes objects invisible (opacity 0 or visible false)
-          ["pacman", "ghost1", "ghost2", "ghost3", "ghost4", "ghost5"].forEach(
-            (key) => {
-              const obj = ghosts[key];
-              if (obj) {
-                obj.visible = true;
-                obj.traverse((child) => {
-                  if ((child as any).isMesh && (child as any).material) {
-                    const mesh = child as THREE.Mesh;
-                    const childName = child.name || "";
-
-                    // Skip currency symbols and pacman parts
-                    if (
-                      ["EUR", "CHF", "YEN", "USD", "GBP"].includes(childName) ||
-                      childName.includes("EUR") ||
-                      childName.includes("CHF") ||
-                      childName.includes("YEN") ||
-                      childName.includes("USD") ||
-                      childName.includes("GBP") ||
-                      (key === "pacman" &&
-                        (childName.includes("Shell") ||
-                          childName.includes("Bitcoin_1") ||
-                          childName.includes("Bitcoin_2")))
-                    ) {
-                      return;
-                    }
-
-                    mesh.visible = true;
-                    if (Array.isArray(mesh.material)) {
-                      mesh.material.forEach((mat: any) => {
-                        mat.opacity = 1;
-                        mat.transparent = true;
-                      });
-                    } else {
-                      (mesh.material as any).opacity = 1;
-                      (mesh.material as any).transparent = true;
-                    }
-                  }
-                });
-                obj.updateMatrixWorld(true);
-              }
-            }
-          );
-
-          // CRITICAL: Reset update flags to ensure first update runs
-          isUpdating = false;
-
-          // Immediately update objects to ensure they're visible and at correct position
-          // Call synchronously first, then also in requestAnimationFrame for safety
-          const scrollTrigger = ScrollTrigger.getById("introScroll");
-          if (scrollTrigger && typeof scrollTrigger.progress === "number") {
-            lastIntroProgress = scrollTrigger.progress;
-            updateObjectsWalkBy(scrollTrigger.progress);
-          } else {
-            lastIntroProgress = 0;
-            updateObjectsWalkBy(0);
-          }
-
-          // Also call in requestAnimationFrame to ensure it runs after any pending updates
-          requestAnimationFrame(() => {
-            const scrollTrigger = ScrollTrigger.getById("introScroll");
-            if (scrollTrigger && typeof scrollTrigger.progress === "number") {
-              lastIntroProgress = scrollTrigger.progress;
-              updateObjectsWalkBy(scrollTrigger.progress);
-            } else {
-              lastIntroProgress = 0;
-              updateObjectsWalkBy(0);
-            }
-          });
+          initializeIntroScrollState();
         },
         onLeave: () => {
           isIntroScrollActive = false;
-
-          // Restore floor to original appearance when leaving intro section
-          scene.traverse((child) => {
-            if (child.name === "CAM-Floor") {
-              child.visible = true;
-              if (child instanceof THREE.Mesh && child.material) {
-                const material = child.material as THREE.MeshBasicMaterial;
-                material.color.setHex(0xffffff); // White
-                material.opacity = 1;
-                material.transparent = false;
-              }
-            }
-          });
+          restoreFloor();
         },
         onLeaveBack: () => {
           isIntroScrollActive = false;
-
-          // Restore floor to original appearance when leaving intro section
-          scene.traverse((child) => {
-            if (child.name === "CAM-Floor") {
-              child.visible = true;
-              if (child instanceof THREE.Mesh && child.material) {
-                const material = child.material as THREE.MeshBasicMaterial;
-                material.color.setHex(0xffffff); // White
-                material.opacity = 1;
-                material.transparent = false;
-              }
-            }
-          });
+          restoreFloor();
         },
         onUpdate: (self) => {
           // CRITICAL: Update on every scroll event - this is the primary update source
@@ -376,21 +187,17 @@ export function initIntroScrollAnimation() {
             updateObjectsWalkBy(self.progress);
           }
         },
-        onRefresh: () => {
-          // Only refresh if active - don't update objects here to avoid conflicts
-          // The onUpdate callback will handle updates
-        },
         id: "introScroll",
       },
     })
     .fromTo(
       ".sc_h--intro",
       { scale: 0.5, opacity: 0 },
-    {
-      keyframes: [
-        { scale: 0.5, opacity: 0, duration: 0 },
-        { scale: 0.8, opacity: 1, duration: 0.3 },
-        { scale: 1.2, opacity: 1, duration: 0.4 },
+      {
+        keyframes: [
+          { scale: 0.5, opacity: 0, duration: 0 },
+          { scale: 0.8, opacity: 1, duration: 0.3 },
+          { scale: 1.2, opacity: 1, duration: 0.4 },
           { scale: 1.5, opacity: 0, duration: 0.3 },
         ],
       }
@@ -398,11 +205,11 @@ export function initIntroScrollAnimation() {
     .fromTo(
       ".sc_b--intro",
       { scale: 0.5, opacity: 0 },
-    {
-      keyframes: [
-        { scale: 0.5, opacity: 0, duration: 0 },
-        { scale: 0.8, opacity: 1, duration: 0.3 },
-        { scale: 1.2, opacity: 1, duration: 0.4 },
+      {
+        keyframes: [
+          { scale: 0.5, opacity: 0, duration: 0 },
+          { scale: 0.8, opacity: 1, duration: 0.3 },
+          { scale: 1.2, opacity: 1, duration: 0.4 },
           { scale: 1.5, opacity: 0, duration: 0.3 },
         ],
       }
@@ -413,17 +220,12 @@ export function initIntroScrollAnimation() {
         progress: 1,
         duration: 1,
         immediateRender: false,
-        // Remove onUpdate here - ScrollTrigger's onUpdate handles all updates
-        // This prevents double updates that cause flickering
-        onStart: function () {},
-        onComplete: function () {
-          // CRITICAL: Ensure objects are visible even when animation completes
+        onComplete: () => {
           if (isIntroScrollActive) {
             updateObjectsWalkBy(lastIntroProgress);
           }
         },
-        onReverseComplete: function () {
-          // CRITICAL: Ensure objects are visible even when animation reverses
+        onReverseComplete: () => {
           if (isIntroScrollActive) {
             updateObjectsWalkBy(lastIntroProgress);
           }
@@ -547,13 +349,13 @@ function updateObjectsWalkBy(progress: number) {
       // Update opacity for meshes
       const targetOpacity = key === "pacman" ? 1.0 : ghostOpacity;
 
-      // Ensure child meshes are visible and maintain ghost colors
+      // Ghost colors (matching scene-presets.ts)
       const ghostColors: Record<string, number> = {
-        ghost1: 0xff0000, // Red
-        ghost2: 0x00ff00, // Green
-        ghost3: 0x0000ff, // Blue
-        ghost4: 0xffff00, // Yellow
-        ghost5: 0xff00ff, // Magenta
+        ghost1: 0xff0000,
+        ghost2: 0x00ff00,
+        ghost3: 0x0000ff,
+        ghost4: 0xffff00,
+        ghost5: 0xff00ff,
       };
 
       object.traverse((child) => {
