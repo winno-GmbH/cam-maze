@@ -42,6 +42,30 @@ export function initHomeScrollAnimation(
   const currentPositions = getCurrentPositions();
   const currentRotations = getCurrentRotations();
 
+  // CRITICAL: Ensure opacity starts at 100% when entering home-scroll
+  // Kill any opacity tweens and set to 1.0
+  Object.entries(ghosts).forEach(([key, object]) => {
+    gsap.killTweensOf(object);
+    object.traverse((child) => {
+      if ((child as any).isMesh && (child as any).material) {
+        const mesh = child as THREE.Mesh;
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((mat: any) => {
+            gsap.killTweensOf(mat);
+            gsap.killTweensOf(mat.opacity);
+            mat.opacity = 1.0;
+            mat.transparent = true;
+          });
+        } else {
+          gsap.killTweensOf(mesh.material);
+          gsap.killTweensOf((mesh.material as any).opacity);
+          (mesh.material as any).opacity = 1.0;
+          (mesh.material as any).transparent = true;
+        }
+      }
+    });
+  });
+
   const scrollPaths = getHomeScrollPaths(currentPositions);
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
@@ -114,6 +138,31 @@ export function initHomeScrollAnimation(
             cameraPathPoints
           );
         },
+        onStart: () => {
+          // CRITICAL: When scroll animation starts (progress = 0), ensure opacity is 100%
+          // Kill any opacity tweens and set to 1.0
+          Object.entries(ghosts).forEach(([key, object]) => {
+            gsap.killTweensOf(object);
+            object.traverse((child) => {
+              if ((child as any).isMesh && (child as any).material) {
+                const mesh = child as THREE.Mesh;
+                if (Array.isArray(mesh.material)) {
+                  mesh.material.forEach((mat: any) => {
+                    gsap.killTweensOf(mat);
+                    gsap.killTweensOf(mat.opacity);
+                    mat.opacity = 1.0;
+                    mat.transparent = true;
+                  });
+                } else {
+                  gsap.killTweensOf(mesh.material);
+                  gsap.killTweensOf((mesh.material as any).opacity);
+                  (mesh.material as any).opacity = 1.0;
+                  (mesh.material as any).transparent = true;
+                }
+              }
+            });
+          });
+        },
         onReverseComplete: () => {
           // CRITICAL: When scrolling back up (reverse), sync state immediately
           // Use requestAnimationFrame to ensure this happens after all updates
@@ -157,15 +206,17 @@ function updateScrollAnimation(
     return;
   }
 
-  // Opacity calculation (unchanged)
+  // Opacity calculation: start at 100% (progress 0), fade to 0% (progress 0.85-0.95)
   const fadeStartProgress = 0.85;
   const fadeEndProgress = 0.95;
+  // CRITICAL: At progress 0, opacity should be 1.0 (100%)
+  // Fade from 1.0 to 0.0 between fadeStartProgress and fadeEndProgress
   const opacity =
     progress < fadeStartProgress
-      ? 1
+      ? 1.0
       : progress > fadeEndProgress
-      ? 0
-      : 1 -
+      ? 0.0
+      : 1.0 -
         (progress - fadeStartProgress) / (fadeEndProgress - fadeStartProgress);
 
   // Apply smooth easing to rotation progress (bidirectional - reverses when scrolling up)

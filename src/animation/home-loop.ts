@@ -12,6 +12,7 @@ import {
   updateObjectPosition,
   updateObjectRotation,
 } from "./object-state";
+import { isCurrencySymbol } from "./util";
 
 const LOOP_DURATION = 50;
 const ROTATION_TRANSITION_DURATION = 1.5; // Seconds to transition from laying down to upright
@@ -272,6 +273,29 @@ function updateHomeLoop(delta: number) {
 
       // CRITICAL: Update state every frame to keep it in sync
       updateObjectRotation(key, ghost.quaternion);
+
+      // CRITICAL: Maintain opacity at 100% in home-loop
+      ghost.traverse((child) => {
+        if ((child as any).isMesh && (child as any).material) {
+          const mesh = child as THREE.Mesh;
+          const childName = child.name || "";
+          
+          // Skip currency symbols
+          if (isCurrencySymbol(childName)) {
+            return;
+          }
+
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((mat: any) => {
+              mat.opacity = 1.0;
+              mat.transparent = false;
+            });
+          } else {
+            (mesh.material as any).opacity = 1.0;
+            (mesh.material as any).transparent = false;
+          }
+        }
+      });
     }
   });
 }
