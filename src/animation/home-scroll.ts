@@ -27,19 +27,14 @@ const characterSpeeds: Record<string, number> = {
   ghost5: 1.4,
 };
 
-export function initHomeScrollAnimation(
-  pausedPositions: Record<string, THREE.Vector3>,
-  pausedRotations: Record<string, THREE.Quaternion>
-) {
+export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
     homeScrollTimeline.kill();
     homeScrollTimeline = null;
   }
 
-  // CRITICAL: Always use current state, not the passed parameters
-  // This ensures we always have the latest positions even if loop was running
-  // Note: We don't call syncStateFromObjects() here because it only works when home-loop is active
-  // We just read the current positions from state (which were last updated by home-loop)
+  // CRITICAL: Always use current state - this is the ONLY source of truth
+  // Positions and rotations are ONLY updated by home-loop, so we read them from state
   const currentPositions = getCurrentPositions();
   const currentRotations = getCurrentRotations();
 
@@ -166,13 +161,7 @@ export function initHomeScrollAnimation(
           const progress = this.targets()[0].progress;
           camera.fov = originalFOV;
           camera.updateProjectionMatrix();
-          const currentRotations = getCurrentRotations();
-          updateScrollAnimation(
-            progress,
-            scrollPaths,
-            currentRotations,
-            cameraPathPoints
-          );
+          updateScrollAnimation(progress, scrollPaths, cameraPathPoints);
         },
       }
     );
@@ -181,9 +170,10 @@ export function initHomeScrollAnimation(
 function updateScrollAnimation(
   progress: number,
   paths: Record<string, THREE.CurvePath<THREE.Vector3>>,
-  pausedRotations: Record<string, THREE.Quaternion>,
   cameraPathPoints: any[]
 ) {
+  // CRITICAL: Always get rotations from state (they're updated by home-loop)
+  const pausedRotations = getCurrentRotations();
   // CRITICAL: Check if intro-scroll is active - if so, don't update objects
   // This prevents conflicts when scrolling between sections
   const introScrollTrigger = gsap.getById("introScroll");

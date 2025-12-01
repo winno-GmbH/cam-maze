@@ -71,13 +71,9 @@ function stopHomeLoop() {
   syncStateFromObjects();
   setHomeLoopActive(false);
 
+  // CRITICAL: Rotations are already in state (updated every frame in updateHomeLoop)
+  // We just need to ensure they're up-to-date before starting scroll
   const homePaths = getHomePaths();
-  // CRITICAL: Get positions from state (which is updated every frame in updateHomeLoop)
-  // This ensures we always use the most recent positions, not stale ones
-  const pausedPositions = getCurrentPositions();
-  const pausedRotations: Record<string, THREE.Quaternion> = {};
-
-  // Calculate proper rotations based on path tangents
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path && homeLoopTangentSmoothers[key]) {
@@ -88,19 +84,19 @@ function stopHomeLoop() {
 
         const tempObject = new THREE.Object3D();
         calculateObjectOrientation(tempObject, smoothTangent, objectType);
-        pausedRotations[key] = tempObject.quaternion.clone();
-        updateObjectRotation(key, pausedRotations[key]);
+        const rotation = tempObject.quaternion.clone();
+        updateObjectRotation(key, rotation);
       } else {
-        pausedRotations[key] = ghost.quaternion.clone();
-        updateObjectRotation(key, pausedRotations[key]);
+        updateObjectRotation(key, ghost.quaternion);
       }
     } else {
-      pausedRotations[key] = ghost.quaternion.clone();
-      updateObjectRotation(key, pausedRotations[key]);
+      updateObjectRotation(key, ghost.quaternion);
     }
   });
 
-  initHomeScrollAnimation(pausedPositions, pausedRotations);
+  // CRITICAL: initHomeScrollAnimation now reads everything from state
+  // No need to pass parameters - state is the single source of truth
+  initHomeScrollAnimation();
 }
 
 function startHomeLoop() {
