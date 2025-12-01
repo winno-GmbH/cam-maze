@@ -85,8 +85,33 @@ export function initHomeScrollAnimation() {
     });
   });
 
-  const scrollPaths = getHomeScrollPaths(currentPositions);
+  // Paths will be recreated in onEnter/onEnterBack with fresh positions
+  // Store initial paths for first render
+  let scrollPaths = getHomeScrollPaths(currentPositions);
   const cameraPathPoints = getCameraHomeScrollPathPoints();
+
+  // Function to recreate paths with current positions from home-loop
+  const recreateScrollPaths = () => {
+    // CRITICAL: Always calculate positions from the same t-value as home-loop
+    const homePaths = getHomePaths();
+    const isLoopActive = getIsHomeLoopActive();
+    const t = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
+
+    const freshPositions: Record<string, THREE.Vector3> = {};
+    Object.entries(ghosts).forEach(([key, _]) => {
+      const path = homePaths[key];
+      if (path) {
+        const position = path.getPointAt(t);
+        if (position) {
+          freshPositions[key] = position;
+        }
+      }
+    });
+
+    // Recreate paths with fresh positions
+    scrollPaths = getHomeScrollPaths(freshPositions);
+    return { positions: freshPositions, paths: scrollPaths };
+  };
 
   homeScrollTimeline = gsap
     .timeline({
@@ -97,8 +122,9 @@ export function initHomeScrollAnimation() {
         end: "bottom top",
         scrub: 0.5,
         onEnter: () => {
-          // CRITICAL: Only read positions from state, don't sync (only home-loop should sync)
-          const freshPositions = getCurrentPositions();
+          // CRITICAL: Recreate paths with current positions from home-loop
+          // This ensures paths always start from the exact position where home-loop is
+          const { positions: freshPositions } = recreateScrollPaths();
           const freshRotations = getCurrentRotations();
           const scrollDir = getScrollDirection();
           applyHomeScrollPreset(
@@ -132,8 +158,9 @@ export function initHomeScrollAnimation() {
           });
         },
         onEnterBack: () => {
-          // CRITICAL: Only read positions from state, don't sync (only home-loop should sync)
-          const freshPositions = getCurrentPositions();
+          // CRITICAL: Recreate paths with current positions from home-loop
+          // This ensures paths always start from the exact position where home-loop is
+          const { positions: freshPositions } = recreateScrollPaths();
           const freshRotations = getCurrentRotations();
           const scrollDir = getScrollDirection();
           applyHomeScrollPreset(
@@ -247,24 +274,11 @@ function updateScrollAnimation(
       (progress - fadeStartProgress) / (fadeEndProgress - fadeStartProgress);
   }
 
-  // Apply smooth easing to rotation progress (bidirectional - reverses when scrolling up)
-  // Rotation animates from start rotation (from home-loop) to laying down
-  // Use easing to make the rotation animation smooth and timed
-  const rotationStartProgress = 0.0; // Start rotation animation immediately
-  const rotationEndProgress = 0.5; // Complete rotation by 50% of scroll
-  let rotationProgress = 0;
-
-  if (progress <= rotationStartProgress) {
-    rotationProgress = 0; // Start at initial rotation
-  } else if (progress >= rotationEndProgress) {
-    rotationProgress = 1; // Fully laid down
-  } else {
-    // Animate rotation between start and end
-    const normalizedProgress =
-      (progress - rotationStartProgress) /
-      (rotationEndProgress - rotationStartProgress);
-    rotationProgress = Math.pow(normalizedProgress, 1.5); // Smooth easing
-  }
+  // Rotation should be progress-based like position and opacity
+  // 0% progress = start rotation (from home-loop)
+  // 100% progress = fully laid down
+  // Use smooth easing for natural animation
+  const rotationProgress = Math.pow(progress, 1.5);
 
   // Pacman animation
   if (paths.pacman && pacman) {
