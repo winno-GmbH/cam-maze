@@ -60,11 +60,14 @@ function stopHomeLoop() {
   hasBeenPausedBefore = true;
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
 
-  // CRITICAL: Sync state from actual object positions before stopping
-  // This ensures pausedPositions always reflects the exact current positions
+  // CRITICAL: State is already updated every frame in updateHomeLoop()
+  // Just ensure we have the absolute latest by syncing one more time
+  // This catches any edge cases where updateHomeLoop() hasn't run yet this frame
   syncStateFromObjects();
 
   const homePaths = getHomePaths();
+  // CRITICAL: Get positions from state (which is updated every frame in updateHomeLoop)
+  // This ensures we always use the most recent positions, not stale ones
   const pausedPositions = getCurrentPositions();
   const pausedRotations: Record<string, THREE.Quaternion> = {};
 

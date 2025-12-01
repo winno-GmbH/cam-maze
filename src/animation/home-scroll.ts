@@ -11,6 +11,8 @@ import {
   syncStateFromObjects,
   updateObjectPosition,
   updateObjectRotation,
+  getCurrentPositions,
+  getCurrentRotations,
 } from "./object-state";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
@@ -34,7 +36,13 @@ export function initHomeScrollAnimation(
     homeScrollTimeline = null;
   }
 
-  const scrollPaths = getHomeScrollPaths(pausedPositions);
+  // CRITICAL: Always use current state, not the passed parameters
+  // This ensures we always have the latest positions even if loop was running
+  syncStateFromObjects();
+  const currentPositions = getCurrentPositions();
+  const currentRotations = getCurrentRotations();
+
+  const scrollPaths = getHomeScrollPaths(currentPositions);
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
   homeScrollTimeline = gsap
@@ -46,21 +54,29 @@ export function initHomeScrollAnimation(
         end: "bottom top",
         scrub: 0.5,
         onEnter: () => {
+          // CRITICAL: Always get fresh positions from state
+          syncStateFromObjects();
+          const freshPositions = getCurrentPositions();
+          const freshRotations = getCurrentRotations();
           const scrollDir = getScrollDirection();
           applyHomeScrollPreset(
             true,
             scrollDir,
-            pausedPositions,
-            pausedRotations
+            freshPositions,
+            freshRotations
           );
         },
         onEnterBack: () => {
+          // CRITICAL: Always get fresh positions from state
+          syncStateFromObjects();
+          const freshPositions = getCurrentPositions();
+          const freshRotations = getCurrentRotations();
           const scrollDir = getScrollDirection();
           applyHomeScrollPreset(
             true,
             scrollDir,
-            pausedPositions,
-            pausedRotations
+            freshPositions,
+            freshRotations
           );
         },
         onScrubComplete: () => {
@@ -80,10 +96,12 @@ export function initHomeScrollAnimation(
           const progress = this.targets()[0].progress;
           camera.fov = originalFOV;
           camera.updateProjectionMatrix();
+          // CRITICAL: Use current rotations from state, not stale pausedRotations
+          const currentRotations = getCurrentRotations();
           updateScrollAnimation(
             progress,
             scrollPaths,
-            pausedRotations,
+            currentRotations,
             cameraPathPoints
           );
         },
