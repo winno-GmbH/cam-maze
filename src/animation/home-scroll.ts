@@ -11,6 +11,7 @@ import {
   syncStateFromObjects,
   updateObjectPosition,
   updateObjectRotation,
+  updateObjectOpacity,
   getCurrentPositions,
   getCurrentRotations,
 } from "./object-state";
@@ -411,37 +412,8 @@ function updateScrollAnimation(
       slerpToLayDown(pacman, pausedRotations["pacman"], rotationProgress);
       updateObjectRotation("pacman", pacman.quaternion);
 
-      // Animate pacman opacity - traverse all nested meshes
-      pacman.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          const mesh = child as THREE.Mesh;
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any, index: number) => {
-              // DEBUG: Log when opacity is set at low progress
-              if (progress < 0.1) {
-                console.log(
-                  `[home-scroll] updateScrollAnimation - Pacman material[${index}] opacity: ${
-                    mat.opacity
-                  } -> ${opacity} (progress: ${progress.toFixed(6)})`
-                );
-              }
-              mat.opacity = opacity;
-              mat.transparent = true;
-            });
-          } else {
-            // DEBUG: Log when opacity is set at low progress
-            if (progress < 0.1) {
-              console.log(
-                `[home-scroll] updateScrollAnimation - Pacman material opacity: ${
-                  (mesh.material as any).opacity
-                } -> ${opacity} (progress: ${progress.toFixed(6)})`
-              );
-            }
-            (mesh.material as any).opacity = opacity;
-            (mesh.material as any).transparent = true;
-          }
-        }
-      });
+      // Animate pacman opacity - use state management
+      updateObjectOpacity("pacman", opacity);
     }
   }
 
@@ -462,21 +434,8 @@ function updateScrollAnimation(
         slerpToLayDown(ghost, pausedRotations[key], rotationProgress);
         updateObjectRotation(key, ghost.quaternion);
 
-        // Animate ghost opacity - traverse all nested meshes
-        ghost.traverse((child) => {
-          if ((child as any).isMesh && (child as any).material) {
-            const mesh = child as THREE.Mesh;
-            if (Array.isArray(mesh.material)) {
-              mesh.material.forEach((mat: any) => {
-                mat.opacity = opacity;
-                mat.transparent = true;
-              });
-            } else {
-              (mesh.material as any).opacity = opacity;
-              (mesh.material as any).transparent = true;
-            }
-          }
-        });
+        // Animate ghost opacity - use state management
+        updateObjectOpacity(key, opacity);
       }
     }
   });
