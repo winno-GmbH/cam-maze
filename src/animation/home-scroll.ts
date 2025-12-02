@@ -2,16 +2,16 @@ import gsap from "gsap";
 import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts, pacman } from "../core/objects";
-import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
-import { getHomeScrollPaths } from "../paths/paths";
+import {
+  getCameraHomeScrollPathPoints,
+  objectHomeScrollEndPathPoint,
+} from "../paths/pathpoints";
 import { homeLoopHandler } from "./home-loop";
 import { slerpToLayDown } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import {
-  syncStateFromObjects,
   updateObjectRotation,
   updateObjectOpacity,
-  getCurrentPositions,
   getCurrentRotations,
   getHomeLoopT,
   getHomeLoopPausedT,
@@ -37,30 +37,6 @@ export function initHomeScrollAnimation() {
     homeScrollTimeline = null;
   }
 
-  // CRITICAL: Use the EXACT same paths and t-value as home-loop
-  // This guarantees 100% identical positions
-  const homePaths = getHomePaths();
-
-  // Use pausedT if loop is stopped, otherwise use current t
-  // This ensures we always use the exact same t-value that home-loop used
-  const isLoopActive = getIsHomeLoopActive();
-  const t = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
-
-  // Calculate positions from the same paths with the same t-value
-  // This ensures they are EXACTLY the same as home-loop
-  const currentPositions: Record<string, THREE.Vector3> = {};
-  Object.entries(ghosts).forEach(([key, _]) => {
-    const path = homePaths[key];
-    if (path) {
-      const position = path.getPointAt(t);
-      if (position) {
-        currentPositions[key] = position;
-      }
-    }
-  });
-
-  const currentRotations = getCurrentRotations();
-
   // CRITICAL: Ensure opacity starts at 100% when entering home-scroll
   // Kill any opacity tweens and set to 1.0
   Object.entries(ghosts).forEach(([key, object]) => {
@@ -85,33 +61,20 @@ export function initHomeScrollAnimation() {
     });
   });
 
-  // Paths will be recreated in onEnter/onEnterBack with fresh positions
-  // Store initial paths for first render
-  let scrollPaths = getHomeScrollPaths(currentPositions);
+  // Camera path points (unchanged - camera still uses bezier curve)
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
-  // Function to recreate paths with current positions from home-loop
-  const recreateScrollPaths = () => {
-    // CRITICAL: Always calculate positions from the same t-value as home-loop
-    const homePaths = getHomePaths();
-    const isLoopActive = getIsHomeLoopActive();
-    const t = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
-
-    const freshPositions: Record<string, THREE.Vector3> = {};
-    Object.entries(ghosts).forEach(([key, _]) => {
-      const path = homePaths[key];
-      if (path) {
-        const position = path.getPointAt(t);
-        if (position) {
-          freshPositions[key] = position;
-        }
-      }
-    });
-
-    // Recreate paths with fresh positions
-    scrollPaths = getHomeScrollPaths(freshPositions);
-    return { positions: freshPositions, paths: scrollPaths };
-  };
+  // Create camera path
+  const cameraPath = new THREE.CurvePath<THREE.Vector3>();
+  if (cameraPathPoints.length === 4) {
+    const cameraCurve = new THREE.CubicBezierCurve3(
+      cameraPathPoints[0].pos,
+      cameraPathPoints[1].pos,
+      cameraPathPoints[2].pos,
+      cameraPathPoints[3].pos
+    );
+    cameraPath.add(cameraCurve);
+  }
 
   homeScrollTimeline = gsap
     .timeline({
@@ -122,11 +85,26 @@ export function initHomeScrollAnimation() {
         end: "bottom top",
         scrub: 0.5,
         onEnter: () => {
-          // CRITICAL: Recreate paths with current positions from home-loop
-          // This ensures paths always start from the exact position where home-loop is
-          const { positions: freshPositions } = recreateScrollPaths();
+          // CRITICAL: Get fresh positions and rotations from home-loop state
+          // Positions will be calculated on-the-fly in updateScrollAnimation
           const freshRotations = getCurrentRotations();
           const scrollDir = getScrollDirection();
+
+          // Calculate current positions from home-loop t-value
+          const homePaths = getHomePaths();
+          const isLoopActive = getIsHomeLoopActive();
+          const t = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
+          const freshPositions: Record<string, THREE.Vector3> = {};
+          Object.entries(ghosts).forEach(([key, _]) => {
+            const path = homePaths[key];
+            if (path) {
+              const position = path.getPointAt(t);
+              if (position) {
+                freshPositions[key] = position;
+              }
+            }
+          });
+
           applyHomeScrollPreset(
             true,
             scrollDir,
@@ -158,11 +136,26 @@ export function initHomeScrollAnimation() {
           });
         },
         onEnterBack: () => {
-          // CRITICAL: Recreate paths with current positions from home-loop
-          // This ensures paths always start from the exact position where home-loop is
-          const { positions: freshPositions } = recreateScrollPaths();
+          // CRITICAL: Get fresh positions and rotations from home-loop state
+          // Positions will be calculated on-the-fly in updateScrollAnimation
           const freshRotations = getCurrentRotations();
           const scrollDir = getScrollDirection();
+
+          // Calculate current positions from home-loop t-value
+          const homePaths = getHomePaths();
+          const isLoopActive = getIsHomeLoopActive();
+          const t = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
+          const freshPositions: Record<string, THREE.Vector3> = {};
+          Object.entries(ghosts).forEach(([key, _]) => {
+            const path = homePaths[key];
+            if (path) {
+              const position = path.getPointAt(t);
+              if (position) {
+                freshPositions[key] = position;
+              }
+            }
+          });
+
           applyHomeScrollPreset(
             true,
             scrollDir,
@@ -211,7 +204,7 @@ export function initHomeScrollAnimation() {
           const progress = this.targets()[0].progress;
           camera.fov = originalFOV;
           camera.updateProjectionMatrix();
-          updateScrollAnimation(progress, scrollPaths, cameraPathPoints);
+          updateScrollAnimation(progress, cameraPath, cameraPathPoints);
         },
       }
     );
@@ -219,19 +212,19 @@ export function initHomeScrollAnimation() {
 
 function updateScrollAnimation(
   progress: number,
-  paths: Record<string, THREE.CurvePath<THREE.Vector3>>,
+  cameraPath: THREE.CurvePath<THREE.Vector3>,
   cameraPathPoints: any[]
 ) {
   // CRITICAL: Always get rotations from state (they're updated by home-loop)
   const pausedRotations = getCurrentRotations();
+
   // CRITICAL: Check if intro-scroll is active - if so, don't update objects
-  // This prevents conflicts when scrolling between sections
   const introScrollTrigger = gsap.getById("introScroll");
   const isIntroScrollActive = introScrollTrigger && introScrollTrigger.isActive;
 
-  // Camera animation (unchanged)
-  if (paths.camera) {
-    const cameraPoint = paths.camera.getPointAt(progress);
+  // Camera animation (unchanged - still uses bezier curve)
+  if (cameraPath) {
+    const cameraPoint = cameraPath.getPointAt(progress);
     camera.position.copy(cameraPoint);
 
     const lookAtCurve = new THREE.CubicBezierCurve3(
@@ -250,78 +243,100 @@ function updateScrollAnimation(
     return;
   }
 
-  // Opacity calculation: start at 100% (progress 0), fade to 0% (progress 0.85-0.95)
+  // UNFAILABLE APPROACH: Always calculate positions directly from home-loop t-value
+  // This ensures 100% synchronization - no stale positions possible
+  const homePaths = getHomePaths();
+  const isLoopActive = getIsHomeLoopActive();
+  const t = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
+
+  // Opacity: progress-based (0% = 100%, 85-95% = fade to 0%)
   const fadeStartProgress = 0.85;
   const fadeEndProgress = 0.95;
-  // CRITICAL: At progress 0 or very close to 0, opacity should ALWAYS be 1.0 (100%)
-  // Fade from 1.0 to 0.0 between fadeStartProgress and fadeEndProgress
-  // Use a threshold (0.01) to handle floating point precision issues
-  // Since progress starts at ~0.001844, we need to ensure opacity is 1.0 for very small values
   let opacity: number;
   if (progress <= 0.01) {
-    // At the very start (progress <= 0.01), always 100%
     opacity = 1.0;
   } else if (progress < fadeStartProgress) {
-    // Before fade starts, stay at 100%
     opacity = 1.0;
   } else if (progress > fadeEndProgress) {
-    // After fade ends, stay at 0%
     opacity = 0.0;
   } else {
-    // During fade, interpolate from 1.0 to 0.0
     opacity =
       1.0 -
       (progress - fadeStartProgress) / (fadeEndProgress - fadeStartProgress);
   }
 
-  // Rotation should be progress-based like position and opacity
-  // 0% progress = start rotation (from home-loop)
-  // 100% progress = fully laid down
-  // Use smooth easing for natural animation
+  // Rotation: progress-based (0% = start rotation, 100% = fully laid down)
   const rotationProgress = Math.pow(progress, 1.5);
 
-  // Pacman animation
-  if (paths.pacman && pacman) {
-    const pacmanSpeed = characterSpeeds["pacman"] ?? 1.0;
-    const rawPacmanProgress = Math.min(progress * pacmanSpeed, 1);
-    const easedPacmanProgress = Math.pow(rawPacmanProgress, 1.25);
-    const pacmanPoint = paths.pacman.getPointAt(easedPacmanProgress);
+  // UNFAILABLE: Calculate start position from home-loop t-value (always fresh)
+  // Interpolate directly to end position - no separate paths needed
+  Object.entries(ghosts).forEach(([key, object]) => {
+    const homePath = homePaths[key];
+    if (!homePath) return;
 
-    if (pacmanPoint) {
-      pacman.position.copy(pacmanPoint);
-      // CRITICAL: Do NOT update state position here - only home-loop should update positions
-      // We only update the visual position for the scroll animation
+    // Get current position from home-loop (always fresh, always correct)
+    const startPosition = homePath.getPointAt(t);
+    if (!startPosition) return;
 
-      // Apply bidirectional laying down animation
-      slerpToLayDown(pacman, pausedRotations["pacman"], rotationProgress);
-      updateObjectRotation("pacman", pacman.quaternion);
+    // Calculate end position with arc (same as before, but simpler)
+    const arcPoint = new THREE.Vector3(
+      startPosition.x * (1 / 4) + objectHomeScrollEndPathPoint.x * (3 / 4),
+      1.5,
+      startPosition.z * (1 / 4) + objectHomeScrollEndPathPoint.z * (3 / 4)
+    );
 
-      // Animate pacman opacity - use state management
-      updateObjectOpacity("pacman", opacity);
-    }
-  }
+    // Apply character speed
+    const speed = characterSpeeds[key] ?? 1.0;
+    const rawProgress = Math.min(progress * speed, 1);
+    const easedProgress = Math.pow(rawProgress, 1.25);
 
-  // Ghosts animation
-  Object.entries(ghosts).forEach(([key, ghost]) => {
-    const path = paths[key];
-    if (path) {
-      const ghostSpeed = characterSpeeds[key] ?? 1.0;
-      const rawGhostProgress = Math.min(progress * ghostSpeed, 1);
-      const easedGhostProgress = Math.pow(rawGhostProgress, 1.25);
-      const ghostPoint = path.getPointAt(easedGhostProgress);
+    // Direct interpolation: start -> arc -> end (quadratic bezier)
+    // This is equivalent to the old path approach, but calculated on-the-fly
+    const t1 = easedProgress;
+    const t2 = 1 - t1;
+    const intermediate = new THREE.Vector3()
+      .addScaledVector(startPosition, t2 * t2)
+      .addScaledVector(arcPoint, 2 * t1 * t2)
+      .addScaledVector(objectHomeScrollEndPathPoint, t1 * t1);
 
-      if (ghostPoint) {
-        ghost.position.copy(ghostPoint);
-        // CRITICAL: Do NOT update state position here - only home-loop should update positions
-        // We only update the visual position for the scroll animation
+    object.position.copy(intermediate);
 
-        // Apply bidirectional laying down animation
-        slerpToLayDown(ghost, pausedRotations[key], rotationProgress);
-        updateObjectRotation(key, ghost.quaternion);
+    // Apply rotation (progress-based, 0-100%)
+    slerpToLayDown(object, pausedRotations[key], rotationProgress);
+    updateObjectRotation(key, object.quaternion);
 
-        // Animate ghost opacity - use state management
-        updateObjectOpacity(key, opacity);
+    // Apply opacity
+    updateObjectOpacity(key, opacity);
+  });
+
+  // Pacman (same approach)
+  if (pacman) {
+    const homePath = homePaths["pacman"];
+    if (homePath) {
+      const startPosition = homePath.getPointAt(t);
+      if (startPosition) {
+        const arcPoint = new THREE.Vector3(
+          startPosition.x * (1 / 4) + objectHomeScrollEndPathPoint.x * (3 / 4),
+          1.5,
+          startPosition.z * (1 / 4) + objectHomeScrollEndPathPoint.z * (3 / 4)
+        );
+
+        const speed = characterSpeeds["pacman"] ?? 1.0;
+        const rawProgress = Math.min(progress * speed, 1);
+        const easedProgress = Math.pow(rawProgress, 1.25);
+
+        const t1 = easedProgress;
+        const t2 = 1 - t1;
+        const intermediate = new THREE.Vector3()
+          .addScaledVector(startPosition, t2 * t2)
+          .addScaledVector(arcPoint, 2 * t1 * t2)
+          .addScaledVector(objectHomeScrollEndPathPoint, t1 * t1);
+
+        pacman.position.copy(intermediate);
+        slerpToLayDown(pacman, pausedRotations["pacman"], rotationProgress);
+        updateObjectRotation("pacman", pacman.quaternion);
+        updateObjectOpacity("pacman", opacity);
       }
     }
-  });
+  }
 }
