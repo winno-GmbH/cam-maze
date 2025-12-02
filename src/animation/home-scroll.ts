@@ -79,6 +79,10 @@ export function initHomeScrollAnimation() {
           // Store for use in animations
           startPositions = freshPositions;
 
+          // Recreate animations with fresh FROM values (including camera)
+          createObjectAnimations();
+          createCameraAnimation();
+
           applyHomeScrollPreset(
             true,
             scrollDir,
@@ -101,16 +105,14 @@ export function initHomeScrollAnimation() {
             freshPositions[key] = object.position.clone();
           });
 
-          // Also include pacman
-          if (pacman) {
-            freshPositions["pacman"] = pacman.position.clone();
-          }
+          // Note: pacman is already in ghosts, so it's included above
 
           // Store for use in animations
           startPositions = freshPositions;
 
-          // Recreate animations with fresh FROM values
+          // Recreate animations with fresh FROM values (including camera)
           createObjectAnimations();
+          createCameraAnimation();
 
           applyHomeScrollPreset(
             true,
@@ -129,10 +131,8 @@ export function initHomeScrollAnimation() {
   });
 
   // Initialize startPositions with current positions
-  const allObjects = [...Object.entries(ghosts)];
-  if (pacman) {
-    allObjects.push(["pacman", pacman]);
-  }
+  // Note: ghosts already contains pacman, so we don't need to add it separately
+  const allObjects = Object.entries(ghosts);
   allObjects.forEach(([key, object]) => {
     startPositions[key] = object.position.clone();
   });
@@ -257,44 +257,55 @@ export function initHomeScrollAnimation() {
     });
   };
 
+  // Store camera progress wrapper for killing
+  let cameraProgressWrapper: { value: number } | null = null;
+
+  // Function to create camera animation
+  const createCameraAnimation = () => {
+    // Kill existing camera animation
+    if (cameraProgressWrapper) {
+      gsap.killTweensOf(cameraProgressWrapper);
+    }
+
+    cameraProgressWrapper = { value: 0 };
+    homeScrollTimeline!.fromTo(
+      cameraProgressWrapper,
+      { value: 0 },
+      {
+        value: 1,
+        immediateRender: false,
+        onUpdate: function () {
+          const progress = this.targets()[0].value;
+          if (cameraPath) {
+            const cameraPoint = cameraPath.getPointAt(progress);
+            camera.position.copy(cameraPoint);
+
+            const lookAtPoints: THREE.Vector3[] = [];
+            cameraPathPoints.forEach((point) => {
+              if ("lookAt" in point && point.lookAt) {
+                lookAtPoints.push(point.lookAt);
+              }
+            });
+
+            if (lookAtPoints.length >= 4) {
+              const lookAtCurve = new THREE.CubicBezierCurve3(
+                lookAtPoints[0],
+                lookAtPoints[1],
+                lookAtPoints[2],
+                lookAtPoints[3]
+              );
+              const lookAtPoint = lookAtCurve.getPoint(progress);
+              camera.lookAt(lookAtPoint);
+            }
+            camera.fov = originalFOV;
+            camera.updateProjectionMatrix();
+          }
+        },
+      }
+    );
+  };
+
   // Create animations initially
   createObjectAnimations();
-
-  // Camera animation (separate, uses bezier curve)
-  const cameraProgress = { value: 0 };
-  homeScrollTimeline!.fromTo(
-    cameraProgress,
-    { value: 0 },
-    {
-      value: 1,
-      immediateRender: false,
-      onUpdate: function () {
-        const progress = this.targets()[0].value;
-        if (cameraPath) {
-          const cameraPoint = cameraPath.getPointAt(progress);
-          camera.position.copy(cameraPoint);
-
-          const lookAtPoints: THREE.Vector3[] = [];
-          cameraPathPoints.forEach((point) => {
-            if ("lookAt" in point && point.lookAt) {
-              lookAtPoints.push(point.lookAt);
-            }
-          });
-
-          if (lookAtPoints.length >= 4) {
-            const lookAtCurve = new THREE.CubicBezierCurve3(
-              lookAtPoints[0],
-              lookAtPoints[1],
-              lookAtPoints[2],
-              lookAtPoints[3]
-            );
-            const lookAtPoint = lookAtCurve.getPoint(progress);
-            camera.lookAt(lookAtPoint);
-          }
-          camera.fov = originalFOV;
-          camera.updateProjectionMatrix();
-        }
-      },
-    }
-  );
+  createCameraAnimation();
 }
