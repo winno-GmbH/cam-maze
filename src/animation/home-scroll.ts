@@ -7,22 +7,17 @@ import {
   objectHomeScrollEndPathPoint,
 } from "../paths/pathpoints";
 import { homeLoopHandler } from "./home-loop";
-import { slerpToLayDown, LAY_DOWN_QUAT_1, LAY_DOWN_QUAT_2 } from "./util";
+import { LAY_DOWN_QUAT_1, LAY_DOWN_QUAT_2 } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import {
   updateObjectRotation,
   updateObjectOpacity,
   getCurrentRotations,
-  getHomeLoopT,
-  getHomeLoopPausedT,
-  getIsHomeLoopActive,
 } from "./object-state";
-import { getHomePaths } from "../paths/paths";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
 
-// Store actual positions when entering home-scroll (not t-values)
 let startPositions: Record<string, THREE.Vector3> = {};
 
 const characterSpeeds: Record<string, number> = {
@@ -40,29 +35,7 @@ export function initHomeScrollAnimation() {
     homeScrollTimeline = null;
   }
 
-  // CRITICAL: Ensure opacity starts at 100% when entering home-scroll
-  // Kill any opacity tweens and set to 1.0
-  Object.entries(ghosts).forEach(([key, object]) => {
-    gsap.killTweensOf(object);
-    object.traverse((child) => {
-      if ((child as any).isMesh && (child as any).material) {
-        const mesh = child as THREE.Mesh;
-        if (Array.isArray(mesh.material)) {
-          mesh.material.forEach((mat: any) => {
-            gsap.killTweensOf(mat);
-            gsap.killTweensOf(mat.opacity);
-            mat.opacity = 1.0;
-            mat.transparent = true;
-          });
-        } else {
-          gsap.killTweensOf(mesh.material);
-          gsap.killTweensOf((mesh.material as any).opacity);
-          (mesh.material as any).opacity = 1.0;
-          (mesh.material as any).transparent = true;
-        }
-      }
-    });
-  });
+  // Remove this - GSAP fromTo handles opacity automatically
 
   // Camera path points (unchanged - camera still uses bezier curve)
   const cameraPathPoints = getCameraHomeScrollPathPoints();
@@ -154,16 +127,27 @@ export function initHomeScrollAnimation() {
     },
   });
 
-  // Camera animation (separate, uses bezier curve)
-  const cameraProgress = { value: 0 };
+  // Initialize startPositions with current positions
+  const allObjects = [...Object.entries(ghosts)];
+  if (pacman) {
+    allObjects.push(["pacman", pacman]);
+  }
+  allObjects.forEach(([key, object]) => {
+    startPositions[key] = object.position.clone();
+  });
+
+  // Single GSAP fromTo for everything (camera + all objects)
+  const animationProgress = { value: 0 };
   homeScrollTimeline!.fromTo(
-    cameraProgress,
+    animationProgress,
     { value: 0 },
     {
       value: 1,
       immediateRender: false,
       onUpdate: function () {
         const progress = this.targets()[0].value;
+
+        // Camera animation
         if (cameraPath) {
           const cameraPoint = cameraPath.getPointAt(progress);
           camera.position.copy(cameraPoint);
@@ -188,46 +172,21 @@ export function initHomeScrollAnimation() {
           camera.fov = originalFOV;
           camera.updateProjectionMatrix();
         }
-      },
-    }
-  );
 
-  // Initialize startPositions with current positions
-  const allObjects = [...Object.entries(ghosts)];
-  if (pacman) {
-    allObjects.push(["pacman", pacman]);
-  }
-  allObjects.forEach(([key, object]) => {
-    startPositions[key] = object.position.clone();
-  });
-
-  // Simple fromTo animations for all objects
-  allObjects.forEach(([key, object]) => {
-    // Get materials for opacity
-    const materials: any[] = [];
-    object.traverse((child) => {
-      if ((child as any).isMesh && (child as any).material) {
-        const mesh = child as THREE.Mesh;
-        if (Array.isArray(mesh.material)) {
-          materials.push(...mesh.material);
-        } else {
-          materials.push(mesh.material);
-        }
-      }
-    });
-
-    // Wrapper object for animation progress
-    const animProgress = { value: 0 };
-
-    // FROM: currentPos, currentRotation, opacity 1
-    // TO: endPos, endRotation, opacity 0
-    homeScrollTimeline!.fromTo(
-      animProgress,
-      { value: 0 },
-      {
-        value: 1,
-        onUpdate: function () {
-          const progress = this.targets()[0].value;
+        // Object animations (position, rotation, opacity)
+        allObjects.forEach(([key, object]) => {
+          // Get materials for opacity
+          const materials: any[] = [];
+          object.traverse((child) => {
+            if ((child as any).isMesh && (child as any).material) {
+              const mesh = child as THREE.Mesh;
+              if (Array.isArray(mesh.material)) {
+                materials.push(...mesh.material);
+              } else {
+                materials.push(mesh.material);
+              }
+            }
+          });
 
           // FROM: Get start position and rotation (stored when entering)
           const startPos = startPositions[key];
@@ -265,8 +224,8 @@ export function initHomeScrollAnimation() {
             mat.transparent = opacity < 1.0;
           });
           updateObjectOpacity(key, opacity);
-        },
-      }
-    );
-  });
+        });
+      },
+    }
+  );
 }
