@@ -79,125 +79,238 @@ export function initHomeScrollAnimation() {
     cameraPath.add(cameraCurve);
   }
 
-  homeScrollTimeline = gsap
-    .timeline({
-      scrollTrigger: {
-        id: "homeScroll",
-        trigger: ".sc--home",
-        start: "top top",
-        end: "bottom top",
-        scrub: 0.5,
-        onEnter: () => {
-          // CRITICAL: Freeze t-value when entering to prevent disalignment
-          // This MUST happen first, before any position calculations
-          const isLoopActive = getIsHomeLoopActive();
-          frozenT = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
+  homeScrollTimeline = gsap.timeline({
+    scrollTrigger: {
+      id: "homeScroll",
+      trigger: ".sc--home",
+      start: "top top",
+      end: "bottom top",
+      scrub: 0.5,
+      onEnter: () => {
+        // CRITICAL: Freeze t-value when entering to prevent disalignment
+        // This MUST happen first, before any position calculations
+        const isLoopActive = getIsHomeLoopActive();
+        frozenT = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
 
-          // CRITICAL: Use requestAnimationFrame to ensure home-loop has updated positions
-          requestAnimationFrame(() => {
-            const freshRotations = getCurrentRotations();
-            const scrollDir = getScrollDirection();
+        // CRITICAL: Use requestAnimationFrame to ensure home-loop has updated positions
+        requestAnimationFrame(() => {
+          const freshRotations = getCurrentRotations();
+          const scrollDir = getScrollDirection();
 
-            // Calculate current positions from frozen t-value
-            const homePaths = getHomePaths();
-            const freshPositions: Record<string, THREE.Vector3> = {};
-            Object.entries(ghosts).forEach(([key, _]) => {
-              const path = homePaths[key];
-              if (path && frozenT !== null) {
-                const position = path.getPointAt(frozenT);
-                if (position) {
-                  freshPositions[key] = position;
-                }
-              }
-            });
-
-            // Also include pacman
-            if (pacman) {
-              const pacmanPath = homePaths["pacman"];
-              if (pacmanPath && frozenT !== null) {
-                const position = pacmanPath.getPointAt(frozenT);
-                if (position) {
-                  freshPositions["pacman"] = position;
-                }
+          // Calculate current positions from frozen t-value
+          const homePaths = getHomePaths();
+          const freshPositions: Record<string, THREE.Vector3> = {};
+          Object.entries(ghosts).forEach(([key, _]) => {
+            const path = homePaths[key];
+            if (path && frozenT !== null) {
+              const position = path.getPointAt(frozenT);
+              if (position) {
+                freshPositions[key] = position;
               }
             }
-
-            applyHomeScrollPreset(
-              true,
-              scrollDir,
-              freshPositions,
-              freshRotations
-            );
           });
-        },
-        onEnterBack: () => {
-          // CRITICAL: Freeze t-value when entering back to prevent disalignment
-          // This MUST happen first, before any position calculations
-          const isLoopActive = getIsHomeLoopActive();
-          frozenT = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
 
-          // CRITICAL: Use requestAnimationFrame to ensure home-loop has updated positions
-          requestAnimationFrame(() => {
-            const freshRotations = getCurrentRotations();
-            const scrollDir = getScrollDirection();
-
-            // Calculate current positions from frozen t-value
-            const homePaths = getHomePaths();
-            const freshPositions: Record<string, THREE.Vector3> = {};
-            Object.entries(ghosts).forEach(([key, _]) => {
-              const path = homePaths[key];
-              if (path && frozenT !== null) {
-                const position = path.getPointAt(frozenT);
-                if (position) {
-                  freshPositions[key] = position;
-                }
-              }
-            });
-
-            // Also include pacman
-            if (pacman) {
-              const pacmanPath = homePaths["pacman"];
-              if (pacmanPath && frozenT !== null) {
-                const position = pacmanPath.getPointAt(frozenT);
-                if (position) {
-                  freshPositions["pacman"] = position;
-                }
+          // Also include pacman
+          if (pacman) {
+            const pacmanPath = homePaths["pacman"];
+            if (pacmanPath && frozenT !== null) {
+              const position = pacmanPath.getPointAt(frozenT);
+              if (position) {
+                freshPositions["pacman"] = position;
               }
             }
+          }
 
-            applyHomeScrollPreset(
-              true,
-              scrollDir,
-              freshPositions,
-              freshRotations
-            );
-          });
-        },
-        onScrubComplete: () => {
-          // CRITICAL: When returning to home-loop, it will sync state itself
-          // We don't sync here because only home-loop should update positions
-          requestAnimationFrame(() => {
-            homeLoopHandler();
-          });
-        },
+          applyHomeScrollPreset(
+            true,
+            scrollDir,
+            freshPositions,
+            freshRotations
+          );
+
+          // CRITICAL: Re-setup animations with fresh rotations when entering
+          if (homeScrollTimeline) {
+            setupScrollAnimations();
+          }
+        });
       },
-    })
-    .to(
-      { progress: 0 },
-      {
-        progress: 1,
-        immediateRender: false,
-        onUpdate: function () {
-          const progress = this.targets()[0].progress;
-          camera.fov = originalFOV;
-          camera.updateProjectionMatrix();
-          updateScrollAnimation(progress, cameraPath, cameraPathPoints);
-        },
-      }
-    );
+      onEnterBack: () => {
+        // CRITICAL: Freeze t-value when entering back to prevent disalignment
+        // This MUST happen first, before any position calculations
+        const isLoopActive = getIsHomeLoopActive();
+        frozenT = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
 
-  // Store rotation targets for smooth animation
-  // These will be calculated once and used in updateScrollAnimation
+        // CRITICAL: Use requestAnimationFrame to ensure home-loop has updated positions
+        requestAnimationFrame(() => {
+          const freshRotations = getCurrentRotations();
+          const scrollDir = getScrollDirection();
+
+          // Calculate current positions from frozen t-value
+          const homePaths = getHomePaths();
+          const freshPositions: Record<string, THREE.Vector3> = {};
+          Object.entries(ghosts).forEach(([key, _]) => {
+            const path = homePaths[key];
+            if (path && frozenT !== null) {
+              const position = path.getPointAt(frozenT);
+              if (position) {
+                freshPositions[key] = position;
+              }
+            }
+          });
+
+          // Also include pacman
+          if (pacman) {
+            const pacmanPath = homePaths["pacman"];
+            if (pacmanPath && frozenT !== null) {
+              const position = pacmanPath.getPointAt(frozenT);
+              if (position) {
+                freshPositions["pacman"] = position;
+              }
+            }
+          }
+
+          applyHomeScrollPreset(
+            true,
+            scrollDir,
+            freshPositions,
+            freshRotations
+          );
+
+          // CRITICAL: Re-setup animations with fresh rotations when entering back
+          if (homeScrollTimeline) {
+            setupScrollAnimations();
+          }
+        });
+      },
+      onScrubComplete: () => {
+        // CRITICAL: When returning to home-loop, it will sync state itself
+        // We don't sync here because only home-loop should update positions
+        requestAnimationFrame(() => {
+          homeLoopHandler();
+        });
+      },
+    },
+  });
+
+  // Store animation references to kill them when re-setting up
+  let rotationAnimations: (gsap.core.Tween | gsap.core.Timeline)[] = [];
+  let opacityAnimations: (gsap.core.Tween | gsap.core.Timeline)[] = [];
+
+  // Function to setup GSAP animations (called on enter to get fresh rotations)
+  const setupScrollAnimations = () => {
+    // Kill existing animations first
+    rotationAnimations.forEach((anim) => anim.kill());
+    opacityAnimations.forEach((anim) => anim.kill());
+    rotationAnimations.length = 0;
+    opacityAnimations.length = 0;
+
+    const allObjects = [...Object.entries(ghosts)];
+    if (pacman) {
+      allObjects.push(["pacman", pacman]);
+    }
+
+    // Animate rotation for all objects (from currentRotation to laying down)
+    // CRITICAL: startRotation is fetched dynamically in onUpdate, not frozen
+    allObjects.forEach(([key, object]) => {
+      // Kill any existing rotation animations
+      gsap.killTweensOf(object.quaternion);
+
+      // Create wrapper object for quaternion animation (GSAP can't animate quaternions directly)
+      const rotationWrapper = { progress: 0 };
+      const rotationAnim = homeScrollTimeline!.fromTo(
+        rotationWrapper,
+        { progress: 0 },
+        {
+          progress: 1,
+          ease: "power1.5",
+          onUpdate: function () {
+            // CRITICAL: Get fresh rotation from state every update (not frozen)
+            // This ensures rotation always starts from current home-loop rotation
+            const currentRotations = getCurrentRotations();
+            const startRotation = currentRotations[key];
+            if (!startRotation) return;
+
+            // Calculate target laying down rotation
+            const d1 = startRotation.angleTo(LAY_DOWN_QUAT_1);
+            const d2 = startRotation.angleTo(LAY_DOWN_QUAT_2);
+            const targetQuat = d1 < d2 ? LAY_DOWN_QUAT_1 : LAY_DOWN_QUAT_2;
+
+            const rotationProgress = this.targets()[0].progress;
+            object.quaternion.copy(
+              startRotation.clone().slerp(targetQuat, rotationProgress)
+            );
+            updateObjectRotation(key, object.quaternion);
+          },
+        }
+      );
+      rotationAnimations.push(rotationAnim);
+    });
+
+    // Animate opacity for all objects (from 1.0 to 0.0, fade at 85-95%)
+    allObjects.forEach(([key, object]) => {
+      // Get all materials for this object
+      const materials: any[] = [];
+      object.traverse((child) => {
+        if ((child as any).isMesh && (child as any).material) {
+          const mesh = child as THREE.Mesh;
+          if (Array.isArray(mesh.material)) {
+            materials.push(...mesh.material);
+          } else {
+            materials.push(mesh.material);
+          }
+        }
+      });
+
+      if (materials.length === 0) return;
+
+      // Kill any existing opacity animations
+      materials.forEach((mat) => {
+        gsap.killTweensOf(mat);
+        gsap.killTweensOf(mat.opacity);
+      });
+
+      // GSAP fromTo with keyframes for opacity
+      const opacityAnim = homeScrollTimeline!.fromTo(
+        materials,
+        { opacity: 1.0 },
+        {
+          opacity: 1.0,
+          keyframes: [
+            { opacity: 1.0, duration: 0.85 }, // Stay at 100% until 85%
+            { opacity: 0.0, duration: 0.1 }, // Fade to 0% between 85-95%
+            { opacity: 0.0, duration: 0.05 }, // Stay at 0% from 95-100%
+          ],
+          onUpdate: function () {
+            // Update state for consistency
+            const opacity = materials[0]?.opacity ?? 1.0;
+            materials.forEach((mat) => {
+              mat.transparent = opacity < 1.0;
+            });
+            updateObjectOpacity(key, opacity);
+          },
+        }
+      );
+      opacityAnimations.push(opacityAnim);
+    });
+  };
+
+  // Setup animations initially
+  setupScrollAnimations();
+
+  // Position animation still uses manual calculation (complex bezier interpolation)
+  homeScrollTimeline!.to(
+    { progress: 0 },
+    {
+      progress: 1,
+      immediateRender: false,
+      onUpdate: function () {
+        const progress = this.targets()[0].progress;
+        camera.fov = originalFOV;
+        camera.updateProjectionMatrix();
+        updateScrollAnimation(progress, cameraPath, cameraPathPoints);
+      },
+    }
+  );
 }
 
 function updateScrollAnimation(
@@ -205,13 +318,6 @@ function updateScrollAnimation(
   cameraPath: THREE.CurvePath<THREE.Vector3>,
   cameraPathPoints: any[]
 ) {
-  // CRITICAL: Always get FRESH rotations from state (they're updated by home-loop)
-  // This ensures rotation works bidirectionally:
-  // - Scroll down (progress 0→1): Rotate from home-loop rotation to laying down
-  // - Scroll up (progress 1→0): Rotate from laying down back to home-loop rotation
-  // The rotation is ALWAYS calculated from the current home-loop rotation, not a frozen one
-  const currentRotations = getCurrentRotations();
-
   // CRITICAL: Check if intro-scroll is active - if so, don't update objects
   const introScrollTrigger = gsap.getById("introScroll");
   const isIntroScrollActive = introScrollTrigger && introScrollTrigger.isActive;
@@ -232,13 +338,14 @@ function updateScrollAnimation(
     camera.updateProjectionMatrix();
   }
 
-  // CRITICAL: Don't update object opacity/position if intro-scroll is active
+  // CRITICAL: Don't update object position if intro-scroll is active
   if (isIntroScrollActive) {
     return;
   }
 
   // UNFAILABLE APPROACH: Use frozen t-value to prevent disalignment
   // This ensures positions stay consistent during scroll
+  // Rotation and Opacity are now handled by GSAP fromTo animations above
   const homePaths = getHomePaths();
   const t =
     frozenT !== null
@@ -246,28 +353,6 @@ function updateScrollAnimation(
       : getIsHomeLoopActive()
       ? getHomeLoopT()
       : getHomeLoopPausedT();
-
-  // Calculate opacity based on progress (smooth, scroll-synced)
-  // 0-85%: 100%, 85-95%: fade to 0%, 95-100%: 0%
-  const fadeStartProgress = 0.85;
-  const fadeEndProgress = 0.95;
-  let opacity: number;
-  if (progress <= 0.01) {
-    opacity = 1.0;
-  } else if (progress < fadeStartProgress) {
-    opacity = 1.0;
-  } else if (progress > fadeEndProgress) {
-    opacity = 0.0;
-  } else {
-    // Smooth fade between 85-95%
-    const fadeProgress =
-      (progress - fadeStartProgress) / (fadeEndProgress - fadeStartProgress);
-    opacity = 1.0 - fadeProgress;
-  }
-
-  // Calculate rotation progress (0% = start, 100% = fully laid down)
-  // Use smooth easing for natural animation
-  const rotationProgress = Math.pow(progress, 1.5);
 
   // UNFAILABLE: Calculate start position from home-loop t-value (always fresh)
   // Interpolate directly to end position - no separate paths needed
@@ -301,28 +386,7 @@ function updateScrollAnimation(
       .addScaledVector(objectHomeScrollEndPathPoint, t1 * t1);
 
     object.position.copy(intermediate);
-
-    // Apply rotation (smooth, progress-based, 0-100%)
-    // CRITICAL: Use current rotation from home-loop as start (always fresh)
-    // This ensures rotation works bidirectionally during scroll
-    const startRotation = currentRotations[key];
-    if (startRotation) {
-      const d1 = startRotation.angleTo(LAY_DOWN_QUAT_1);
-      const d2 = startRotation.angleTo(LAY_DOWN_QUAT_2);
-      const targetQuat = d1 < d2 ? LAY_DOWN_QUAT_1 : LAY_DOWN_QUAT_2;
-
-      // CRITICAL:
-      // - progress = 0.0 → rotationProgress = 0.0 → startRotation (home-loop rotation)
-      // - progress = 1.0 → rotationProgress = 1.0 → targetQuat (laying down)
-      // This works bidirectionally: scrolling up reverses the animation
-      object.quaternion.copy(
-        startRotation.clone().slerp(targetQuat, rotationProgress)
-      );
-      updateObjectRotation(key, object.quaternion);
-    }
-
-    // Apply opacity (smooth, progress-based)
-    updateObjectOpacity(key, opacity);
+    // Rotation and Opacity are handled by GSAP fromTo animations above
   });
 
   // Pacman (same approach)
@@ -349,27 +413,7 @@ function updateScrollAnimation(
           .addScaledVector(objectHomeScrollEndPathPoint, t1 * t1);
 
         pacman.position.copy(intermediate);
-
-        // Apply rotation (smooth, progress-based, 0-100%)
-        // CRITICAL: Use current rotation from home-loop as start (always fresh)
-        const startRotation = currentRotations["pacman"];
-        if (startRotation) {
-          const d1 = startRotation.angleTo(LAY_DOWN_QUAT_1);
-          const d2 = startRotation.angleTo(LAY_DOWN_QUAT_2);
-          const targetQuat = d1 < d2 ? LAY_DOWN_QUAT_1 : LAY_DOWN_QUAT_2;
-
-          // CRITICAL:
-          // - progress = 0.0 → rotationProgress = 0.0 → startRotation (home-loop rotation)
-          // - progress = 1.0 → rotationProgress = 1.0 → targetQuat (laying down)
-          // This works bidirectionally: scrolling up reverses the animation
-          pacman.quaternion.copy(
-            startRotation.clone().slerp(targetQuat, rotationProgress)
-          );
-          updateObjectRotation("pacman", pacman.quaternion);
-        }
-
-        // Apply opacity (smooth, progress-based)
-        updateObjectOpacity("pacman", opacity);
+        // Rotation and Opacity are handled by GSAP fromTo animations above
       }
     }
   }
