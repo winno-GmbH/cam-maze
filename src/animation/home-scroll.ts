@@ -127,11 +127,6 @@ export function initHomeScrollAnimation() {
             freshPositions,
             freshRotations
           );
-
-          // CRITICAL: Re-setup animations with fresh rotations when entering
-          if (homeScrollTimeline) {
-            setupScrollAnimations();
-          }
         });
       },
       onEnterBack: () => {
@@ -175,11 +170,6 @@ export function initHomeScrollAnimation() {
             freshPositions,
             freshRotations
           );
-
-          // CRITICAL: Re-setup animations with fresh rotations when entering back
-          if (homeScrollTimeline) {
-            setupScrollAnimations();
-          }
         });
       },
       onScrubComplete: () => {
@@ -191,111 +181,6 @@ export function initHomeScrollAnimation() {
       },
     },
   });
-
-  // Store animation references to kill them when re-setting up
-  let rotationAnimations: (gsap.core.Tween | gsap.core.Timeline)[] = [];
-  let opacityAnimations: (gsap.core.Tween | gsap.core.Timeline)[] = [];
-
-  // Function to setup GSAP animations (called on enter to get fresh rotations)
-  const setupScrollAnimations = () => {
-    // Kill existing animations first
-    rotationAnimations.forEach((anim) => anim.kill());
-    opacityAnimations.forEach((anim) => anim.kill());
-    rotationAnimations.length = 0;
-    opacityAnimations.length = 0;
-
-    const allObjects = [...Object.entries(ghosts)];
-    if (pacman) {
-      allObjects.push(["pacman", pacman]);
-    }
-
-    // Animate rotation for all objects (from currentRotation to laying down)
-    // CRITICAL: startRotation is fetched dynamically in onUpdate, not frozen
-    allObjects.forEach(([key, object]) => {
-      // Kill any existing rotation animations
-      gsap.killTweensOf(object.quaternion);
-
-      // Create wrapper object for quaternion animation (GSAP can't animate quaternions directly)
-      const rotationWrapper = { progress: 0 };
-      const rotationAnim = homeScrollTimeline!.fromTo(
-        rotationWrapper,
-        { progress: 0 },
-        {
-          progress: 1,
-          ease: "power1.5",
-          onUpdate: function () {
-            // CRITICAL: Get fresh rotation from state every update (not frozen)
-            // This ensures rotation always starts from current home-loop rotation
-            const currentRotations = getCurrentRotations();
-            const startRotation = currentRotations[key];
-            if (!startRotation) return;
-
-            // Calculate target laying down rotation
-            const d1 = startRotation.angleTo(LAY_DOWN_QUAT_1);
-            const d2 = startRotation.angleTo(LAY_DOWN_QUAT_2);
-            const targetQuat = d1 < d2 ? LAY_DOWN_QUAT_1 : LAY_DOWN_QUAT_2;
-
-            const rotationProgress = this.targets()[0].progress;
-            object.quaternion.copy(
-              startRotation.clone().slerp(targetQuat, rotationProgress)
-            );
-            updateObjectRotation(key, object.quaternion);
-          },
-        }
-      );
-      rotationAnimations.push(rotationAnim);
-    });
-
-    // Animate opacity for all objects (from 1.0 to 0.0, fade at 85-95%)
-    allObjects.forEach(([key, object]) => {
-      // Get all materials for this object
-      const materials: any[] = [];
-      object.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          const mesh = child as THREE.Mesh;
-          if (Array.isArray(mesh.material)) {
-            materials.push(...mesh.material);
-          } else {
-            materials.push(mesh.material);
-          }
-        }
-      });
-
-      if (materials.length === 0) return;
-
-      // Kill any existing opacity animations
-      materials.forEach((mat) => {
-        gsap.killTweensOf(mat);
-        gsap.killTweensOf(mat.opacity);
-      });
-
-      // GSAP fromTo with keyframes for opacity
-      const opacityAnim = homeScrollTimeline!.fromTo(
-        materials,
-        { opacity: 1.0 },
-        {
-          opacity: 1.0,
-          keyframes: [
-            { opacity: 1.0, duration: 0.85 }, // Stay at 100% until 85%
-            { opacity: 0.0, duration: 0.1 }, // Fade to 0% between 85-95%
-            { opacity: 0.0, duration: 0.05 }, // Stay at 0% from 95-100%
-          ],
-          onUpdate: function () {
-            // Update state for consistency
-            const opacity = materials[0]?.opacity ?? 1.0;
-            materials.forEach((mat) => {
-              mat.transparent = opacity < 1.0;
-            });
-            updateObjectOpacity(key, opacity);
-          },
-        }
-      );
-      opacityAnimations.push(opacityAnim);
-    });
-  };
-
-  // Setup animations initially
-  setupScrollAnimations();
 
   // Position animation still uses manual calculation (complex bezier interpolation)
   homeScrollTimeline!.to(
@@ -345,7 +230,6 @@ function updateScrollAnimation(
 
   // UNFAILABLE APPROACH: Use frozen t-value to prevent disalignment
   // This ensures positions stay consistent during scroll
-  // Rotation and Opacity are now handled by GSAP fromTo animations above
   const homePaths = getHomePaths();
   const t =
     frozenT !== null
@@ -353,6 +237,28 @@ function updateScrollAnimation(
       : getIsHomeLoopActive()
       ? getHomeLoopT()
       : getHomeLoopPausedT();
+
+  // Calculate opacity based on progress (0-85%: 100%, 85-95%: fade, 95-100%: 0%)
+  const fadeStartProgress = 0.85;
+  const fadeEndProgress = 0.95;
+  let opacity: number;
+  if (progress <= 0.01) {
+    opacity = 1.0;
+  } else if (progress < fadeStartProgress) {
+    opacity = 1.0;
+  } else if (progress > fadeEndProgress) {
+    opacity = 0.0;
+  } else {
+    const fadeProgress =
+      (progress - fadeStartProgress) / (fadeEndProgress - fadeStartProgress);
+    opacity = 1.0 - fadeProgress;
+  }
+
+  // Calculate rotation progress with easing (0% = home-loop rotation, 100% = laying down)
+  const rotationProgress = Math.pow(progress, 1.5);
+
+  // Get fresh rotations from state (always current, not frozen)
+  const currentRotations = getCurrentRotations();
 
   // UNFAILABLE: Calculate start position from home-loop t-value (always fresh)
   // Interpolate directly to end position - no separate paths needed
@@ -386,7 +292,21 @@ function updateScrollAnimation(
       .addScaledVector(objectHomeScrollEndPathPoint, t1 * t1);
 
     object.position.copy(intermediate);
-    // Rotation and Opacity are handled by GSAP fromTo animations above
+
+    // Apply rotation (scroll-based, always uses fresh home-loop rotation)
+    const startRotation = currentRotations[key];
+    if (startRotation) {
+      const d1 = startRotation.angleTo(LAY_DOWN_QUAT_1);
+      const d2 = startRotation.angleTo(LAY_DOWN_QUAT_2);
+      const targetQuat = d1 < d2 ? LAY_DOWN_QUAT_1 : LAY_DOWN_QUAT_2;
+      object.quaternion.copy(
+        startRotation.clone().slerp(targetQuat, rotationProgress)
+      );
+      updateObjectRotation(key, object.quaternion);
+    }
+
+    // Apply opacity
+    updateObjectOpacity(key, opacity);
   });
 
   // Pacman (same approach)
@@ -413,7 +333,21 @@ function updateScrollAnimation(
           .addScaledVector(objectHomeScrollEndPathPoint, t1 * t1);
 
         pacman.position.copy(intermediate);
-        // Rotation and Opacity are handled by GSAP fromTo animations above
+
+        // Apply rotation (scroll-based, always uses fresh home-loop rotation)
+        const startRotation = currentRotations["pacman"];
+        if (startRotation) {
+          const d1 = startRotation.angleTo(LAY_DOWN_QUAT_1);
+          const d2 = startRotation.angleTo(LAY_DOWN_QUAT_2);
+          const targetQuat = d1 < d2 ? LAY_DOWN_QUAT_1 : LAY_DOWN_QUAT_2;
+          pacman.quaternion.copy(
+            startRotation.clone().slerp(targetQuat, rotationProgress)
+          );
+          updateObjectRotation("pacman", pacman.quaternion);
+        }
+
+        // Apply opacity
+        updateObjectOpacity("pacman", opacity);
       }
     }
   }
