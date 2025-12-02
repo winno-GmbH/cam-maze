@@ -147,11 +147,10 @@ export function applyHomeScrollPreset(
       }
 
       if (pausedRotations[key]) {
-        // CRITICAL: Set initial rotation for animation start
-        // The rotation will be animated during scroll, not set instantly
-        // We just ensure the object starts at the correct rotation from home-loop
-        object.quaternion.copy(pausedRotations[key]);
-        // Do NOT update state rotation here - it will be updated during scroll animation
+        // CRITICAL: Do NOT set rotation here - it will be set by updateScrollAnimation
+        // Setting it here would interfere with the scroll-based rotation animation
+        // The rotation will be animated during scroll based on progress
+        // We just ensure the object is visible and positioned correctly
       }
 
       gsap.set(object, { visible: true });

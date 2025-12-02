@@ -205,8 +205,12 @@ function updateScrollAnimation(
   cameraPath: THREE.CurvePath<THREE.Vector3>,
   cameraPathPoints: any[]
 ) {
-  // CRITICAL: Always get rotations from state (they're updated by home-loop)
-  const pausedRotations = getCurrentRotations();
+  // CRITICAL: Always get FRESH rotations from state (they're updated by home-loop)
+  // This ensures rotation works bidirectionally:
+  // - Scroll down (progress 0→1): Rotate from home-loop rotation to laying down
+  // - Scroll up (progress 1→0): Rotate from laying down back to home-loop rotation
+  // The rotation is ALWAYS calculated from the current home-loop rotation, not a frozen one
+  const currentRotations = getCurrentRotations();
 
   // CRITICAL: Check if intro-scroll is active - if so, don't update objects
   const introScrollTrigger = gsap.getById("introScroll");
@@ -299,13 +303,18 @@ function updateScrollAnimation(
     object.position.copy(intermediate);
 
     // Apply rotation (smooth, progress-based, 0-100%)
-    const startRotation = pausedRotations[key];
+    // CRITICAL: Use current rotation from home-loop as start (always fresh)
+    // This ensures rotation works bidirectionally during scroll
+    const startRotation = currentRotations[key];
     if (startRotation) {
       const d1 = startRotation.angleTo(LAY_DOWN_QUAT_1);
       const d2 = startRotation.angleTo(LAY_DOWN_QUAT_2);
       const targetQuat = d1 < d2 ? LAY_DOWN_QUAT_1 : LAY_DOWN_QUAT_2;
 
-      // CRITICAL: At progress = 1.0, rotationProgress = 1.0, so we get exact targetQuat
+      // CRITICAL:
+      // - progress = 0.0 → rotationProgress = 0.0 → startRotation (home-loop rotation)
+      // - progress = 1.0 → rotationProgress = 1.0 → targetQuat (laying down)
+      // This works bidirectionally: scrolling up reverses the animation
       object.quaternion.copy(
         startRotation.clone().slerp(targetQuat, rotationProgress)
       );
@@ -342,13 +351,17 @@ function updateScrollAnimation(
         pacman.position.copy(intermediate);
 
         // Apply rotation (smooth, progress-based, 0-100%)
-        const startRotation = pausedRotations["pacman"];
+        // CRITICAL: Use current rotation from home-loop as start (always fresh)
+        const startRotation = currentRotations["pacman"];
         if (startRotation) {
           const d1 = startRotation.angleTo(LAY_DOWN_QUAT_1);
           const d2 = startRotation.angleTo(LAY_DOWN_QUAT_2);
           const targetQuat = d1 < d2 ? LAY_DOWN_QUAT_1 : LAY_DOWN_QUAT_2;
 
-          // CRITICAL: At progress = 1.0, rotationProgress = 1.0, so we get exact targetQuat
+          // CRITICAL:
+          // - progress = 0.0 → rotationProgress = 0.0 → startRotation (home-loop rotation)
+          // - progress = 1.0 → rotationProgress = 1.0 → targetQuat (laying down)
+          // This works bidirectionally: scrolling up reverses the animation
           pacman.quaternion.copy(
             startRotation.clone().slerp(targetQuat, rotationProgress)
           );
