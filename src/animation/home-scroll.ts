@@ -7,7 +7,7 @@ import {
   objectHomeScrollEndPathPoint,
 } from "../paths/pathpoints";
 import { homeLoopHandler } from "./home-loop";
-import { slerpToLayDown } from "./util";
+import { slerpToLayDown, LAY_DOWN_QUAT_1, LAY_DOWN_QUAT_2 } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import {
   updateObjectRotation,
@@ -21,6 +21,9 @@ import { getHomePaths } from "../paths/paths";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
+
+// Store t-value when entering home-scroll to prevent disalignment
+let frozenT: number | null = null;
 
 const characterSpeeds: Record<string, number> = {
   pacman: 0.9,
@@ -85,20 +88,20 @@ export function initHomeScrollAnimation() {
         end: "bottom top",
         scrub: 0.5,
         onEnter: () => {
-          // CRITICAL: Get fresh positions and rotations from home-loop state
-          // Positions will be calculated on-the-fly in updateScrollAnimation
+          // CRITICAL: Freeze t-value when entering to prevent disalignment
+          const isLoopActive = getIsHomeLoopActive();
+          frozenT = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
+
           const freshRotations = getCurrentRotations();
           const scrollDir = getScrollDirection();
 
-          // Calculate current positions from home-loop t-value
+          // Calculate current positions from frozen t-value
           const homePaths = getHomePaths();
-          const isLoopActive = getIsHomeLoopActive();
-          const t = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
           const freshPositions: Record<string, THREE.Vector3> = {};
           Object.entries(ghosts).forEach(([key, _]) => {
             const path = homePaths[key];
-            if (path) {
-              const position = path.getPointAt(t);
+            if (path && frozenT !== null) {
+              const position = path.getPointAt(frozenT);
               if (position) {
                 freshPositions[key] = position;
               }
@@ -111,45 +114,22 @@ export function initHomeScrollAnimation() {
             freshPositions,
             freshRotations
           );
-
-          // Ensure opacity starts at 100% when entering
-          Object.entries(ghosts).forEach(([key, object]) => {
-            gsap.killTweensOf(object);
-            object.traverse((child) => {
-              if ((child as any).isMesh && (child as any).material) {
-                const mesh = child as THREE.Mesh;
-                if (Array.isArray(mesh.material)) {
-                  mesh.material.forEach((mat: any) => {
-                    gsap.killTweensOf(mat);
-                    gsap.killTweensOf(mat.opacity);
-                    mat.opacity = 1.0;
-                    mat.transparent = true;
-                  });
-                } else {
-                  gsap.killTweensOf(mesh.material);
-                  gsap.killTweensOf((mesh.material as any).opacity);
-                  (mesh.material as any).opacity = 1.0;
-                  (mesh.material as any).transparent = true;
-                }
-              }
-            });
-          });
         },
         onEnterBack: () => {
-          // CRITICAL: Get fresh positions and rotations from home-loop state
-          // Positions will be calculated on-the-fly in updateScrollAnimation
+          // CRITICAL: Freeze t-value when entering back to prevent disalignment
+          const isLoopActive = getIsHomeLoopActive();
+          frozenT = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
+
           const freshRotations = getCurrentRotations();
           const scrollDir = getScrollDirection();
 
-          // Calculate current positions from home-loop t-value
+          // Calculate current positions from frozen t-value
           const homePaths = getHomePaths();
-          const isLoopActive = getIsHomeLoopActive();
-          const t = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
           const freshPositions: Record<string, THREE.Vector3> = {};
           Object.entries(ghosts).forEach(([key, _]) => {
             const path = homePaths[key];
-            if (path) {
-              const position = path.getPointAt(t);
+            if (path && frozenT !== null) {
+              const position = path.getPointAt(frozenT);
               if (position) {
                 freshPositions[key] = position;
               }
@@ -162,29 +142,6 @@ export function initHomeScrollAnimation() {
             freshPositions,
             freshRotations
           );
-
-          // Ensure opacity starts at 100% when entering back
-          Object.entries(ghosts).forEach(([key, object]) => {
-            gsap.killTweensOf(object);
-            object.traverse((child) => {
-              if ((child as any).isMesh && (child as any).material) {
-                const mesh = child as THREE.Mesh;
-                if (Array.isArray(mesh.material)) {
-                  mesh.material.forEach((mat: any) => {
-                    gsap.killTweensOf(mat);
-                    gsap.killTweensOf(mat.opacity);
-                    mat.opacity = 1.0;
-                    mat.transparent = true;
-                  });
-                } else {
-                  gsap.killTweensOf(mesh.material);
-                  gsap.killTweensOf((mesh.material as any).opacity);
-                  (mesh.material as any).opacity = 1.0;
-                  (mesh.material as any).transparent = true;
-                }
-              }
-            });
-          });
         },
         onScrubComplete: () => {
           // CRITICAL: When returning to home-loop, it will sync state itself
@@ -208,6 +165,84 @@ export function initHomeScrollAnimation() {
         },
       }
     );
+
+  // GSAP fromTo animations for rotation and opacity (smooth, scroll-synced)
+  const pausedRotations = getCurrentRotations();
+
+  // Animate rotation for all objects including pacman (from start rotation to laying down)
+  const allObjects = [...Object.entries(ghosts)];
+  if (pacman) {
+    allObjects.push(["pacman", pacman]);
+  }
+
+  allObjects.forEach(([key, object]) => {
+    const startRotation = pausedRotations[key];
+    if (!startRotation) return;
+
+    // Calculate target laying down rotation
+    const d1 = startRotation.angleTo(LAY_DOWN_QUAT_1);
+    const d2 = startRotation.angleTo(LAY_DOWN_QUAT_2);
+    const targetQuat = d1 < d2 ? LAY_DOWN_QUAT_1 : LAY_DOWN_QUAT_2;
+
+    // Create a dummy object to animate quaternion
+    const rotationTarget = { progress: 0 };
+    homeScrollTimeline!.fromTo(
+      rotationTarget,
+      { progress: 0 },
+      {
+        progress: 1,
+        ease: "power1.5",
+        onUpdate: function () {
+          const rotationProgress = this.targets()[0].progress;
+          object.quaternion.copy(
+            startRotation.clone().slerp(targetQuat, rotationProgress)
+          );
+          updateObjectRotation(key, object.quaternion);
+        },
+      }
+    );
+  });
+
+  // Animate opacity for all objects including pacman (from 1.0 to 0.0, fade at 85-95%)
+  allObjects.forEach(([key, object]) => {
+    // Get all materials for this object
+    const materials: any[] = [];
+    object.traverse((child) => {
+      if ((child as any).isMesh && (child as any).material) {
+        const mesh = child as THREE.Mesh;
+        if (Array.isArray(mesh.material)) {
+          materials.push(...mesh.material);
+        } else {
+          materials.push(mesh.material);
+        }
+      }
+    });
+
+    if (materials.length === 0) return;
+
+    // Create opacity target object
+    const opacityTarget = { value: 1.0 };
+    homeScrollTimeline!.fromTo(
+      opacityTarget,
+      { value: 1.0 },
+      {
+        value: 1.0,
+        keyframes: [
+          { value: 1.0, duration: 0.85 }, // Stay at 100% until 85%
+          { value: 0.0, duration: 0.1 }, // Fade to 0% between 85-95%
+          { value: 0.0, duration: 0.05 }, // Stay at 0% from 95-100%
+        ],
+        onUpdate: function () {
+          const opacity = this.targets()[0].value;
+          materials.forEach((mat) => {
+            mat.opacity = opacity;
+            mat.transparent = opacity < 1.0;
+          });
+          updateObjectOpacity(key, opacity);
+        },
+      }
+    );
+  });
 }
 
 function updateScrollAnimation(
@@ -243,30 +278,18 @@ function updateScrollAnimation(
     return;
   }
 
-  // UNFAILABLE APPROACH: Always calculate positions directly from home-loop t-value
-  // This ensures 100% synchronization - no stale positions possible
+  // UNFAILABLE APPROACH: Use frozen t-value to prevent disalignment
+  // This ensures positions stay consistent during scroll
   const homePaths = getHomePaths();
-  const isLoopActive = getIsHomeLoopActive();
-  const t = isLoopActive ? getHomeLoopT() : getHomeLoopPausedT();
+  const t =
+    frozenT !== null
+      ? frozenT
+      : getIsHomeLoopActive()
+      ? getHomeLoopT()
+      : getHomeLoopPausedT();
 
-  // Opacity: progress-based (0% = 100%, 85-95% = fade to 0%)
-  const fadeStartProgress = 0.85;
-  const fadeEndProgress = 0.95;
-  let opacity: number;
-  if (progress <= 0.01) {
-    opacity = 1.0;
-  } else if (progress < fadeStartProgress) {
-    opacity = 1.0;
-  } else if (progress > fadeEndProgress) {
-    opacity = 0.0;
-  } else {
-    opacity =
-      1.0 -
-      (progress - fadeStartProgress) / (fadeEndProgress - fadeStartProgress);
-  }
-
-  // Rotation: progress-based (0% = start rotation, 100% = fully laid down)
-  const rotationProgress = Math.pow(progress, 1.5);
+  // Rotation and Opacity are now handled by GSAP fromTo animations
+  // We only handle position updates here
 
   // UNFAILABLE: Calculate start position from home-loop t-value (always fresh)
   // Interpolate directly to end position - no separate paths needed
@@ -300,13 +323,6 @@ function updateScrollAnimation(
       .addScaledVector(objectHomeScrollEndPathPoint, t1 * t1);
 
     object.position.copy(intermediate);
-
-    // Apply rotation (progress-based, 0-100%)
-    slerpToLayDown(object, pausedRotations[key], rotationProgress);
-    updateObjectRotation(key, object.quaternion);
-
-    // Apply opacity
-    updateObjectOpacity(key, opacity);
   });
 
   // Pacman (same approach)
@@ -333,9 +349,6 @@ function updateScrollAnimation(
           .addScaledVector(objectHomeScrollEndPathPoint, t1 * t1);
 
         pacman.position.copy(intermediate);
-        slerpToLayDown(pacman, pausedRotations["pacman"], rotationProgress);
-        updateObjectRotation("pacman", pacman.quaternion);
-        updateObjectOpacity("pacman", opacity);
       }
     }
   }
