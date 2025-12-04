@@ -221,16 +221,8 @@ export function initHomeScrollAnimation() {
 
       // Get TO values: laydown rotation
       // CRITICAL: Use the SAME end rotation for ALL objects to ensure consistent orientation
-      // Create a new quaternion that is LAY_DOWN_QUAT_1 rotated by 180° around Y-axis
-      // This should fix the 180° orientation issue
-      const baseRot = LAY_DOWN_QUAT_1;
-      // Rotate 180° around Y-axis to flip the orientation
-      const yAxis180 = new THREE.Quaternion().setFromAxisAngle(
-        new THREE.Vector3(0, 1, 0),
-        Math.PI
-      );
-      // Multiply: first apply base rotation, then rotate around Y
-      const endRot = baseRot.clone().multiply(yAxis180);
+      // Use LAY_DOWN_QUAT_1 (which has been adjusted by 180° in util.ts)
+      const endRot = LAY_DOWN_QUAT_1;
       const endEuler = new THREE.Euler().setFromQuaternion(endRot);
 
       // Get path for this object

@@ -56,9 +56,17 @@ export function calculateObjectOrientation(
   }
 }
 
-export const LAY_DOWN_QUAT_1 = new THREE.Quaternion().setFromEuler(
+// LAY_DOWN_QUAT_1: Laydown rotation rotated by 180° around Y-axis to fix orientation
+// Base rotation is Math.PI/2 around X-axis, then rotated 180° around Y-axis
+const baseLayDownQuat = new THREE.Quaternion().setFromEuler(
   new THREE.Euler(Math.PI / 2, 0, 0)
 );
+const yAxis180 = new THREE.Quaternion().setFromAxisAngle(
+  new THREE.Vector3(0, 1, 0),
+  Math.PI
+);
+export const LAY_DOWN_QUAT_1 = baseLayDownQuat.clone().multiply(yAxis180);
+
 export const LAY_DOWN_QUAT_2 = new THREE.Quaternion().setFromEuler(
   new THREE.Euler(-Math.PI / 2, 0, 0)
 );
