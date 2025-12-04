@@ -148,3 +148,42 @@ export function resetGhostMaterialsToFullOpacity(object: THREE.Object3D): void {
   });
 }
 
+/**
+ * Set ghost color on all materials of an object
+ * Used to colorize ghosts (e.g., red for ghost1, green for ghost2, etc.)
+ */
+export function setGhostColor(
+  object: THREE.Object3D,
+  color: number,
+  options?: {
+    skipCurrencySymbols?: boolean; // If true, skips currency symbol meshes (default: true)
+  }
+): void {
+  const skipCurrencySymbols = options?.skipCurrencySymbols !== false; // Default: true
+
+  object.traverse((child) => {
+    if ((child as any).isMesh && (child as any).material) {
+      const mesh = child as THREE.Mesh;
+      const childName = child.name || "";
+
+      // Skip currency symbols if requested
+      if (skipCurrencySymbols && isCurrencySymbol(childName)) {
+        return;
+      }
+
+      if (Array.isArray(mesh.material)) {
+        mesh.material.forEach((mat: any) => {
+          if (mat.color && mat.color.getHex() !== color) {
+            mat.color.setHex(color);
+          }
+        });
+      } else {
+        const mat = mesh.material as any;
+        if (mat.color && mat.color.getHex() !== color) {
+          mat.color.setHex(color);
+        }
+      }
+    }
+  });
+}
+

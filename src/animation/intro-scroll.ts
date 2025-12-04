@@ -11,13 +11,15 @@ import {
   getGhostTargetQuaternion,
   INTRO_POSITION_OFFSET,
 } from "./scene-presets";
-import { setMaterialOpacity } from "../core/material-utils";
+import { setMaterialOpacity, setGhostColor } from "../core/material-utils";
 import {
   OBJECT_KEYS,
   GHOST_COLORS,
   isCurrencySymbol,
   isPacmanPart,
 } from "./util";
+import { SCROLL_SELECTORS, SCALE, COLOR, OPACITY } from "./constants";
+import { setFloorPlane, setObjectScale, killObjectAnimations } from "./scene-utils";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -117,17 +119,7 @@ function initializeIntroScrollState() {
 
 // Helper function to restore floor
 function restoreFloor() {
-  scene.traverse((child) => {
-    if (child.name === "CAM-Floor") {
-      child.visible = true;
-      if (child instanceof THREE.Mesh && child.material) {
-        const material = child.material as THREE.MeshBasicMaterial;
-        material.color.setHex(0xffffff);
-        material.opacity = 1;
-        material.transparent = false;
-      }
-    }
-  });
+  setFloorPlane(true, OPACITY.FULL, false);
 }
 
 export function initIntroScrollAnimation() {
@@ -140,7 +132,7 @@ export function initIntroScrollAnimation() {
   introScrollTimeline = gsap
     .timeline({
       scrollTrigger: {
-        trigger: ".sc--intro",
+        trigger: SCROLL_SELECTORS.INTRO,
         start: "top top",
         end: "bottom bottom",
         scrub: 0.5,
@@ -229,17 +221,7 @@ function updateObjectsWalkBy(progress: number) {
 
   try {
     // Ensure floor plane stays invisible (white with opacity 0) during animation
-    scene.traverse((child) => {
-      if (child.name === "CAM-Floor") {
-        child.visible = true;
-        if (child instanceof THREE.Mesh && child.material) {
-          const material = child.material as THREE.MeshBasicMaterial;
-          material.color.setHex(0xffffff); // White
-          material.opacity = 0;
-          material.transparent = true;
-        }
-      }
-    });
+    setFloorPlane(true, OPACITY.HIDDEN, true);
 
     // Calculate base center point for walk path
     const baseCenter = new THREE.Vector3(
@@ -282,27 +264,8 @@ function updateObjectsWalkBy(progress: number) {
       const object = ghosts[key];
       if (!object) return;
 
-      // CRITICAL: Kill any GSAP animations that might interfere
-      gsap.killTweensOf(object);
-      gsap.killTweensOf(object.scale);
-      gsap.killTweensOf(object.position);
-      gsap.killTweensOf(object.quaternion);
-
-      // CRITICAL: Kill any opacity/material animations that might be interfering
-      object.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          const mesh = child as THREE.Mesh;
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              gsap.killTweensOf(mat);
-              gsap.killTweensOf(mat.opacity);
-            });
-          } else {
-            gsap.killTweensOf(mesh.material);
-            gsap.killTweensOf((mesh.material as any).opacity);
-          }
-        }
-      });
+      // CRITICAL: Kill all GSAP animations that might interfere
+      killObjectAnimations(object);
 
       // Calculate position
       const finalX = pacmanX + behindOffset;
@@ -326,11 +289,7 @@ function updateObjectsWalkBy(progress: number) {
 
       // CRITICAL: Force visibility, scale EVERY frame to override home-scroll
       object.visible = true;
-      if (key === "pacman") {
-        object.scale.set(0.1, 0.1, 0.1);
-      } else {
-        object.scale.set(1.0, 1.0, 1.0);
-      }
+      setObjectScale(object, key, "intro");
 
       // Update opacity for meshes
       const targetOpacity = key === "pacman" ? 1.0 : ghostOpacity;
@@ -362,21 +321,9 @@ function updateObjectsWalkBy(progress: number) {
             setMaterialOpacity(mesh.material as any, targetOpacity, true);
           }
 
-          // Set ghost colors (only if needed)
+          // Set ghost colors using centralized utility (only if needed)
           if (GHOST_COLORS[key] && key !== "pacman") {
-            const newColor = GHOST_COLORS[key];
-            if (Array.isArray(mesh.material)) {
-              mesh.material.forEach((mat: any) => {
-                if (mat.color.getHex() !== newColor) {
-                  mat.color.setHex(newColor);
-                }
-              });
-            } else {
-              const mat = mesh.material as any;
-              if (mat.color.getHex() !== newColor) {
-                mat.color.setHex(newColor);
-              }
-            }
+            setGhostColor(object, GHOST_COLORS[key]);
           }
         }
       });

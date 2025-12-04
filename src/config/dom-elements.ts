@@ -1,11 +1,14 @@
+// Import scroll selectors from animation constants for consistency
+import { SCROLL_SELECTORS } from "../animation/constants";
+
 const SELECTORS = {
   mazeContainer: ".el--home-maze.el",
   canvas: "canvas",
 
-  homeSection: ".sc--home.sc",
-  introSection: ".sc--intro.sc",
-  povSection: ".sc--pov.sc",
-  finalSection: ".sc--outro.sc",
+  homeSection: SCROLL_SELECTORS.HOME,
+  introSection: SCROLL_SELECTORS.INTRO,
+  povSection: SCROLL_SELECTORS.POV,
+  finalSection: SCROLL_SELECTORS.OUTRO,
   finalContainer: ".cr--outro.cr",
 
   scrollComponent: ".cmp--scroll.cmp",

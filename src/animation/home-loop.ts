@@ -5,6 +5,8 @@ import { getHomePaths, TangentSmoother } from "../paths/paths";
 import { initHomeScrollAnimation } from "./home-scroll";
 import { calculateObjectOrientation } from "./util";
 import { applyHomeLoopPreset } from "./scene-presets";
+import { SCALE } from "./constants";
+import { setObjectScale } from "./scene-utils";
 import {
   syncStateFromObjects,
   getCurrentPositions,
@@ -186,10 +188,8 @@ function startHomeLoop() {
 
       if (key !== "pacman") {
         ghost.visible = true;
-        ghost.scale.set(1, 1, 1);
-      } else {
-        ghost.scale.set(0.05, 0.05, 0.05);
       }
+      setObjectScale(ghost, key, "home");
 
       // Reset the smoother with initial tangent
       if (homeLoopTangentSmoothers[key]) {
@@ -244,13 +244,8 @@ function updateHomeLoop(delta: number) {
         updateObjectPosition(key, position);
       }
 
-      // CRITICAL: Maintain correct scale every frame
-      // Pacman should be 0.05 (original model size), ghosts should be 1.0
-      if (key === "pacman") {
-        ghost.scale.set(0.05, 0.05, 0.05);
-      } else {
-        ghost.scale.set(1.0, 1.0, 1.0);
-      }
+      // CRITICAL: Maintain correct scale every frame using centralized utility
+      setObjectScale(ghost, key, "home");
 
       // Calculate target rotation from path tangent
       const targetQuat = new THREE.Quaternion();

@@ -9,6 +9,7 @@ import { LAY_DOWN_QUAT_1 } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import { updateObjectRotation, getCurrentRotations } from "./object-state";
 import { setObjectOpacity, getObjectOpacity } from "../core/material-utils";
+import { SCROLL_SELECTORS } from "./constants";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
@@ -71,7 +72,7 @@ export function initHomeScrollAnimation() {
   homeScrollTimeline = gsap.timeline({
     scrollTrigger: {
       id: "homeScroll",
-      trigger: ".sc--home",
+      trigger: SCROLL_SELECTORS.HOME,
       start: "top top",
       end: "bottom top",
       scrub: 0.5,

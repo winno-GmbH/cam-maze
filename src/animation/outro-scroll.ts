@@ -1,12 +1,13 @@
 import gsap from "gsap";
 import { applyOutroScrollPreset, getScrollDirection } from "./scene-presets";
+import { SCROLL_SELECTORS } from "./constants";
 
 let outroScrollTimeline: gsap.core.Timeline | null = null;
 
 export function initOutroScrollAnimation() {
   outroScrollTimeline = gsap.timeline({
     scrollTrigger: {
-      trigger: ".sc--outro",
+      trigger: SCROLL_SELECTORS.OUTRO,
       start: "top center",
       end: "bottom bottom",
       scrub: 0.5,

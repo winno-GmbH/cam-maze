@@ -11,6 +11,8 @@ import {
 import { DOM_ELEMENTS } from "../config/dom-elements";
 import { calculateObjectOrientation } from "./util";
 import { applyPovScrollPreset, getScrollDirection } from "./scene-presets";
+import { SCALE } from "./constants";
+import { setObjectScale } from "./scene-utils";
 
 // Cache for DOM elements to avoid repeated queries
 const domElementCache: Record<
@@ -233,7 +235,7 @@ function handleAnimationStart() {
       const tangent = povPaths[key].getTangentAt(0).normalize();
       ghost.lookAt(position.clone().add(tangent));
       ghost.visible = false;
-      ghost.scale.set(0.5, 0.5, 0.5);
+      setObjectScale(ghost, key, "pov");
     }
   });
 

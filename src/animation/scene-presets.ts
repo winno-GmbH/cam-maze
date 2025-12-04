@@ -2,17 +2,19 @@ import gsap from "gsap";
 import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
-import { scene } from "../core/scene";
 import { slerpToLayDown, OBJECT_KEYS, GHOST_COLORS, isCurrencySymbol, isPacmanPart } from "./util";
 import {
   setMaterialOpacity,
   setMaterialTransparent,
   resetGhostMaterialsToFullOpacity,
+  setGhostColor,
 } from "../core/material-utils";
 import {
   updateObjectRotation,
   syncStateFromObjects,
 } from "./object-state";
+import { setFloorPlane, setObjectScale, killObjectAnimations } from "./scene-utils";
+import { SCALE, COLOR, OPACITY } from "./constants";
 
 /**
  * SCENE PRESETS
@@ -65,19 +67,9 @@ export function applyHomeLoopPreset(
 
   // Home loop uses paths, so positions/rotations are handled by home-loop.ts
   // Here we just ensure visibility and scale settings
-  // Pacman scale should be 0.05 (original model size), ghosts are 1.0
   Object.entries(ghosts).forEach(([key, object]) => {
     gsap.set(object, { visible: true });
-
-    if (key === "pacman") {
-      // CRITICAL: Pacman default scale is 0.05 (from model loading)
-      // Kill any GSAP animations that might interfere
-      gsap.killTweensOf(object.scale);
-      object.scale.set(0.05, 0.05, 0.05);
-      object.updateMatrixWorld(true);
-    } else {
-      gsap.set(object.scale, { x: 1, y: 1, z: 1 });
-    }
+    setObjectScale(object, key, "home");
 
     // Ensure all meshes are visible (except currencies)
     object.traverse((child) => {
@@ -101,17 +93,7 @@ export function applyHomeLoopPreset(
   });
 
   // Floor plane visible
-  scene.traverse((child) => {
-    if (child.name === "CAM-Floor") {
-      child.visible = true;
-      if (child instanceof THREE.Mesh && child.material) {
-        const material = child.material as THREE.MeshBasicMaterial;
-        material.color.setHex(0xffffff);
-        material.opacity = 1;
-        material.transparent = false;
-      }
-    }
-  });
+  setFloorPlane(true, OPACITY.FULL, false);
 }
 
 // ============================================================================
@@ -154,15 +136,8 @@ export function applyHomeScrollPreset(
 
       gsap.set(object, { visible: true });
 
-      // CRITICAL: Set correct scales - pacman should be 0.05 (original size), ghosts 1.0
-      if (key === "pacman") {
-        // Kill any GSAP animations that might interfere
-        gsap.killTweensOf(object.scale);
-        object.scale.set(0.05, 0.05, 0.05);
-        object.updateMatrixWorld(true);
-      } else {
-        gsap.set(object.scale, { x: 1, y: 1, z: 1 });
-      }
+      // CRITICAL: Set correct scales using centralized utility
+      setObjectScale(object, key, "home");
 
       // Set visibility but DON'T change opacity here - opacity is managed individually per object in home-scroll.ts
       object.traverse((child) => {
@@ -193,17 +168,7 @@ export function applyHomeScrollPreset(
   }
 
   // Floor plane visible
-  scene.traverse((child) => {
-    if (child.name === "CAM-Floor") {
-      child.visible = true;
-      if (child instanceof THREE.Mesh && child.material) {
-        const material = child.material as THREE.MeshBasicMaterial;
-        material.color.setHex(0xffffff);
-        material.opacity = 1;
-        material.transparent = false;
-      }
-    }
-  });
+  setFloorPlane(true, OPACITY.FULL, false);
 }
 
 // ============================================================================
@@ -321,30 +286,8 @@ export function applyIntroScrollPreset(
     const object = ghosts[key];
     if (!object) return;
 
-    // CRITICAL: For pacman, kill ALL GSAP animations first to prevent interference
-    if (key === "pacman") {
-      gsap.killTweensOf(object);
-      gsap.killTweensOf(object.scale);
-      gsap.killTweensOf(object.position);
-      gsap.killTweensOf(object.quaternion);
-    }
-
-    // CRITICAL: Kill any opacity/material animations that might be interfering
-    // Traverse and kill tweens on all materials
-    object.traverse((child) => {
-      if ((child as any).isMesh && (child as any).material) {
-        const mesh = child as THREE.Mesh;
-        if (Array.isArray(mesh.material)) {
-          mesh.material.forEach((mat: any) => {
-            gsap.killTweensOf(mat);
-            gsap.killTweensOf(mat.opacity);
-          });
-        } else {
-          gsap.killTweensOf(mesh.material);
-          gsap.killTweensOf((mesh.material as any).opacity);
-        }
-      }
-    });
+    // CRITICAL: Kill all GSAP animations first to prevent interference
+    killObjectAnimations(object);
 
     // Calculate position with stagger
     const behindOffset = index === 0 ? 0 : -0.5 * index;
@@ -368,19 +311,8 @@ export function applyIntroScrollPreset(
       object.quaternion.copy(ghostTargetQuaternion);
     }
 
-    // CRITICAL: Set pacman scale BEFORE any other operations
-    // Must be 0.1 for intro-scroll - set directly and kill any tweens
-    if (key === "pacman") {
-      // Force set scale immediately
-      object.scale.set(0.1, 0.1, 0.1);
-      object.updateMatrixWorld(true);
-      // Use gsap.set as backup
-      gsap.set(object.scale, { x: 0.1, y: 0.1, z: 0.1 });
-    } else {
-      object.scale.set(1.0, 1.0, 1.0);
-      object.updateMatrixWorld(true);
-      gsap.set(object.scale, { x: 1.0, y: 1.0, z: 1.0 });
-    }
+    // CRITICAL: Set scale using centralized utility
+    setObjectScale(object, key, "intro");
 
     gsap.set(object, { visible: true });
 
@@ -408,16 +340,9 @@ export function applyIntroScrollPreset(
           setMaterialOpacity(mesh.material as any, 1, true);
         }
 
-        // Set ghost colors
+        // Set ghost colors using centralized utility
         if (GHOST_COLORS[key] && key !== "pacman") {
-          const newColor = GHOST_COLORS[key];
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              mat.color.setHex(newColor);
-            });
-          } else {
-            (mesh.material as any).color.setHex(newColor);
-          }
+          setGhostColor(object, GHOST_COLORS[key]);
         }
       }
     });
@@ -426,17 +351,7 @@ export function applyIntroScrollPreset(
   });
 
   // Hide floor plane (white with opacity 0)
-  scene.traverse((child) => {
-    if (child.name === "CAM-Floor") {
-      child.visible = true;
-      if (child instanceof THREE.Mesh && child.material) {
-        const material = child.material as THREE.MeshBasicMaterial;
-        material.color.setHex(0xffffff);
-        material.opacity = 0;
-        material.transparent = true;
-      }
-    }
-  });
+  setFloorPlane(true, OPACITY.HIDDEN, true);
 }
 
 // ============================================================================
@@ -477,17 +392,7 @@ export function applyPovScrollPreset(
   });
 
   // Floor plane visible
-  scene.traverse((child) => {
-    if (child.name === "CAM-Floor") {
-      child.visible = true;
-      if (child instanceof THREE.Mesh && child.material) {
-        const material = child.material as THREE.MeshBasicMaterial;
-        material.color.setHex(0xffffff);
-        material.opacity = 1;
-        material.transparent = false;
-      }
-    }
-  });
+  setFloorPlane(true, OPACITY.FULL, false);
 }
 
 // ============================================================================
@@ -503,17 +408,7 @@ export function applyOutroScrollPreset(
   // This is where you can add any outro-specific object settings
 
   // Floor plane visible
-  scene.traverse((child) => {
-    if (child.name === "CAM-Floor") {
-      child.visible = true;
-      if (child instanceof THREE.Mesh && child.material) {
-        const material = child.material as THREE.MeshBasicMaterial;
-        material.color.setHex(0xffffff);
-        material.opacity = 1;
-        material.transparent = false;
-      }
-    }
-  });
+  setFloorPlane(true, OPACITY.FULL, false);
 }
 
 // ============================================================================
