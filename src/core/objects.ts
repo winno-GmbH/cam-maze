@@ -35,21 +35,6 @@ const ghostContainers = {
   Ghost_GBP: ghosts.ghost5,
 };
 
-// CAM-Pacman_Shell -> should not be visible
-// CAM-Pacman_Shell_Boolean -> should not be visible
-// CAM-Pacman_Backframe -> should be visible (below the logo)
-// CAM-Pacman_Bottom -> should be visible (bottom)
-// CAM-Pacman_Bitcoin_1 -> should be visible (bitcoin in logo - left)
-// CAM-Pacman_Bitcoin_2 -> should be visible (bitcoin in logo - right)
-// CAM_Pacman_Logo_1 -> should be visible (octagon background of logo - left)
-// CAM_Pacman_Logo_2 -> should be visible (octagon background of logo - right)
-// CAM-Pacman_Eye -> should be visible (eyes)
-// CAM-Pacman_Bottom_electronic -> should be visible (bottom of bitcoin on pacman)
-// CAM-Pacman_Top_electronic -> should be visible (top of bitcoin on pacman)
-// CAM-Pacman_Bottom_Text -> should be visible (text on bottom of pacman)
-// CAM-Pacman_Top_Text -> should be visible (text on top of pacman)
-// CAM-Pacman_Top -> should be visible (top)
-
 const greenMaterial = new THREE.MeshBasicMaterial({
   color: 0x00ff00,
   opacity: 1,
@@ -67,7 +52,6 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
       function (gltf) {
         const model = gltf.scene;
 
-        // Print all elements in the 3D model
         model.traverse((obj: THREE.Object3D) => {});
 
         model.traverse((child: THREE.Object3D) => {

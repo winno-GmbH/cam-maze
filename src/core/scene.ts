@@ -86,7 +86,6 @@ export function setupLighting(): void {
 }
 
 export function createDebugLines(): void {
-  // Red line at z: 0.5, lying along x-axis at y: 0.55 (same height as ghosts)
   const redLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(-5, -0.55, 0),
     new THREE.Vector3(5, -0.55, 0),
@@ -96,10 +95,9 @@ export function createDebugLines(): void {
     linewidth: 3,
   });
   const redLine = new THREE.Line(redLineGeometry, redLineMaterial);
-  redLine.renderOrder = 999; // Render on top
+  redLine.renderOrder = 999;
   scene.add(redLine);
 
-  // Green line at z: 1.5, lying along x-axis at y: 0.55 (same height as ghosts)
   const greenLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(-5, -0.55, 0.75),
     new THREE.Vector3(5, -0.55, 0.75),
@@ -109,7 +107,7 @@ export function createDebugLines(): void {
     linewidth: 3,
   });
   const greenLine = new THREE.Line(greenLineGeometry, greenLineMaterial);
-  greenLine.renderOrder = 999; // Render on top
+  greenLine.renderOrder = 999;
   scene.add(greenLine);
 }
 

@@ -1,4 +1,3 @@
-// Import scroll selectors from animation constants for consistency
 import { SCROLL_SELECTORS } from "../animation/constants";
 
 const SELECTORS = {

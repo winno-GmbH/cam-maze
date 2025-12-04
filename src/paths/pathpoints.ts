@@ -3,8 +3,6 @@ import { MazePathPoint, PathPoint, CameraPathPoint } from "../types/types";
 import { isMobile } from "../config/config";
 import { getCoord, X, Y, Z } from "./coordinates";
 
-// TODO - add curveCheckPoints to all curves where needed
-
 export const objectHomeScrollEndPathPoint = new THREE.Vector3(
   0.55675,
   0.35,
@@ -19,7 +17,7 @@ const cameraPathPointsConfig = {
   mobileLookAt: new THREE.Vector3(0.5, 0.5, -1.5),
   desktopLookAt: new THREE.Vector3(-1.25, 0.5, 0.25),
   cameraLookAtSecondDesktop: new THREE.Vector3(-0.75, 0.5, -0.75),
-  cameraLookAtSecondMobile: new THREE.Vector3(-0.75, 0.5, -0.75), // TODO
+  cameraLookAtSecondMobile: new THREE.Vector3(-0.75, 0.5, -0.75),
 
   cameraHomeScrollEndLookAt: new THREE.Vector3(0.55675, -5, 0.35),
   thirdPosition: new THREE.Vector3(0.55675, 3, 0.45175),
@@ -27,7 +25,6 @@ const cameraPathPointsConfig = {
   cameraHomeScrollEndPathPoint: new THREE.Vector3(0.55675, 0.5, 0.45175),
 };
 
-// determine positions and look at - changed if is mobile
 const startPosition = isMobile
   ? cameraPathPointsConfig.startMobile
   : cameraPathPointsConfig.startDesktop;
@@ -851,7 +848,6 @@ const ghost5HomePathPoints: MazePathPoint[] = [
 
 const cameraHomeScrollPathPoints: CameraPathPoint[] = [
   { pos: startPosition, lookAt: lookAtPosition },
-  // { pos: thirdPosition, lookAt: cameraHomeScrollEndLookAt },
   { pos: secondPosition, lookAt: cameraLookAtSecondPosition },
   { pos: thirdPosition, lookAt: cameraHomeScrollEndLookAt },
   { pos: cameraHomeScrollEndPathPoint, lookAt: cameraHomeScrollEndLookAt },
@@ -862,9 +858,9 @@ const cameraPOVPathPoints: MazePathPoint[] = [
     pos: new THREE.Vector3(X["11"], 0.40625, Z["7.5"]),
     type: "straight",
     lookAtSequence: [
-      new THREE.Vector3(X["11"], 0.2, Z["8"]), // Look forward first
-      new THREE.Vector3(X["11"], 1.2, Z["16"]), // Look up
-      new THREE.Vector3(X["11"], 0.55, Z["16"]), // Look forward again
+      new THREE.Vector3(X["11"], 0.2, Z["8"]),
+      new THREE.Vector3(X["11"], 1.2, Z["16"]),
+      new THREE.Vector3(X["11"], 0.55, Z["16"]),
     ],
   },
   {
@@ -1008,23 +1004,19 @@ const ghost5POVPathPoints: MazePathPoint[] = [
   { pos: getCoord("9.5", "15"), type: "straight" },
 ];
 
-// start position, end position, ghost fade: 10, 20, cam fade: 50, 60, text start fade out: 90
-
-// @philipp - check ghost 3 - 5
-
 export const povTriggerPositions = {
   ghost1: {
-    triggerPos: new THREE.Vector3(0.65725, 0.55, 0.75325), // start ghost path
-    ghostStartFadeIn: new THREE.Vector3(0.7075, 0.55, 0.8035), // start ghost text fade in
-    ghostEndFadeIn: new THREE.Vector3(0.725, 0.55, 0.8035), // end ghost text fade in
-    ghostStartFadeOut: new THREE.Vector3(0.75, 0.55, 0.8035), // start ghost text fade out
-    camStartFadeIn: new THREE.Vector3(0.75775, 0.55, 0.8035), // start cam fade in
-    camEndFadeIn: new THREE.Vector3(0.775, 0.55, 0.8035), // end cam fade in
-    camStartFadeOut: new THREE.Vector3(0.84, 0.55, 0.8035), // start cam fade out
-    endPosition: new THREE.Vector3(0.85825, 0.55, 0.8035), // end of path
+    triggerPos: new THREE.Vector3(0.65725, 0.55, 0.75325),
+    ghostStartFadeIn: new THREE.Vector3(0.7075, 0.55, 0.8035),
+    ghostEndFadeIn: new THREE.Vector3(0.725, 0.55, 0.8035),
+    ghostStartFadeOut: new THREE.Vector3(0.75, 0.55, 0.8035),
+    camStartFadeIn: new THREE.Vector3(0.75775, 0.55, 0.8035),
+    camEndFadeIn: new THREE.Vector3(0.775, 0.55, 0.8035),
+    camStartFadeOut: new THREE.Vector3(0.84, 0.55, 0.8035),
+    endPosition: new THREE.Vector3(0.85825, 0.55, 0.8035),
     forceEndProgress: {
-      start: 0.1, // start of force end
-      end: 0.16, // end of force end
+      start: 0.1,
+      end: 0.16,
     },
   },
   ghost2: {

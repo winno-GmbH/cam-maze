@@ -7,10 +7,8 @@ import {
   getCameraHomeScrollPathPoints,
 } from "./pathpoints";
 
-// Cache for created paths
 const pathCache = new Map<string, THREE.CurvePath<THREE.Vector3>>();
 
-// Optional utility for smoothing tangent directions when following paths
 export class TangentSmoother {
   private currentTangent: THREE.Vector3;
   private smoothing: number;
@@ -57,9 +55,7 @@ function createMazePath(
     const current = pathPoints[i];
     const next = pathPoints[i + 1];
 
-    // Check if current point has curveCheckPoints
     if (current.curveCheckPoints && current.curveCheckPoints.length > 0) {
-      // Create CatmullRomCurve3 with start point, checkpoints, and end point
       const catmullPoints = [
         current.pos,
         ...current.curveCheckPoints,
@@ -71,7 +67,6 @@ function createMazePath(
     } else if (current.type === "straight") {
       path.add(new THREE.LineCurve3(current.pos, next.pos));
     } else {
-      // Create curve using existing logic
       const midPoint = createNormalCurveMidPoint(current, next);
       path.add(
         new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
@@ -148,7 +143,6 @@ function createCameraPath(
     const current = pathPoints[i];
     const next = pathPoints[i + 1];
 
-    // Check if it's a MazePathPoint-like structure
     if ("type" in current && current.type === "straight") {
       path.add(new THREE.LineCurve3(current.pos, next.pos));
     } else if (
@@ -156,13 +150,11 @@ function createCameraPath(
       current.type === "curve" &&
       "arc" in current
     ) {
-      // Create curve using existing logic
       const midPoint = createCameraCurveMidPoint(current, next);
       path.add(
         new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
       );
     } else {
-      // Default to straight line for other types
       path.add(new THREE.LineCurve3(current.pos, next.pos));
     }
   }
@@ -199,7 +191,6 @@ export function getHomePaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
   return paths;
 }
 
-// when scrolling, this is where the ghosts are going into the void
 export function getHomeScrollPaths(
   pausedPositions: Record<string, THREE.Vector3>
 ): Record<string, THREE.CurvePath<THREE.Vector3>> {
@@ -222,10 +213,8 @@ export function getPovPaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
 
   Object.entries(povPaths).forEach(([key, pathPoints]) => {
     if (key === "camera") {
-      // Camera path uses CameraPathPoint[] and needs special handling
       paths[key] = createMazePath(pathPoints as MazePathPoint[], key);
     } else {
-      // Ghost paths use MazePathPoint[]
       paths[key] = createMazePath(pathPoints as MazePathPoint[], key);
     }
   });

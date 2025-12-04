@@ -1,5 +1,3 @@
-// Global declarations for external libraries
-
 declare const gsap: {
   registerPlugin: (plugin: any) => void;
   set: (target: any, vars: any) => any;

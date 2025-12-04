@@ -41,9 +41,8 @@ import { setFloorPlane, setObjectScale, killObjectAnimations } from "./scene-uti
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
 let lastIntroProgress = 0;
-let isUpdating = false; // Prevent concurrent updates
+let isUpdating = false;
 
-// Helper function to pause other scroll triggers
 function pauseOtherScrollTriggers() {
   const homeScrollTrigger = gsap.getById("homeScroll");
   if (homeScrollTrigger) {
@@ -62,16 +61,13 @@ function pauseOtherScrollTriggers() {
   }
 }
 
-// Helper function to set object visibility and opacity
 function setObjectVisibilityAndOpacity(key: string, obj: THREE.Object3D) {
   killObjectAnimations(obj);
   obj.visible = true;
 
-  // Use centralized utility to iterate over materials
   forEachMaterial(
     obj,
     (mat: any, mesh: THREE.Mesh, childName: string) => {
-      // Skip currency symbols and pacman parts
       if (
         isCurrencySymbol(childName) ||
         (key === "pacman" && isPacmanPart(childName))
@@ -84,8 +80,8 @@ function setObjectVisibilityAndOpacity(key: string, obj: THREE.Object3D) {
       setMaterialOpacity(mat, 1, true);
     },
     {
-      skipCurrencySymbols: false, // We handle this in the callback
-      skipPacmanParts: false, // We handle this in the callback
+      skipCurrencySymbols: false,
+      skipPacmanParts: false,
       objectKey: key,
     }
   );
@@ -93,7 +89,6 @@ function setObjectVisibilityAndOpacity(key: string, obj: THREE.Object3D) {
   obj.updateMatrixWorld(true);
 }
 
-// Helper function to initialize intro scroll state
 function initializeIntroScrollState() {
   pauseOtherScrollTriggers();
 
@@ -106,11 +101,10 @@ function initializeIntroScrollState() {
 
   setVisibilityForAll();
   applyIntroScrollPreset(true, getScrollDirection());
-  setVisibilityForAll(); // Force visibility again after preset
+  setVisibilityForAll();
 
   isUpdating = false;
 
-  // Update objects immediately
   const scrollTrigger = ScrollTrigger.getById("introScroll");
   const progress =
     scrollTrigger && typeof scrollTrigger.progress === "number"
@@ -119,7 +113,6 @@ function initializeIntroScrollState() {
   lastIntroProgress = progress;
   updateObjectsWalkBy(progress);
 
-  // Also update in next frame
   requestAnimationFrame(() => {
     const scrollTrigger = ScrollTrigger.getById("introScroll");
     const progress =
@@ -131,13 +124,11 @@ function initializeIntroScrollState() {
   });
 }
 
-// Helper function to restore floor
 function restoreFloor() {
   setFloorPlane(true, OPACITY.FULL, false);
 }
 
 export function initIntroScrollAnimation() {
-  // Kill any existing timeline
   if (introScrollTimeline) {
     introScrollTimeline.kill();
     introScrollTimeline = null;
@@ -168,8 +159,6 @@ export function initIntroScrollAnimation() {
           restoreFloor();
         },
         onUpdate: (self) => {
-          // CRITICAL: Update on every scroll event - this is the primary update source
-          // Update bidirectionally based on scroll progress (works for both scroll up and down)
           if (
             isIntroScrollActive &&
             typeof self.progress === "number" &&
@@ -255,33 +244,27 @@ export function initIntroScrollAnimation() {
           }
         },
       },
-      0 // Start at the same time as the other animations
+      0
     );
 }
 
 function updateObjectsWalkBy(progress: number) {
-  // CRITICAL: Only update if intro-scroll is active
   if (!isIntroScrollActive || isUpdating) return;
 
   isUpdating = true;
 
   try {
-    // Ensure floor plane stays invisible (white with opacity 0) during animation
     setFloorPlane(true, OPACITY.HIDDEN, true);
 
-    // Calculate base center point for walk path
     const baseCenter = new THREE.Vector3(
       camera.position.x,
       camera.position.y,
       camera.position.z
     );
 
-    // Walk path symmetric around center
-    // Start INTRO_WALK_DISTANCE units left of center, end INTRO_WALK_DISTANCE units right of center
-    const walkStart = baseCenter.x - INTRO_WALK_DISTANCE; // Start from left
-    const walkEnd = baseCenter.x + INTRO_WALK_DISTANCE; // End at right
+    const walkStart = baseCenter.x - INTRO_WALK_DISTANCE;
+    const walkEnd = baseCenter.x + INTRO_WALK_DISTANCE;
 
-    // Objects to animate - ghosts walk behind pacman
     const objectsToAnimate = [
       { key: "pacman", behindOffset: 0 },
       { key: "ghost1", behindOffset: INTRO_GHOST_OFFSETS.GHOST1 },
@@ -291,14 +274,12 @@ function updateObjectsWalkBy(progress: number) {
       { key: "ghost5", behindOffset: INTRO_GHOST_OFFSETS.GHOST5 },
     ];
 
-    // Calculate pacman's position using smooth interpolation
     const normalizedProgress = Math.max(0, Math.min(1, progress));
     const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
     const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
     const pacmanY = baseCenter.y + INTRO_POSITION_OFFSET.y;
     const pacmanZ = baseCenter.z + INTRO_POSITION_OFFSET.z;
 
-    // Smooth fade-in for ghosts based on progress
     const ghostOpacity =
       normalizedProgress < INTRO_FADE_IN_DURATION
         ? normalizedProgress / INTRO_FADE_IN_DURATION
@@ -308,18 +289,14 @@ function updateObjectsWalkBy(progress: number) {
       const object = ghosts[key];
       if (!object) return;
 
-      // CRITICAL: Kill all GSAP animations that might interfere
       killObjectAnimations(object);
 
-      // Calculate position
       const finalX = pacmanX + behindOffset;
       const finalY = pacmanY;
       const finalZ = pacmanZ;
 
-      // Update position directly (no GSAP interpolation for smoother updates)
       object.position.set(finalX, finalY, finalZ);
 
-      // Set rotation quaternion directly (no recalculation - use pre-calculated quaternions)
       const pacmanQuat = getPacmanTargetQuaternion();
       const ghostQuat = getGhostTargetQuaternion();
       if (key === "pacman" && pacmanQuat) {
@@ -328,21 +305,16 @@ function updateObjectsWalkBy(progress: number) {
         object.quaternion.copy(ghostQuat);
       }
 
-      // Force update matrix to ensure rotation is applied
       object.updateMatrixWorld(true);
 
-      // CRITICAL: Force visibility, scale EVERY frame to override home-scroll
       object.visible = true;
       setObjectScale(object, key, "intro");
 
-      // Update opacity for meshes
       const targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
 
-      // Use centralized utility for consistency
       forEachMaterial(
         object,
         (mat: any, mesh: THREE.Mesh, childName: string) => {
-          // Keep currency symbols and pacman parts hidden
           if (
             isCurrencySymbol(childName) ||
             (key === "pacman" && isPacmanPart(childName))
@@ -351,26 +323,21 @@ function updateObjectsWalkBy(progress: number) {
             return;
           }
 
-          // CRITICAL: Force visibility EVERY frame (don't check, just set it)
           mesh.visible = true;
 
-          // CRITICAL: Force opacity EVERY frame using centralized utility
-          // This ensures opacity is always correct and ghost materials keep transparent=true
           setMaterialOpacity(mat, targetOpacity, true);
         },
         {
-          skipCurrencySymbols: false, // We handle this in the callback
-          skipPacmanParts: false, // We handle this in the callback
+          skipCurrencySymbols: false,
+          skipPacmanParts: false,
           objectKey: key,
         }
       );
 
-      // Set ghost colors using centralized utility (only if needed)
       if (GHOST_COLORS[key] && key !== "pacman") {
         setGhostColor(object, GHOST_COLORS[key]);
       }
 
-      // CRITICAL: Force matrix update after all changes (only once per object)
       object.updateMatrixWorld(true);
     });
   } finally {

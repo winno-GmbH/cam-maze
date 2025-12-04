@@ -4,17 +4,6 @@ import { scene } from "../core/scene";
 import { SCALE, COLOR, OPACITY } from "./constants";
 import { forEachMaterial } from "../core/material-utils";
 
-/**
- * SCENE UTILITIES
- * 
- * Centralized utility functions for common scene operations.
- * This prevents code duplication and ensures consistency.
- */
-
-/**
- * Set floor plane visibility, opacity, and transparency
- * Used across all scene presets to manage the floor plane consistently
- */
 export function setFloorPlane(
   visible: boolean,
   opacity: number = OPACITY.FULL,
@@ -33,10 +22,6 @@ export function setFloorPlane(
   });
 }
 
-/**
- * Set object scale based on object key and scene type
- * Ensures consistent scaling across all scenes
- */
 export function setObjectScale(
   object: THREE.Object3D,
   key: string,
@@ -50,27 +35,19 @@ export function setObjectScale(
     scale = sceneType === "pov" ? SCALE.GHOST_POV : SCALE.GHOST_NORMAL;
   }
 
-  // Set scale directly
   object.scale.set(scale, scale, scale);
   object.updateMatrixWorld(true);
 
-  // Also set via GSAP for consistency
   gsap.set(object.scale, { x: scale, y: scale, z: scale });
 }
 
-/**
- * Kill all GSAP animations for an object and its materials
- * Useful when transitioning between scenes to prevent animation conflicts
- */
 export function killObjectAnimations(object: THREE.Object3D): void {
-  // Kill object animations
   gsap.killTweensOf(object);
   gsap.killTweensOf(object.scale);
   gsap.killTweensOf(object.position);
   gsap.killTweensOf(object.rotation);
   gsap.killTweensOf(object.quaternion);
 
-  // Kill material animations using centralized utility
   forEachMaterial(
     object,
     (mat: any) => {
@@ -80,4 +57,3 @@ export function killObjectAnimations(object: THREE.Object3D): void {
     { skipCurrencySymbols: false }
   );
 }
-

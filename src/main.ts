@@ -17,7 +17,6 @@ import { initIntroScrollAnimation } from "./animation/intro-scroll";
 import { initOutroScrollAnimation } from "./animation/outro-scroll";
 import { initializeObjectStates } from "./animation/object-state";
 
-// Declare global window interface for debug commands
 declare global {
   interface Window {
     lookAt: (x: XCoordKey, y: number, z: ZCoordKey) => void;
@@ -47,7 +46,6 @@ async function main() {
   createDebugLines();
   await loadModel(scene);
 
-  // Initialize unified object state manager
   initializeObjectStates();
 
   homeLoopHandler();

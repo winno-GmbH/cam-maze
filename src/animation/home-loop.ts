@@ -26,12 +26,10 @@ let pausedT = 0;
 let homeLoopFrameRegistered = false;
 let rotationTransitionTime = 0;
 let startRotations: Record<string, THREE.Quaternion> = {};
-let hasBeenPausedBefore = false; // Track if we've ever stopped the loop (i.e., scrolled)
+let hasBeenPausedBefore = false;
 
-// Tangent smoothers for home loop (separate from scroll smoothers)
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
 
-// Initialize home loop tangent smoothers
 function initializeHomeLoopTangentSmoothers() {
   const smoothingFactor = TANGENT_SMOOTHING.HOME_LOOP;
   const initialVector = new THREE.Vector3(1, 0, 0);
@@ -47,23 +45,16 @@ function initializeHomeLoopTangentSmoothers() {
 function stopHomeLoop() {
   if (!isHomeLoopActive) return;
   isHomeLoopActive = false;
-  setHomeLoopActive(false); // Notify state manager that home-loop is inactive
+  setHomeLoopActive(false);
   hasBeenPausedBefore = true;
   pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
 
-  // CRITICAL: Store pausedT in state so home-scroll can use the exact same value
   updateHomeLoopPausedT(pausedT);
 
-  // CRITICAL: State is already updated every frame in updateHomeLoop()
-  // Just ensure we have the absolute latest by syncing one more time
-  // This catches any edge cases where updateHomeLoop() hasn't run yet this frame
-  // Temporarily set active to allow this final sync
   setHomeLoopActive(true);
   syncStateFromObjects();
   setHomeLoopActive(false);
 
-  // CRITICAL: Rotations are already in state (updated every frame in updateHomeLoop)
-  // We just need to ensure they're up-to-date before starting scroll
   const homePaths = getHomePaths();
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
@@ -85,28 +76,22 @@ function stopHomeLoop() {
     }
   });
 
-  // CRITICAL: initHomeScrollAnimation now reads everything from state
-  // No need to pass parameters - state is the single source of truth
   initHomeScrollAnimation();
 }
 
 function startHomeLoop() {
   isHomeLoopActive = true;
-  setHomeLoopActive(true); // Notify state manager that home-loop is active
+  setHomeLoopActive(true);
 
-  // CRITICAL: When returning from scroll, recalculate pausedT from state positions
-  // We use state positions because they are the ONLY source of truth (set by home-loop)
   if (hasBeenPausedBefore) {
     const homePaths = getHomePaths();
-    const currentPositions = getCurrentPositions(); // Read from state (last updated by home-loop)
+    const currentPositions = getCurrentPositions();
 
-    // Find closest t value for each object and use average
     let totalT = 0;
     let count = 0;
     Object.entries(currentPositions).forEach(([key, pos]) => {
       const path = homePaths[key];
       if (path) {
-        // Simple approximation: find closest point on path
         let closestT = 0;
         let closestDist = Infinity;
         for (let i = 0; i <= 100; i++) {
@@ -133,26 +118,20 @@ function startHomeLoop() {
   rotationTransitionTime = 0;
   startRotations = {};
 
-  // Apply home loop preset
   applyHomeLoopPreset(true);
 
-  // Initialize smooth tangent smoothers for home loop
   initializeHomeLoopTangentSmoothers();
 
   const homePaths = getHomePaths();
 
-  // CRITICAL: Read positions from state (which were last updated by home-loop)
-  // Do NOT sync here - we will set objects to these positions and THEN sync
   const currentPositions = getCurrentPositions();
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
-      // Use current position from state if available, otherwise use path position
       const savedPosition = currentPositions[key];
       if (savedPosition && hasBeenPausedBefore) {
         ghost.position.copy(savedPosition);
-        // CRITICAL: Update state with the position we just set
         updateObjectPosition(key, savedPosition);
       } else {
         const position = path.getPointAt(pausedT);
@@ -162,10 +141,8 @@ function startHomeLoop() {
         }
       }
 
-      // CRITICAL: Also update rotation in state
       updateObjectRotation(key, ghost.quaternion);
 
-      // Only store current rotation for transition if we're returning from scroll
       if (hasBeenPausedBefore) {
         startRotations[key] = ghost.quaternion.clone();
       }
@@ -175,7 +152,6 @@ function startHomeLoop() {
       }
       setObjectScale(ghost, key, "home");
 
-      // Reset the smoother with initial tangent
       if (homeLoopTangentSmoothers[key]) {
         const initialTangent = path.getTangentAt(pausedT);
         if (initialTangent) {
@@ -185,8 +161,6 @@ function startHomeLoop() {
     }
   });
 
-  // CRITICAL: Now sync state AFTER we've set all object positions
-  // This ensures state matches the actual object positions
   syncStateFromObjects();
 
   if (!homeLoopFrameRegistered) {
@@ -202,7 +176,6 @@ function updateHomeLoop(delta: number) {
 
   const t = (animationTime % LOOP_DURATION) / LOOP_DURATION;
 
-  // CRITICAL: Update t-value in state so home-scroll can use the exact same value
   updateHomeLoopT(t, animationTime);
 
   const homePaths = getHomePaths();
@@ -210,8 +183,6 @@ function updateHomeLoop(delta: number) {
     pacmanMixer.update(delta);
   }
 
-  // Calculate rotation transition progress (0 to 1 over ROTATION_TRANSITION_DURATION)
-  // Only transition if we've been paused before (returning from scroll)
   const transitionProgress = Math.min(
     rotationTransitionTime / ROTATION_TRANSITION_DURATION,
     1
@@ -224,14 +195,11 @@ function updateHomeLoop(delta: number) {
       const position = path.getPointAt(t);
       if (position) {
         ghost.position.copy(position);
-        // CRITICAL: Update state every frame to keep it in sync
         updateObjectPosition(key, position);
       }
 
-      // CRITICAL: Maintain correct scale every frame using centralized utility
       setObjectScale(ghost, key, "home");
 
-      // Calculate target rotation from path tangent
       const targetQuat = new THREE.Quaternion();
       if (homeLoopTangentSmoothers[key] && t > 0) {
         const rawTangent = path.getTangentAt(t);
@@ -240,38 +208,29 @@ function updateHomeLoop(delta: number) {
             homeLoopTangentSmoothers[key].update(rawTangent);
           const objectType = key === "pacman" ? "pacman" : "ghost";
 
-          // Create a temporary object to get target quaternion
           const tempObject = new THREE.Object3D();
           calculateObjectOrientation(tempObject, smoothTangent, objectType);
           targetQuat.copy(tempObject.quaternion);
         }
       }
 
-      // Smoothly transition from laying down rotation to upright rotation (only when returning from scroll)
       if (isTransitioning && startRotations[key]) {
-        // Smooth easing for rotation transition
         const easedProgress =
           transitionProgress *
           transitionProgress *
-          (3 - 2 * transitionProgress); // smoothstep
+          (3 - 2 * transitionProgress);
         ghost.quaternion.copy(
           startRotations[key].clone().slerp(targetQuat, easedProgress)
         );
       } else {
-        // After transition or on first load, use normal rotation
         ghost.quaternion.copy(targetQuat);
       }
 
-      // CRITICAL: Update state every frame to keep it in sync
       updateObjectRotation(key, ghost.quaternion);
-      
-      // Opacity is managed by animations (home-scroll animates to 0, when returning to home-loop it's already at 1)
     }
   });
 }
 
-// when scroll is 0 - home loop is running.
-// Home= pacman and ghosts moving on their paths - scroll doesn't mattermatter
 export function homeLoopHandler() {
   if (window.scrollY === 0) {
     startHomeLoop();

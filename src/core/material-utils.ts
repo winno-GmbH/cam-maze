@@ -1,40 +1,22 @@
 import * as THREE from "three";
 import { isCurrencySymbol, isPacmanPart } from "../animation/util";
 
-/**
- * MATERIAL UTILITIES
- * 
- * Centralized functions for managing material properties consistently across the codebase.
- * This prevents bugs where material properties (especially opacity/transparent) are set
- * inconsistently in different places.
- * 
- * CRITICAL RULES:
- * - Ghost materials (MeshPhysicalMaterial with transmission) MUST always have transparent=true
- *   to preserve the glow effect, even at opacity 1.0
- * - Always use these utility functions instead of directly setting material properties
- */
-
-/**
- * Set opacity on all materials of an object
- * CRITICAL: For ghost materials with transmission, transparent is always kept true
- */
 export function setObjectOpacity(
   object: THREE.Object3D,
   opacity: number,
   options?: {
-    preserveTransmission?: boolean; // If true, keeps transparent=true for ghost materials (default: true)
-    skipCurrencySymbols?: boolean; // If true, skips currency symbol meshes (default: true)
+    preserveTransmission?: boolean;
+    skipCurrencySymbols?: boolean;
   }
 ): void {
-  const preserveTransmission = options?.preserveTransmission !== false; // Default: true
-  const skipCurrencySymbols = options?.skipCurrencySymbols !== false; // Default: true
+  const preserveTransmission = options?.preserveTransmission !== false;
+  const skipCurrencySymbols = options?.skipCurrencySymbols !== false;
 
   object.traverse((child) => {
     if ((child as any).isMesh && (child as any).material) {
       const mesh = child as THREE.Mesh;
       const childName = child.name || "";
 
-      // Skip currency symbols if requested
       if (skipCurrencySymbols && isCurrencySymbol(childName)) {
         return;
       }
@@ -50,10 +32,6 @@ export function setObjectOpacity(
   });
 }
 
-/**
- * Set opacity on a single material
- * CRITICAL: For MeshPhysicalMaterial with transmission, transparent is always kept true
- */
 export function setMaterialOpacity(
   material: THREE.Material,
   opacity: number,
@@ -62,28 +40,17 @@ export function setMaterialOpacity(
   const mat = material as any;
   mat.opacity = opacity;
 
-  // CRITICAL: For MeshPhysicalMaterial with transmission, always keep transparent=true
-  // This preserves the glow effect even at opacity 1.0
-  // Three.js treats opacity 1.0 as non-transparent even with transparent=true,
-  // but we need transparent=true to maintain the transmission glow effect
   if (preserveTransmission && mat.transmission !== undefined && mat.transmission > 0) {
     mat.transparent = true;
   } else {
-    // For other materials, set transparent based on opacity
     mat.transparent = opacity < 1.0;
   }
 
-  // Force material update
   if (mat.needsUpdate !== undefined) {
     mat.needsUpdate = true;
   }
 }
 
-/**
- * Set transparent property on a single material
- * CRITICAL: For MeshPhysicalMaterial with transmission, transparent is always kept true
- * NOTE: This is used internally by setMaterialOpacity, but can be used directly if needed
- */
 export function setMaterialTransparent(
   material: THREE.Material,
   transparent: boolean,
@@ -91,23 +58,17 @@ export function setMaterialTransparent(
 ): void {
   const mat = material as any;
 
-  // CRITICAL: For MeshPhysicalMaterial with transmission, always keep transparent=true
-  // This preserves the glow effect
   if (preserveTransmission && mat.transmission !== undefined && mat.transmission > 0) {
     mat.transparent = true;
   } else {
     mat.transparent = transparent;
   }
 
-  // Force material update
   if (mat.needsUpdate !== undefined) {
     mat.needsUpdate = true;
   }
 }
 
-/**
- * Get opacity from the first material found in an object
- */
 export function getObjectOpacity(object: THREE.Object3D): number {
   let opacity = 1.0;
   let found = false;
@@ -126,38 +87,26 @@ export function getObjectOpacity(object: THREE.Object3D): number {
   return opacity;
 }
 
-/**
- * Check if a material is a ghost material (has transmission)
- * NOTE: Currently not used, but kept for potential future use
- */
 export function isGhostMaterial(material: THREE.Material): boolean {
   const mat = material as any;
   return mat.transmission !== undefined && mat.transmission > 0;
 }
 
-/**
- * Set all ghost materials to full opacity and ensure transparent=true
- * Use this when resetting objects to their default state
- */
 export function resetGhostMaterialsToFullOpacity(object: THREE.Object3D): void {
   setObjectOpacity(object, 1.0, {
-    preserveTransmission: true, // Keep transparent=true for glow effect
+    preserveTransmission: true,
     skipCurrencySymbols: true,
   });
 }
 
-/**
- * Set ghost color on all materials of an object
- * Used to colorize ghosts (e.g., red for ghost1, green for ghost2, etc.)
- */
 export function setGhostColor(
   object: THREE.Object3D,
   color: number,
   options?: {
-    skipCurrencySymbols?: boolean; // If true, skips currency symbol meshes (default: true)
+    skipCurrencySymbols?: boolean;
   }
 ): void {
-  const skipCurrencySymbols = options?.skipCurrencySymbols !== false; // Default: true
+  const skipCurrencySymbols = options?.skipCurrencySymbols !== false;
 
   forEachMaterial(
     object,
@@ -170,21 +119,13 @@ export function setGhostColor(
   );
 }
 
-/**
- * Iterate over all materials in an object
- * Centralized utility to avoid code duplication for the common traverse pattern
- * 
- * @param object - The object to traverse
- * @param callback - Function called for each material found
- * @param options - Optional configuration
- */
 export function forEachMaterial(
   object: THREE.Object3D,
   callback: (material: THREE.Material, mesh: THREE.Mesh, childName: string) => void,
   options?: {
-    skipCurrencySymbols?: boolean; // If true, skips currency symbol meshes (default: false)
-    skipPacmanParts?: boolean; // If true, skips pacman parts (default: false)
-    objectKey?: string; // Object key (e.g., "pacman", "ghost1") - needed for skipPacmanParts
+    skipCurrencySymbols?: boolean;
+    skipPacmanParts?: boolean;
+    objectKey?: string;
   }
 ): void {
   const skipCurrencySymbols = options?.skipCurrencySymbols === true;
@@ -196,12 +137,10 @@ export function forEachMaterial(
       const mesh = child as THREE.Mesh;
       const childName = child.name || "";
 
-      // Skip currency symbols if requested
       if (skipCurrencySymbols && isCurrencySymbol(childName)) {
         return;
       }
 
-      // Skip pacman parts if requested
       if (skipPacmanParts && objectKey === "pacman" && isPacmanPart(childName)) {
         return;
       }
@@ -216,4 +155,3 @@ export function forEachMaterial(
     }
   });
 }
-

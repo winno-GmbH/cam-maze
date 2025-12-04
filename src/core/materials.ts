@@ -18,8 +18,7 @@ export const topMaterial = new THREE.MeshStandardMaterial({
 
 export const ghostMaterial = new THREE.MeshPhysicalMaterial({
   color: 0xffffff,
-  opacity: 0.9999, // Use 0.9999 instead of 1.0 to ensure consistent rendering with transmission
-  // This prevents Three.js from treating the material differently at opacity 1.0
+  opacity: 0.9999,
   transparent: true,
   depthWrite: false,
   depthTest: true,
@@ -28,8 +27,6 @@ export const ghostMaterial = new THREE.MeshPhysicalMaterial({
   roughness: 0.75,
   metalness: 0.2,
   transmission: 0.5,
-  // Ensure transmission is always active regardless of opacity
-  // This helps maintain the glow effect consistently
 });
 
 export const floorMaterial = new THREE.MeshStandardMaterial({
@@ -58,8 +55,6 @@ const pacmanMaterials = {
   }),
 };
 
-// @philipp - comment out the comments to change colors
-
 export const materialMap = {
   CAM_Pacman_Backframe: pacmanMaterials.blue,
   "CAM-Pacman_Bitcoin_1": pacmanMaterials.white,
@@ -67,19 +62,13 @@ export const materialMap = {
   "CAM-Pacman_Bottom": pacmanMaterials.blue,
   "CAM-Pacman_Top": pacmanMaterials.blue,
   "CAM-Pacman_Eye": pacmanMaterials.white,
-  // CAM_Pacman_Logo_1: pacmanMaterials.blue, // logo in the back, left side
-  // CAM_Pacman_Logo_2: pacmanMaterials.blue, // logo in the back, right side
   CAM_Pacman_Logo_1: pacmanMaterials.white,
   CAM_Pacman_Logo_2: pacmanMaterials.white,
   "CAM-Pacman_Shell_Boolean": pacmanMaterials.blue,
   "CAM-Pacman_Shell": pacmanMaterials.blue,
-  // "CAM-Pacman_Bottom_electronic": pacmanMaterials.blue,
-  // "CAM-Pacman_Top_electronic": pacmanMaterials.blue,
-  "CAM-Pacman_Bottom_electronic": pacmanMaterials.white, // bitcoin in the middle, left side
-  "CAM-Pacman_Top_electronic": pacmanMaterials.white, // bitcoin in the middle, right side
+  "CAM-Pacman_Bottom_electronic": pacmanMaterials.white,
+  "CAM-Pacman_Top_electronic": pacmanMaterials.white,
   "CAM-Pacman_Bottom_Text": pacmanMaterials.white,
   "CAM-Pacman_Top_Text": pacmanMaterials.white,
-  // "CAM-Pacman_Bottom_Text": pacmanMaterials.blue, // text on the bottom of pacman
-  // "CAM-Pacman_Top_Text": pacmanMaterials.blue, // text on the top of pacman
   default: pacmanMaterials.blue,
 };

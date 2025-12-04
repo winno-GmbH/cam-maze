@@ -33,10 +33,8 @@ export function initHomeScrollAnimation() {
     homeScrollTimeline = null;
   }
 
-  // Camera path points (unchanged - camera still uses bezier curve)
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
-  // Create camera path
   const cameraPath = new THREE.CurvePath<THREE.Vector3>();
   if (cameraPathPoints.length === 4) {
     const cameraCurve = new THREE.CubicBezierCurve3(
@@ -48,34 +46,25 @@ export function initHomeScrollAnimation() {
     cameraPath.add(cameraCurve);
   }
 
-  // Shared function for onEnter and onEnterBack to avoid code duplication
   const handleScrollEnter = () => {
     requestAnimationFrame(() => {
       const freshRotations = getCurrentRotations();
       const scrollDir = getScrollDirection();
 
-      // CRITICAL: Store ACTUAL current positions (not t-values)
-      // These are the positions where objects are RIGHT NOW when entering home-scroll
       const freshPositions: Record<string, THREE.Vector3> = {};
       Object.entries(ghosts).forEach(([key, object]) => {
         freshPositions[key] = object.position.clone();
       });
 
-      // Store for use in animations
       startPositions = freshPositions;
 
-      // Apply preset FIRST to set positions and opacity correctly
       applyHomeScrollPreset(true, scrollDir, freshPositions, freshRotations);
 
-      // Update startPositions with the positions set by applyHomeScrollPreset
       Object.entries(ghosts).forEach(([key, object]) => {
         startPositions[key] = object.position.clone();
       });
 
-      // Recreate animations with fresh FROM values (including camera)
-      // Create object animations FIRST (this clears the timeline)
       createObjectAnimations();
-      // Then create camera animation (after timeline is cleared, so it's not removed)
       createCameraAnimation();
     });
   };
@@ -97,32 +86,24 @@ export function initHomeScrollAnimation() {
     },
   });
 
-  // Initialize startPositions with current values
-  // Note: ghosts already contains pacman, so we don't need to add it separately
   const allObjects = Object.entries(ghosts);
   allObjects.forEach(([key, object]) => {
     startPositions[key] = object.position.clone();
   });
 
-  // Function to create/update animations with current FROM values
   const createObjectAnimations = () => {
-    // Clear timeline to remove all existing animations
-    // Note: This will also clear camera animation, so it must be re-added after
     if (homeScrollTimeline) {
       homeScrollTimeline.clear();
     }
 
-    // Kill existing animations
     allObjects.forEach(([key, object]) => {
       gsap.killTweensOf(object);
       gsap.killTweensOf(object.position);
       gsap.killTweensOf(object.rotation);
     });
 
-    // Create paths for each object based on their start positions
     const homeScrollPaths = getHomeScrollPaths(startPositions);
 
-    // Collect all animation data in arrays for stagger
     const animPropsArray: any[] = [];
     const animationData: Array<{
       key: string;
@@ -133,17 +114,12 @@ export function initHomeScrollAnimation() {
     }> = [];
 
     allObjects.forEach(([key, object]) => {
-      // Get current opacity using centralized utility
       const currentMaterialOpacity = getObjectOpacity(object);
 
-      // Get materials and CLONE them to avoid shared material issues
-      // Materials are shared between objects (e.g., ghostMaterial), so we need to clone them
-      // This ensures each object has its own material instance and opacity can be animated independently
       forEachMaterial(
         object,
         (mat: any, mesh: THREE.Mesh) => {
           const clonedMat = mat.clone();
-          // Preserve current opacity and transparency using centralized utilities
           setMaterialOpacity(clonedMat, currentMaterialOpacity, true);
 
           if (Array.isArray(mesh.material)) {
@@ -160,28 +136,22 @@ export function initHomeScrollAnimation() {
         { skipCurrencySymbols: false }
       );
 
-      // Get FROM values: current rotation
       const startRot = getCurrentRotations()[key] || object.quaternion.clone();
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
 
-      // Get TO values: laydown rotation
-      // CRITICAL: Use the SAME end rotation for ALL objects to ensure consistent orientation
-      // Use LAY_DOWN_QUAT_1 (which has been adjusted by 180° in util.ts)
       const endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
 
-      // Get path for this object
       const path = homeScrollPaths[key];
       if (!path) {
-        return; // Skip if no path found
+        return;
       }
 
-      // Create animation props object - use progress for path animation
       const animProps = {
-        progress: 0, // Progress along path (0 to 1)
+        progress: 0,
         rotX: startEuler.x,
         rotY: startEuler.y,
         rotZ: startEuler.z,
-        opacity: currentMaterialOpacity, // Start from current opacity
+        opacity: currentMaterialOpacity,
       };
 
       animPropsArray.push(animProps);
@@ -194,27 +164,22 @@ export function initHomeScrollAnimation() {
       });
     });
 
-    // Create individual animations for each object with manual stagger positioning
-    // This ensures each object's opacity animates correctly
     const totalObjects = animationData.length;
 
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];
       const staggerPosition = index * (STAGGER_AMOUNT / totalObjects);
 
-      // Create individual fromTo animation for each object
       homeScrollTimeline!.fromTo(
         animProps,
         {
-          // FROM: progress 0 (start of path), current rotation, current opacity
           progress: 0,
           rotX: data.startEuler.x,
           rotY: data.startEuler.y,
           rotZ: data.startEuler.z,
-          opacity: animProps.opacity, // Start from current opacity
+          opacity: animProps.opacity,
         },
         {
-          // TO: progress 1 (end of path), laydown rotation, opacity 0
           progress: 1,
           rotX: data.endEuler.x,
           rotY: data.endEuler.y,
@@ -222,11 +187,9 @@ export function initHomeScrollAnimation() {
           opacity: OPACITY.HIDDEN,
           ease: "power1.out",
           onUpdate: function () {
-            // Calculate position along path based on progress
             const pathPoint = data.path.getPointAt(animProps.progress);
             data.object.position.copy(pathPoint);
 
-            // Apply rotation (Euler to quaternion)
             data.object.rotation.set(
               animProps.rotX,
               animProps.rotY,
@@ -235,40 +198,30 @@ export function initHomeScrollAnimation() {
             data.object.quaternion.setFromEuler(data.object.rotation);
             updateObjectRotation(data.key, data.object.quaternion);
 
-            // Apply opacity using centralized material utility
-            // This ensures ghost materials with transmission always have transparent=true
             setObjectOpacity(data.object, animProps.opacity, {
-              preserveTransmission: true, // Keep transparent=true for glow effect
+              preserveTransmission: true,
               skipCurrencySymbols: true,
             });
           },
         },
-        staggerPosition // Start position on timeline (staggered)
+        staggerPosition
       );
     });
   };
 
-  // Store camera progress wrapper for killing
   let cameraProgressWrapper: { value: number } | null = null;
 
-  // Function to create camera animation
   const createCameraAnimation = () => {
-    // Kill existing camera animation
     if (cameraProgressWrapper) {
       gsap.killTweensOf(cameraProgressWrapper);
     }
 
     cameraProgressWrapper = { value: 0 };
 
-    // Add camera animation at position 0 (start of timeline) so it runs for the full duration
-    // This ensures camera animates alongside the object animations
-    // Make sure cameraPath exists before creating animation
     if (!cameraPath || cameraPath.curves.length === 0) {
-      return; // Skip if camera path not created
+      return;
     }
 
-    // Add camera animation - it should run for the full timeline duration
-    // Position 0 means it starts at the beginning, parallel to object animations
     homeScrollTimeline!.fromTo(
       cameraProgressWrapper,
       { value: 0 },
@@ -303,13 +256,10 @@ export function initHomeScrollAnimation() {
           }
         },
       },
-      0 // Start at position 0, parallel to object animations
+      0
     );
   };
 
-  // Create animations initially
-  // Create object animations FIRST (this clears the timeline)
   createObjectAnimations();
-  // Then create camera animation (after timeline is cleared, so it's not removed)
   createCameraAnimation();
 }
