@@ -9,17 +9,8 @@ import {
   getPacmanTargetQuaternion,
   getGhostTargetQuaternion,
 } from "./scene-presets";
-import {
-  setMaterialOpacity,
-  setGhostColor,
-  forEachMaterial,
-} from "../core/material-utils";
-import {
-  OBJECT_KEYS,
-  GHOST_COLORS,
-  isCurrencySymbol,
-  isPacmanPart,
-} from "./util";
+import { setMaterialOpacity, forEachMaterial } from "../core/material-utils";
+import { OBJECT_KEYS, isCurrencySymbol, isPacmanPart } from "./util";
 import {
   SCROLL_SELECTORS,
   SCALE,
@@ -269,23 +260,41 @@ function updateObjectsWalkBy(progress: number) {
     const walkEnd = baseCenter.x + INTRO_WALK_DISTANCE;
 
     const objectsToAnimate = [
-      { key: "pacman", behindOffset: 0, zOffset: 0.5 },
+      { key: "pacman", behindOffset: 0, zOffset: 0.5, xOffset: 0, yPhase: 0 },
       {
         key: "ghost1",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST1,
         zOffset: 0.5,
+        xOffset: 0.2,
+        yPhase: 0,
       },
-      { key: "ghost2", behindOffset: INTRO_GHOST_OFFSETS.GHOST2, zOffset: 0.5 },
+      {
+        key: "ghost2",
+        behindOffset: INTRO_GHOST_OFFSETS.GHOST2,
+        zOffset: 0.5,
+        xOffset: -0.15,
+        yPhase: Math.PI * 0.4,
+      },
       {
         key: "ghost3",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST3,
         zOffset: 0.5,
+        xOffset: 0.25,
+        yPhase: Math.PI * 0.8,
       },
-      { key: "ghost4", behindOffset: INTRO_GHOST_OFFSETS.GHOST4, zOffset: 0.5 },
+      {
+        key: "ghost4",
+        behindOffset: INTRO_GHOST_OFFSETS.GHOST4,
+        zOffset: 0.5,
+        xOffset: -0.2,
+        yPhase: Math.PI * 1.2,
+      },
       {
         key: "ghost5",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST5,
         zOffset: 0.5,
+        xOffset: 0.18,
+        yPhase: Math.PI * 1.6,
       },
     ];
 
@@ -300,59 +309,61 @@ function updateObjectsWalkBy(progress: number) {
         ? normalizedProgress / INTRO_FADE_IN_DURATION
         : 1.0;
 
-    objectsToAnimate.forEach(({ key, behindOffset, zOffset }) => {
-      const object = ghosts[key];
-      if (!object) return;
+    objectsToAnimate.forEach(
+      ({ key, behindOffset, zOffset, xOffset, yPhase }) => {
+        const object = ghosts[key];
+        if (!object) return;
 
-      killObjectAnimations(object);
+        killObjectAnimations(object);
 
-      const finalX = pacmanX + behindOffset;
-      const finalY = pacmanY;
-      const finalZ = pacmanZ + zOffset;
+        const yBounce =
+          key === "pacman"
+            ? 0
+            : Math.sin(normalizedProgress * Math.PI * 2 + yPhase) * 0.15;
+        const finalX = pacmanX + behindOffset + (xOffset || 0);
+        const finalY = pacmanY + yBounce;
+        const finalZ = pacmanZ + zOffset;
 
-      object.position.set(finalX, finalY, finalZ);
+        object.position.set(finalX, finalY, finalZ);
 
-      const pacmanQuat = getPacmanTargetQuaternion();
-      const ghostQuat = getGhostTargetQuaternion();
-      if (key === "pacman" && pacmanQuat) {
-        object.quaternion.copy(pacmanQuat);
-      } else if (ghostQuat) {
-        object.quaternion.copy(ghostQuat);
-      }
-
-      object.visible = true;
-      setObjectScale(object, key, "intro");
-
-      const targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
-
-      forEachMaterial(
-        object,
-        (mat: any, mesh: THREE.Mesh, childName: string) => {
-          if (
-            isCurrencySymbol(childName) ||
-            (key === "pacman" && isPacmanPart(childName))
-          ) {
-            mesh.visible = false;
-            return;
-          }
-
-          mesh.visible = true;
-
-          setMaterialOpacity(mat, targetOpacity, true);
-        },
-        {
-          skipCurrencySymbols: false,
-          skipPacmanParts: false,
-          objectKey: key,
+        const pacmanQuat = getPacmanTargetQuaternion();
+        const ghostQuat = getGhostTargetQuaternion();
+        if (key === "pacman" && pacmanQuat) {
+          object.quaternion.copy(pacmanQuat);
+        } else if (ghostQuat) {
+          object.quaternion.copy(ghostQuat);
         }
-      );
 
-      if (GHOST_COLORS[key] && key !== "pacman") {
-        setGhostColor(object, GHOST_COLORS[key]);
+        object.visible = true;
+        setObjectScale(object, key, "intro");
+
+        const targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
+
+        forEachMaterial(
+          object,
+          (mat: any, mesh: THREE.Mesh, childName: string) => {
+            if (
+              isCurrencySymbol(childName) ||
+              (key === "pacman" && isPacmanPart(childName))
+            ) {
+              mesh.visible = false;
+              return;
+            }
+
+            mesh.visible = true;
+
+            setMaterialOpacity(mat, targetOpacity, true);
+          },
+          {
+            skipCurrencySymbols: false,
+            skipPacmanParts: false,
+            objectKey: key,
+          }
+        );
+
+        object.updateMatrixWorld(true);
       }
-
-      object.updateMatrixWorld(true);
-    });
+    );
   } finally {
     isUpdating = false;
   }

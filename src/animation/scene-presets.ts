@@ -242,10 +242,6 @@ export function applyIntroScrollPreset(
       }
     );
 
-    if (GHOST_COLORS[key] && key !== "pacman") {
-      setGhostColor(object, GHOST_COLORS[key]);
-    }
-
     object.updateMatrixWorld(true);
   });
 
