@@ -23,6 +23,7 @@ import {
   POV_TRANSITION_PHASE_END,
   POV_Y_CONSTRAINT_THRESHOLD,
   OPACITY_VISIBILITY_THRESHOLD,
+  clamp,
 } from "./constants";
 import { setObjectScale } from "./scene-utils";
 import { setObjectOpacity } from "../core/material-utils";
@@ -448,7 +449,7 @@ function updateGhost(
     const normalizedProgress =
       (currentCameraProgress - state.triggerCameraProgress) /
       (state.endCameraProgress - state.triggerCameraProgress);
-    let ghostProgress = Math.max(0, Math.min(1, normalizedProgress));
+    let ghostProgress = clamp(normalizedProgress);
 
     if (state.currentPathT === undefined) {
       state.currentPathT = ghostProgress;

@@ -10,26 +10,16 @@ export function setObjectOpacity(
   }
 ): void {
   const preserveTransmission = options?.preserveTransmission !== false;
-  const skipCurrencySymbols = options?.skipCurrencySymbols !== false;
 
-  object.traverse((child) => {
-    if ((child as any).isMesh && (child as any).material) {
-      const mesh = child as THREE.Mesh;
-      const childName = child.name || "";
-
-      if (skipCurrencySymbols && isCurrencySymbol(childName)) {
-        return;
-      }
-
-      if (Array.isArray(mesh.material)) {
-        mesh.material.forEach((mat: any) => {
-          setMaterialOpacity(mat, opacity, preserveTransmission);
-        });
-      } else {
-        setMaterialOpacity(mesh.material as any, opacity, preserveTransmission);
-      }
+  forEachMaterial(
+    object,
+    (mat: any) => {
+      setMaterialOpacity(mat, opacity, preserveTransmission);
+    },
+    {
+      skipCurrencySymbols: options?.skipCurrencySymbols === true,
     }
-  });
+  );
 }
 
 export function setMaterialOpacity(

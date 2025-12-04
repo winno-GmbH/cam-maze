@@ -72,3 +72,13 @@ export const INTRO_GHOST_OFFSETS = {
   GHOST4: -2.0,
   GHOST5: -2.5,
 } as const;
+
+export const PI = {
+  HALF: Math.PI / 2,
+  FULL: Math.PI,
+  QUARTER: Math.PI / 4,
+} as const;
+
+export function clamp(value: number, min: number = 0, max: number = 1): number {
+  return Math.max(min, Math.min(max, value));
+}

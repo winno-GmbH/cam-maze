@@ -15,6 +15,7 @@ import {
   setMaterialOpacity,
   setMaterialTransparent,
 } from "../core/material-utils";
+import { killObjectAnimations } from "./scene-utils";
 import {
   SCROLL_SELECTORS,
   SCRUB_DURATION,
@@ -97,9 +98,7 @@ export function initHomeScrollAnimation() {
     }
 
     allObjects.forEach(([key, object]) => {
-      gsap.killTweensOf(object);
-      gsap.killTweensOf(object.position);
-      gsap.killTweensOf(object.rotation);
+      killObjectAnimations(object);
     });
 
     const homeScrollPaths = getHomeScrollPaths(startPositions);

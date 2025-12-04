@@ -33,6 +33,7 @@ import {
   KEYFRAME_SCALE,
   KEYFRAME_DURATION,
   INTRO_GHOST_OFFSETS,
+  clamp,
 } from "./constants";
 import { setFloorPlane, setObjectScale, killObjectAnimations } from "./scene-utils";
 
@@ -272,7 +273,7 @@ function updateObjectsWalkBy(progress: number) {
       { key: "ghost5", behindOffset: INTRO_GHOST_OFFSETS.GHOST5 },
     ];
 
-    const normalizedProgress = Math.max(0, Math.min(1, progress));
+    const normalizedProgress = clamp(progress);
     const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
     const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
     const pacmanY = baseCenter.y + INTRO_POSITION_OFFSET.y;
