@@ -5,7 +5,11 @@ import { getHomePaths, TangentSmoother } from "../paths/paths";
 import { initHomeScrollAnimation } from "./home-scroll";
 import { calculateObjectOrientation, OBJECT_KEYS } from "./util";
 import { applyHomeLoopPreset } from "./scene-presets";
-import { SCALE, TANGENT_SMOOTHING, ROTATION_TRANSITION_DURATION } from "./constants";
+import {
+  SCALE,
+  TANGENT_SMOOTHING,
+  ROTATION_TRANSITION_DURATION,
+} from "./constants";
 import { setObjectScale } from "./scene-utils";
 import {
   syncStateFromObjects,
@@ -51,9 +55,7 @@ function stopHomeLoop() {
 
   updateHomeLoopPausedT(pausedT);
 
-  setHomeLoopActive(true);
-  syncStateFromObjects();
-  setHomeLoopActive(false);
+  syncStateFromObjects(true);
 
   const homePaths = getHomePaths();
   Object.entries(ghosts).forEach(([key, ghost]) => {

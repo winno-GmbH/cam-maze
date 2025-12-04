@@ -7,7 +7,11 @@ import { getHomeScrollPaths } from "../paths/paths";
 import { homeLoopHandler } from "./home-loop";
 import { LAY_DOWN_QUAT_1 } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
-import { updateObjectRotation, getCurrentRotations } from "./object-state";
+import {
+  updateObjectRotation,
+  getCurrentRotations,
+  getCurrentPositions,
+} from "./object-state";
 import {
   setObjectOpacity,
   getObjectOpacity,
@@ -49,21 +53,20 @@ export function initHomeScrollAnimation() {
 
   const handleScrollEnter = () => {
     requestAnimationFrame(() => {
-      const freshRotations = getCurrentRotations();
+      const currentPositions = getCurrentPositions();
+      const currentRotations = getCurrentRotations();
       const scrollDir = getScrollDirection();
 
-      const freshPositions: Record<string, THREE.Vector3> = {};
       Object.entries(ghosts).forEach(([key, object]) => {
-        freshPositions[key] = object.position.clone();
+        if (currentPositions[key]) {
+          object.position.copy(currentPositions[key]);
+          startPositions[key] = currentPositions[key].clone();
+        } else {
+          startPositions[key] = object.position.clone();
+        }
       });
 
-      startPositions = freshPositions;
-
-      applyHomeScrollPreset(true, scrollDir, freshPositions, freshRotations);
-
-      Object.entries(ghosts).forEach(([key, object]) => {
-        startPositions[key] = object.position.clone();
-      });
+      applyHomeScrollPreset(true, scrollDir, startPositions, currentRotations);
 
       createObjectAnimations();
       createCameraAnimation();

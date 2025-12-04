@@ -1,6 +1,10 @@
 import * as THREE from "three";
 import { ghosts } from "../core/objects";
-import { setObjectOpacity, forEachMaterial, getObjectOpacity } from "../core/material-utils";
+import {
+  setObjectOpacity,
+  forEachMaterial,
+  getObjectOpacity,
+} from "../core/material-utils";
 
 export interface ObjectState {
   position: THREE.Vector3;
@@ -69,8 +73,8 @@ export function initializeObjectStates() {
   });
 }
 
-export function syncStateFromObjects() {
-  if (!isHomeLoopActive) {
+export function syncStateFromObjects(force: boolean = false) {
+  if (!isHomeLoopActive && !force) {
     return;
   }
 
@@ -102,7 +106,7 @@ export function applyStateToObjects() {
       object.quaternion.copy(state.rotation);
       object.scale.copy(state.scale);
       object.visible = state.visible;
-      
+
       setObjectOpacity(object, state.opacity, {
         preserveTransmission: true,
         skipCurrencySymbols: true,
