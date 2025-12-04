@@ -21,7 +21,9 @@ import {
   updateHomeLoopT,
   updateHomeLoopPausedT,
   getHomeLoopStartPositions,
+  getHomeLoopStartRotations,
   clearHomeLoopStartPositions,
+  clearHomeLoopStartRotations,
 } from "./object-state";
 import { isCurrencySymbol } from "./util";
 
@@ -61,27 +63,7 @@ function stopHomeLoop() {
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     updateObjectPosition(key, ghost.position.clone(), true, true);
-  });
-
-  const homePaths = getHomePaths();
-  Object.entries(ghosts).forEach(([key, ghost]) => {
-    const path = homePaths[key];
-    if (path && homeLoopTangentSmoothers[key]) {
-      const rawTangent = path.getTangentAt(pausedT);
-      if (rawTangent && rawTangent.length() > 0) {
-        const smoothTangent = homeLoopTangentSmoothers[key].getCurrentTangent();
-        const objectType = key === "pacman" ? "pacman" : "ghost";
-
-        const tempObject = new THREE.Object3D();
-        calculateObjectOrientation(tempObject, smoothTangent, objectType);
-        const rotation = tempObject.quaternion.clone();
-        updateObjectRotation(key, rotation);
-      } else {
-        updateObjectRotation(key, ghost.quaternion);
-      }
-    } else {
-      updateObjectRotation(key, ghost.quaternion);
-    }
+    updateObjectRotation(key, ghost.quaternion.clone(), true);
   });
 
   initHomeScrollAnimation();
@@ -132,11 +114,13 @@ function startHomeLoop() {
 
   const homePaths = getHomePaths();
   const homeLoopStartPos = getHomeLoopStartPositions();
+  const homeLoopStartRot = getHomeLoopStartRotations();
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
       const savedPosition = homeLoopStartPos[key];
+      const savedRotation = homeLoopStartRot[key];
 
       if (savedPosition) {
         ghost.position.copy(savedPosition);
@@ -156,7 +140,12 @@ function startHomeLoop() {
         }
       }
 
-      updateObjectRotation(key, ghost.quaternion);
+      if (savedRotation) {
+        ghost.quaternion.copy(savedRotation);
+        updateObjectRotation(key, savedRotation);
+      } else {
+        updateObjectRotation(key, ghost.quaternion);
+      }
 
       if (hasBeenPausedBefore) {
         startRotations[key] = ghost.quaternion.clone();

@@ -14,6 +14,7 @@ import {
   getCurrentPositions,
   syncStateFromObjects,
   getHomeLoopStartPositions,
+  getHomeLoopStartRotations,
 } from "./object-state";
 import {
   setObjectOpacity,
@@ -57,7 +58,7 @@ export function initHomeScrollAnimation() {
   const handleScrollEnter = () => {
     requestAnimationFrame(() => {
       const homeLoopStartPos = getHomeLoopStartPositions();
-      const currentRotations = getCurrentRotations();
+      const homeLoopStartRot = getHomeLoopStartRotations();
       const scrollDir = getScrollDirection();
 
       Object.entries(ghosts).forEach(([key, object]) => {
@@ -73,9 +74,18 @@ export function initHomeScrollAnimation() {
             startPositions[key] = object.position.clone();
           }
         }
+
+        if (homeLoopStartRot[key]) {
+          object.quaternion.copy(homeLoopStartRot[key]);
+        }
       });
 
-      applyHomeScrollPreset(true, scrollDir, startPositions, currentRotations);
+      const rotationsToUse =
+        Object.keys(homeLoopStartRot).length > 0
+          ? homeLoopStartRot
+          : getCurrentRotations();
+
+      applyHomeScrollPreset(true, scrollDir, startPositions, rotationsToUse);
 
       createObjectAnimations();
       createCameraAnimation();
@@ -152,7 +162,11 @@ export function initHomeScrollAnimation() {
         { skipCurrencySymbols: false }
       );
 
-      const startRot = getCurrentRotations()[key] || object.quaternion.clone();
+      const homeLoopStartRot = getHomeLoopStartRotations();
+      const startRot =
+        homeLoopStartRot[key] ||
+        getCurrentRotations()[key] ||
+        object.quaternion.clone();
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
       const endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
 
@@ -215,7 +229,6 @@ export function initHomeScrollAnimation() {
               animProps.rotZ
             );
             data.object.quaternion.setFromEuler(data.object.rotation);
-            updateObjectRotation(data.key, data.object.quaternion);
 
             setObjectOpacity(data.object, animProps.opacity, {
               preserveTransmission: true,
