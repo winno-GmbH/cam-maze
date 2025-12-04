@@ -22,8 +22,11 @@ import {
   updateHomeLoopPausedT,
   getHomeLoopStartPositions,
   getHomeLoopStartRotations,
+  getHomeLoopStartTValues,
+  homeLoopStartTValues,
   clearHomeLoopStartPositions,
   clearHomeLoopStartRotations,
+  clearHomeLoopStartTValues,
 } from "./object-state";
 import { isCurrencySymbol } from "./util";
 
@@ -60,11 +63,32 @@ function stopHomeLoop() {
 
   updateHomeLoopPausedT(pausedT);
 
-  syncStateFromObjects(true);
+  const homePaths = getHomePaths();
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     updateObjectPosition(key, ghost.position.clone(), true, true);
     updateObjectRotation(key, ghost.quaternion.clone(), true);
+
+    const path = homePaths[key];
+    if (path) {
+      const savedPosition = getHomeLoopStartPositions()[key];
+      if (savedPosition) {
+        let closestT = pausedT;
+        let closestDist = Infinity;
+        for (let i = 0; i <= 100; i++) {
+          const t = i / 100;
+          const pathPoint = path.getPointAt(t);
+          if (pathPoint) {
+            const dist = pathPoint.distanceTo(savedPosition);
+            if (dist < closestDist) {
+              closestDist = dist;
+              closestT = t;
+            }
+          }
+        }
+        homeLoopStartTValues[key] = closestT;
+      }
+    }
   });
 
   initHomeScrollAnimation();
@@ -77,32 +101,16 @@ function startHomeLoop() {
   const homePaths = getHomePaths();
   const homeLoopStartPos = getHomeLoopStartPositions();
   const homeLoopStartRot = getHomeLoopStartRotations();
+  const homeLoopStartT = getHomeLoopStartTValues();
 
-  objectTValues = {};
+  objectTValues = { ...homeLoopStartT };
 
   if (hasBeenPausedBefore && Object.keys(homeLoopStartPos).length > 0) {
     let totalT = 0;
     let count = 0;
-    Object.entries(homeLoopStartPos).forEach(([key, pos]) => {
-      const path = homePaths[key];
-      if (path) {
-        let closestT = 0;
-        let closestDist = Infinity;
-        for (let i = 0; i <= 100; i++) {
-          const t = i / 100;
-          const pathPoint = path.getPointAt(t);
-          if (pathPoint) {
-            const dist = pathPoint.distanceTo(pos);
-            if (dist < closestDist) {
-              closestDist = dist;
-              closestT = t;
-            }
-          }
-        }
-        objectTValues[key] = closestT;
-        totalT += closestT;
-        count++;
-      }
+    Object.entries(homeLoopStartT).forEach(([key, tValue]) => {
+      totalT += tValue;
+      count++;
     });
     if (count > 0) {
       pausedT = totalT / count;
@@ -172,8 +180,6 @@ function startHomeLoop() {
       }
     }
   });
-
-  syncStateFromObjects();
 
   if (!homeLoopFrameRegistered) {
     onFrame(() => updateHomeLoop(clock.getDelta()));

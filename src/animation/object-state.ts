@@ -30,6 +30,7 @@ export const currentObjectStates: Record<string, ObjectState> = {};
 
 export let homeLoopStartPositions: Record<string, THREE.Vector3> = {};
 export let homeLoopStartRotations: Record<string, THREE.Quaternion> = {};
+export let homeLoopStartTValues: Record<string, number> = {};
 
 let isHomeLoopActive = false;
 
@@ -184,6 +185,14 @@ export function getHomeLoopStartRotations(): Record<string, THREE.Quaternion> {
 
 export function clearHomeLoopStartRotations(): void {
   homeLoopStartRotations = {};
+}
+
+export function getHomeLoopStartTValues(): Record<string, number> {
+  return { ...homeLoopStartTValues };
+}
+
+export function clearHomeLoopStartTValues(): void {
+  homeLoopStartTValues = {};
 }
 
 export function updateObjectScale(key: string, scale: THREE.Vector3) {
