@@ -79,16 +79,22 @@ export function initHomeScrollAnimation() {
           // Store for use in animations
           startPositions = freshPositions;
 
-          // Recreate animations with fresh FROM values (including camera)
-          createObjectAnimations();
-          createCameraAnimation();
-
+          // Apply preset FIRST to set positions and opacity correctly
           applyHomeScrollPreset(
             true,
             scrollDir,
             freshPositions,
             freshRotations
           );
+
+          // Update startPositions with the positions set by applyHomeScrollPreset
+          Object.entries(ghosts).forEach(([key, object]) => {
+            startPositions[key] = object.position.clone();
+          });
+
+          // Recreate animations with fresh FROM values (including camera)
+          createObjectAnimations();
+          createCameraAnimation();
         });
       },
       onEnterBack: () => {
@@ -110,16 +116,22 @@ export function initHomeScrollAnimation() {
           // Store for use in animations
           startPositions = freshPositions;
 
-          // Recreate animations with fresh FROM values (including camera)
-          createObjectAnimations();
-          createCameraAnimation();
-
+          // Apply preset FIRST to set positions and opacity correctly
           applyHomeScrollPreset(
             true,
             scrollDir,
             freshPositions,
             freshRotations
           );
+
+          // Update startPositions with the positions set by applyHomeScrollPreset
+          Object.entries(ghosts).forEach(([key, object]) => {
+            startPositions[key] = object.position.clone();
+          });
+
+          // Recreate animations with fresh FROM values (including camera)
+          createObjectAnimations();
+          createCameraAnimation();
         });
       },
       onScrubComplete: () => {
@@ -166,10 +178,20 @@ export function initHomeScrollAnimation() {
         }
       });
 
-      // Get FROM values: current position, current rotation, opacity 1
+      // Get FROM values: current position, current rotation, current opacity
       const startPos = startPositions[key] || object.position.clone();
       const startRot = getCurrentRotations()[key] || object.quaternion.clone();
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
+
+      // Get current opacity from materials (should be 1.0 after applyHomeScrollPreset)
+      const currentOpacity =
+        materials.length > 0 ? (materials[0] as any).opacity ?? 1.0 : 1.0;
+
+      // Ensure opacity is 1.0 at start
+      materials.forEach((mat) => {
+        mat.opacity = 1.0;
+        mat.transparent = true;
+      });
 
       // Get TO values: center of maze, laydown rotation, opacity 0
       const endPos = objectHomeScrollEndPathPoint;
@@ -179,10 +201,12 @@ export function initHomeScrollAnimation() {
       const endEuler = new THREE.Euler().setFromQuaternion(endRot);
 
       // Create a wrapper object to animate all properties together
+      // Use actual current position from object (not startPositions which might be stale)
+      const currentPos = object.position.clone();
       const animProps = {
-        posX: startPos.x,
-        posY: startPos.y,
-        posZ: startPos.z,
+        posX: currentPos.x,
+        posY: currentPos.y,
+        posZ: currentPos.z,
         rotX: startEuler.x,
         rotY: startEuler.y,
         rotZ: startEuler.z,
@@ -194,9 +218,9 @@ export function initHomeScrollAnimation() {
         animProps,
         {
           // FROM: current position, current rotation, opacity 1
-          posX: startPos.x,
-          posY: startPos.y,
-          posZ: startPos.z,
+          posX: currentPos.x,
+          posY: currentPos.y,
+          posZ: currentPos.z,
           rotX: startEuler.x,
           rotY: startEuler.y,
           rotZ: startEuler.z,
