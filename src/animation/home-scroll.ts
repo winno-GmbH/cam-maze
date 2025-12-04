@@ -185,6 +185,9 @@ export function initHomeScrollAnimation() {
       const animProps = animPropsArray[index];
       const staggerPosition = index * (STAGGER_AMOUNT / totalObjects);
 
+      const startPathPoint = data.path.getPointAt(0);
+      data.object.position.copy(startPathPoint);
+
       homeScrollTimeline!.fromTo(
         animProps,
         {
@@ -201,6 +204,7 @@ export function initHomeScrollAnimation() {
           rotZ: data.endEuler.z,
           opacity: OPACITY.HIDDEN,
           ease: "power1.out",
+          immediateRender: false,
           onUpdate: function () {
             const pathPoint = data.path.getPointAt(animProps.progress);
             data.object.position.copy(pathPoint);
