@@ -10,11 +10,7 @@ import { getHomeScrollPaths } from "../paths/paths";
 import { homeLoopHandler } from "./home-loop";
 import { LAY_DOWN_QUAT_1, LAY_DOWN_QUAT_2 } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
-import {
-  updateObjectRotation,
-  updateObjectOpacity,
-  getCurrentRotations,
-} from "./object-state";
+import { updateObjectRotation, getCurrentRotations } from "./object-state";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;

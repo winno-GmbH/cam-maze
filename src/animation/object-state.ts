@@ -96,9 +96,6 @@ export function initializeObjectStates() {
       visible: object.visible,
       opacity: initialOpacity,
     };
-    
-    // Initialize material cache for performance
-    initializeMaterialCache(key);
   });
 }
 
@@ -119,7 +116,7 @@ export function syncStateFromObjects() {
       currentObjectStates[key].rotation.copy(object.quaternion);
       currentObjectStates[key].scale.copy(object.scale);
       currentObjectStates[key].visible = object.visible;
-      // Opacity is managed separately via updateObjectOpacity() - don't sync it here
+      // Opacity is managed directly by animations - don't sync it here
       // This avoids expensive traverse() calls on every position update
     } else {
       // Initial state creation: get opacity from first material
@@ -231,60 +228,5 @@ export function updateObjectVisibility(key: string, visible: boolean) {
   }
 }
 
-// Cache for material references to avoid expensive traversals
-const materialCache: Record<string, Array<{ material: any; isArray: boolean }>> = {};
 
-// Initialize material cache for an object (called once)
-function initializeMaterialCache(key: string) {
-  if (materialCache[key]) return; // Already cached
-  
-  const object = ghosts[key];
-  if (!object) return;
-  
-  materialCache[key] = [];
-  object.traverse((child) => {
-    if ((child as any).isMesh && (child as any).material) {
-      const mesh = child as THREE.Mesh;
-      if (Array.isArray(mesh.material)) {
-        mesh.material.forEach((mat: any) => {
-          materialCache[key].push({ material: mat, isArray: true });
-        });
-      } else {
-        materialCache[key].push({ material: mesh.material, isArray: false });
-      }
-    }
-  });
-}
-
-// Update opacity for a specific object (and apply to materials)
-export function updateObjectOpacity(key: string, opacity: number) {
-  if (currentObjectStates[key]) {
-    // Only update if opacity actually changed (avoid unnecessary work)
-    const currentOpacity = currentObjectStates[key].opacity;
-    if (Math.abs(currentOpacity - opacity) < 0.001) {
-      return; // Opacity hasn't changed significantly
-    }
-    
-    currentObjectStates[key].opacity = opacity;
-    
-    // Initialize cache if needed
-    if (!materialCache[key]) {
-      initializeMaterialCache(key);
-    }
-    
-    // Apply to cached materials (much faster than traverse)
-    const materials = materialCache[key];
-    if (materials) {
-      materials.forEach(({ material }) => {
-        material.opacity = opacity;
-        material.transparent = opacity < 1.0;
-      });
-    }
-  }
-}
-
-// Get current opacity for a specific object
-export function getObjectOpacity(key: string): number {
-  return currentObjectStates[key]?.opacity ?? 1.0;
-}
 
