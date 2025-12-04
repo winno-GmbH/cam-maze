@@ -143,7 +143,7 @@ export function applyIntroScrollPreset(
         { axis: "y", angle: Math.PI },
         { axis: "y", angle: Math.PI },
         { axis: "x", angle: Math.PI },
-        { axis: "y", angle: Math.PI },
+        { axis: "x", angle: Math.PI },
       ]);
 
       pacmanTargetQuaternion = quat;
@@ -166,7 +166,7 @@ export function applyIntroScrollPreset(
         { axis: "y", angle: Math.PI },
         { axis: "y", angle: Math.PI },
         { axis: "x", angle: Math.PI },
-        { axis: "y", angle: Math.PI },
+        { axis: "x", angle: Math.PI },
       ]);
 
       ghostTargetQuaternion = quat;
