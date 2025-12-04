@@ -325,7 +325,7 @@ function updateObjectsWalkBy(progress: number) {
           key === "pacman"
             ? 0
             : Math.sin(normalizedProgress * Math.PI * 2 + yPhase) * 0.05;
-        const yOffset = key === "pacman" ? 0 : zBounce * 0.3;
+        const yOffset = key === "pacman" ? 0 : zBounce * 0.8;
         const finalX = pacmanX + behindOffset + (xOffset || 0);
         const finalY = pacmanY - yOffset;
         const finalZ = pacmanZ + zOffset - zBounce;

@@ -67,11 +67,11 @@ export const KEYFRAME_DURATION = {
 } as const;
 
 export const INTRO_GHOST_OFFSETS = {
-  GHOST1: -0.02,
-  GHOST2: -0.04,
-  GHOST3: -0.06,
-  GHOST4: -0.08,
-  GHOST5: -0.1,
+  GHOST1: 0.0,
+  GHOST2: -0.01,
+  GHOST3: -0.02,
+  GHOST4: -0.03,
+  GHOST5: -0.04,
 } as const;
 
 export const PI = {
