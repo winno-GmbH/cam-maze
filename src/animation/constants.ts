@@ -2,6 +2,7 @@ export const SCALE = {
   PACMAN_HOME: 0.05,
   PACMAN_INTRO: 0.1,
   GHOST_NORMAL: 1.0,
+  GHOST_INTRO: 1.3,
   GHOST_POV: 0.5,
 } as const;
 
@@ -66,11 +67,11 @@ export const KEYFRAME_DURATION = {
 } as const;
 
 export const INTRO_GHOST_OFFSETS = {
-  GHOST1: -0.2,
-  GHOST2: -0.4,
-  GHOST3: -0.6,
-  GHOST4: -0.8,
-  GHOST5: -1.0,
+  GHOST1: -0.1,
+  GHOST2: -0.2,
+  GHOST3: -0.3,
+  GHOST4: -0.4,
+  GHOST5: -0.5,
 } as const;
 
 export const PI = {

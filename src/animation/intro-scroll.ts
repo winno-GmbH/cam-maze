@@ -321,13 +321,13 @@ function updateObjectsWalkBy(progress: number) {
 
         killObjectAnimations(object);
 
-        const yBounce =
+        const zBounce =
           key === "pacman"
             ? 0
-            : Math.sin(normalizedProgress * Math.PI * 2 + yPhase) * 0.15;
+            : Math.sin(normalizedProgress * Math.PI * 2 + yPhase) * 0.25;
         const finalX = pacmanX + behindOffset + (xOffset || 0);
-        const finalY = pacmanY + yBounce;
-        const finalZ = pacmanZ + zOffset;
+        const finalY = pacmanY;
+        const finalZ = pacmanZ + zOffset - zBounce;
 
         object.position.set(finalX, finalY, finalZ);
 

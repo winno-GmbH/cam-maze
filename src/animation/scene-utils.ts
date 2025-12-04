@@ -32,7 +32,13 @@ export function setObjectScale(
   if (key === "pacman") {
     scale = sceneType === "intro" ? SCALE.PACMAN_INTRO : SCALE.PACMAN_HOME;
   } else {
-    scale = sceneType === "pov" ? SCALE.GHOST_POV : SCALE.GHOST_NORMAL;
+    if (sceneType === "intro") {
+      scale = SCALE.GHOST_INTRO;
+    } else if (sceneType === "pov") {
+      scale = SCALE.GHOST_POV;
+    } else {
+      scale = SCALE.GHOST_NORMAL;
+    }
   }
 
   object.scale.set(scale, scale, scale);
