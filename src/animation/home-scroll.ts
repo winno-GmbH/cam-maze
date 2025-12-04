@@ -305,6 +305,7 @@ export function initHomeScrollAnimation() {
                   mesh.material.forEach((mat: any) => {
                     mat.opacity = animProps.opacity;
                     mat.transparent = true;
+                    console.log(`${data.key} opacity:`, animProps.opacity);
                     // Preserve depthWrite setting (should be false for ghost materials)
                     if (
                       mat.depthWrite !== undefined &&
@@ -321,6 +322,7 @@ export function initHomeScrollAnimation() {
                   const mat = mesh.material as any;
                   mat.opacity = animProps.opacity;
                   mat.transparent = true;
+                  console.log(`${data.key} opacity:`, animProps.opacity);
                   // Preserve depthWrite setting (should be false for ghost materials)
                   if (
                     mat.depthWrite !== undefined &&
