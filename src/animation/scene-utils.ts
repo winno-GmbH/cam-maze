@@ -37,7 +37,6 @@ export function setObjectScale(
 
   object.scale.set(scale, scale, scale);
   object.updateMatrixWorld(true);
-
   gsap.set(object.scale, { x: scale, y: scale, z: scale });
 }
 

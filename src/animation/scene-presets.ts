@@ -74,7 +74,6 @@ export function applyHomeScrollPreset(
           pausedPositions[key].y,
           pausedPositions[key].z
         );
-        
         gsap.set(object.position, {
           x: pausedPositions[key].x,
           y: pausedPositions[key].y,

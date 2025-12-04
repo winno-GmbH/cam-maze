@@ -37,7 +37,7 @@ export function calculateObjectOrientation(
   tangent: THREE.Vector3,
   objectType: "pacman" | "ghost" | "camera" = "ghost"
 ): void {
-  if (!tangent || tangent.length() === 0) return;
+  if (!tangent?.length()) return;
 
   const targetRotation = Math.atan2(tangent.x, tangent.z);
 

@@ -65,10 +65,7 @@ function getCustomLookAtForProgress(
   if (progress <= POV_SEQUENCE_PHASE_END) {
     const firstPoint = cameraPathPoints[0];
 
-    if (
-      "lookAtSequence" in firstPoint &&
-      firstPoint.lookAtSequence?.length
-    ) {
+    if ("lookAtSequence" in firstPoint && firstPoint.lookAtSequence?.length) {
       const sequenceProgress = progress / POV_SEQUENCE_PHASE_END;
       const sequenceLength = firstPoint.lookAtSequence.length;
 
@@ -87,15 +84,10 @@ function getCustomLookAtForProgress(
         return fromTarget.clone().lerp(toTarget, segmentProgress);
       }
     }
-  }
-
-  else if (progress <= POV_TRANSITION_PHASE_END) {
+  } else if (progress <= POV_TRANSITION_PHASE_END) {
     const firstPoint = cameraPathPoints[0];
 
-    if (
-      "lookAtSequence" in firstPoint &&
-      firstPoint.lookAtSequence?.length
-    ) {
+    if ("lookAtSequence" in firstPoint && firstPoint.lookAtSequence?.length) {
       const finalSequenceLookAt =
         firstPoint.lookAtSequence[firstPoint.lookAtSequence.length - 1];
 
@@ -110,7 +102,8 @@ function getCustomLookAtForProgress(
       const defaultLookAt = position.clone().add(constrainedTangent);
 
       const transitionProgress =
-        (progress - POV_SEQUENCE_PHASE_END) / (POV_TRANSITION_PHASE_END - POV_SEQUENCE_PHASE_END);
+        (progress - POV_SEQUENCE_PHASE_END) /
+        (POV_TRANSITION_PHASE_END - POV_SEQUENCE_PHASE_END);
 
       return finalSequenceLookAt
         .clone()
@@ -123,7 +116,7 @@ function getCustomLookAtForProgress(
 
 function initializePovTangentSmoothers() {
   const smoothingFactor = TANGENT_SMOOTHING.POV;
-  
+
   povTangentSmoothers.camera = new TangentSmoother(
     new THREE.Vector3(0, 0, -1),
     smoothingFactor
@@ -369,8 +362,12 @@ function updateGhost(
     const parent = parentElements[ghostIndex] as HTMLElement;
     cached = {
       parent: parent || null,
-      povElements: parent ? parent.querySelectorAll(".pov") : ([] as NodeListOf<Element>),
-      camElements: parent ? parent.querySelectorAll(".cam") : ([] as NodeListOf<Element>),
+      povElements: parent
+        ? parent.querySelectorAll(".pov")
+        : (document.querySelectorAll(".nonexistent") as NodeListOf<Element>),
+      camElements: parent
+        ? parent.querySelectorAll(".cam")
+        : (document.querySelectorAll(".nonexistent") as NodeListOf<Element>),
     };
     domElementCache[ghostIndex] = cached;
   }
@@ -508,14 +505,12 @@ function calculateTextOpacities(
       (currentCameraProgress - state.ghostStartFadeInProgress) /
       (state.ghostEndFadeInProgress - state.ghostStartFadeInProgress);
     targetGhostOpacity = Math.min(1, fadeProgress);
-  }
-  else if (
+  } else if (
     currentCameraProgress > state.ghostEndFadeInProgress &&
     currentCameraProgress < state.ghostStartFadeOutProgress
   ) {
     targetGhostOpacity = 1;
-  }
-  else if (
+  } else if (
     currentCameraProgress >= state.ghostStartFadeOutProgress &&
     currentCameraProgress <= state.camStartFadeInProgress
   ) {
@@ -533,14 +528,12 @@ function calculateTextOpacities(
       (currentCameraProgress - state.camStartFadeInProgress) /
       (state.camEndFadeInProgress - state.camStartFadeInProgress);
     targetCamOpacity = Math.min(1, fadeProgress);
-  }
-  else if (
+  } else if (
     currentCameraProgress > state.camEndFadeInProgress &&
     currentCameraProgress < state.camStartFadeOutProgress
   ) {
     targetCamOpacity = 1;
-  }
-  else if (
+  } else if (
     currentCameraProgress >= state.camStartFadeOutProgress &&
     currentCameraProgress <= state.endCameraProgress
   ) {
@@ -723,8 +716,7 @@ function findClosestProgressOnPath(
         closestDistance = distance;
         closestProgress = t;
       }
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   return closestProgress;
