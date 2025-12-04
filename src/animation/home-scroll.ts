@@ -102,13 +102,9 @@ export function initHomeScrollAnimation() {
       onEnterBack: handleScrollEnter,
       onScrubComplete: () => {
         requestAnimationFrame(() => {
-          const homeLoopStartPos = getHomeLoopStartPositions();
           const homeLoopStartRot = getHomeLoopStartRotations();
 
           Object.entries(ghosts).forEach(([key, object]) => {
-            if (homeLoopStartPos[key]) {
-              object.position.copy(homeLoopStartPos[key]);
-            }
             if (homeLoopStartRot[key]) {
               object.quaternion.copy(homeLoopStartRot[key]);
             }
@@ -119,13 +115,9 @@ export function initHomeScrollAnimation() {
       },
       onLeaveBack: () => {
         requestAnimationFrame(() => {
-          const homeLoopStartPos = getHomeLoopStartPositions();
           const homeLoopStartRot = getHomeLoopStartRotations();
 
           Object.entries(ghosts).forEach(([key, object]) => {
-            if (homeLoopStartPos[key]) {
-              object.position.copy(homeLoopStartPos[key]);
-            }
             if (homeLoopStartRot[key]) {
               object.quaternion.copy(homeLoopStartRot[key]);
             }

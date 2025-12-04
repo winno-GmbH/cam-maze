@@ -83,6 +83,14 @@ function startHomeLoop() {
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
+      if (hasBeenPausedBefore && savedT !== null) {
+        const position = path.getPointAt(savedT);
+        if (position) {
+          ghost.position.copy(position);
+          updateObjectPosition(key, position);
+        }
+      }
+
       const savedRotation = homeLoopStartRot[key];
 
       if (savedRotation) {
