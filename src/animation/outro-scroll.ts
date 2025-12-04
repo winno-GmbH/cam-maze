@@ -1,6 +1,12 @@
 import gsap from "gsap";
 import { applyOutroScrollPreset, getScrollDirection } from "./scene-presets";
-import { SCROLL_SELECTORS } from "./constants";
+import {
+  SCROLL_SELECTORS,
+  SCRUB_DURATION,
+  KEYFRAME_SCALE,
+  KEYFRAME_DURATION,
+  OPACITY,
+} from "./constants";
 
 let outroScrollTimeline: gsap.core.Timeline | null = null;
 
@@ -10,7 +16,7 @@ export function initOutroScrollAnimation() {
       trigger: SCROLL_SELECTORS.OUTRO,
       start: "top center",
       end: "bottom bottom",
-      scrub: 0.5,
+      scrub: SCRUB_DURATION,
       onEnter: () => {
         const scrollDir = getScrollDirection();
         applyOutroScrollPreset(true, scrollDir);
@@ -21,14 +27,31 @@ export function initOutroScrollAnimation() {
       },
     }
   }).fromTo(
-    ".sc_b--outro", { scale: 0.5, opacity: 0 },
+    ".sc_b--outro",
+    { scale: KEYFRAME_SCALE.START, opacity: OPACITY.HIDDEN },
     {
       keyframes: [
-        { scale: 0.5, opacity: 0, duration: 0 },
-        { scale: 0.8, opacity: 1, duration: 0.3 },
-        { scale: 1.2, opacity: 1, duration: 0.4 },
-        { scale: 1.5, opacity: 0, duration: 0.3 }
-      ]
+        {
+          scale: KEYFRAME_SCALE.START,
+          opacity: OPACITY.HIDDEN,
+          duration: 0,
+        },
+        {
+          scale: KEYFRAME_SCALE.MID,
+          opacity: OPACITY.FULL,
+          duration: KEYFRAME_DURATION.FADE_IN,
+        },
+        {
+          scale: KEYFRAME_SCALE.LARGE,
+          opacity: OPACITY.FULL,
+          duration: KEYFRAME_DURATION.HOLD,
+        },
+        {
+          scale: KEYFRAME_SCALE.END,
+          opacity: OPACITY.HIDDEN,
+          duration: KEYFRAME_DURATION.FADE_OUT,
+        },
+      ],
     }
   );
 }

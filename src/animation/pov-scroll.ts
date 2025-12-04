@@ -18,6 +18,11 @@ import {
   GHOST_FADE_THRESHOLD,
   GHOST_FADE_OUT_DURATION,
   FIND_CLOSEST_SAMPLES,
+  SCRUB_DURATION,
+  POV_SEQUENCE_PHASE_END,
+  POV_TRANSITION_PHASE_END,
+  POV_Y_CONSTRAINT_THRESHOLD,
+  OPACITY_VISIBILITY_THRESHOLD,
 } from "./constants";
 import { setObjectScale } from "./scene-utils";
 import { setObjectOpacity } from "../core/material-utils";
@@ -64,12 +69,8 @@ function getCustomLookAtForProgress(
 ): THREE.Vector3 | null {
   const cameraPathPoints = pathPointsData.camera;
 
-  // Define the sequence phase (first 5%) and transition phase (next 2%)
-  const sequencePhaseEnd = 0.05;
-  const transitionPhaseEnd = 0.07;
-
   // For the very first point (progress close to 0), check for lookAtSequence
-  if (progress <= sequencePhaseEnd) {
+  if (progress <= POV_SEQUENCE_PHASE_END) {
     // Check first 5% of path
     const firstPoint = cameraPathPoints[0];
 
@@ -79,7 +80,7 @@ function getCustomLookAtForProgress(
       firstPoint.lookAtSequence &&
       firstPoint.lookAtSequence.length > 0
     ) {
-      const sequenceProgress = progress / sequencePhaseEnd; // Normalize to 0-1 within first 5%
+      const sequenceProgress = progress / POV_SEQUENCE_PHASE_END; // Normalize to 0-1 within first 5%
       const sequenceLength = firstPoint.lookAtSequence.length;
 
       // Calculate which lookAt target to use and interpolation
@@ -104,7 +105,7 @@ function getCustomLookAtForProgress(
   }
 
   // Transition phase: smoothly blend from final sequence lookAt to default tangent lookAt
-  else if (progress <= transitionPhaseEnd) {
+  else if (progress <= POV_TRANSITION_PHASE_END) {
     const firstPoint = cameraPathPoints[0];
 
     if (
@@ -130,7 +131,7 @@ function getCustomLookAtForProgress(
 
       // Calculate transition progress (0 to 1 over the 2% transition phase)
       const transitionProgress =
-        (progress - sequencePhaseEnd) / (transitionPhaseEnd - sequencePhaseEnd);
+        (progress - POV_SEQUENCE_PHASE_END) / (POV_TRANSITION_PHASE_END - POV_SEQUENCE_PHASE_END);
 
       // Smooth interpolation from sequence lookAt to constrained default lookAt
       return finalSequenceLookAt
@@ -193,7 +194,7 @@ export function initPovScrollAnimation() {
         start: "top bottom",
         end: "bottom top",
         markers: true,
-        scrub: 0.5,
+        scrub: SCRUB_DURATION,
         toggleActions: "play none none reverse",
         onEnter: () => {
           const scrollDir = getScrollDirection();
@@ -307,7 +308,7 @@ function updateCamera(
   }
 
   // Constrain Y component to prevent looking up/down during early path following
-  if (progress <= 0.15) {
+  if (progress <= POV_Y_CONSTRAINT_THRESHOLD) {
     // Extend constraint for first 15% of path
     smoothTangent = new THREE.Vector3(
       smoothTangent.x,
@@ -615,11 +616,11 @@ function updateTextElementVisibility(
 ): void {
   elements.forEach((element) => {
     const el = element as HTMLElement;
-    if (targetOpacity > 0.01) {
+    if (targetOpacity > OPACITY_VISIBILITY_THRESHOLD) {
       el.classList.remove("no-visibility");
       el.style.opacity = targetOpacity.toString();
     } else if (
-      targetOpacity <= 0.01 &&
+      targetOpacity <= OPACITY_VISIBILITY_THRESHOLD &&
       !el.classList.contains("no-visibility")
     ) {
       el.classList.add("no-visibility");
@@ -663,7 +664,9 @@ function updateTextVisibility(
   }
 
   // Update visibility class based on both opacities
-  const isPassed = targetCamOpacity > 0.01 && targetGhostOpacity > 0.01;
+  const isPassed =
+    targetCamOpacity > OPACITY_VISIBILITY_THRESHOLD &&
+    targetGhostOpacity > OPACITY_VISIBILITY_THRESHOLD;
   const hasNoVisibility = parent.classList.contains("no-visibility");
 
   if (isPassed && !hasNoVisibility) {
@@ -673,10 +676,18 @@ function updateTextVisibility(
   }
 
   // Update all POV elements (ghost text)
-  updateTextElementVisibility(povElements, targetGhostOpacity);
+  if (targetGhostOpacity > OPACITY_VISIBILITY_THRESHOLD) {
+    updateTextElementVisibility(povElements, targetGhostOpacity);
+  } else {
+    hideTextElements(povElements);
+  }
 
   // Update all CAM elements
-  updateTextElementVisibility(camElements, targetCamOpacity);
+  if (targetCamOpacity > OPACITY_VISIBILITY_THRESHOLD) {
+    updateTextElementVisibility(camElements, targetCamOpacity);
+  } else {
+    hideTextElements(camElements);
+  }
 }
 
 // Helper function to reset tangent smoothers
@@ -715,11 +726,11 @@ function handleLeavePOV() {
         cached.parent.classList.add("no-visibility");
       }
 
-      // Reset ghost material opacity
-      const mesh = ghost as THREE.Mesh;
-      if (mesh.material && "opacity" in mesh.material) {
-        (mesh.material as THREE.Material & { opacity: number }).opacity = 1;
-      }
+      // Reset ghost material opacity using centralized utility
+      setObjectOpacity(ghost, 1.0, {
+        preserveTransmission: true,
+        skipCurrencySymbols: true,
+      });
     }
   });
 

@@ -5,7 +5,7 @@ import { getHomePaths, TangentSmoother } from "../paths/paths";
 import { initHomeScrollAnimation } from "./home-scroll";
 import { calculateObjectOrientation, OBJECT_KEYS } from "./util";
 import { applyHomeLoopPreset } from "./scene-presets";
-import { SCALE, TANGENT_SMOOTHING } from "./constants";
+import { SCALE, TANGENT_SMOOTHING, ROTATION_TRANSITION_DURATION } from "./constants";
 import { setObjectScale } from "./scene-utils";
 import {
   syncStateFromObjects,
@@ -20,7 +20,6 @@ import {
 import { isCurrencySymbol } from "./util";
 
 const LOOP_DURATION = 50;
-const ROTATION_TRANSITION_DURATION = 1.5; // Seconds to transition from laying down to upright
 let isHomeLoopActive = true;
 let animationTime = 0;
 let pausedT = 0;

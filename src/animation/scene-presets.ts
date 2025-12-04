@@ -29,6 +29,7 @@ import {
   OPACITY,
   INTRO_POSITION_OFFSET,
   INTRO_BASE_X_OFFSET,
+  INTRO_BEHIND_OFFSET_STEP,
 } from "./constants";
 
 /**
@@ -217,7 +218,7 @@ export function applyIntroScrollPreset(
 
       // Start with laydown rotation
       let quat = introInitialRotations["pacman"].clone();
-      slerpToLayDown(pacmanObj, quat, 1.0);
+      slerpToLayDown(pacmanObj, quat, OPACITY.FULL);
       quat = pacmanObj.quaternion.clone();
 
       // Apply rotations in sequence using helper function
@@ -241,7 +242,7 @@ export function applyIntroScrollPreset(
 
       // Start with laydown rotation
       let quat = introInitialRotations["ghost1"].clone();
-      slerpToLayDown(ghostObj, quat, 1.0);
+      slerpToLayDown(ghostObj, quat, OPACITY.FULL);
       quat = ghostObj.quaternion.clone();
 
       // Apply rotations in sequence using helper function
@@ -286,7 +287,7 @@ export function applyIntroScrollPreset(
     killObjectAnimations(object);
 
     // Calculate position with stagger
-    const behindOffset = index === 0 ? 0 : -0.5 * index;
+    const behindOffset = index === 0 ? 0 : INTRO_BEHIND_OFFSET_STEP * index;
     const pos = new THREE.Vector3(
       startPosition.x + behindOffset,
       startPosition.y,
@@ -370,7 +371,7 @@ export function applyPovScrollPreset(
     if (key !== "pacman") {
       // Initially invisible, will be shown by pov-scroll.ts when triggered
       gsap.set(object, { visible: false });
-      gsap.set(object.scale, { x: 0.5, y: 0.5, z: 0.5 });
+      setObjectScale(object, key, "pov");
 
       // Reset opacity using centralized utility
       forEachMaterial(

@@ -71,3 +71,45 @@ export const INTRO_POSITION_OFFSET = {
 // ============================================================================
 export const FIND_CLOSEST_SAMPLES = 800; // Default samples for findClosestProgressOnPath
 
+// ============================================================================
+// ANIMATION TIMING CONSTANTS
+// ============================================================================
+export const SCRUB_DURATION = 0.5; // Default scrub duration for GSAP ScrollTrigger
+export const STAGGER_AMOUNT = 0.15; // Stagger amount as fraction of timeline (15%)
+export const ROTATION_TRANSITION_DURATION = 1.5; // Seconds to transition from laying down to upright
+
+// ============================================================================
+// POV SCROLL CONSTANTS
+// ============================================================================
+export const POV_SEQUENCE_PHASE_END = 0.05; // First 5% of camera path
+export const POV_TRANSITION_PHASE_END = 0.07; // Next 2% of camera path (total 7%)
+export const POV_Y_CONSTRAINT_THRESHOLD = 0.15; // Constrain Y component for first 15% of path
+export const OPACITY_VISIBILITY_THRESHOLD = 0.01; // Threshold for element visibility (opacity > 0.01)
+
+// ============================================================================
+// KEYFRAME ANIMATION CONSTANTS
+// ============================================================================
+export const KEYFRAME_SCALE = {
+  START: 0.5,
+  MID: 0.8,
+  LARGE: 1.2,
+  END: 1.5,
+} as const;
+
+export const KEYFRAME_DURATION = {
+  FADE_IN: 0.3,
+  HOLD: 0.4,
+  FADE_OUT: 0.3,
+} as const;
+
+// ============================================================================
+// INTRO SCROLL GHOST OFFSETS
+// ============================================================================
+export const INTRO_GHOST_OFFSETS = {
+  GHOST1: -0.5,
+  GHOST2: -1.0,
+  GHOST3: -1.5,
+  GHOST4: -2.0,
+  GHOST5: -2.5,
+} as const;
+

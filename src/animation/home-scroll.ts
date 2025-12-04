@@ -12,8 +12,15 @@ import {
   setObjectOpacity,
   getObjectOpacity,
   forEachMaterial,
+  setMaterialOpacity,
+  setMaterialTransparent,
 } from "../core/material-utils";
-import { SCROLL_SELECTORS } from "./constants";
+import {
+  SCROLL_SELECTORS,
+  SCRUB_DURATION,
+  STAGGER_AMOUNT,
+  OPACITY,
+} from "./constants";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
@@ -79,7 +86,7 @@ export function initHomeScrollAnimation() {
       trigger: SCROLL_SELECTORS.HOME,
       start: "top top",
       end: "bottom top",
-      scrub: 0.5,
+      scrub: SCRUB_DURATION,
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
       onScrubComplete: () => {
@@ -132,29 +139,26 @@ export function initHomeScrollAnimation() {
       // Get materials and CLONE them to avoid shared material issues
       // Materials are shared between objects (e.g., ghostMaterial), so we need to clone them
       // This ensures each object has its own material instance and opacity can be animated independently
-      object.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          const mesh = child as THREE.Mesh;
+      forEachMaterial(
+        object,
+        (mat: any, mesh: THREE.Mesh) => {
+          const clonedMat = mat.clone();
+          // Preserve current opacity and transparency using centralized utilities
+          setMaterialOpacity(clonedMat, currentMaterialOpacity, true);
+
           if (Array.isArray(mesh.material)) {
-            // Clone each material in the array
-            const clonedMaterials = mesh.material.map((originalMat: any) => {
-              const clonedMat = originalMat.clone();
-              // Preserve current opacity on cloned material
-              clonedMat.opacity = currentMaterialOpacity;
-              clonedMat.transparent = true; // Always allow transparency
-              return clonedMat;
-            });
-            mesh.material = clonedMaterials;
+            const index = mesh.material.indexOf(mat);
+            if (index !== -1) {
+              const clonedMaterials = [...mesh.material];
+              clonedMaterials[index] = clonedMat;
+              mesh.material = clonedMaterials;
+            }
           } else {
-            // Clone single material
-            const clonedMat = (mesh.material as any).clone();
-            // Preserve current opacity on cloned material
-            clonedMat.opacity = currentMaterialOpacity;
-            clonedMat.transparent = true; // Always allow transparency
             mesh.material = clonedMat;
           }
-        }
-      });
+        },
+        { skipCurrencySymbols: false }
+      );
 
       // Get FROM values: current rotation
       const startRot = getCurrentRotations()[key] || object.quaternion.clone();
@@ -193,11 +197,10 @@ export function initHomeScrollAnimation() {
     // Create individual animations for each object with manual stagger positioning
     // This ensures each object's opacity animates correctly
     const totalObjects = animationData.length;
-    const staggerAmount = 0.15; // Stagger amount as fraction of timeline (15%)
 
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];
-      const staggerPosition = index * (staggerAmount / totalObjects);
+      const staggerPosition = index * (STAGGER_AMOUNT / totalObjects);
 
       // Create individual fromTo animation for each object
       homeScrollTimeline!.fromTo(
@@ -216,7 +219,7 @@ export function initHomeScrollAnimation() {
           rotX: data.endEuler.x,
           rotY: data.endEuler.y,
           rotZ: data.endEuler.z,
-          opacity: 0.0,
+          opacity: OPACITY.HIDDEN,
           ease: "power1.out",
           onUpdate: function () {
             // Calculate position along path based on progress

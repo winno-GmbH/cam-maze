@@ -31,6 +31,10 @@ import {
   INTRO_BEHIND_OFFSET_STEP,
   INTRO_BASE_X_OFFSET,
   INTRO_POSITION_OFFSET,
+  SCRUB_DURATION,
+  KEYFRAME_SCALE,
+  KEYFRAME_DURATION,
+  INTRO_GHOST_OFFSETS,
 } from "./constants";
 import { setFloorPlane, setObjectScale, killObjectAnimations } from "./scene-utils";
 
@@ -145,7 +149,7 @@ export function initIntroScrollAnimation() {
         trigger: SCROLL_SELECTORS.INTRO,
         start: "top top",
         end: "bottom bottom",
-        scrub: 0.5,
+        scrub: SCRUB_DURATION,
         refreshPriority: 1,
         onEnter: () => {
           isIntroScrollActive = true;
@@ -180,25 +184,57 @@ export function initIntroScrollAnimation() {
     })
     .fromTo(
       ".sc_h--intro",
-      { scale: 0.5, opacity: 0 },
+      { scale: KEYFRAME_SCALE.START, opacity: OPACITY.HIDDEN },
       {
         keyframes: [
-          { scale: 0.5, opacity: 0, duration: 0 },
-          { scale: 0.8, opacity: 1, duration: 0.3 },
-          { scale: 1.2, opacity: 1, duration: 0.4 },
-          { scale: 1.5, opacity: 0, duration: 0.3 },
+          {
+            scale: KEYFRAME_SCALE.START,
+            opacity: OPACITY.HIDDEN,
+            duration: 0,
+          },
+          {
+            scale: KEYFRAME_SCALE.MID,
+            opacity: OPACITY.FULL,
+            duration: KEYFRAME_DURATION.FADE_IN,
+          },
+          {
+            scale: KEYFRAME_SCALE.LARGE,
+            opacity: OPACITY.FULL,
+            duration: KEYFRAME_DURATION.HOLD,
+          },
+          {
+            scale: KEYFRAME_SCALE.END,
+            opacity: OPACITY.HIDDEN,
+            duration: KEYFRAME_DURATION.FADE_OUT,
+          },
         ],
       }
     )
     .fromTo(
       ".sc_b--intro",
-      { scale: 0.5, opacity: 0 },
+      { scale: KEYFRAME_SCALE.START, opacity: OPACITY.HIDDEN },
       {
         keyframes: [
-          { scale: 0.5, opacity: 0, duration: 0 },
-          { scale: 0.8, opacity: 1, duration: 0.3 },
-          { scale: 1.2, opacity: 1, duration: 0.4 },
-          { scale: 1.5, opacity: 0, duration: 0.3 },
+          {
+            scale: KEYFRAME_SCALE.START,
+            opacity: OPACITY.HIDDEN,
+            duration: 0,
+          },
+          {
+            scale: KEYFRAME_SCALE.MID,
+            opacity: OPACITY.FULL,
+            duration: KEYFRAME_DURATION.FADE_IN,
+          },
+          {
+            scale: KEYFRAME_SCALE.LARGE,
+            opacity: OPACITY.FULL,
+            duration: KEYFRAME_DURATION.HOLD,
+          },
+          {
+            scale: KEYFRAME_SCALE.END,
+            opacity: OPACITY.HIDDEN,
+            duration: KEYFRAME_DURATION.FADE_OUT,
+          },
         ],
       }
     )
@@ -245,14 +281,14 @@ function updateObjectsWalkBy(progress: number) {
     const walkStart = baseCenter.x - INTRO_WALK_DISTANCE; // Start from left
     const walkEnd = baseCenter.x + INTRO_WALK_DISTANCE; // End at right
 
-    // Objects to animate - ghosts walk 0.5 units behind pacman
+    // Objects to animate - ghosts walk behind pacman
     const objectsToAnimate = [
       { key: "pacman", behindOffset: 0 },
-      { key: "ghost1", behindOffset: -0.5 },
-      { key: "ghost2", behindOffset: -1.0 },
-      { key: "ghost3", behindOffset: -1.5 },
-      { key: "ghost4", behindOffset: -2.0 },
-      { key: "ghost5", behindOffset: -2.5 },
+      { key: "ghost1", behindOffset: INTRO_GHOST_OFFSETS.GHOST1 },
+      { key: "ghost2", behindOffset: INTRO_GHOST_OFFSETS.GHOST2 },
+      { key: "ghost3", behindOffset: INTRO_GHOST_OFFSETS.GHOST3 },
+      { key: "ghost4", behindOffset: INTRO_GHOST_OFFSETS.GHOST4 },
+      { key: "ghost5", behindOffset: INTRO_GHOST_OFFSETS.GHOST5 },
     ];
 
     // Calculate pacman's position using smooth interpolation
@@ -300,7 +336,7 @@ function updateObjectsWalkBy(progress: number) {
       setObjectScale(object, key, "intro");
 
       // Update opacity for meshes
-      const targetOpacity = key === "pacman" ? 1.0 : ghostOpacity;
+      const targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
 
       // Use centralized utility for consistency
       forEachMaterial(
