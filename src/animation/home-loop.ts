@@ -12,20 +12,13 @@ import {
 } from "./constants";
 import { setObjectScale } from "./scene-utils";
 import {
-  syncStateFromObjects,
-  getCurrentPositions,
-  getCurrentRotations,
   updateObjectPosition,
   updateObjectRotation,
   setHomeLoopActive,
   updateHomeLoopT,
-  getHomeLoopStartPositions,
   getHomeLoopStartRotations,
   setHomeLoopStartT,
   getHomeLoopStartT,
-  clearHomeLoopStartPositions,
-  clearHomeLoopStartRotations,
-  clearHomeLoopStartT,
 } from "./object-state";
 import { isCurrencySymbol } from "./util";
 
@@ -36,8 +29,6 @@ let homeLoopFrameRegistered = false;
 let rotationTransitionTime = 0;
 let startRotations: Record<string, THREE.Quaternion> = {};
 let hasBeenPausedBefore = false;
-let isFirstFrame = false;
-let savedStartPositions: Record<string, THREE.Vector3> = {};
 
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
 
@@ -75,11 +66,8 @@ function startHomeLoop() {
   setHomeLoopActive(true);
 
   const homePaths = getHomePaths();
-  const homeLoopStartPos = getHomeLoopStartPositions();
   const homeLoopStartRot = getHomeLoopStartRotations();
   const savedT = getHomeLoopStartT();
-
-  savedStartPositions = { ...homeLoopStartPos };
 
   if (hasBeenPausedBefore && savedT !== null) {
     animationTime = savedT * LOOP_DURATION;
@@ -87,7 +75,6 @@ function startHomeLoop() {
 
   rotationTransitionTime = 0;
   startRotations = {};
-  isFirstFrame = true;
 
   applyHomeLoopPreset(true);
 
@@ -96,17 +83,7 @@ function startHomeLoop() {
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
-      const savedPosition = homeLoopStartPos[key];
       const savedRotation = homeLoopStartRot[key];
-
-      if (!savedPosition) {
-        const currentPositions = getCurrentPositions();
-        const currentPosition = currentPositions[key];
-        if (currentPosition) {
-          ghost.position.copy(currentPosition);
-          updateObjectPosition(key, currentPosition);
-        }
-      }
 
       if (savedRotation) {
         ghost.quaternion.copy(savedRotation);
@@ -160,10 +137,6 @@ function updateHomeLoop(delta: number) {
     1
   );
   const isTransitioning = hasBeenPausedBefore && transitionProgress < 1;
-
-  if (isFirstFrame) {
-    isFirstFrame = false;
-  }
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];

@@ -12,7 +12,6 @@ import {
   updateObjectPosition,
   getCurrentRotations,
   getCurrentPositions,
-  syncStateFromObjects,
   getHomeLoopStartPositions,
   getHomeLoopStartRotations,
 } from "./object-state";
@@ -115,7 +114,6 @@ export function initHomeScrollAnimation() {
             }
           });
 
-          syncStateFromObjects(true);
           homeLoopHandler();
         });
       },
@@ -133,7 +131,6 @@ export function initHomeScrollAnimation() {
             }
           });
 
-          syncStateFromObjects(true);
           homeLoopHandler();
         });
       },
