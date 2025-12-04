@@ -35,6 +35,7 @@ let homeLoopFrameRegistered = false;
 let rotationTransitionTime = 0;
 let startRotations: Record<string, THREE.Quaternion> = {};
 let hasBeenPausedBefore = false;
+let objectTValues: Record<string, number> = {};
 
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
 
@@ -77,6 +78,8 @@ function startHomeLoop() {
   const homeLoopStartPos = getHomeLoopStartPositions();
   const homeLoopStartRot = getHomeLoopStartRotations();
 
+  objectTValues = {};
+
   if (hasBeenPausedBefore && Object.keys(homeLoopStartPos).length > 0) {
     let totalT = 0;
     let count = 0;
@@ -96,6 +99,7 @@ function startHomeLoop() {
             }
           }
         }
+        objectTValues[key] = closestT;
         totalT += closestT;
         count++;
       }
@@ -156,26 +160,8 @@ function startHomeLoop() {
       setObjectScale(ghost, key, "home");
 
       if (homeLoopTangentSmoothers[key]) {
-        const savedPos = savedPosition || ghost.position;
-        let tangentT = pausedT;
-
-        if (savedPosition) {
-          let closestT = pausedT;
-          let closestDist = Infinity;
-          for (let i = 0; i <= 100; i++) {
-            const t = i / 100;
-            const pathPoint = path.getPointAt(t);
-            if (pathPoint) {
-              const dist = pathPoint.distanceTo(savedPos);
-              if (dist < closestDist) {
-                closestDist = dist;
-                closestT = t;
-              }
-            }
-          }
-          tangentT = closestT;
-        }
-
+        const tangentT =
+          objectTValues[key] !== undefined ? objectTValues[key] : pausedT;
         const initialTangent = path.getTangentAt(tangentT);
         if (initialTangent) {
           homeLoopTangentSmoothers[key].reset(initialTangent);
@@ -215,7 +201,13 @@ function updateHomeLoop(delta: number) {
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
-      const position = path.getPointAt(t);
+      let objectT = t;
+      if (objectTValues[key] !== undefined) {
+        const deltaT = t - pausedT;
+        objectT = (objectTValues[key] + deltaT + 1) % 1;
+      }
+
+      const position = path.getPointAt(objectT);
       if (position) {
         ghost.position.copy(position);
         updateObjectPosition(key, position);
@@ -224,8 +216,8 @@ function updateHomeLoop(delta: number) {
       setObjectScale(ghost, key, "home");
 
       const targetQuat = new THREE.Quaternion();
-      if (homeLoopTangentSmoothers[key] && t > 0) {
-        const rawTangent = path.getTangentAt(t);
+      if (homeLoopTangentSmoothers[key] && objectT > 0) {
+        const rawTangent = path.getTangentAt(objectT);
         if (rawTangent && rawTangent.length() > 0) {
           const smoothTangent =
             homeLoopTangentSmoothers[key].update(rawTangent);
