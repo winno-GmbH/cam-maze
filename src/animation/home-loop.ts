@@ -61,7 +61,7 @@ function stopHomeLoop() {
   initHomeScrollAnimation();
 }
 
-function startHomeLoop() {
+export function startHomeLoop() {
   isHomeLoopActive = true;
   setHomeLoopActive(true);
 
@@ -198,8 +198,14 @@ export function homeLoopHandler() {
 
 export function setupHomeLoopScrollHandler() {
   window.addEventListener("scroll", () => {
-    if (window.scrollY !== 0) {
-      stopHomeLoop();
+    if (window.scrollY === 0) {
+      if (!isHomeLoopActive) {
+        startHomeLoop();
+      }
+    } else {
+      if (isHomeLoopActive) {
+        stopHomeLoop();
+      }
     }
   });
 }

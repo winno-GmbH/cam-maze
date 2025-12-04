@@ -4,7 +4,6 @@ import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
 import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import { getHomeScrollPaths } from "../paths/paths";
-import { homeLoopHandler } from "./home-loop";
 import { LAY_DOWN_QUAT_1 } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import {
@@ -100,16 +99,6 @@ export function initHomeScrollAnimation() {
       scrub: SCRUB_DURATION,
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
-      onScrubComplete: () => {
-        requestAnimationFrame(() => {
-          homeLoopHandler();
-        });
-      },
-      onLeaveBack: () => {
-        requestAnimationFrame(() => {
-          homeLoopHandler();
-        });
-      },
     },
   });
 

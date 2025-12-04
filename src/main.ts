@@ -6,8 +6,8 @@ import {
   createDebugLines,
 } from "./core/scene";
 import {
-  homeLoopHandler,
   setupHomeLoopScrollHandler,
+  startHomeLoop,
 } from "./animation/home-loop";
 import { initPovScrollAnimation } from "./animation/pov-scroll";
 import { loadModel } from "./core/objects";
@@ -41,8 +41,10 @@ async function main() {
 
   initializeObjectStates();
 
-  homeLoopHandler();
   setupHomeLoopScrollHandler();
+  if (window.scrollY === 0) {
+    startHomeLoop();
+  }
 
   initPovScrollAnimation();
   initIntroScrollAnimation();
