@@ -234,9 +234,20 @@ export function initHomeScrollAnimation() {
       gsap.killTweensOf(object.rotation);
     });
 
-    // Simple fromTo for each object - animates position, rotation, and opacity together
-    // Use stagger so each object starts at a different time
-    allObjects.forEach(([key, object], index) => {
+    // Collect all animation data in arrays for stagger
+    const animPropsArray: any[] = [];
+    const animationData: Array<{
+      key: string;
+      object: THREE.Object3D;
+      materials: any[];
+      startPos: THREE.Vector3;
+      endPos: THREE.Vector3;
+      startEuler: THREE.Euler;
+      endEuler: THREE.Euler;
+      currentPos: THREE.Vector3;
+    }> = [];
+
+    allObjects.forEach(([key, object]) => {
       // Get materials for opacity
       const materials: any[] = [];
       object.traverse((child) => {
@@ -250,32 +261,28 @@ export function initHomeScrollAnimation() {
         }
       });
 
-      // Get FROM values: current position, current rotation, CURRENT opacity
+      // Get FROM values: current position, current rotation
       const startPos = startPositions[key] || object.position.clone();
       const startRot = getCurrentRotations()[key] || object.quaternion.clone();
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
 
-      // Use stored opacity (from before applyHomeScrollPreset changed it)
-      // This ensures each object keeps its individual opacity
-      const currentOpacity = startOpacities[key] ?? 1.0;
-
-      // Set the material opacity to the stored value (each object individually)
-      // This ensures materials have the correct opacity when animation starts
+      // Set opacity to 1.0 for all objects at start (stagger will handle timing)
       materials.forEach((mat) => {
-        mat.opacity = currentOpacity;
+        mat.opacity = 1.0;
         mat.transparent = true;
       });
 
-      // Get TO values: center of maze, laydown rotation, opacity 0
+      // Get TO values: center of maze, laydown rotation
       const endPos = objectHomeScrollEndPathPoint;
       const d1 = startRot.angleTo(LAY_DOWN_QUAT_1);
       const d2 = startRot.angleTo(LAY_DOWN_QUAT_2);
       const endRot = d1 < d2 ? LAY_DOWN_QUAT_1 : LAY_DOWN_QUAT_2;
       const endEuler = new THREE.Euler().setFromQuaternion(endRot);
 
-      // Create a wrapper object to animate all properties together
-      // Use actual current position from object (not startPositions which might be stale)
+      // Use actual current position from object
       const currentPos = object.position.clone();
+
+      // Create animation props object
       const animProps = {
         posX: currentPos.x,
         posY: currentPos.y,
@@ -283,61 +290,80 @@ export function initHomeScrollAnimation() {
         rotX: startEuler.x,
         rotY: startEuler.y,
         rotZ: startEuler.z,
-        opacity: currentOpacity, // Use current opacity, not always 1.0
+        opacity: 1.0, // Always start from 1.0
       };
 
-      // Calculate stagger position: each object starts at a different time
-      // Total objects: allObjects.length, stagger amount: spread them across timeline
-      const totalObjects = allObjects.length;
-      const staggerAmount = 1 / (totalObjects + 1); // Divide timeline into equal parts
-      const staggerPosition = index * staggerAmount; // Each object starts at its position
+      animPropsArray.push(animProps);
+      animationData.push({
+        key,
+        object,
+        materials,
+        startPos,
+        endPos,
+        startEuler,
+        endEuler,
+        currentPos,
+      });
+    });
 
-      // Single fromTo that animates everything together, with stagger
-      // Position parameter sets when this animation starts on the timeline
-      // Each animation uses the remaining timeline duration from its start position
-      homeScrollTimeline!.fromTo(
-        animProps,
-        {
-          // FROM: current position, current rotation, CURRENT opacity
-          posX: currentPos.x,
-          posY: currentPos.y,
-          posZ: currentPos.z,
-          rotX: startEuler.x,
-          rotY: startEuler.y,
-          rotZ: startEuler.z,
-          opacity: currentOpacity, // Start from current opacity, not always 1.0
+    // Use stagger to animate all objects with different start times
+    homeScrollTimeline!.fromTo(
+      animPropsArray,
+      {
+        // FROM: current position, current rotation, opacity 1.0
+        posX: (index: number) => animationData[index].currentPos.x,
+        posY: (index: number) => animationData[index].currentPos.y,
+        posZ: (index: number) => animationData[index].currentPos.z,
+        rotX: (index: number) => animationData[index].startEuler.x,
+        rotY: (index: number) => animationData[index].startEuler.y,
+        rotZ: (index: number) => animationData[index].startEuler.z,
+        opacity: 1.0, // All start from 1.0
+      },
+      {
+        // TO: center position, laydown rotation, opacity 0
+        posX: (index: number) => animationData[index].endPos.x,
+        posY: (index: number) => animationData[index].endPos.y,
+        posZ: (index: number) => animationData[index].endPos.z,
+        rotX: (index: number) => animationData[index].endEuler.x,
+        rotY: (index: number) => animationData[index].endEuler.y,
+        rotZ: (index: number) => animationData[index].endEuler.z,
+        opacity: 0.0,
+        ease: "power1.out",
+        stagger: {
+          amount: 1, // Stagger across the full timeline duration
         },
-        {
-          // TO: center position, laydown rotation, opacity 0
-          posX: endPos.x,
-          posY: endPos.y,
-          posZ: endPos.z,
-          rotX: endEuler.x,
-          rotY: endEuler.y,
-          rotZ: endEuler.z,
-          opacity: 0.0,
-          ease: "power1.out",
-          // Don't set duration - let it use remaining timeline from start position
-          onUpdate: function () {
+        onUpdate: function (this: gsap.core.Tween) {
+          // Apply updates to each object
+          const targets = this.targets() as any[];
+          targets.forEach((animProps, index) => {
+            const data = animationData[index];
+
             // Apply position
-            object.position.set(animProps.posX, animProps.posY, animProps.posZ);
+            data.object.position.set(
+              animProps.posX,
+              animProps.posY,
+              animProps.posZ
+            );
 
             // Apply rotation (Euler to quaternion)
-            object.rotation.set(animProps.rotX, animProps.rotY, animProps.rotZ);
-            object.quaternion.setFromEuler(object.rotation);
-            updateObjectRotation(key, object.quaternion);
+            data.object.rotation.set(
+              animProps.rotX,
+              animProps.rotY,
+              animProps.rotZ
+            );
+            data.object.quaternion.setFromEuler(data.object.rotation);
+            updateObjectRotation(data.key, data.object.quaternion);
 
             // Apply opacity to all materials
-            materials.forEach((mat) => {
+            data.materials.forEach((mat) => {
               mat.opacity = animProps.opacity;
               mat.transparent = animProps.opacity < 1.0;
             });
-            updateObjectOpacity(key, animProps.opacity);
-          },
+            updateObjectOpacity(data.key, animProps.opacity);
+          });
         },
-        staggerPosition // Start position on timeline (staggered) - relative to timeline (0-1)
-      );
-    });
+      }
+    );
   };
 
   // Store camera progress wrapper for killing
