@@ -261,8 +261,7 @@ export function initHomeScrollAnimation() {
     // This ensures camera animates alongside the object animations
     // Make sure cameraPath exists before creating animation
     if (!cameraPath || cameraPath.curves.length === 0) {
-      console.warn("Camera path not created, skipping camera animation");
-      return;
+      return; // Skip if camera path not created
     }
 
     // Add camera animation - it should run for the full timeline duration

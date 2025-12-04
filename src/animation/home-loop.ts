@@ -3,9 +3,9 @@ import { ghosts, pacmanMixer } from "../core/objects";
 import { clock, onFrame } from "../core/scene";
 import { getHomePaths, TangentSmoother } from "../paths/paths";
 import { initHomeScrollAnimation } from "./home-scroll";
-import { calculateObjectOrientation } from "./util";
+import { calculateObjectOrientation, OBJECT_KEYS } from "./util";
 import { applyHomeLoopPreset } from "./scene-presets";
-import { SCALE } from "./constants";
+import { SCALE, TANGENT_SMOOTHING } from "./constants";
 import { setObjectScale } from "./scene-utils";
 import {
   syncStateFromObjects,
@@ -34,30 +34,15 @@ const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
 
 // Initialize home loop tangent smoothers
 function initializeHomeLoopTangentSmoothers() {
-  homeLoopTangentSmoothers.pacman = new TangentSmoother(
-    new THREE.Vector3(1, 0, 0),
-    0.06
-  );
-  homeLoopTangentSmoothers.ghost1 = new TangentSmoother(
-    new THREE.Vector3(1, 0, 0),
-    0.06
-  );
-  homeLoopTangentSmoothers.ghost2 = new TangentSmoother(
-    new THREE.Vector3(1, 0, 0),
-    0.06
-  );
-  homeLoopTangentSmoothers.ghost3 = new TangentSmoother(
-    new THREE.Vector3(1, 0, 0),
-    0.06
-  );
-  homeLoopTangentSmoothers.ghost4 = new TangentSmoother(
-    new THREE.Vector3(1, 0, 0),
-    0.06
-  );
-  homeLoopTangentSmoothers.ghost5 = new TangentSmoother(
-    new THREE.Vector3(1, 0, 0),
-    0.06
-  );
+  const smoothingFactor = TANGENT_SMOOTHING.HOME_LOOP;
+  const initialVector = new THREE.Vector3(1, 0, 0);
+
+  OBJECT_KEYS.forEach((key) => {
+    homeLoopTangentSmoothers[key] = new TangentSmoother(
+      initialVector.clone(),
+      smoothingFactor
+    );
+  });
 }
 
 function stopHomeLoop() {

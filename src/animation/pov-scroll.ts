@@ -11,8 +11,16 @@ import {
 import { DOM_ELEMENTS } from "../config/dom-elements";
 import { calculateObjectOrientation } from "./util";
 import { applyPovScrollPreset, getScrollDirection } from "./scene-presets";
-import { SCALE } from "./constants";
+import {
+  SCALE,
+  TANGENT_SMOOTHING,
+  PARAMETER_SMOOTHING_FACTOR,
+  GHOST_FADE_THRESHOLD,
+  GHOST_FADE_OUT_DURATION,
+  FIND_CLOSEST_SAMPLES,
+} from "./constants";
 import { setObjectScale } from "./scene-utils";
+import { setObjectOpacity } from "../core/material-utils";
 
 // Cache for DOM elements to avoid repeated queries
 const domElementCache: Record<
@@ -136,16 +144,18 @@ function getCustomLookAtForProgress(
 
 // Initialize POV tangent smoothers
 function initializePovTangentSmoothers() {
+  const smoothingFactor = TANGENT_SMOOTHING.POV;
+  
   povTangentSmoothers.camera = new TangentSmoother(
     new THREE.Vector3(0, 0, -1),
-    0.08
+    smoothingFactor
   );
 
   // Initialize ghost smoothers with loop
   for (let i = 1; i <= 5; i++) {
     povTangentSmoothers[`ghost${i}`] = new TangentSmoother(
       new THREE.Vector3(1, 0, 0),
-      0.08
+      smoothingFactor
     );
   }
 }
@@ -409,49 +419,49 @@ function updateGhost(
     state.triggerCameraProgress = findClosestProgressOnPath(
       povPaths.camera,
       triggerPos,
-      800
+      FIND_CLOSEST_SAMPLES
     );
     state.ghostStartFadeInProgress = findClosestProgressOnPath(
       povPaths.camera,
       ghostStartFadeIn,
-      800
+      FIND_CLOSEST_SAMPLES
     );
     state.ghostEndFadeInProgress = findClosestProgressOnPath(
       povPaths.camera,
       ghostEndFadeIn,
-      800
+      FIND_CLOSEST_SAMPLES
     );
     state.ghostStartFadeOutProgress = findClosestProgressOnPath(
       povPaths.camera,
       ghostStartFadeOut,
-      800
+      FIND_CLOSEST_SAMPLES
     );
     state.camStartFadeInProgress = findClosestProgressOnPath(
       povPaths.camera,
       camStartFadeIn,
-      800
+      FIND_CLOSEST_SAMPLES
     );
     state.camEndFadeInProgress = findClosestProgressOnPath(
       povPaths.camera,
       camEndFadeIn,
-      800
+      FIND_CLOSEST_SAMPLES
     );
     state.camStartFadeOutProgress = findClosestProgressOnPath(
       povPaths.camera,
       camStartFadeOut,
-      800
+      FIND_CLOSEST_SAMPLES
     );
     state.endCameraProgress = findClosestProgressOnPath(
       povPaths.camera,
       endPosition,
-      800
+      FIND_CLOSEST_SAMPLES
     );
   }
 
   const currentCameraProgress = findClosestProgressOnPath(
     povPaths.camera,
     cameraPosition,
-    800
+    FIND_CLOSEST_SAMPLES
   );
 
   // Update ghost visibility and position
@@ -482,9 +492,8 @@ function updateGhost(
     if (state.currentPathT === undefined) {
       state.currentPathT = ghostProgress;
     } else {
-      const parameterSmoothingFactor = 0.1;
       state.currentPathT +=
-        (ghostProgress - state.currentPathT) * parameterSmoothingFactor;
+        (ghostProgress - state.currentPathT) * PARAMETER_SMOOTHING_FACTOR;
     }
 
     ghostProgress = state.currentPathT;
@@ -502,19 +511,15 @@ function updateGhost(
       }
     }
 
-    // Handle fade out at the end
-    if (ghostProgress > 0.9) {
-      const mesh = ghost as THREE.Mesh;
-      if (mesh.material && "opacity" in mesh.material) {
-        (mesh.material as THREE.Material & { opacity: number }).opacity =
-          1 - (ghostProgress - 0.9) / 0.1;
-      }
-    } else {
-      const mesh = ghost as THREE.Mesh;
-      if (mesh.material && "opacity" in mesh.material) {
-        (mesh.material as THREE.Material & { opacity: number }).opacity = 1;
-      }
-    }
+    // Handle fade out at the end using centralized utility
+    const targetOpacity =
+      ghostProgress > GHOST_FADE_THRESHOLD
+        ? 1 - (ghostProgress - GHOST_FADE_THRESHOLD) / GHOST_FADE_OUT_DURATION
+        : 1.0;
+    setObjectOpacity(ghost, targetOpacity, {
+      preserveTransmission: true,
+      skipCurrencySymbols: true,
+    });
   } else {
     ghost.visible = false;
     state.hasBeenTriggered = false;
@@ -532,25 +537,13 @@ function updateGhost(
   );
 }
 
-function updateTextVisibility(
-  key: string,
+/**
+ * Calculate target opacities for ghost and cam text based on camera progress
+ */
+function calculateTextOpacities(
   currentCameraProgress: number,
-  state: any,
-  parent: HTMLElement,
-  povElements: NodeListOf<Element>,
-  camElements: NodeListOf<Element>,
-  forceEndProgress: boolean = false
-) {
-  // If forceEndProgress is true, immediately hide all text elements
-  if (forceEndProgress) {
-    parent.style.opacity = "0";
-    parent.classList.add("no-visibility");
-    hideTextElements(povElements);
-    hideTextElements(camElements);
-    return;
-  }
-
-  // Calculate target opacities using precise fade timing positions
+  state: any
+): { targetGhostOpacity: number; targetCamOpacity: number } {
   let targetGhostOpacity = 0;
   let targetCamOpacity = 0;
 
@@ -563,7 +556,6 @@ function updateTextVisibility(
       (currentCameraProgress - state.ghostStartFadeInProgress) /
       (state.ghostEndFadeInProgress - state.ghostStartFadeInProgress);
     targetGhostOpacity = Math.min(1, fadeProgress);
-    parent.style.opacity = targetGhostOpacity.toString();
   }
   // Ghost text stays fully visible (ghostEndFadeIn -> ghostStartFadeOut)
   else if (
@@ -609,9 +601,68 @@ function updateTextVisibility(
       (currentCameraProgress - state.camStartFadeOutProgress) /
       (state.endCameraProgress - state.camStartFadeOutProgress);
     targetCamOpacity = Math.max(0, 1 - fadeOutProgress);
-    parent.style.opacity = targetCamOpacity.toString();
   }
 
+  return { targetGhostOpacity, targetCamOpacity };
+}
+
+/**
+ * Update visibility and opacity of text elements
+ */
+function updateTextElementVisibility(
+  elements: NodeListOf<Element>,
+  targetOpacity: number
+): void {
+  elements.forEach((element) => {
+    const el = element as HTMLElement;
+    if (targetOpacity > 0.01) {
+      el.classList.remove("no-visibility");
+      el.style.opacity = targetOpacity.toString();
+    } else if (
+      targetOpacity <= 0.01 &&
+      !el.classList.contains("no-visibility")
+    ) {
+      el.classList.add("no-visibility");
+      el.style.opacity = "0";
+    }
+  });
+}
+
+function updateTextVisibility(
+  key: string,
+  currentCameraProgress: number,
+  state: any,
+  parent: HTMLElement,
+  povElements: NodeListOf<Element>,
+  camElements: NodeListOf<Element>,
+  forceEndProgress: boolean = false
+) {
+  // If forceEndProgress is true, immediately hide all text elements
+  if (forceEndProgress) {
+    parent.style.opacity = "0";
+    parent.classList.add("no-visibility");
+    hideTextElements(povElements);
+    hideTextElements(camElements);
+    return;
+  }
+
+  // Calculate target opacities
+  const { targetGhostOpacity, targetCamOpacity } = calculateTextOpacities(
+    currentCameraProgress,
+    state
+  );
+
+  // Update parent opacity (uses cam opacity at the end, ghost opacity during fade in)
+  if (currentCameraProgress >= state.camStartFadeOutProgress) {
+    parent.style.opacity = targetCamOpacity.toString();
+  } else if (
+    currentCameraProgress >= state.ghostStartFadeInProgress &&
+    currentCameraProgress <= state.ghostEndFadeInProgress
+  ) {
+    parent.style.opacity = targetGhostOpacity.toString();
+  }
+
+  // Update visibility class based on both opacities
   const isPassed = targetCamOpacity > 0.01 && targetGhostOpacity > 0.01;
   const hasNoVisibility = parent.classList.contains("no-visibility");
 
@@ -622,34 +673,10 @@ function updateTextVisibility(
   }
 
   // Update all POV elements (ghost text)
-  povElements.forEach((povElement) => {
-    const element = povElement as HTMLElement;
-    if (targetGhostOpacity > 0.01) {
-      element.classList.remove("no-visibility");
-      element.style.opacity = targetGhostOpacity.toString();
-    } else if (
-      targetGhostOpacity <= 0.01 &&
-      !element.classList.contains("no-visibility")
-    ) {
-      element.classList.add("no-visibility");
-      element.style.opacity = "0";
-    }
-  });
+  updateTextElementVisibility(povElements, targetGhostOpacity);
 
   // Update all CAM elements
-  camElements.forEach((camElement) => {
-    const element = camElement as HTMLElement;
-    if (targetCamOpacity > 0.01) {
-      element.classList.remove("no-visibility");
-      element.style.opacity = targetCamOpacity.toString();
-    } else if (
-      targetCamOpacity <= 0.01 &&
-      !element.classList.contains("no-visibility")
-    ) {
-      element.classList.add("no-visibility");
-      element.style.opacity = "0";
-    }
-  });
+  updateTextElementVisibility(camElements, targetCamOpacity);
 }
 
 // Helper function to reset tangent smoothers
@@ -737,7 +764,7 @@ function resetState() {
 function findClosestProgressOnPath(
   path: THREE.CurvePath<THREE.Vector3>,
   targetPoint: THREE.Vector3,
-  samples: number = 2000
+  samples: number = FIND_CLOSEST_SAMPLES
 ): number {
   if (!path || !targetPoint) return 0;
 

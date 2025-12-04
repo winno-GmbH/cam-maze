@@ -41,3 +41,33 @@ export const SCROLL_SELECTORS = {
   OUTRO: ".sc--outro.sc",
 } as const;
 
+// ============================================================================
+// ANIMATION TIMING CONSTANTS
+// ============================================================================
+export const TANGENT_SMOOTHING = {
+  HOME_LOOP: 0.06,
+  POV: 0.08,
+} as const;
+
+export const PARAMETER_SMOOTHING_FACTOR = 0.1;
+export const GHOST_FADE_THRESHOLD = 0.9;
+export const GHOST_FADE_OUT_DURATION = 0.1; // Last 10% of progress
+
+// ============================================================================
+// INTRO SCROLL CONSTANTS
+// ============================================================================
+export const INTRO_WALK_DISTANCE = 10.0;
+export const INTRO_FADE_IN_DURATION = 0.2; // Fade in over 20% of progress
+export const INTRO_BEHIND_OFFSET_STEP = -0.5;
+export const INTRO_BASE_X_OFFSET = -5.0;
+export const INTRO_POSITION_OFFSET = {
+  x: 4.3,
+  y: -2.0,
+  z: 0.0,
+} as const;
+
+// ============================================================================
+// PATH FINDING CONSTANTS
+// ============================================================================
+export const FIND_CLOSEST_SAMPLES = 800; // Default samples for findClosestProgressOnPath
+

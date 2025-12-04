@@ -9,16 +9,29 @@ import {
   getScrollDirection,
   getPacmanTargetQuaternion,
   getGhostTargetQuaternion,
-  INTRO_POSITION_OFFSET,
 } from "./scene-presets";
-import { setMaterialOpacity, setGhostColor, forEachMaterial } from "../core/material-utils";
+import {
+  setMaterialOpacity,
+  setGhostColor,
+  forEachMaterial,
+} from "../core/material-utils";
 import {
   OBJECT_KEYS,
   GHOST_COLORS,
   isCurrencySymbol,
   isPacmanPart,
 } from "./util";
-import { SCROLL_SELECTORS, SCALE, COLOR, OPACITY } from "./constants";
+import {
+  SCROLL_SELECTORS,
+  SCALE,
+  COLOR,
+  OPACITY,
+  INTRO_WALK_DISTANCE,
+  INTRO_FADE_IN_DURATION,
+  INTRO_BEHIND_OFFSET_STEP,
+  INTRO_BASE_X_OFFSET,
+  INTRO_POSITION_OFFSET,
+} from "./constants";
 import { setFloorPlane, setObjectScale, killObjectAnimations } from "./scene-utils";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
@@ -47,35 +60,32 @@ function pauseOtherScrollTriggers() {
 
 // Helper function to set object visibility and opacity
 function setObjectVisibilityAndOpacity(key: string, obj: THREE.Object3D) {
-  gsap.killTweensOf(obj);
-  gsap.killTweensOf(obj.scale);
-  gsap.killTweensOf(obj.position);
-  gsap.killTweensOf(obj.quaternion);
-
+  killObjectAnimations(obj);
   obj.visible = true;
-  obj.traverse((child) => {
-    if ((child as any).isMesh && (child as any).material) {
-      const mesh = child as THREE.Mesh;
-      const childName = child.name || "";
 
+  // Use centralized utility to iterate over materials
+  forEachMaterial(
+    obj,
+    (mat: any, mesh: THREE.Mesh, childName: string) => {
       // Skip currency symbols and pacman parts
       if (
         isCurrencySymbol(childName) ||
         (key === "pacman" && isPacmanPart(childName))
       ) {
+        mesh.visible = false;
         return;
       }
 
       mesh.visible = true;
-      if (Array.isArray(mesh.material)) {
-        mesh.material.forEach((mat: any) => {
-          setMaterialOpacity(mat, 1, true);
-        });
-      } else {
-        setMaterialOpacity(mesh.material as any, 1, true);
-      }
+      setMaterialOpacity(mat, 1, true);
+    },
+    {
+      skipCurrencySymbols: false, // We handle this in the callback
+      skipPacmanParts: false, // We handle this in the callback
+      objectKey: key,
     }
-  });
+  );
+
   obj.updateMatrixWorld(true);
 }
 
@@ -231,10 +241,9 @@ function updateObjectsWalkBy(progress: number) {
     );
 
     // Walk path symmetric around center
-    // Start 10 units left of center, end 10 units right of center
-    const walkDistance = 10.0;
-    const walkStart = baseCenter.x - walkDistance; // Start from left
-    const walkEnd = baseCenter.x + walkDistance; // End at right
+    // Start INTRO_WALK_DISTANCE units left of center, end INTRO_WALK_DISTANCE units right of center
+    const walkStart = baseCenter.x - INTRO_WALK_DISTANCE; // Start from left
+    const walkEnd = baseCenter.x + INTRO_WALK_DISTANCE; // End at right
 
     // Objects to animate - ghosts walk 0.5 units behind pacman
     const objectsToAnimate = [
@@ -254,10 +263,9 @@ function updateObjectsWalkBy(progress: number) {
     const pacmanZ = baseCenter.z + INTRO_POSITION_OFFSET.z;
 
     // Smooth fade-in for ghosts based on progress
-    const fadeInDuration = 0.2; // Fade in over 20% of progress
     const ghostOpacity =
-      normalizedProgress < fadeInDuration
-        ? normalizedProgress / fadeInDuration
+      normalizedProgress < INTRO_FADE_IN_DURATION
+        ? normalizedProgress / INTRO_FADE_IN_DURATION
         : 1.0;
 
     objectsToAnimate.forEach(({ key, behindOffset }) => {
@@ -294,11 +302,10 @@ function updateObjectsWalkBy(progress: number) {
       // Update opacity for meshes
       const targetOpacity = key === "pacman" ? 1.0 : ghostOpacity;
 
-      object.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          const mesh = child as THREE.Mesh;
-          const childName = child.name || "";
-
+      // Use centralized utility for consistency
+      forEachMaterial(
+        object,
+        (mat: any, mesh: THREE.Mesh, childName: string) => {
           // Keep currency symbols and pacman parts hidden
           if (
             isCurrencySymbol(childName) ||
@@ -313,20 +320,19 @@ function updateObjectsWalkBy(progress: number) {
 
           // CRITICAL: Force opacity EVERY frame using centralized utility
           // This ensures opacity is always correct and ghost materials keep transparent=true
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              setMaterialOpacity(mat, targetOpacity, true);
-            });
-          } else {
-            setMaterialOpacity(mesh.material as any, targetOpacity, true);
-          }
-
-          // Set ghost colors using centralized utility (only if needed)
-          if (GHOST_COLORS[key] && key !== "pacman") {
-            setGhostColor(object, GHOST_COLORS[key]);
-          }
+          setMaterialOpacity(mat, targetOpacity, true);
+        },
+        {
+          skipCurrencySymbols: false, // We handle this in the callback
+          skipPacmanParts: false, // We handle this in the callback
+          objectKey: key,
         }
-      });
+      );
+
+      // Set ghost colors using centralized utility (only if needed)
+      if (GHOST_COLORS[key] && key !== "pacman") {
+        setGhostColor(object, GHOST_COLORS[key]);
+      }
 
       // CRITICAL: Force matrix update after all changes (only once per object)
       object.updateMatrixWorld(true);

@@ -2,6 +2,7 @@ import gsap from "gsap";
 import * as THREE from "three";
 import { scene } from "../core/scene";
 import { SCALE, COLOR, OPACITY } from "./constants";
+import { forEachMaterial } from "../core/material-utils";
 
 /**
  * SCENE UTILITIES
@@ -62,7 +63,6 @@ export function setObjectScale(
  * Useful when transitioning between scenes to prevent animation conflicts
  */
 export function killObjectAnimations(object: THREE.Object3D): void {
-
   // Kill object animations
   gsap.killTweensOf(object);
   gsap.killTweensOf(object.scale);
@@ -70,20 +70,14 @@ export function killObjectAnimations(object: THREE.Object3D): void {
   gsap.killTweensOf(object.rotation);
   gsap.killTweensOf(object.quaternion);
 
-  // Kill material animations
-  object.traverse((child) => {
-    if ((child as any).isMesh && (child as any).material) {
-      const mesh = child as THREE.Mesh;
-      if (Array.isArray(mesh.material)) {
-        mesh.material.forEach((mat: any) => {
-          gsap.killTweensOf(mat);
-          gsap.killTweensOf(mat.opacity);
-        });
-      } else {
-        gsap.killTweensOf(mesh.material);
-        gsap.killTweensOf((mesh.material as any).opacity);
-      }
-    }
-  });
+  // Kill material animations using centralized utility
+  forEachMaterial(
+    object,
+    (mat: any) => {
+      gsap.killTweensOf(mat);
+      gsap.killTweensOf(mat.opacity);
+    },
+    { skipCurrencySymbols: false }
+  );
 }
 

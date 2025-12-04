@@ -16,13 +16,20 @@ import {
   setMaterialTransparent,
   resetGhostMaterialsToFullOpacity,
   setGhostColor,
+  forEachMaterial,
 } from "../core/material-utils";
 import {
   updateObjectRotation,
   syncStateFromObjects,
 } from "./object-state";
 import { setFloorPlane, setObjectScale, killObjectAnimations } from "./scene-utils";
-import { SCALE, COLOR, OPACITY } from "./constants";
+import {
+  SCALE,
+  COLOR,
+  OPACITY,
+  INTRO_POSITION_OFFSET,
+  INTRO_BASE_X_OFFSET,
+} from "./constants";
 
 /**
  * SCENE PRESETS
@@ -79,21 +86,19 @@ export function applyHomeLoopPreset(
     gsap.set(object, { visible: true });
     setObjectScale(object, key, "home");
 
-    // Ensure all meshes are visible (except currencies)
-    object.traverse((child) => {
-      if ((child as any).isMesh && (child as any).material) {
-        const mesh = child as THREE.Mesh;
-        const childName = child.name || "";
-
+    // Ensure all meshes are visible (except currencies) using centralized utility
+    forEachMaterial(
+      object,
+      (mat: any, mesh: THREE.Mesh, childName: string) => {
         // Keep currency symbols hidden in all scenes
         if (isCurrencySymbol(childName)) {
           mesh.visible = false;
           return;
         }
-
         mesh.visible = true;
-      }
-    });
+      },
+      { skipCurrencySymbols: false } // We handle this in the callback
+    );
 
     // Use centralized material utility to set opacity consistently
     // This ensures ghost materials with transmission always have transparent=true
@@ -148,11 +153,10 @@ export function applyHomeScrollPreset(
       setObjectScale(object, key, "home");
 
       // Set visibility but DON'T change opacity here - opacity is managed individually per object in home-scroll.ts
-      object.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          const mesh = child as THREE.Mesh;
-          const childName = child.name || "";
-
+      // Use centralized utility to ensure materials are transparent-capable
+      forEachMaterial(
+        object,
+        (mat: any, mesh: THREE.Mesh, childName: string) => {
           // Keep currency symbols hidden in all scenes
           if (isCurrencySymbol(childName)) {
             mesh.visible = false;
@@ -163,15 +167,10 @@ export function applyHomeScrollPreset(
 
           // Don't set opacity here - let home-scroll.ts handle it per object
           // Just ensure materials are transparent-capable using centralized utility
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              setMaterialTransparent(mat, true, true);
-            });
-          } else {
-            setMaterialTransparent(mesh.material as any, true, true);
-          }
-        }
-      });
+          setMaterialTransparent(mat, true, true);
+        },
+        { skipCurrencySymbols: false } // We handle this in the callback
+      );
     });
   }
 
@@ -183,13 +182,9 @@ export function applyHomeScrollPreset(
 // INTRO SCROLL PRESET
 // ============================================================================
 
-// Position offsets (hardcoded from previous adjuster values)
-// Export for use in intro-scroll updates
-export const INTRO_POSITION_OFFSET = {
-  x: 4.3,
-  y: -2.0,
-  z: 0.0,
-};
+// Position offsets are now in constants.ts (INTRO_POSITION_OFFSET)
+// Re-export for backward compatibility
+export { INTRO_POSITION_OFFSET };
 
 // Store target quaternions for intro (calculated once)
 let pacmanTargetQuaternion: THREE.Quaternion | null = null;
@@ -273,7 +268,7 @@ export function applyIntroScrollPreset(
   }
 
   // Calculate start position (far left)
-  const baseX = camera.position.x - 5.0;
+  const baseX = camera.position.x + INTRO_BASE_X_OFFSET;
   const startPosition = new THREE.Vector3(
     baseX + INTRO_POSITION_OFFSET.x,
     camera.position.y + INTRO_POSITION_OFFSET.y,
@@ -318,13 +313,15 @@ export function applyIntroScrollPreset(
     gsap.set(object, { visible: true });
 
     // CRITICAL: Set opacity and visibility for all meshes IMMEDIATELY and EXPLICITLY
-    object.traverse((child) => {
-      if ((child as any).isMesh && (child as any).material) {
-        const mesh = child as THREE.Mesh;
-        const childName = child.name || "";
-
+    // Use centralized utility for consistency
+    forEachMaterial(
+      object,
+      (mat: any, mesh: THREE.Mesh, childName: string) => {
         // Keep currency symbols and pacman parts hidden
-        if (isCurrencySymbol(childName) || (key === "pacman" && isPacmanPart(childName))) {
+        if (
+          isCurrencySymbol(childName) ||
+          (key === "pacman" && isPacmanPart(childName))
+        ) {
           mesh.visible = false;
           return;
         }
@@ -333,20 +330,19 @@ export function applyIntroScrollPreset(
         mesh.visible = true;
 
         // Set opacity using centralized utility (not via GSAP to ensure immediate effect)
-        if (Array.isArray(mesh.material)) {
-          mesh.material.forEach((mat: any) => {
-            setMaterialOpacity(mat, 1, true);
-          });
-        } else {
-          setMaterialOpacity(mesh.material as any, 1, true);
-        }
-
-        // Set ghost colors using centralized utility
-        if (GHOST_COLORS[key] && key !== "pacman") {
-          setGhostColor(object, GHOST_COLORS[key]);
-        }
+        setMaterialOpacity(mat, 1, true);
+      },
+      {
+        skipCurrencySymbols: false, // We handle this in the callback
+        skipPacmanParts: false, // We handle this in the callback
+        objectKey: key,
       }
-    });
+    );
+
+    // Set ghost colors using centralized utility (only if needed)
+    if (GHOST_COLORS[key] && key !== "pacman") {
+      setGhostColor(object, GHOST_COLORS[key]);
+    }
 
     object.updateMatrixWorld(true);
   });
@@ -376,19 +372,14 @@ export function applyPovScrollPreset(
       gsap.set(object, { visible: false });
       gsap.set(object.scale, { x: 0.5, y: 0.5, z: 0.5 });
 
-      // Reset opacity
-      object.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          const mesh = child as THREE.Mesh;
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              setMaterialOpacity(mat, 1, true);
-            });
-          } else {
-            setMaterialOpacity(mesh.material as any, 1, true);
-          }
-        }
-      });
+      // Reset opacity using centralized utility
+      forEachMaterial(
+        object,
+        (mat: any) => {
+          setMaterialOpacity(mat, 1, true);
+        },
+        { skipCurrencySymbols: false }
+      );
     }
   });
 

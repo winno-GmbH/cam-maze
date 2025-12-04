@@ -110,20 +110,18 @@ export function setMaterialTransparent(
  */
 export function getObjectOpacity(object: THREE.Object3D): number {
   let opacity = 1.0;
+  let found = false;
 
-  object.traverse((child) => {
-    if ((child as any).isMesh && (child as any).material) {
-      const mesh = child as THREE.Mesh;
-      if (Array.isArray(mesh.material)) {
-        if (mesh.material.length > 0) {
-          opacity = (mesh.material[0] as any).opacity ?? 1.0;
-        }
-      } else {
-        opacity = (mesh.material as any).opacity ?? 1.0;
+  forEachMaterial(
+    object,
+    (mat: any) => {
+      if (!found) {
+        opacity = mat.opacity ?? 1.0;
+        found = true;
       }
-      return; // Only need first material
-    }
-  });
+    },
+    { skipCurrencySymbols: false }
+  );
 
   return opacity;
 }
