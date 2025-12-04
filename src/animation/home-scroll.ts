@@ -347,13 +347,10 @@ export function initHomeScrollAnimation() {
 
             // Apply opacity to all materials DIRECTLY
             // These are the exact materials we collected for this object
+            // Only change opacity and transparent - don't force needsUpdate to avoid material re-rendering
             data.materials.forEach((mat) => {
               mat.opacity = animProps.opacity;
               mat.transparent = animProps.opacity < 1.0;
-              // Force material update
-              if (mat.needsUpdate !== undefined) {
-                mat.needsUpdate = true;
-              }
             });
 
             // Log current opacity for each object every frame
