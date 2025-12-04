@@ -121,15 +121,31 @@ export function startHomeLoop() {
   });
 
   if (!homeLoopFrameRegistered) {
-    onFrame(() => updateHomeLoop(clock.getDelta()));
+    let lastTime = clock.getElapsedTime();
+    onFrame(() => {
+      if (document.hidden) {
+        lastTime = clock.getElapsedTime();
+        return;
+      }
+
+      const currentTime = clock.getElapsedTime();
+      const delta = currentTime - lastTime;
+      lastTime = currentTime;
+
+      updateHomeLoop(delta);
+    });
     homeLoopFrameRegistered = true;
   }
 }
 
 function updateHomeLoop(delta: number) {
   if (!isHomeLoopActive) return;
-  animationTime += delta;
-  rotationTransitionTime += delta;
+
+  const maxDelta = 0.1;
+  const clampedDelta = Math.min(delta, maxDelta);
+
+  animationTime += clampedDelta;
+  rotationTransitionTime += clampedDelta;
 
   const t = (animationTime % LOOP_DURATION) / LOOP_DURATION;
 
