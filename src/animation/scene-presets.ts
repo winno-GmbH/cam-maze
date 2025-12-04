@@ -17,10 +17,12 @@ import {
   setGhostColor,
   forEachMaterial,
 } from "../core/material-utils";
+import { updateObjectRotation } from "./object-state";
 import {
-  updateObjectRotation,
-} from "./object-state";
-import { setFloorPlane, setObjectScale, killObjectAnimations } from "./scene-utils";
+  setFloorPlane,
+  setObjectScale,
+  killObjectAnimations,
+} from "./scene-utils";
 import {
   SCALE,
   COLOR,
@@ -141,6 +143,7 @@ export function applyIntroScrollPreset(
         { axis: "y", angle: Math.PI },
         { axis: "y", angle: Math.PI },
         { axis: "x", angle: Math.PI },
+        { axis: "y", angle: Math.PI },
       ]);
 
       pacmanTargetQuaternion = quat;
@@ -163,6 +166,7 @@ export function applyIntroScrollPreset(
         { axis: "y", angle: Math.PI },
         { axis: "y", angle: Math.PI },
         { axis: "x", angle: Math.PI },
+        { axis: "y", angle: Math.PI },
       ]);
 
       ghostTargetQuaternion = quat;
