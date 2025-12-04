@@ -73,13 +73,14 @@ function startHomeLoop() {
   isHomeLoopActive = true;
   setHomeLoopActive(true);
 
-  if (hasBeenPausedBefore) {
-    const homePaths = getHomePaths();
-    const currentPositions = getCurrentPositions();
+  const homePaths = getHomePaths();
+  const homeLoopStartPos = getHomeLoopStartPositions();
+  const homeLoopStartRot = getHomeLoopStartRotations();
 
+  if (hasBeenPausedBefore && Object.keys(homeLoopStartPos).length > 0) {
     let totalT = 0;
     let count = 0;
-    Object.entries(currentPositions).forEach(([key, pos]) => {
+    Object.entries(homeLoopStartPos).forEach(([key, pos]) => {
       const path = homePaths[key];
       if (path) {
         let closestT = 0;
@@ -112,10 +113,6 @@ function startHomeLoop() {
 
   initializeHomeLoopTangentSmoothers();
 
-  const homePaths = getHomePaths();
-  const homeLoopStartPos = getHomeLoopStartPositions();
-  const homeLoopStartRot = getHomeLoopStartRotations();
-
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
@@ -143,12 +140,14 @@ function startHomeLoop() {
       if (savedRotation) {
         ghost.quaternion.copy(savedRotation);
         updateObjectRotation(key, savedRotation);
+        if (hasBeenPausedBefore) {
+          startRotations[key] = savedRotation.clone();
+        }
       } else {
         updateObjectRotation(key, ghost.quaternion);
-      }
-
-      if (hasBeenPausedBefore) {
-        startRotations[key] = ghost.quaternion.clone();
+        if (hasBeenPausedBefore) {
+          startRotations[key] = ghost.quaternion.clone();
+        }
       }
 
       if (key !== "pacman") {
@@ -157,7 +156,27 @@ function startHomeLoop() {
       setObjectScale(ghost, key, "home");
 
       if (homeLoopTangentSmoothers[key]) {
-        const initialTangent = path.getTangentAt(pausedT);
+        const savedPos = savedPosition || ghost.position;
+        let tangentT = pausedT;
+
+        if (savedPosition) {
+          let closestT = pausedT;
+          let closestDist = Infinity;
+          for (let i = 0; i <= 100; i++) {
+            const t = i / 100;
+            const pathPoint = path.getPointAt(t);
+            if (pathPoint) {
+              const dist = pathPoint.distanceTo(savedPos);
+              if (dist < closestDist) {
+                closestDist = dist;
+                closestT = t;
+              }
+            }
+          }
+          tangentT = closestT;
+        }
+
+        const initialTangent = path.getTangentAt(tangentT);
         if (initialTangent) {
           homeLoopTangentSmoothers[key].reset(initialTangent);
         }
