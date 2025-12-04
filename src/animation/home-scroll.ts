@@ -6,6 +6,7 @@ import {
   getCameraHomeScrollPathPoints,
   objectHomeScrollEndPathPoint,
 } from "../paths/pathpoints";
+import { getHomeScrollPaths } from "../paths/paths";
 import { homeLoopHandler } from "./home-loop";
 import { LAY_DOWN_QUAT_1, LAY_DOWN_QUAT_2 } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
@@ -235,17 +236,18 @@ export function initHomeScrollAnimation() {
       gsap.killTweensOf(object.rotation);
     });
 
+    // Create paths for each object based on their start positions
+    const homeScrollPaths = getHomeScrollPaths(startPositions);
+
     // Collect all animation data in arrays for stagger
     const animPropsArray: any[] = [];
     const animationData: Array<{
       key: string;
       object: THREE.Object3D;
       materials: any[];
-      startPos: THREE.Vector3;
-      endPos: THREE.Vector3;
+      path: THREE.CurvePath<THREE.Vector3>;
       startEuler: THREE.Euler;
       endEuler: THREE.Euler;
-      currentPos: THREE.Vector3;
     }> = [];
 
     allObjects.forEach(([key, object]) => {
@@ -262,8 +264,7 @@ export function initHomeScrollAnimation() {
         }
       });
 
-      // Get FROM values: current position, current rotation
-      const startPos = startPositions[key] || object.position.clone();
+      // Get FROM values: current rotation
       const startRot = getCurrentRotations()[key] || object.quaternion.clone();
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
 
@@ -273,21 +274,22 @@ export function initHomeScrollAnimation() {
         mat.transparent = true;
       });
 
-      // Get TO values: center of maze, laydown rotation
-      const endPos = objectHomeScrollEndPathPoint;
+      // Get TO values: laydown rotation
       const d1 = startRot.angleTo(LAY_DOWN_QUAT_1);
       const d2 = startRot.angleTo(LAY_DOWN_QUAT_2);
       const endRot = d1 < d2 ? LAY_DOWN_QUAT_1 : LAY_DOWN_QUAT_2;
       const endEuler = new THREE.Euler().setFromQuaternion(endRot);
 
-      // Use actual current position from object
-      const currentPos = object.position.clone();
+      // Get path for this object
+      const path = homeScrollPaths[key];
+      if (!path) {
+        console.warn(`No path found for object: ${key}`);
+        return;
+      }
 
-      // Create animation props object
+      // Create animation props object - use progress for path animation
       const animProps = {
-        posX: currentPos.x,
-        posY: currentPos.y,
-        posZ: currentPos.z,
+        progress: 0, // Progress along path (0 to 1)
         rotX: startEuler.x,
         rotY: startEuler.y,
         rotZ: startEuler.z,
@@ -299,39 +301,34 @@ export function initHomeScrollAnimation() {
         key,
         object,
         materials,
-        startPos,
-        endPos,
+        path,
         startEuler,
         endEuler,
-        currentPos,
       });
     });
 
     // Use stagger to animate all objects with different start times
+    // Reduced stagger amount for faster sequential animation
     homeScrollTimeline!.fromTo(
       animPropsArray,
       {
-        // FROM: current position, current rotation, opacity 1.0
-        posX: (index: number) => animationData[index].currentPos.x,
-        posY: (index: number) => animationData[index].currentPos.y,
-        posZ: (index: number) => animationData[index].currentPos.z,
+        // FROM: progress 0 (start of path), current rotation, opacity 1.0
+        progress: 0,
         rotX: (index: number) => animationData[index].startEuler.x,
         rotY: (index: number) => animationData[index].startEuler.y,
         rotZ: (index: number) => animationData[index].startEuler.z,
         opacity: 1.0, // All start from 1.0
       },
       {
-        // TO: center position, laydown rotation, opacity 0
-        posX: (index: number) => animationData[index].endPos.x,
-        posY: (index: number) => animationData[index].endPos.y,
-        posZ: (index: number) => animationData[index].endPos.z,
+        // TO: progress 1 (end of path), laydown rotation, opacity 0
+        progress: 1,
         rotX: (index: number) => animationData[index].endEuler.x,
         rotY: (index: number) => animationData[index].endEuler.y,
         rotZ: (index: number) => animationData[index].endEuler.z,
         opacity: 0.0,
         ease: "power1.out",
         stagger: {
-          amount: 1, // Stagger across the full timeline duration
+          amount: 0.2, // Reduced stagger - objects animate faster after each other
         },
         onUpdate: function (this: gsap.core.Tween) {
           // Apply updates to each object
@@ -339,12 +336,9 @@ export function initHomeScrollAnimation() {
           targets.forEach((animProps, index) => {
             const data = animationData[index];
 
-            // Apply position
-            data.object.position.set(
-              animProps.posX,
-              animProps.posY,
-              animProps.posZ
-            );
+            // Calculate position along path based on progress
+            const pathPoint = data.path.getPointAt(animProps.progress);
+            data.object.position.copy(pathPoint);
 
             // Apply rotation (Euler to quaternion)
             data.object.rotation.set(
