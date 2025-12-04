@@ -258,6 +258,13 @@ export function initHomeScrollAnimation() {
       // This ensures each object keeps its individual opacity
       const currentOpacity = startOpacities[key] ?? 1.0;
 
+      // Set the material opacity to the stored value (each object individually)
+      // This ensures materials have the correct opacity when animation starts
+      materials.forEach((mat) => {
+        mat.opacity = currentOpacity;
+        mat.transparent = true;
+      });
+
       // Get TO values: center of maze, laydown rotation, opacity 0
       const endPos = objectHomeScrollEndPathPoint;
       const d1 = startRot.angleTo(LAY_DOWN_QUAT_1);

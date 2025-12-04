@@ -165,7 +165,7 @@ export function applyHomeScrollPreset(
         gsap.set(object.scale, { x: 1, y: 1, z: 1 });
       }
 
-      // Set opacity to 1 initially (will be animated by home-scroll.ts)
+      // Set visibility but DON'T change opacity here - opacity is managed individually per object in home-scroll.ts
       object.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
           const mesh = child as THREE.Mesh;
@@ -179,13 +179,13 @@ export function applyHomeScrollPreset(
 
           mesh.visible = true;
 
+          // Don't set opacity here - let home-scroll.ts handle it per object
+          // Just ensure materials are transparent-capable
           if (Array.isArray(mesh.material)) {
             mesh.material.forEach((mat: any) => {
-              mat.opacity = 1;
               mat.transparent = true;
             });
           } else {
-            (mesh.material as any).opacity = 1;
             (mesh.material as any).transparent = true;
           }
         }
