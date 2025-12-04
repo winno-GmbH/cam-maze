@@ -37,6 +37,7 @@ let rotationTransitionTime = 0;
 let startRotations: Record<string, THREE.Quaternion> = {};
 let hasBeenPausedBefore = false;
 let objectTValues: Record<string, number> = {};
+let isFirstFrame = false;
 
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
 
@@ -113,6 +114,7 @@ function startHomeLoop() {
 
   rotationTransitionTime = 0;
   startRotations = {};
+  isFirstFrame = true;
 
   applyHomeLoopPreset(true);
 
@@ -124,27 +126,20 @@ function startHomeLoop() {
       const savedPosition = homeLoopStartPos[key];
       const savedRotation = homeLoopStartRot[key];
 
-      let initialPosition: THREE.Vector3 | null = null;
-
-      if (objectTValues[key] !== undefined) {
-        initialPosition = path.getPointAt(objectTValues[key]);
-      } else if (savedPosition) {
-        initialPosition = savedPosition;
+      if (savedPosition) {
+        ghost.position.copy(savedPosition);
+        updateObjectPosition(key, savedPosition);
       } else {
         const currentPositions = getCurrentPositions();
         const currentPosition = currentPositions[key];
         if (currentPosition) {
-          initialPosition = currentPosition;
-        } else {
-          const fallbackT =
-            objectTValues[key] !== undefined ? objectTValues[key] : 0;
-          initialPosition = path.getPointAt(fallbackT);
+          ghost.position.copy(currentPosition);
+          updateObjectPosition(key, currentPosition);
+        } else if (objectTValues[key] !== undefined) {
+          const fallbackPosition = path.getPointAt(objectTValues[key]);
+          ghost.position.copy(fallbackPosition);
+          updateObjectPosition(key, fallbackPosition);
         }
-      }
-
-      if (initialPosition) {
-        ghost.position.copy(initialPosition);
-        updateObjectPosition(key, initialPosition);
       }
 
       if (savedRotation) {
@@ -202,6 +197,8 @@ function updateHomeLoop(delta: number) {
   );
   const isTransitioning = hasBeenPausedBefore && transitionProgress < 1;
 
+  const homeLoopStartPos = isFirstFrame ? getHomeLoopStartPositions() : null;
+
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
@@ -215,10 +212,34 @@ function updateHomeLoop(delta: number) {
         }
       }
 
-      const position = path.getPointAt(objectT);
-      if (position) {
-        ghost.position.copy(position);
-        updateObjectPosition(key, position);
+      if (isFirstFrame && homeLoopStartPos) {
+        const savedPosition = homeLoopStartPos[key];
+        if (savedPosition) {
+          const pathPosition = path.getPointAt(objectT);
+          if (pathPosition && savedPosition.distanceTo(pathPosition) > 0.001) {
+            ghost.position.copy(savedPosition);
+            updateObjectPosition(key, savedPosition);
+          } else {
+            ghost.position.copy(pathPosition);
+            updateObjectPosition(key, pathPosition);
+          }
+        } else {
+          const position = path.getPointAt(objectT);
+          if (position) {
+            ghost.position.copy(position);
+            updateObjectPosition(key, position);
+          }
+        }
+      } else {
+        const position = path.getPointAt(objectT);
+        if (position) {
+          ghost.position.copy(position);
+          updateObjectPosition(key, position);
+        }
+      }
+
+      if (isFirstFrame) {
+        isFirstFrame = false;
       }
 
       setObjectScale(ghost, key, "home");
