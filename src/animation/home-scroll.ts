@@ -9,8 +9,10 @@ import { LAY_DOWN_QUAT_1 } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import {
   updateObjectRotation,
+  updateObjectPosition,
   getCurrentRotations,
   getCurrentPositions,
+  syncStateFromObjects,
 } from "./object-state";
 import {
   setObjectOpacity,
@@ -84,7 +86,13 @@ export function initHomeScrollAnimation() {
       onEnterBack: handleScrollEnter,
       onScrubComplete: () => {
         requestAnimationFrame(() => {
+          syncStateFromObjects(true);
           homeLoopHandler();
+        });
+      },
+      onLeaveBack: () => {
+        requestAnimationFrame(() => {
+          syncStateFromObjects(true);
         });
       },
     },
@@ -190,6 +198,7 @@ export function initHomeScrollAnimation() {
           onUpdate: function () {
             const pathPoint = data.path.getPointAt(animProps.progress);
             data.object.position.copy(pathPoint);
+            updateObjectPosition(data.key, pathPoint, true);
 
             data.object.rotation.set(
               animProps.rotX,

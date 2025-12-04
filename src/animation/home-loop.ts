@@ -126,13 +126,13 @@ function startHomeLoop() {
 
   const homePaths = getHomePaths();
 
-  const currentPositions = getCurrentPositions();
-
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
+      const currentPositions = getCurrentPositions();
       const savedPosition = currentPositions[key];
-      if (savedPosition && hasBeenPausedBefore) {
+
+      if (savedPosition) {
         ghost.position.copy(savedPosition);
         updateObjectPosition(key, savedPosition);
       } else {

@@ -131,8 +131,12 @@ export function getCurrentRotations(): Record<string, THREE.Quaternion> {
   return rotations;
 }
 
-export function updateObjectPosition(key: string, position: THREE.Vector3) {
-  if (!isHomeLoopActive) {
+export function updateObjectPosition(
+  key: string,
+  position: THREE.Vector3,
+  force: boolean = false
+) {
+  if (!isHomeLoopActive && !force) {
     return;
   }
 
