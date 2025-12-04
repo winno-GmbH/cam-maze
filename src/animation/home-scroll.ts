@@ -218,8 +218,13 @@ export function initHomeScrollAnimation() {
 
       // Get TO values: laydown rotation
       // CRITICAL: Use the SAME end rotation for ALL objects to ensure consistent orientation
-      // Always use LAY_DOWN_QUAT_1 for all ghosts to avoid 180° rotation issues
-      const endRot = LAY_DOWN_QUAT_1;
+      // Rotate LAY_DOWN_QUAT_1 by 180° around Y-axis to fix orientation
+      const baseRot = LAY_DOWN_QUAT_1;
+      const yAxis180 = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        Math.PI
+      );
+      const endRot = baseRot.clone().multiply(yAxis180);
       const endEuler = new THREE.Euler().setFromQuaternion(endRot);
 
       // Get path for this object
@@ -304,17 +309,45 @@ export function initHomeScrollAnimation() {
                 const mesh = child as THREE.Mesh;
                 if (Array.isArray(mesh.material)) {
                   mesh.material.forEach((mat: any) => {
+                    // CRITICAL: For MeshPhysicalMaterial with transmission, we need to maintain
+                    // the transmission effect even when opacity changes. The glow effect comes
+                    // from transmission, so we keep it constant while only changing opacity.
                     mat.opacity = animProps.opacity;
                     // Always keep transparent=true to preserve transmission glow effect
                     // This ensures the glow effect is consistent even when opacity changes
                     mat.transparent = true;
+                    // Preserve depthWrite setting (should be false for ghost materials)
+                    if (
+                      mat.depthWrite !== undefined &&
+                      mat.depthWrite === false
+                    ) {
+                      mat.depthWrite = false;
+                    }
+                    // Force material update to ensure transmission effect is recalculated
+                    if (mat.needsUpdate !== undefined) {
+                      mat.needsUpdate = true;
+                    }
                   });
                 } else {
                   const mat = mesh.material as any;
+                  // CRITICAL: For MeshPhysicalMaterial with transmission, we need to maintain
+                  // the transmission effect even when opacity changes. The glow effect comes
+                  // from transmission, so we keep it constant while only changing opacity.
                   mat.opacity = animProps.opacity;
                   // Always keep transparent=true to preserve transmission glow effect
                   // This ensures the glow effect is consistent even when opacity changes
                   mat.transparent = true;
+                  // Preserve depthWrite setting (should be false for ghost materials)
+                  if (
+                    mat.depthWrite !== undefined &&
+                    mat.depthWrite === false
+                  ) {
+                    mat.depthWrite = false;
+                  }
+                  // Force material update to ensure transmission effect is recalculated
+                  if (mat.needsUpdate !== undefined) {
+                    mat.needsUpdate = true;
+                  }
                 }
               }
             });
