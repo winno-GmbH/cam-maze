@@ -35,7 +35,11 @@ import {
   INTRO_GHOST_OFFSETS,
   clamp,
 } from "./constants";
-import { setFloorPlane, setObjectScale, killObjectAnimations } from "./scene-utils";
+import {
+  setFloorPlane,
+  setObjectScale,
+  killObjectAnimations,
+} from "./scene-utils";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -265,12 +269,24 @@ function updateObjectsWalkBy(progress: number) {
     const walkEnd = baseCenter.x + INTRO_WALK_DISTANCE;
 
     const objectsToAnimate = [
-      { key: "pacman", behindOffset: 0 },
-      { key: "ghost1", behindOffset: INTRO_GHOST_OFFSETS.GHOST1 },
-      { key: "ghost2", behindOffset: INTRO_GHOST_OFFSETS.GHOST2 },
-      { key: "ghost3", behindOffset: INTRO_GHOST_OFFSETS.GHOST3 },
-      { key: "ghost4", behindOffset: INTRO_GHOST_OFFSETS.GHOST4 },
-      { key: "ghost5", behindOffset: INTRO_GHOST_OFFSETS.GHOST5 },
+      { key: "pacman", behindOffset: 0, zOffset: 0.5 },
+      {
+        key: "ghost1",
+        behindOffset: INTRO_GHOST_OFFSETS.GHOST1,
+        zOffset: -0.5,
+      },
+      { key: "ghost2", behindOffset: INTRO_GHOST_OFFSETS.GHOST2, zOffset: 0.5 },
+      {
+        key: "ghost3",
+        behindOffset: INTRO_GHOST_OFFSETS.GHOST3,
+        zOffset: -0.5,
+      },
+      { key: "ghost4", behindOffset: INTRO_GHOST_OFFSETS.GHOST4, zOffset: 0.5 },
+      {
+        key: "ghost5",
+        behindOffset: INTRO_GHOST_OFFSETS.GHOST5,
+        zOffset: -0.5,
+      },
     ];
 
     const normalizedProgress = clamp(progress);
@@ -284,7 +300,7 @@ function updateObjectsWalkBy(progress: number) {
         ? normalizedProgress / INTRO_FADE_IN_DURATION
         : 1.0;
 
-    objectsToAnimate.forEach(({ key, behindOffset }) => {
+    objectsToAnimate.forEach(({ key, behindOffset, zOffset }) => {
       const object = ghosts[key];
       if (!object) return;
 
@@ -292,7 +308,7 @@ function updateObjectsWalkBy(progress: number) {
 
       const finalX = pacmanX + behindOffset;
       const finalY = pacmanY;
-      const finalZ = pacmanZ;
+      const finalZ = pacmanZ + zOffset;
 
       object.position.set(finalX, finalY, finalZ);
 

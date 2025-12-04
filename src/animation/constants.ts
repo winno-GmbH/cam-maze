@@ -36,7 +36,7 @@ export const INTRO_BEHIND_OFFSET_STEP = -0.5;
 export const INTRO_BASE_X_OFFSET = -5.0;
 export const INTRO_POSITION_OFFSET = {
   x: 4.3,
-  y: -3.0,
+  y: -2.0,
   z: 0.0,
 } as const;
 
