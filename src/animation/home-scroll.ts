@@ -137,7 +137,6 @@ export function initHomeScrollAnimation() {
 
       const startRot = getCurrentRotations()[key] || object.quaternion.clone();
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
-
       const endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
 
       const path = homeScrollPaths[key];
@@ -217,7 +216,7 @@ export function initHomeScrollAnimation() {
 
     cameraProgressWrapper = { value: 0 };
 
-    if (!cameraPath || cameraPath.curves.length === 0) {
+    if (!cameraPath || !cameraPath.curves.length) {
       return;
     }
 
@@ -229,7 +228,7 @@ export function initHomeScrollAnimation() {
         immediateRender: false,
         onUpdate: function () {
           const progress = this.targets()[0].value;
-          if (cameraPath && cameraPath.curves.length > 0) {
+          if (cameraPath && cameraPath.curves.length) {
             const cameraPoint = cameraPath.getPointAt(progress);
             camera.position.copy(cameraPoint);
 

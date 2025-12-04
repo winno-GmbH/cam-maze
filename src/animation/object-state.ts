@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ghosts } from "../core/objects";
-import { setObjectOpacity, forEachMaterial } from "../core/material-utils";
+import { setObjectOpacity, forEachMaterial, getObjectOpacity } from "../core/material-utils";
 
 export interface ObjectState {
   position: THREE.Vector3;
@@ -57,18 +57,7 @@ export function getHomeLoopAnimationTime(): number {
 
 export function initializeObjectStates() {
   Object.entries(ghosts).forEach(([key, object]) => {
-    let initialOpacity = 1.0;
-    let found = false;
-    forEachMaterial(
-      object,
-      (mat: any) => {
-        if (!found) {
-          initialOpacity = mat.opacity ?? 1.0;
-          found = true;
-        }
-      },
-      { skipCurrencySymbols: false }
-    );
+    const initialOpacity = getObjectOpacity(object);
 
     currentObjectStates[key] = {
       position: object.position.clone(),
@@ -92,18 +81,7 @@ export function syncStateFromObjects() {
       currentObjectStates[key].scale.copy(object.scale);
       currentObjectStates[key].visible = object.visible;
     } else {
-      let initialOpacity = 1.0;
-      let found = false;
-      forEachMaterial(
-        object,
-        (mat: any) => {
-          if (!found) {
-            initialOpacity = mat.opacity ?? 1.0;
-            found = true;
-          }
-        },
-        { skipCurrencySymbols: false }
-      );
+      const initialOpacity = getObjectOpacity(object);
 
       currentObjectStates[key] = {
         position: object.position.clone(),

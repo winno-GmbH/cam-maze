@@ -54,7 +54,7 @@ function createMazePath(
     const current = pathPoints[i];
     const next = pathPoints[i + 1];
 
-    if (current.curveCheckPoints && current.curveCheckPoints.length > 0) {
+    if (current.curveCheckPoints?.length) {
       const catmullPoints = [
         current.pos,
         ...current.curveCheckPoints,

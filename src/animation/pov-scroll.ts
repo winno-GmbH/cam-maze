@@ -67,8 +67,7 @@ function getCustomLookAtForProgress(
 
     if (
       "lookAtSequence" in firstPoint &&
-      firstPoint.lookAtSequence &&
-      firstPoint.lookAtSequence.length > 0
+      firstPoint.lookAtSequence?.length
     ) {
       const sequenceProgress = progress / POV_SEQUENCE_PHASE_END;
       const sequenceLength = firstPoint.lookAtSequence.length;
@@ -95,8 +94,7 @@ function getCustomLookAtForProgress(
 
     if (
       "lookAtSequence" in firstPoint &&
-      firstPoint.lookAtSequence &&
-      firstPoint.lookAtSequence.length > 0
+      firstPoint.lookAtSequence?.length
     ) {
       const finalSequenceLookAt =
         firstPoint.lookAtSequence[firstPoint.lookAtSequence.length - 1];
@@ -371,8 +369,8 @@ function updateGhost(
     const parent = parentElements[ghostIndex] as HTMLElement;
     cached = {
       parent: parent || null,
-      povElements: parent ? parent.querySelectorAll(".pov") : ([] as any),
-      camElements: parent ? parent.querySelectorAll(".cam") : ([] as any),
+      povElements: parent ? parent.querySelectorAll(".pov") : ([] as NodeListOf<Element>),
+      camElements: parent ? parent.querySelectorAll(".cam") : ([] as NodeListOf<Element>),
     };
     domElementCache[ghostIndex] = cached;
   }
