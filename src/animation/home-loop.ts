@@ -19,7 +19,6 @@ import {
   updateObjectRotation,
   setHomeLoopActive,
   updateHomeLoopT,
-  updateHomeLoopPausedT,
   getHomeLoopStartPositions,
   getHomeLoopStartRotations,
   getHomeLoopStartTValues,
@@ -33,7 +32,6 @@ import { isCurrencySymbol } from "./util";
 const LOOP_DURATION = 50;
 let isHomeLoopActive = true;
 let animationTime = 0;
-let pausedT = 0;
 let homeLoopFrameRegistered = false;
 let rotationTransitionTime = 0;
 let startRotations: Record<string, THREE.Quaternion> = {};
@@ -59,9 +57,6 @@ function stopHomeLoop() {
   isHomeLoopActive = false;
   setHomeLoopActive(false);
   hasBeenPausedBefore = true;
-  pausedT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
-
-  updateHomeLoopPausedT(pausedT);
 
   const homePaths = getHomePaths();
 
@@ -73,7 +68,7 @@ function stopHomeLoop() {
     if (path) {
       const savedPosition = getHomeLoopStartPositions()[key];
       if (savedPosition) {
-        let closestT = pausedT;
+        let closestT = 0;
         let closestDist = Infinity;
         for (let i = 0; i <= 100; i++) {
           const t = i / 100;
@@ -105,17 +100,15 @@ function startHomeLoop() {
 
   objectTValues = { ...homeLoopStartT };
 
-  if (hasBeenPausedBefore && Object.keys(homeLoopStartPos).length > 0) {
-    let totalT = 0;
-    let count = 0;
-    Object.entries(homeLoopStartT).forEach(([key, tValue]) => {
-      totalT += tValue;
-      count++;
-    });
-    if (count > 0) {
-      pausedT = totalT / count;
+  if (
+    hasBeenPausedBefore &&
+    Object.keys(homeLoopStartPos).length > 0 &&
+    Object.keys(homeLoopStartT).length > 0
+  ) {
+    const firstTValue = Object.values(homeLoopStartT)[0];
+    if (firstTValue !== undefined) {
+      animationTime = firstTValue * LOOP_DURATION;
     }
-    animationTime = pausedT * LOOP_DURATION;
   }
 
   rotationTransitionTime = 0;
@@ -143,7 +136,9 @@ function startHomeLoop() {
         if (currentPosition) {
           initialPosition = currentPosition;
         } else {
-          initialPosition = path.getPointAt(pausedT);
+          const fallbackT =
+            objectTValues[key] !== undefined ? objectTValues[key] : 0;
+          initialPosition = path.getPointAt(fallbackT);
         }
       }
 
@@ -172,7 +167,7 @@ function startHomeLoop() {
 
       if (homeLoopTangentSmoothers[key]) {
         const tangentT =
-          objectTValues[key] !== undefined ? objectTValues[key] : pausedT;
+          objectTValues[key] !== undefined ? objectTValues[key] : 0;
         const initialTangent = path.getTangentAt(tangentT);
         if (initialTangent) {
           homeLoopTangentSmoothers[key].reset(initialTangent);
@@ -212,8 +207,12 @@ function updateHomeLoop(delta: number) {
     if (path) {
       let objectT = t;
       if (objectTValues[key] !== undefined) {
-        const deltaT = t - pausedT;
-        objectT = (objectTValues[key] + deltaT + 1) % 1;
+        const startT = objectTValues[key];
+        const firstTValue = Object.values(objectTValues)[0];
+        if (firstTValue !== undefined) {
+          const deltaT = t - firstTValue;
+          objectT = (startT + deltaT + 1) % 1;
+        }
       }
 
       const position = path.getPointAt(objectT);
