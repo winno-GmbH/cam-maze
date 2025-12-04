@@ -91,11 +91,15 @@ export function applyHomeLoopPreset(
         if (Array.isArray(mesh.material)) {
           mesh.material.forEach((mat: any) => {
             mat.opacity = 1;
-            mat.transparent = false;
+            // CRITICAL: Keep transparent=true to preserve transmission glow effect
+            // MeshPhysicalMaterial with transmission needs transparent=true even at opacity 1.0
+            mat.transparent = true;
           });
         } else {
           (mesh.material as any).opacity = 1;
-          (mesh.material as any).transparent = false;
+          // CRITICAL: Keep transparent=true to preserve transmission glow effect
+          // MeshPhysicalMaterial with transmission needs transparent=true even at opacity 1.0
+          (mesh.material as any).transparent = true;
         }
       }
     });
