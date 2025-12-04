@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import gsap from "gsap";
 import { ghosts, pacmanMixer } from "../core/objects";
 import { clock, onFrame } from "../core/scene";
 import { getHomePaths, TangentSmoother } from "../paths/paths";
@@ -286,28 +287,35 @@ function updateHomeLoop(delta: number) {
       // CRITICAL: Update state every frame to keep it in sync
       updateObjectRotation(key, ghost.quaternion);
 
-      // CRITICAL: Maintain opacity at 100% in home-loop
-      ghost.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          const mesh = child as THREE.Mesh;
-          const childName = child.name || "";
+      // CRITICAL: Only maintain opacity at 100% in home-loop if home-scroll is NOT active
+      // Check if home-scroll ScrollTrigger is active
+      const homeScrollTrigger = gsap.getById("homeScroll");
+      const isHomeScrollActive = homeScrollTrigger && homeScrollTrigger.isActive;
+      
+      // Only set opacity if home-scroll is not active (home-scroll manages its own opacity)
+      if (!isHomeScrollActive) {
+        ghost.traverse((child) => {
+          if ((child as any).isMesh && (child as any).material) {
+            const mesh = child as THREE.Mesh;
+            const childName = child.name || "";
 
-          // Skip currency symbols
-          if (isCurrencySymbol(childName)) {
-            return;
-          }
+            // Skip currency symbols
+            if (isCurrencySymbol(childName)) {
+              return;
+            }
 
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              mat.opacity = 1.0;
-              mat.transparent = false;
-            });
-          } else {
-            (mesh.material as any).opacity = 1.0;
-            (mesh.material as any).transparent = false;
+            if (Array.isArray(mesh.material)) {
+              mesh.material.forEach((mat: any) => {
+                mat.opacity = 1.0;
+                mat.transparent = false;
+              });
+            } else {
+              (mesh.material as any).opacity = 1.0;
+              (mesh.material as any).transparent = false;
+            }
           }
-        }
-      });
+        });
+      }
     }
   });
 }

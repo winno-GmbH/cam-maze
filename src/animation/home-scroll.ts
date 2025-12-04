@@ -349,12 +349,16 @@ export function initHomeScrollAnimation() {
             data.object.quaternion.setFromEuler(data.object.rotation);
             updateObjectRotation(data.key, data.object.quaternion);
 
-            // Apply opacity to all materials
+            // Apply opacity to all materials DIRECTLY (don't use updateObjectOpacity to avoid conflicts)
+            // These are the exact materials we collected for this object
             data.materials.forEach((mat) => {
               mat.opacity = animProps.opacity;
               mat.transparent = animProps.opacity < 1.0;
+              // Force material update
+              if (mat.needsUpdate !== undefined) {
+                mat.needsUpdate = true;
+              }
             });
-            updateObjectOpacity(data.key, animProps.opacity);
 
             // Log current opacity for each object every frame
             console.log(`${data.key} opacity:`, animProps.opacity);
