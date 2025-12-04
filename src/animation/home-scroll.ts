@@ -233,12 +233,12 @@ export function initHomeScrollAnimation() {
       }
 
       // Get current opacity from materials (after cloning)
-      // CRITICAL: Use 0.9999 instead of 1.0 to ensure consistent rendering with transmission
-      // Three.js treats opacity 1.0 differently than 0.9999, causing the glow effect to disappear
-      let startOpacity = materials.length > 0 ? materials[0].opacity : 0.9999;
-      // Clamp to 0.9999 max to ensure consistent rendering
+      // CRITICAL: Never use exactly 1.0 to ensure consistent rendering with transmission
+      // Three.js treats opacity 1.0 as non-transparent even with transparent=true
+      let startOpacity = materials.length > 0 ? materials[0].opacity : 0.99999;
+      // Clamp to 0.99999 max to ensure consistent rendering (never exactly 1.0)
       if (startOpacity >= 1.0) {
-        startOpacity = 0.9999;
+        startOpacity = 0.99999;
       }
 
       // Create animation props object - use progress for path animation
@@ -314,24 +314,23 @@ export function initHomeScrollAnimation() {
                 if (Array.isArray(mesh.material)) {
                   mesh.material.forEach((mat: any) => {
                     // CRITICAL: For MeshPhysicalMaterial with transmission, the glow effect
-                    // disappears when opacity changes because Three.js treats opacity 1.0 differently.
-                    // Solution: Scale transmission with opacity to maintain the glow effect
-                    // When opacity is high (near 1.0), keep transmission high
-                    // When opacity is low, scale transmission proportionally
+                    // disappears when opacity changes from 1.0 to 0.999 because Three.js
+                    // treats opacity 1.0 as non-transparent even with transparent=true.
+                    // Solution: Never set opacity to exactly 1.0, use 0.99999 instead
+                    // This keeps the material in transparent mode and preserves the glow
                     const targetOpacity = animProps.opacity;
-                    mat.opacity = targetOpacity;
+                    // Clamp opacity to never be exactly 1.0 to maintain transmission glow
+                    const clampedOpacity =
+                      targetOpacity >= 1.0 ? 0.99999 : targetOpacity;
+                    mat.opacity = clampedOpacity;
 
-                    // Scale transmission to maintain glow effect at all opacity levels
-                    // Original transmission is 0.5, we scale it based on opacity
-                    // This ensures the glow effect is visible even when opacity changes
-                    if (mat.transmission !== undefined) {
-                      // Keep transmission high when opacity is high, scale down when opacity decreases
-                      // Use a curve that maintains glow at high opacity but allows fade at low opacity
-                      const transmissionScale = Math.max(
-                        0.3,
-                        targetOpacity * 0.6 + 0.4
-                      );
-                      mat.transmission = 0.5 * transmissionScale;
+                    // Keep transmission constant at 0.5 (don't scale it)
+                    // The glow effect should work if opacity is never exactly 1.0
+                    if (
+                      mat.transmission !== undefined &&
+                      mat.transmission !== 0.5
+                    ) {
+                      mat.transmission = 0.5;
                     }
 
                     // Always keep transparent=true to preserve transmission glow effect
@@ -352,24 +351,23 @@ export function initHomeScrollAnimation() {
                 } else {
                   const mat = mesh.material as any;
                   // CRITICAL: For MeshPhysicalMaterial with transmission, the glow effect
-                  // disappears when opacity changes because Three.js treats opacity 1.0 differently.
-                  // Solution: Scale transmission with opacity to maintain the glow effect
-                  // When opacity is high (near 1.0), keep transmission high
-                  // When opacity is low, scale transmission proportionally
+                  // disappears when opacity changes from 1.0 to 0.999 because Three.js
+                  // treats opacity 1.0 as non-transparent even with transparent=true.
+                  // Solution: Never set opacity to exactly 1.0, use 0.99999 instead
+                  // This keeps the material in transparent mode and preserves the glow
                   const targetOpacity = animProps.opacity;
-                  mat.opacity = targetOpacity;
+                  // Clamp opacity to never be exactly 1.0 to maintain transmission glow
+                  const clampedOpacity =
+                    targetOpacity >= 1.0 ? 0.99999 : targetOpacity;
+                  mat.opacity = clampedOpacity;
 
-                  // Scale transmission to maintain glow effect at all opacity levels
-                  // Original transmission is 0.5, we scale it based on opacity
-                  // This ensures the glow effect is visible even when opacity changes
-                  if (mat.transmission !== undefined) {
-                    // Keep transmission high when opacity is high, scale down when opacity decreases
-                    // Use a curve that maintains glow at high opacity but allows fade at low opacity
-                    const transmissionScale = Math.max(
-                      0.3,
-                      targetOpacity * 0.6 + 0.4
-                    );
-                    mat.transmission = 0.5 * transmissionScale;
+                  // Keep transmission constant at 0.5 (don't scale it)
+                  // The glow effect should work if opacity is never exactly 1.0
+                  if (
+                    mat.transmission !== undefined &&
+                    mat.transmission !== 0.5
+                  ) {
+                    mat.transmission = 0.5;
                   }
 
                   // Always keep transparent=true to preserve transmission glow effect
