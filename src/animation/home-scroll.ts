@@ -235,7 +235,8 @@ export function initHomeScrollAnimation() {
     });
 
     // Simple fromTo for each object - animates position, rotation, and opacity together
-    allObjects.forEach(([key, object]) => {
+    // Use stagger so each object starts at a different time
+    allObjects.forEach(([key, object], index) => {
       // Get materials for opacity
       const materials: any[] = [];
       object.traverse((child) => {
@@ -285,7 +286,15 @@ export function initHomeScrollAnimation() {
         opacity: currentOpacity, // Use current opacity, not always 1.0
       };
 
-      // Single fromTo that animates everything together
+      // Calculate stagger position: each object starts at a different time
+      // Total objects: allObjects.length, stagger amount: spread them across timeline
+      const totalObjects = allObjects.length;
+      const staggerAmount = 1 / (totalObjects + 1); // Divide timeline into equal parts
+      const staggerPosition = index * staggerAmount; // Each object starts at its position
+
+      // Single fromTo that animates everything together, with stagger
+      // Position parameter sets when this animation starts on the timeline
+      // Each animation uses the remaining timeline duration from its start position
       homeScrollTimeline!.fromTo(
         animProps,
         {
@@ -308,6 +317,7 @@ export function initHomeScrollAnimation() {
           rotZ: endEuler.z,
           opacity: 0.0,
           ease: "power1.out",
+          // Don't set duration - let it use remaining timeline from start position
           onUpdate: function () {
             // Apply position
             object.position.set(animProps.posX, animProps.posY, animProps.posZ);
@@ -324,7 +334,8 @@ export function initHomeScrollAnimation() {
             });
             updateObjectOpacity(key, animProps.opacity);
           },
-        }
+        },
+        staggerPosition // Start position on timeline (staggered) - relative to timeline (0-1)
       );
     });
   };
