@@ -139,6 +139,12 @@ export function initHomeScrollAnimation() {
 
   // Function to create/update animations with current FROM values
   const createObjectAnimations = () => {
+    // Clear timeline to remove all existing animations
+    // This prevents duplicate animations when called from onEnter/onEnterBack
+    if (homeScrollTimeline) {
+      homeScrollTimeline.clear();
+    }
+
     // Kill existing animations first
     allObjects.forEach(([key, object]) => {
       gsap.killTweensOf(object.position);
@@ -231,16 +237,14 @@ export function initHomeScrollAnimation() {
       );
 
       // GSAP fromTo - animates opacity directly
+      // Opacity stays at 1.0 until 85%, then fades to 0.0 in the last 15%
       if (materials.length > 0) {
         homeScrollTimeline!.fromTo(
           materials,
           {
-            // FROM: opacity 1.0
             opacity: 1.0,
           },
           {
-            // TO: opacity 0.0
-            opacity: 0.0,
             keyframes: [
               { opacity: 1.0, duration: 0.85 }, // Stay at 100% until 85%
               { opacity: 0.0, duration: 0.15 }, // Fade to 0% from 85-100%
