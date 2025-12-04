@@ -16,16 +16,6 @@ let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
 
 let startPositions: Record<string, THREE.Vector3> = {};
-let startOpacities: Record<string, number> = {};
-
-const characterSpeeds: Record<string, number> = {
-  pacman: 0.9,
-  ghost1: 1,
-  ghost2: 1.1,
-  ghost3: 1.2,
-  ghost4: 1.3,
-  ghost5: 1.4,
-};
 
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
@@ -60,56 +50,17 @@ export function initHomeScrollAnimation() {
           const freshRotations = getCurrentRotations();
           const scrollDir = getScrollDirection();
 
-          // CRITICAL: Store ACTUAL current positions and opacities (not t-values)
-          // These are the positions/opacities where objects are RIGHT NOW when entering home-scroll
+          // CRITICAL: Store ACTUAL current positions (not t-values)
+          // These are the positions where objects are RIGHT NOW when entering home-scroll
           const freshPositions: Record<string, THREE.Vector3> = {};
-          const freshOpacities: Record<string, number> = {};
 
           Object.entries(ghosts).forEach(([key, object]) => {
             // Use actual object position (from home-loop or wherever it is)
             freshPositions[key] = object.position.clone();
-
-            // Store current opacity BEFORE applyHomeScrollPreset changes it
-            let currentOpacity = 1.0;
-            object.traverse((child) => {
-              if ((child as any).isMesh && (child as any).material) {
-                const mesh = child as THREE.Mesh;
-                if (Array.isArray(mesh.material)) {
-                  if (mesh.material.length > 0) {
-                    currentOpacity = (mesh.material[0] as any).opacity ?? 1.0;
-                  }
-                } else {
-                  currentOpacity = (mesh.material as any).opacity ?? 1.0;
-                }
-                return; // Only need first material
-              }
-            });
-            freshOpacities[key] = currentOpacity;
           });
-
-          // Also include pacman
-          if (pacman) {
-            freshPositions["pacman"] = pacman.position.clone();
-            let currentOpacity = 1.0;
-            pacman.traverse((child) => {
-              if ((child as any).isMesh && (child as any).material) {
-                const mesh = child as THREE.Mesh;
-                if (Array.isArray(mesh.material)) {
-                  if (mesh.material.length > 0) {
-                    currentOpacity = (mesh.material[0] as any).opacity ?? 1.0;
-                  }
-                } else {
-                  currentOpacity = (mesh.material as any).opacity ?? 1.0;
-                }
-                return;
-              }
-            });
-            freshOpacities["pacman"] = currentOpacity;
-          }
 
           // Store for use in animations
           startPositions = freshPositions;
-          startOpacities = freshOpacities;
 
           // Apply preset FIRST to set positions and opacity correctly
           applyHomeScrollPreset(
@@ -136,38 +87,17 @@ export function initHomeScrollAnimation() {
           const freshRotations = getCurrentRotations();
           const scrollDir = getScrollDirection();
 
-          // CRITICAL: Store ACTUAL current positions and opacities (not t-values)
-          // These are the positions/opacities where objects are RIGHT NOW when entering back
+          // CRITICAL: Store ACTUAL current positions (not t-values)
+          // These are the positions where objects are RIGHT NOW when entering back
           const freshPositions: Record<string, THREE.Vector3> = {};
-          const freshOpacities: Record<string, number> = {};
 
           Object.entries(ghosts).forEach(([key, object]) => {
             // Use actual object position
             freshPositions[key] = object.position.clone();
-
-            // Store current opacity BEFORE applyHomeScrollPreset changes it
-            let currentOpacity = 1.0;
-            object.traverse((child) => {
-              if ((child as any).isMesh && (child as any).material) {
-                const mesh = child as THREE.Mesh;
-                if (Array.isArray(mesh.material)) {
-                  if (mesh.material.length > 0) {
-                    currentOpacity = (mesh.material[0] as any).opacity ?? 1.0;
-                  }
-                } else {
-                  currentOpacity = (mesh.material as any).opacity ?? 1.0;
-                }
-                return; // Only need first material
-              }
-            });
-            freshOpacities[key] = currentOpacity;
           });
-
-          // Note: pacman is already in ghosts, so it's included above
 
           // Store for use in animations
           startPositions = freshPositions;
-          startOpacities = freshOpacities;
 
           // Apply preset FIRST to set positions and opacity correctly
           applyHomeScrollPreset(
@@ -197,28 +127,11 @@ export function initHomeScrollAnimation() {
     },
   });
 
-  // Initialize startPositions and startOpacities with current values
+  // Initialize startPositions with current values
   // Note: ghosts already contains pacman, so we don't need to add it separately
   const allObjects = Object.entries(ghosts);
   allObjects.forEach(([key, object]) => {
     startPositions[key] = object.position.clone();
-
-    // Get current opacity
-    let currentOpacity = 1.0;
-    object.traverse((child) => {
-      if ((child as any).isMesh && (child as any).material) {
-        const mesh = child as THREE.Mesh;
-        if (Array.isArray(mesh.material)) {
-          if (mesh.material.length > 0) {
-            currentOpacity = (mesh.material[0] as any).opacity ?? 1.0;
-          }
-        } else {
-          currentOpacity = (mesh.material as any).opacity ?? 1.0;
-        }
-        return; // Only need first material
-      }
-    });
-    startOpacities[key] = currentOpacity;
   });
 
   // Function to create/update animations with current FROM values
@@ -398,9 +311,6 @@ export function initHomeScrollAnimation() {
                 }
               }
             });
-
-            // Log current opacity for each object every frame
-            console.log(`${data.key} opacity:`, animProps.opacity);
           },
         },
         staggerPosition // Start position on timeline (staggered)
