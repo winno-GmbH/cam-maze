@@ -125,10 +125,10 @@ export function initHomeScrollAnimation() {
           });
 
           // Recreate animations with fresh FROM values (including camera)
-          // Create camera animation FIRST so it starts at position 0
-          createCameraAnimation();
-          // Then create object animations (they will be staggered after position 0)
+          // Create object animations FIRST (this clears the timeline)
           createObjectAnimations();
+          // Then create camera animation (after timeline is cleared, so it's not removed)
+          createCameraAnimation();
         });
       },
       onEnterBack: () => {
@@ -183,10 +183,10 @@ export function initHomeScrollAnimation() {
           });
 
           // Recreate animations with fresh FROM values (including camera)
-          // Create camera animation FIRST so it starts at position 0
-          createCameraAnimation();
-          // Then create object animations (they will be staggered after position 0)
+          // Create object animations FIRST (this clears the timeline)
           createObjectAnimations();
+          // Then create camera animation (after timeline is cleared, so it's not removed)
+          createCameraAnimation();
         });
       },
       onScrubComplete: () => {
@@ -251,6 +251,23 @@ export function initHomeScrollAnimation() {
     }> = [];
 
     allObjects.forEach(([key, object]) => {
+      // Get current opacity from original materials BEFORE cloning
+      // This preserves the actual current opacity state
+      let currentMaterialOpacity = 1.0;
+      object.traverse((child) => {
+        if ((child as any).isMesh && (child as any).material) {
+          const mesh = child as THREE.Mesh;
+          if (Array.isArray(mesh.material)) {
+            if (mesh.material.length > 0) {
+              currentMaterialOpacity = (mesh.material[0] as any).opacity ?? 1.0;
+            }
+          } else {
+            currentMaterialOpacity = (mesh.material as any).opacity ?? 1.0;
+          }
+          return; // Only need first material
+        }
+      });
+
       // Get materials for opacity and CLONE them to avoid shared material issues
       // Materials are shared between objects (e.g., ghostMaterial), so we need to clone them
       // This ensures each object has its own material instance and opacity can be animated independently
@@ -263,6 +280,9 @@ export function initHomeScrollAnimation() {
             // Clone each material in the array
             const clonedMaterials = mesh.material.map((originalMat: any) => {
               const clonedMat = originalMat.clone();
+              // Preserve current opacity on cloned material
+              clonedMat.opacity = currentMaterialOpacity;
+              clonedMat.transparent = true; // Always allow transparency
               materials.push(clonedMat);
               return clonedMat;
             });
@@ -270,6 +290,9 @@ export function initHomeScrollAnimation() {
           } else {
             // Clone single material
             const clonedMat = (mesh.material as any).clone();
+            // Preserve current opacity on cloned material
+            clonedMat.opacity = currentMaterialOpacity;
+            clonedMat.transparent = true; // Always allow transparency
             materials.push(clonedMat);
             mesh.material = clonedMat;
           }
@@ -279,12 +302,6 @@ export function initHomeScrollAnimation() {
       // Get FROM values: current rotation
       const startRot = getCurrentRotations()[key] || object.quaternion.clone();
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
-
-      // Set opacity to 1.0 for all objects at start (stagger will handle timing)
-      materials.forEach((mat) => {
-        mat.opacity = 1.0;
-        mat.transparent = true;
-      });
 
       // Get TO values: laydown rotation
       const d1 = startRot.angleTo(LAY_DOWN_QUAT_1);
@@ -299,13 +316,16 @@ export function initHomeScrollAnimation() {
         return;
       }
 
+      // Get current opacity from materials (after cloning)
+      const startOpacity = materials.length > 0 ? materials[0].opacity : 1.0;
+
       // Create animation props object - use progress for path animation
       const animProps = {
         progress: 0, // Progress along path (0 to 1)
         rotX: startEuler.x,
         rotY: startEuler.y,
         rotZ: startEuler.z,
-        opacity: 1.0, // Always start from 1.0
+        opacity: startOpacity, // Start from current opacity, not always 1.0
       };
 
       animPropsArray.push(animProps);
@@ -332,12 +352,12 @@ export function initHomeScrollAnimation() {
       homeScrollTimeline!.fromTo(
         animProps,
         {
-          // FROM: progress 0 (start of path), current rotation, opacity 1.0
+          // FROM: progress 0 (start of path), current rotation, current opacity
           progress: 0,
           rotX: data.startEuler.x,
           rotY: data.startEuler.y,
           rotZ: data.startEuler.z,
-          opacity: 1.0, // Start from 1.0
+          opacity: animProps.opacity, // Start from current opacity (from material)
         },
         {
           // TO: progress 1 (end of path), laydown rotation, opacity 0
@@ -449,8 +469,8 @@ export function initHomeScrollAnimation() {
   };
 
   // Create animations initially
-  // Create camera animation FIRST so it starts at position 0
-  createCameraAnimation();
-  // Then create object animations (they will be staggered after position 0)
+  // Create object animations FIRST (this clears the timeline)
   createObjectAnimations();
+  // Then create camera animation (after timeline is cleared, so it's not removed)
+  createCameraAnimation();
 }
