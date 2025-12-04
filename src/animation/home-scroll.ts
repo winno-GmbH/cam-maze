@@ -125,8 +125,10 @@ export function initHomeScrollAnimation() {
           });
 
           // Recreate animations with fresh FROM values (including camera)
-          createObjectAnimations();
+          // Create camera animation FIRST so it starts at position 0
           createCameraAnimation();
+          // Then create object animations (they will be staggered after position 0)
+          createObjectAnimations();
         });
       },
       onEnterBack: () => {
@@ -181,8 +183,10 @@ export function initHomeScrollAnimation() {
           });
 
           // Recreate animations with fresh FROM values (including camera)
-          createObjectAnimations();
+          // Create camera animation FIRST so it starts at position 0
           createCameraAnimation();
+          // Then create object animations (they will be staggered after position 0)
+          createObjectAnimations();
         });
       },
       onScrubComplete: () => {
@@ -247,15 +251,27 @@ export function initHomeScrollAnimation() {
     }> = [];
 
     allObjects.forEach(([key, object]) => {
-      // Get materials for opacity
+      // Get materials for opacity and CLONE them to avoid shared material issues
+      // Materials are shared between objects (e.g., ghostMaterial), so we need to clone them
+      // This ensures each object has its own material instance and opacity can be animated independently
       const materials: any[] = [];
+
       object.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
           const mesh = child as THREE.Mesh;
           if (Array.isArray(mesh.material)) {
-            materials.push(...mesh.material);
+            // Clone each material in the array
+            const clonedMaterials = mesh.material.map((originalMat: any) => {
+              const clonedMat = originalMat.clone();
+              materials.push(clonedMat);
+              return clonedMat;
+            });
+            mesh.material = clonedMaterials;
           } else {
-            materials.push(mesh.material);
+            // Clone single material
+            const clonedMat = (mesh.material as any).clone();
+            materials.push(clonedMat);
+            mesh.material = clonedMat;
           }
         }
       });
@@ -346,11 +362,21 @@ export function initHomeScrollAnimation() {
             updateObjectRotation(data.key, data.object.quaternion);
 
             // Apply opacity to all materials DIRECTLY
-            // These are the exact materials we collected for this object
-            // Only change opacity and transparent - don't force needsUpdate to avoid material re-rendering
-            data.materials.forEach((mat) => {
-              mat.opacity = animProps.opacity;
-              mat.transparent = animProps.opacity < 1.0;
+            // Get materials fresh from the object each frame to ensure we have the correct references
+            data.object.traverse((child) => {
+              if ((child as any).isMesh && (child as any).material) {
+                const mesh = child as THREE.Mesh;
+                if (Array.isArray(mesh.material)) {
+                  mesh.material.forEach((mat: any) => {
+                    mat.opacity = animProps.opacity;
+                    mat.transparent = animProps.opacity < 1.0;
+                  });
+                } else {
+                  const mat = mesh.material as any;
+                  mat.opacity = animProps.opacity;
+                  mat.transparent = animProps.opacity < 1.0;
+                }
+              }
             });
 
             // Log current opacity for each object every frame
@@ -383,7 +409,7 @@ export function initHomeScrollAnimation() {
     }
 
     // Add camera animation - it should run for the full timeline duration
-    // Position 0 means it starts at the beginning and runs alongside object animations
+    // Position 0 means it starts at the beginning, parallel to object animations
     homeScrollTimeline!.fromTo(
       cameraProgressWrapper,
       { value: 0 },
@@ -418,11 +444,13 @@ export function initHomeScrollAnimation() {
           }
         },
       },
-      "<" // Start at the same time as the first animation (object animations)
+      0 // Start at position 0, parallel to object animations
     );
   };
 
   // Create animations initially
-  createObjectAnimations();
+  // Create camera animation FIRST so it starts at position 0
   createCameraAnimation();
+  // Then create object animations (they will be staggered after position 0)
+  createObjectAnimations();
 }
