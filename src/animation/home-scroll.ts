@@ -140,33 +140,18 @@ export function initHomeScrollAnimation() {
   // Function to create/update animations with current FROM values
   const createObjectAnimations = () => {
     // Clear timeline to remove all existing animations
-    // This prevents duplicate animations when called from onEnter/onEnterBack
     if (homeScrollTimeline) {
       homeScrollTimeline.clear();
     }
 
-    // Kill existing animations first
+    // Kill existing animations
     allObjects.forEach(([key, object]) => {
+      gsap.killTweensOf(object);
       gsap.killTweensOf(object.position);
       gsap.killTweensOf(object.rotation);
-      object.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          const mesh = child as THREE.Mesh;
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              gsap.killTweensOf(mat);
-              gsap.killTweensOf(mat.opacity);
-            });
-          } else {
-            gsap.killTweensOf(mesh.material);
-            gsap.killTweensOf((mesh.material as any).opacity);
-          }
-        }
-      });
     });
 
-    // GSAP fromTo for each object - FROM: currentPos, currentRotation, opacity 1
-    // TO: endPos, endRotation, opacity 0
+    // Simple fromTo for each object - animates position, rotation, and opacity together
     allObjects.forEach(([key, object]) => {
       // Get materials for opacity
       const materials: any[] = [];
@@ -181,83 +166,70 @@ export function initHomeScrollAnimation() {
         }
       });
 
-      // Get FROM values: currentPos, currentRotation, opacity 1
+      // Get FROM values: current position, current rotation, opacity 1
       const startPos = startPositions[key] || object.position.clone();
       const startRot = getCurrentRotations()[key] || object.quaternion.clone();
-
-      // Convert quaternion to Euler for GSAP (GSAP can't animate quaternions directly)
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
 
-      // Calculate TO values: endPos, endRotation, opacity 0
+      // Get TO values: center of maze, laydown rotation, opacity 0
       const endPos = objectHomeScrollEndPathPoint;
       const d1 = startRot.angleTo(LAY_DOWN_QUAT_1);
       const d2 = startRot.angleTo(LAY_DOWN_QUAT_2);
       const endRot = d1 < d2 ? LAY_DOWN_QUAT_1 : LAY_DOWN_QUAT_2;
       const endEuler = new THREE.Euler().setFromQuaternion(endRot);
 
-      // GSAP fromTo - animates position directly
-      homeScrollTimeline!.fromTo(
-        object.position,
-        {
-          // FROM: currentPos
-          x: startPos.x,
-          y: startPos.y,
-          z: startPos.z,
-        },
-        {
-          // TO: endPos
-          x: endPos.x,
-          y: endPos.y,
-          z: endPos.z,
-          ease: "power1.25",
-        }
-      );
+      // Create a wrapper object to animate all properties together
+      const animProps = {
+        posX: startPos.x,
+        posY: startPos.y,
+        posZ: startPos.z,
+        rotX: startEuler.x,
+        rotY: startEuler.y,
+        rotZ: startEuler.z,
+        opacity: 1.0,
+      };
 
-      // GSAP fromTo - animates rotation directly (as Euler)
+      // Single fromTo that animates everything together
       homeScrollTimeline!.fromTo(
-        object.rotation,
+        animProps,
         {
-          // FROM: currentRotation (as Euler)
-          x: startEuler.x,
-          y: startEuler.y,
-          z: startEuler.z,
+          // FROM: current position, current rotation, opacity 1
+          posX: startPos.x,
+          posY: startPos.y,
+          posZ: startPos.z,
+          rotX: startEuler.x,
+          rotY: startEuler.y,
+          rotZ: startEuler.z,
+          opacity: 1.0,
         },
         {
-          // TO: endRotation (as Euler)
-          x: endEuler.x,
-          y: endEuler.y,
-          z: endEuler.z,
-          ease: "power1.5",
+          // TO: center position, laydown rotation, opacity 0
+          posX: endPos.x,
+          posY: endPos.y,
+          posZ: endPos.z,
+          rotX: endEuler.x,
+          rotY: endEuler.y,
+          rotZ: endEuler.z,
+          opacity: 0.0,
+          ease: "power1.out",
           onUpdate: function () {
-            // Update quaternion from Euler rotation
+            // Apply position
+            object.position.set(animProps.posX, animProps.posY, animProps.posZ);
+
+            // Apply rotation (Euler to quaternion)
+            object.rotation.set(animProps.rotX, animProps.rotY, animProps.rotZ);
             object.quaternion.setFromEuler(object.rotation);
             updateObjectRotation(key, object.quaternion);
+
+            // Apply opacity to all materials
+            materials.forEach((mat) => {
+              mat.opacity = animProps.opacity;
+              mat.transparent = animProps.opacity < 1.0;
+            });
+            updateObjectOpacity(key, animProps.opacity);
           },
         }
       );
-
-      // GSAP fromTo - animates opacity directly
-      // Opacity stays at 1.0 until 85%, then fades to 0.0 in the last 15%
-      if (materials.length > 0) {
-        homeScrollTimeline!.fromTo(
-          materials,
-          {
-            opacity: 1.0,
-          },
-          {
-            keyframes: [
-              { opacity: 1.0, duration: 0.85 }, // Stay at 100% until 85%
-              { opacity: 0.0, duration: 0.15 }, // Fade to 0% from 85-100%
-            ],
-            onUpdate: function () {
-              materials.forEach((mat) => {
-                mat.transparent = mat.opacity < 1.0;
-              });
-              updateObjectOpacity(key, materials[0]?.opacity ?? 1.0);
-            },
-          }
-        );
-      }
     });
   };
 
