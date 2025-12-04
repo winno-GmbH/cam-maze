@@ -59,6 +59,7 @@ export const KEYFRAME_SCALE = {
 } as const;
 
 export const KEYFRAME_DURATION = {
+  NONE: 0,
   FADE_IN: 0.3,
   HOLD: 0.4,
   FADE_OUT: 0.3,

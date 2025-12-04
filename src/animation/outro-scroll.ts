@@ -34,7 +34,7 @@ export function initOutroScrollAnimation() {
         {
           scale: KEYFRAME_SCALE.START,
           opacity: OPACITY.HIDDEN,
-          duration: 0,
+          duration: KEYFRAME_DURATION.NONE,
         },
         {
           scale: KEYFRAME_SCALE.MID,

@@ -87,11 +87,6 @@ export function getObjectOpacity(object: THREE.Object3D): number {
   return opacity;
 }
 
-export function isGhostMaterial(material: THREE.Material): boolean {
-  const mat = material as any;
-  return mat.transmission !== undefined && mat.transmission > 0;
-}
-
 export function resetGhostMaterialsToFullOpacity(object: THREE.Object3D): void {
   setObjectOpacity(object, 1.0, {
     preserveTransmission: true,

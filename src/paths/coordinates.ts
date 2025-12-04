@@ -1,3 +1,5 @@
+import * as THREE from "three";
+
 export type XCoordKey =
   | "0"
   | "0.5"

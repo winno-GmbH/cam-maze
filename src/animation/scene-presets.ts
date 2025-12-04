@@ -4,7 +4,6 @@ import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
 import {
   slerpToLayDown,
-  rotateQuaternionAroundAxis,
   applyRotations,
   OBJECT_KEYS,
   GHOST_COLORS,
@@ -20,7 +19,6 @@ import {
 } from "../core/material-utils";
 import {
   updateObjectRotation,
-  syncStateFromObjects,
 } from "./object-state";
 import { setFloorPlane, setObjectScale, killObjectAnimations } from "./scene-utils";
 import {
@@ -82,9 +80,6 @@ export function applyHomeScrollPreset(
           y: pausedPositions[key].y,
           z: pausedPositions[key].z,
         });
-      }
-
-      if (pausedRotations[key]) {
       }
 
       gsap.set(object, { visible: true });

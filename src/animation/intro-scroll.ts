@@ -3,7 +3,6 @@ import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
-import { scene } from "../core/scene";
 import {
   applyIntroScrollPreset,
   getScrollDirection,
@@ -24,7 +23,6 @@ import {
 import {
   SCROLL_SELECTORS,
   SCALE,
-  COLOR,
   OPACITY,
   INTRO_WALK_DISTANCE,
   INTRO_FADE_IN_DURATION,
@@ -179,7 +177,7 @@ export function initIntroScrollAnimation() {
           {
             scale: KEYFRAME_SCALE.START,
             opacity: OPACITY.HIDDEN,
-            duration: 0,
+            duration: KEYFRAME_DURATION.NONE,
           },
           {
             scale: KEYFRAME_SCALE.MID,
@@ -207,7 +205,7 @@ export function initIntroScrollAnimation() {
           {
             scale: KEYFRAME_SCALE.START,
             opacity: OPACITY.HIDDEN,
-            duration: 0,
+            duration: KEYFRAME_DURATION.NONE,
           },
           {
             scale: KEYFRAME_SCALE.MID,
@@ -304,8 +302,6 @@ function updateObjectsWalkBy(progress: number) {
       } else if (ghostQuat) {
         object.quaternion.copy(ghostQuat);
       }
-
-      object.updateMatrixWorld(true);
 
       object.visible = true;
       setObjectScale(object, key, "intro");

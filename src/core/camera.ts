@@ -1,22 +1,14 @@
 import * as THREE from "three";
-import gsap from "gsap";
-import ScrollTrigger from "gsap/ScrollTrigger";
 import { getLookAtPosition, getStartPosition } from "../paths/pathpoints";
 
-gsap.registerPlugin(ScrollTrigger);
-
-const CAMERA_CONFIG = {
-  originalFOV: 50,
-  wideFOV: 80,
-  near: 0.001,
-  far: 100,
-};
+const CAMERA_NEAR = 0.001;
+const CAMERA_FAR = 100;
 
 export const camera = new THREE.PerspectiveCamera(
   50,
   window.innerWidth / window.innerHeight,
-  CAMERA_CONFIG.near,
-  CAMERA_CONFIG.far
+  CAMERA_NEAR,
+  CAMERA_FAR
 );
 
 export function setupCamera(): void {

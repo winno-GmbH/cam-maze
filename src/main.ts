@@ -12,16 +12,9 @@ import {
 import { initPovScrollAnimation } from "./animation/pov-scroll";
 import { loadModel } from "./core/objects";
 import { setupCamera } from "./core/camera";
-import { XCoordKey, ZCoordKey } from "./paths/coordinates";
 import { initIntroScrollAnimation } from "./animation/intro-scroll";
 import { initOutroScrollAnimation } from "./animation/outro-scroll";
 import { initializeObjectStates } from "./animation/object-state";
-
-declare global {
-  interface Window {
-    lookAt: (x: XCoordKey, y: number, z: ZCoordKey) => void;
-  }
-}
 
 function initSkipButton() {
   const skipButton = document.querySelector(".wr_p--skip.wr_p");

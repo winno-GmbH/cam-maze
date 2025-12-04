@@ -37,8 +37,7 @@ export class TangentSmoother {
 }
 
 function createMazePath(
-  pathPoints: MazePathPoint[],
-  pathName?: string
+  pathPoints: MazePathPoint[]
 ): THREE.CurvePath<THREE.Vector3> {
   const cacheKey = pathPoints
     .map((p) => `${p.pos.x},${p.pos.y},${p.pos.z},${p.type},${p.arc || ""}`)
@@ -134,58 +133,11 @@ function createCameraHomeScrollPath(
   return path;
 }
 
-function createCameraPath(
-  pathPoints: CameraPathPoint[]
-): THREE.CurvePath<THREE.Vector3> {
-  const path = new THREE.CurvePath<THREE.Vector3>();
-
-  for (let i = 0; i < pathPoints.length - 1; i++) {
-    const current = pathPoints[i];
-    const next = pathPoints[i + 1];
-
-    if ("type" in current && current.type === "straight") {
-      path.add(new THREE.LineCurve3(current.pos, next.pos));
-    } else if (
-      "type" in current &&
-      current.type === "curve" &&
-      "arc" in current
-    ) {
-      const midPoint = createCameraCurveMidPoint(current, next);
-      path.add(
-        new THREE.QuadraticBezierCurve3(current.pos, midPoint, next.pos)
-      );
-    } else {
-      path.add(new THREE.LineCurve3(current.pos, next.pos));
-    }
-  }
-
-  return path;
-}
-
-function createCameraCurveMidPoint(
-  current: CameraPathPoint,
-  next: CameraPathPoint
-): THREE.Vector3 {
-  if ("arc" in current && current.arc) {
-    const curveType = current.arc;
-
-    if (curveType === "upperArc") {
-      return new THREE.Vector3(current.pos.x, current.pos.y, next.pos.z);
-    } else if (curveType === "lowerArc") {
-      return new THREE.Vector3(next.pos.x, current.pos.y, current.pos.z);
-    } else if (curveType === "forwardDownArc") {
-      return new THREE.Vector3(current.pos.x, next.pos.y, current.pos.z);
-    }
-  }
-
-  return new THREE.Vector3(current.pos.x, current.pos.y, next.pos.z);
-}
-
 export function getHomePaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
   const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 
   Object.entries(homePaths).forEach(([key, pathPoints]) => {
-    paths[key] = createMazePath(pathPoints, key);
+    paths[key] = createMazePath(pathPoints);
   });
 
   return paths;
@@ -212,11 +164,7 @@ export function getPovPaths(): Record<string, THREE.CurvePath<THREE.Vector3>> {
   const paths: Record<string, THREE.CurvePath<THREE.Vector3>> = {};
 
   Object.entries(povPaths).forEach(([key, pathPoints]) => {
-    if (key === "camera") {
-      paths[key] = createMazePath(pathPoints as MazePathPoint[], key);
-    } else {
-      paths[key] = createMazePath(pathPoints as MazePathPoint[], key);
-    }
+    paths[key] = createMazePath(pathPoints as MazePathPoint[]);
   });
 
   return paths;

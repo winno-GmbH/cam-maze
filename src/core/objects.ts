@@ -35,14 +35,6 @@ const ghostContainers = {
   Ghost_GBP: ghosts.ghost5,
 };
 
-const greenMaterial = new THREE.MeshBasicMaterial({
-  color: 0x00ff00,
-  opacity: 1,
-  transparent: false,
-  depthWrite: true,
-  depthTest: true,
-});
-
 export async function loadModel(scene: THREE.Scene): Promise<void> {
   Object.values(ghosts).forEach((ghost) => scene.add(ghost));
   scene.add(pacman);
@@ -51,8 +43,6 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
       ASSETS.mazeModel,
       function (gltf) {
         const model = gltf.scene;
-
-        model.traverse((obj: THREE.Object3D) => {});
 
         model.traverse((child: THREE.Object3D) => {
           if (child.name === "CAM-Pacman") {
@@ -148,8 +138,6 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
 
             if (ghostContainer) {
               ghostContainer.add(ghostGroup);
-            } else {
-              console.warn(`ghostContainer for ${child.name} is undefined!`);
             }
           }
 
