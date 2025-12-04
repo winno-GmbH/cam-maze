@@ -161,22 +161,14 @@ function updateHomeLoop(delta: number) {
   );
   const isTransitioning = hasBeenPausedBefore && transitionProgress < 1;
 
-  const homeLoopStartPos = isFirstFrame ? getHomeLoopStartPositions() : null;
-  const savedT = getHomeLoopStartT();
+  if (isFirstFrame) {
+    isFirstFrame = false;
+  }
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
-      if (isFirstFrame && savedStartPositions[key]) {
-        setObjectScale(ghost, key, "home");
-        return;
-      }
-
-      let objectT = t;
-      if (savedT !== null) {
-        const deltaT = t - savedT;
-        objectT = (savedT + deltaT + 1) % 1;
-      }
+      const objectT = t;
 
       const position = path.getPointAt(objectT);
       if (position) {
@@ -215,10 +207,6 @@ function updateHomeLoop(delta: number) {
       updateObjectRotation(key, ghost.quaternion);
     }
   });
-
-  if (isFirstFrame) {
-    isFirstFrame = false;
-  }
 }
 
 export function homeLoopHandler() {
