@@ -223,6 +223,7 @@ export function initHomeScrollAnimation() {
   // Function to create/update animations with current FROM values
   const createObjectAnimations = () => {
     // Clear timeline to remove all existing animations
+    // Note: This will also clear camera animation, so it must be re-added after
     if (homeScrollTimeline) {
       homeScrollTimeline.clear();
     }
@@ -377,6 +378,17 @@ export function initHomeScrollAnimation() {
     }
 
     cameraProgressWrapper = { value: 0 };
+
+    // Add camera animation at position 0 (start of timeline) so it runs for the full duration
+    // This ensures camera animates alongside the object animations
+    // Make sure cameraPath exists before creating animation
+    if (!cameraPath || cameraPath.curves.length === 0) {
+      console.warn("Camera path not created, skipping camera animation");
+      return;
+    }
+
+    // Add camera animation - it should run for the full timeline duration
+    // Position 0 means it starts at the beginning and runs alongside object animations
     homeScrollTimeline!.fromTo(
       cameraProgressWrapper,
       { value: 0 },
@@ -385,7 +397,7 @@ export function initHomeScrollAnimation() {
         immediateRender: false,
         onUpdate: function () {
           const progress = this.targets()[0].value;
-          if (cameraPath) {
+          if (cameraPath && cameraPath.curves.length > 0) {
             const cameraPoint = cameraPath.getPointAt(progress);
             camera.position.copy(cameraPoint);
 
@@ -410,7 +422,8 @@ export function initHomeScrollAnimation() {
             camera.updateProjectionMatrix();
           }
         },
-      }
+      },
+      "<" // Start at the same time as the first animation (object animations)
     );
   };
 
