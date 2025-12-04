@@ -11,7 +11,7 @@ import {
   getGhostTargetQuaternion,
   INTRO_POSITION_OFFSET,
 } from "./scene-presets";
-import { setMaterialOpacity, setGhostColor } from "../core/material-utils";
+import { setMaterialOpacity, setGhostColor, forEachMaterial } from "../core/material-utils";
 import {
   OBJECT_KEYS,
   GHOST_COLORS,

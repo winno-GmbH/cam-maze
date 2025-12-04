@@ -8,7 +8,11 @@ import { homeLoopHandler } from "./home-loop";
 import { LAY_DOWN_QUAT_1 } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import { updateObjectRotation, getCurrentRotations } from "./object-state";
-import { setObjectOpacity, getObjectOpacity } from "../core/material-utils";
+import {
+  setObjectOpacity,
+  getObjectOpacity,
+  forEachMaterial,
+} from "../core/material-utils";
 import { SCROLL_SELECTORS } from "./constants";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
@@ -164,8 +168,7 @@ export function initHomeScrollAnimation() {
       // Get path for this object
       const path = homeScrollPaths[key];
       if (!path) {
-        console.warn(`No path found for object: ${key}`);
-        return;
+        return; // Skip if no path found
       }
 
       // Create animation props object - use progress for path animation

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ghosts } from "../core/objects";
-import { setObjectOpacity } from "../core/material-utils";
+import { setObjectOpacity, forEachMaterial } from "../core/material-utils";
 
 /**
  * UNIFIED OBJECT STATE MANAGER
@@ -74,21 +74,19 @@ export function getHomeLoopAnimationTime(): number {
 // Initialize state for all objects
 export function initializeObjectStates() {
   Object.entries(ghosts).forEach(([key, object]) => {
-    // Get initial opacity from first material found
+    // Get initial opacity from first material found using centralized utility
     let initialOpacity = 1.0;
-    object.traverse((child) => {
-      if ((child as any).isMesh && (child as any).material) {
-        const mesh = child as THREE.Mesh;
-        if (Array.isArray(mesh.material)) {
-          if (mesh.material.length > 0) {
-            initialOpacity = (mesh.material[0] as any).opacity ?? 1.0;
-          }
-        } else {
-          initialOpacity = ((mesh.material as any).opacity ?? 1.0);
+    let found = false;
+    forEachMaterial(
+      object,
+      (mat: any) => {
+        if (!found) {
+          initialOpacity = mat.opacity ?? 1.0;
+          found = true;
         }
-        return; // Only need first material
-      }
-    });
+      },
+      { skipCurrencySymbols: false }
+    );
 
     currentObjectStates[key] = {
       position: object.position.clone(),
@@ -120,21 +118,19 @@ export function syncStateFromObjects() {
       // Opacity is managed directly by animations - don't sync it here
       // This avoids expensive traverse() calls on every position update
     } else {
-      // Initial state creation: get opacity from first material
+      // Initial state creation: get opacity from first material using centralized utility
       let initialOpacity = 1.0;
-      object.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          const mesh = child as THREE.Mesh;
-          if (Array.isArray(mesh.material)) {
-            if (mesh.material.length > 0) {
-              initialOpacity = (mesh.material[0] as any).opacity ?? 1.0;
-            }
-          } else {
-            initialOpacity = ((mesh.material as any).opacity ?? 1.0);
+      let found = false;
+      forEachMaterial(
+        object,
+        (mat: any) => {
+          if (!found) {
+            initialOpacity = mat.opacity ?? 1.0;
+            found = true;
           }
-          return; // Only need first material
-        }
-      });
+        },
+        { skipCurrencySymbols: false }
+      );
 
       currentObjectStates[key] = {
         position: object.position.clone(),

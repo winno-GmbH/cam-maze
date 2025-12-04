@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { isCurrencySymbol } from "../animation/util";
+import { isCurrencySymbol, isPacmanPart } from "../animation/util";
 
 /**
  * MATERIAL UTILITIES
@@ -161,6 +161,38 @@ export function setGhostColor(
 ): void {
   const skipCurrencySymbols = options?.skipCurrencySymbols !== false; // Default: true
 
+  forEachMaterial(
+    object,
+    (mat: any) => {
+      if (mat.color && mat.color.getHex() !== color) {
+        mat.color.setHex(color);
+      }
+    },
+    { skipCurrencySymbols }
+  );
+}
+
+/**
+ * Iterate over all materials in an object
+ * Centralized utility to avoid code duplication for the common traverse pattern
+ * 
+ * @param object - The object to traverse
+ * @param callback - Function called for each material found
+ * @param options - Optional configuration
+ */
+export function forEachMaterial(
+  object: THREE.Object3D,
+  callback: (material: THREE.Material, mesh: THREE.Mesh, childName: string) => void,
+  options?: {
+    skipCurrencySymbols?: boolean; // If true, skips currency symbol meshes (default: false)
+    skipPacmanParts?: boolean; // If true, skips pacman parts (default: false)
+    objectKey?: string; // Object key (e.g., "pacman", "ghost1") - needed for skipPacmanParts
+  }
+): void {
+  const skipCurrencySymbols = options?.skipCurrencySymbols === true;
+  const skipPacmanParts = options?.skipPacmanParts === true;
+  const objectKey = options?.objectKey;
+
   object.traverse((child) => {
     if ((child as any).isMesh && (child as any).material) {
       const mesh = child as THREE.Mesh;
@@ -171,17 +203,17 @@ export function setGhostColor(
         return;
       }
 
+      // Skip pacman parts if requested
+      if (skipPacmanParts && objectKey === "pacman" && isPacmanPart(childName)) {
+        return;
+      }
+
       if (Array.isArray(mesh.material)) {
         mesh.material.forEach((mat: any) => {
-          if (mat.color && mat.color.getHex() !== color) {
-            mat.color.setHex(color);
-          }
+          callback(mat, mesh, childName);
         });
       } else {
-        const mat = mesh.material as any;
-        if (mat.color && mat.color.getHex() !== color) {
-          mat.color.setHex(color);
-        }
+        callback(mesh.material as any, mesh, childName);
       }
     }
   });
