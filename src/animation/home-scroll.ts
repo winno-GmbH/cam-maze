@@ -182,10 +182,12 @@ export function initHomeScrollAnimation() {
     });
 
     const totalObjects = animationData.length;
+    const baseDuration = 1;
+    const staggerDuration = STAGGER_AMOUNT;
 
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];
-      const staggerPosition = index * (STAGGER_AMOUNT / totalObjects);
+      const duration = baseDuration + index * staggerDuration;
 
       const startPathPoint = data.path.getPointAt(0);
       data.object.position.copy(startPathPoint);
@@ -207,6 +209,7 @@ export function initHomeScrollAnimation() {
           opacity: OPACITY.HIDDEN,
           ease: "power1.out",
           immediateRender: false,
+          duration: duration,
           onUpdate: function () {
             const pathPoint = data.path.getPointAt(animProps.progress);
             data.object.position.copy(pathPoint);
@@ -224,7 +227,7 @@ export function initHomeScrollAnimation() {
             });
           },
         },
-        staggerPosition
+        0
       );
     });
   };
