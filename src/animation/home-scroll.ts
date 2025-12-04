@@ -13,6 +13,7 @@ import {
   getCurrentRotations,
   getCurrentPositions,
   syncStateFromObjects,
+  getHomeLoopStartPositions,
 } from "./object-state";
 import {
   setObjectOpacity,
@@ -55,16 +56,22 @@ export function initHomeScrollAnimation() {
 
   const handleScrollEnter = () => {
     requestAnimationFrame(() => {
-      const currentPositions = getCurrentPositions();
+      const homeLoopStartPos = getHomeLoopStartPositions();
       const currentRotations = getCurrentRotations();
       const scrollDir = getScrollDirection();
 
       Object.entries(ghosts).forEach(([key, object]) => {
-        if (currentPositions[key]) {
-          object.position.copy(currentPositions[key]);
-          startPositions[key] = currentPositions[key].clone();
+        if (homeLoopStartPos[key]) {
+          object.position.copy(homeLoopStartPos[key]);
+          startPositions[key] = homeLoopStartPos[key].clone();
         } else {
-          startPositions[key] = object.position.clone();
+          const currentPositions = getCurrentPositions();
+          if (currentPositions[key]) {
+            object.position.copy(currentPositions[key]);
+            startPositions[key] = currentPositions[key].clone();
+          } else {
+            startPositions[key] = object.position.clone();
+          }
         }
       });
 
@@ -86,13 +93,12 @@ export function initHomeScrollAnimation() {
       onEnterBack: handleScrollEnter,
       onScrubComplete: () => {
         requestAnimationFrame(() => {
-          syncStateFromObjects(true);
           homeLoopHandler();
         });
       },
       onLeaveBack: () => {
         requestAnimationFrame(() => {
-          syncStateFromObjects(true);
+          homeLoopHandler();
         });
       },
     },
@@ -198,7 +204,6 @@ export function initHomeScrollAnimation() {
           onUpdate: function () {
             const pathPoint = data.path.getPointAt(animProps.progress);
             data.object.position.copy(pathPoint);
-            updateObjectPosition(data.key, pathPoint, true);
 
             data.object.rotation.set(
               animProps.rotX,

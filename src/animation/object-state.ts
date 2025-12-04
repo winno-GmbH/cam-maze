@@ -28,6 +28,8 @@ export const homeLoopState: HomeLoopState = {
 
 export const currentObjectStates: Record<string, ObjectState> = {};
 
+export let homeLoopStartPositions: Record<string, THREE.Vector3> = {};
+
 let isHomeLoopActive = false;
 
 export function setHomeLoopActive(active: boolean) {
@@ -134,7 +136,8 @@ export function getCurrentRotations(): Record<string, THREE.Quaternion> {
 export function updateObjectPosition(
   key: string,
   position: THREE.Vector3,
-  force: boolean = false
+  force: boolean = false,
+  preserveHomeLoopStart: boolean = false
 ) {
   if (!isHomeLoopActive && !force) {
     return;
@@ -143,6 +146,18 @@ export function updateObjectPosition(
   if (currentObjectStates[key]) {
     currentObjectStates[key].position.copy(position);
   }
+
+  if (preserveHomeLoopStart) {
+    homeLoopStartPositions[key] = position.clone();
+  }
+}
+
+export function getHomeLoopStartPositions(): Record<string, THREE.Vector3> {
+  return { ...homeLoopStartPositions };
+}
+
+export function clearHomeLoopStartPositions(): void {
+  homeLoopStartPositions = {};
 }
 
 export function updateObjectRotation(key: string, rotation: THREE.Quaternion) {

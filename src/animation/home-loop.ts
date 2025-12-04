@@ -20,6 +20,8 @@ import {
   setHomeLoopActive,
   updateHomeLoopT,
   updateHomeLoopPausedT,
+  getHomeLoopStartPositions,
+  clearHomeLoopStartPositions,
 } from "./object-state";
 import { isCurrencySymbol } from "./util";
 
@@ -56,6 +58,10 @@ function stopHomeLoop() {
   updateHomeLoopPausedT(pausedT);
 
   syncStateFromObjects(true);
+
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    updateObjectPosition(key, ghost.position.clone(), true, true);
+  });
 
   const homePaths = getHomePaths();
   Object.entries(ghosts).forEach(([key, ghost]) => {
@@ -125,21 +131,28 @@ function startHomeLoop() {
   initializeHomeLoopTangentSmoothers();
 
   const homePaths = getHomePaths();
+  const homeLoopStartPos = getHomeLoopStartPositions();
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
-      const currentPositions = getCurrentPositions();
-      const savedPosition = currentPositions[key];
+      const savedPosition = homeLoopStartPos[key];
 
       if (savedPosition) {
         ghost.position.copy(savedPosition);
         updateObjectPosition(key, savedPosition);
       } else {
-        const position = path.getPointAt(pausedT);
-        if (position) {
-          ghost.position.copy(position);
-          updateObjectPosition(key, position);
+        const currentPositions = getCurrentPositions();
+        const currentPosition = currentPositions[key];
+        if (currentPosition) {
+          ghost.position.copy(currentPosition);
+          updateObjectPosition(key, currentPosition);
+        } else {
+          const position = path.getPointAt(pausedT);
+          if (position) {
+            ghost.position.copy(position);
+            updateObjectPosition(key, position);
+          }
         }
       }
 
