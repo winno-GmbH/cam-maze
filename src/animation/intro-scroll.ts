@@ -2,7 +2,8 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
-import { ghosts } from "../core/objects";
+import { ghosts, pacmanMixer } from "../core/objects";
+import { clock } from "../core/scene";
 import {
   applyIntroScrollPreset,
   getScrollDirection,
@@ -248,6 +249,10 @@ function updateObjectsWalkBy(progress: number) {
   isUpdating = true;
 
   try {
+    if (pacmanMixer) {
+      pacmanMixer.update(clock.getDelta());
+    }
+
     setFloorPlane(true, OPACITY.HIDDEN, true);
 
     const baseCenter = new THREE.Vector3(
@@ -260,7 +265,7 @@ function updateObjectsWalkBy(progress: number) {
     const walkEnd = baseCenter.x + INTRO_WALK_DISTANCE;
 
     const objectsToAnimate = [
-      { key: "pacman", behindOffset: 0, zOffset: 0.5, xOffset: 0, yPhase: 0 },
+      { key: "pacman", behindOffset: 1.5, zOffset: 0.5, xOffset: 0, yPhase: 0 },
       {
         key: "ghost1",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST1,
