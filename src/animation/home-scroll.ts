@@ -303,35 +303,35 @@ export function initHomeScrollAnimation() {
       });
     });
 
-    // Use stagger to animate all objects with different start times
-    // Reduced stagger amount for faster sequential animation
-    homeScrollTimeline!.fromTo(
-      animPropsArray,
-      {
-        // FROM: progress 0 (start of path), current rotation, opacity 1.0
-        progress: 0,
-        rotX: (index: number) => animationData[index].startEuler.x,
-        rotY: (index: number) => animationData[index].startEuler.y,
-        rotZ: (index: number) => animationData[index].startEuler.z,
-        opacity: 1.0, // All start from 1.0
-      },
-      {
-        // TO: progress 1 (end of path), laydown rotation, opacity 0
-        progress: 1,
-        rotX: (index: number) => animationData[index].endEuler.x,
-        rotY: (index: number) => animationData[index].endEuler.y,
-        rotZ: (index: number) => animationData[index].endEuler.z,
-        opacity: 0.0,
-        ease: "power1.out",
-        stagger: {
-          amount: 0.2, // Reduced stagger - objects animate faster after each other
-        },
-        onUpdate: function (this: gsap.core.Tween) {
-          // Apply updates to each object
-          const targets = this.targets() as any[];
-          targets.forEach((animProps, index) => {
-            const data = animationData[index];
+    // Create individual animations for each object with manual stagger positioning
+    // This ensures each object's opacity animates correctly
+    const totalObjects = animationData.length;
+    const staggerAmount = 0.15; // Stagger amount as fraction of timeline (15%)
 
+    animationData.forEach((data, index) => {
+      const animProps = animPropsArray[index];
+      const staggerPosition = index * (staggerAmount / totalObjects);
+
+      // Create individual fromTo animation for each object
+      homeScrollTimeline!.fromTo(
+        animProps,
+        {
+          // FROM: progress 0 (start of path), current rotation, opacity 1.0
+          progress: 0,
+          rotX: data.startEuler.x,
+          rotY: data.startEuler.y,
+          rotZ: data.startEuler.z,
+          opacity: 1.0, // Start from 1.0
+        },
+        {
+          // TO: progress 1 (end of path), laydown rotation, opacity 0
+          progress: 1,
+          rotX: data.endEuler.x,
+          rotY: data.endEuler.y,
+          rotZ: data.endEuler.z,
+          opacity: 0.0,
+          ease: "power1.out",
+          onUpdate: function () {
             // Calculate position along path based on progress
             const pathPoint = data.path.getPointAt(animProps.progress);
             data.object.position.copy(pathPoint);
@@ -345,7 +345,7 @@ export function initHomeScrollAnimation() {
             data.object.quaternion.setFromEuler(data.object.rotation);
             updateObjectRotation(data.key, data.object.quaternion);
 
-            // Apply opacity to all materials DIRECTLY (don't use updateObjectOpacity to avoid conflicts)
+            // Apply opacity to all materials DIRECTLY
             // These are the exact materials we collected for this object
             data.materials.forEach((mat) => {
               mat.opacity = animProps.opacity;
@@ -358,10 +358,11 @@ export function initHomeScrollAnimation() {
 
             // Log current opacity for each object every frame
             console.log(`${data.key} opacity:`, animProps.opacity);
-          });
+          },
         },
-      }
-    );
+        staggerPosition // Start position on timeline (staggered)
+      );
+    });
   };
 
   // Store camera progress wrapper for killing
