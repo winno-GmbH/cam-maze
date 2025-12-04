@@ -278,28 +278,28 @@ function updateObjectsWalkBy(progress: number) {
         behindOffset: INTRO_GHOST_OFFSETS.GHOST2,
         zOffset: 0.5,
         xOffset: -0.15,
-        yPhase: Math.PI * 0.4,
+        yPhase: 0,
       },
       {
         key: "ghost3",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST3,
         zOffset: 0.5,
         xOffset: 0.25,
-        yPhase: Math.PI * 0.8,
+        yPhase: 0,
       },
       {
         key: "ghost4",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST4,
         zOffset: 0.5,
         xOffset: -0.2,
-        yPhase: Math.PI * 1.2,
+        yPhase: 0,
       },
       {
         key: "ghost5",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST5,
         zOffset: 0.5,
         xOffset: 0.18,
-        yPhase: Math.PI * 1.6,
+        yPhase: 0,
       },
     ];
 
@@ -324,7 +324,7 @@ function updateObjectsWalkBy(progress: number) {
         const zBounce =
           key === "pacman"
             ? 0
-            : Math.sin(normalizedProgress * Math.PI * 2 + yPhase) * 0.25;
+            : Math.sin(normalizedProgress * Math.PI * 2 + yPhase) * 0.05;
         const finalX = pacmanX + behindOffset + (xOffset || 0);
         const finalY = pacmanY;
         const finalZ = pacmanZ + zOffset - zBounce;
