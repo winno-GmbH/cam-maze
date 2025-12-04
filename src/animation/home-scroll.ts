@@ -355,6 +355,9 @@ export function initHomeScrollAnimation() {
               mat.transparent = animProps.opacity < 1.0;
             });
             updateObjectOpacity(data.key, animProps.opacity);
+
+            // Log current opacity for each object every frame
+            console.log(`${data.key} opacity:`, animProps.opacity);
           });
         },
       }
