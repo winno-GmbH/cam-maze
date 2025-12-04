@@ -11,6 +11,7 @@ import {
   getGhostTargetQuaternion,
   INTRO_POSITION_OFFSET,
 } from "./scene-presets";
+import { setMaterialOpacity } from "../core/material-utils";
 import {
   OBJECT_KEYS,
   GHOST_COLORS,
@@ -66,12 +67,10 @@ function setObjectVisibilityAndOpacity(key: string, obj: THREE.Object3D) {
       mesh.visible = true;
       if (Array.isArray(mesh.material)) {
         mesh.material.forEach((mat: any) => {
-          mat.opacity = 1;
-          mat.transparent = true;
+          setMaterialOpacity(mat, 1, true);
         });
       } else {
-        (mesh.material as any).opacity = 1;
-        (mesh.material as any).transparent = true;
+        setMaterialOpacity(mesh.material as any, 1, true);
       }
     }
   });
@@ -353,25 +352,14 @@ function updateObjectsWalkBy(progress: number) {
           // CRITICAL: Force visibility EVERY frame (don't check, just set it)
           mesh.visible = true;
 
-          // CRITICAL: Force opacity EVERY frame (always set it, don't check cache or conditions)
-          // This ensures opacity is always correct even if something overrides it
+          // CRITICAL: Force opacity EVERY frame using centralized utility
+          // This ensures opacity is always correct and ghost materials keep transparent=true
           if (Array.isArray(mesh.material)) {
             mesh.material.forEach((mat: any) => {
-              mat.opacity = targetOpacity;
-              mat.transparent = true;
-              // Force material update
-              if (mat.needsUpdate !== undefined) {
-                mat.needsUpdate = true;
-              }
+              setMaterialOpacity(mat, targetOpacity, true);
             });
           } else {
-            const mat = mesh.material as any;
-            mat.opacity = targetOpacity;
-            mat.transparent = true;
-            // Force material update
-            if (mat.needsUpdate !== undefined) {
-              mat.needsUpdate = true;
-            }
+            setMaterialOpacity(mesh.material as any, targetOpacity, true);
           }
 
           // Set ghost colors (only if needed)

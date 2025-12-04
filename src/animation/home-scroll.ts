@@ -11,6 +11,7 @@ import { homeLoopHandler } from "./home-loop";
 import { LAY_DOWN_QUAT_1, LAY_DOWN_QUAT_2 } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import { updateObjectRotation, getCurrentRotations } from "./object-state";
+import { setObjectOpacity, getObjectOpacity } from "../core/material-utils";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
@@ -164,21 +165,8 @@ export function initHomeScrollAnimation() {
     }> = [];
 
     allObjects.forEach(([key, object]) => {
-      // Get current opacity from original materials BEFORE cloning
-      let currentMaterialOpacity = 1.0;
-      object.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          const mesh = child as THREE.Mesh;
-          if (Array.isArray(mesh.material)) {
-            if (mesh.material.length > 0) {
-              currentMaterialOpacity = (mesh.material[0] as any).opacity ?? 1.0;
-            }
-          } else {
-            currentMaterialOpacity = (mesh.material as any).opacity ?? 1.0;
-          }
-          return; // Only need first material
-        }
-      });
+      // Get current opacity using centralized utility
+      const currentMaterialOpacity = getObjectOpacity(object);
 
       // Get materials for opacity and CLONE them to avoid shared material issues
       // Materials are shared between objects (e.g., ghostMaterial), so we need to clone them
@@ -293,49 +281,11 @@ export function initHomeScrollAnimation() {
             data.object.quaternion.setFromEuler(data.object.rotation);
             updateObjectRotation(data.key, data.object.quaternion);
 
-            // Apply opacity to all materials DIRECTLY
-            // Get materials fresh from the object each frame to ensure we have the correct references
-            // CRITICAL: Always set transparent=true to preserve transmission/glow effects
-            // MeshPhysicalMaterial with transmission needs transparent=true even at opacity 1.0
-            // to maintain consistent rendering and glow effects
-            data.object.traverse((child) => {
-              if ((child as any).isMesh && (child as any).material) {
-                const mesh = child as THREE.Mesh;
-                if (Array.isArray(mesh.material)) {
-                  mesh.material.forEach((mat: any) => {
-                    mat.opacity = animProps.opacity;
-                    mat.transparent = true;
-                    console.log(`${data.key} opacity:`, animProps.opacity);
-                    // Preserve depthWrite setting (should be false for ghost materials)
-                    if (
-                      mat.depthWrite !== undefined &&
-                      mat.depthWrite === false
-                    ) {
-                      mat.depthWrite = false;
-                    }
-                    // Force material update to ensure transmission effect is recalculated
-                    if (mat.needsUpdate !== undefined) {
-                      mat.needsUpdate = true;
-                    }
-                  });
-                } else {
-                  const mat = mesh.material as any;
-                  mat.opacity = animProps.opacity;
-                  mat.transparent = true;
-                  console.log(`${data.key} opacity:`, animProps.opacity);
-                  // Preserve depthWrite setting (should be false for ghost materials)
-                  if (
-                    mat.depthWrite !== undefined &&
-                    mat.depthWrite === false
-                  ) {
-                    mat.depthWrite = false;
-                  }
-                  // Force material update to ensure transmission effect is recalculated
-                  if (mat.needsUpdate !== undefined) {
-                    mat.needsUpdate = true;
-                  }
-                }
-              }
+            // Apply opacity using centralized material utility
+            // This ensures ghost materials with transmission always have transparent=true
+            setObjectOpacity(data.object, animProps.opacity, {
+              preserveTransmission: true, // Keep transparent=true for glow effect
+              skipCurrencySymbols: true,
             });
           },
         },

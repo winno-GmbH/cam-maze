@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { ghosts } from "../core/objects";
+import { setObjectOpacity } from "../core/material-utils";
 
 /**
  * UNIFIED OBJECT STATE MANAGER
@@ -156,20 +157,11 @@ export function applyStateToObjects() {
       object.scale.copy(state.scale);
       object.visible = state.visible;
       
-      // Apply opacity to all materials
-      object.traverse((child) => {
-        if ((child as any).isMesh && (child as any).material) {
-          const mesh = child as THREE.Mesh;
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat: any) => {
-              mat.opacity = state.opacity;
-              mat.transparent = state.opacity < 1.0;
-            });
-          } else {
-            (mesh.material as any).opacity = state.opacity;
-            (mesh.material as any).transparent = state.opacity < 1.0;
-          }
-        }
+      // Apply opacity using centralized material utility
+      // This ensures ghost materials with transmission always have transparent=true
+      setObjectOpacity(object, state.opacity, {
+        preserveTransmission: true, // Keep transparent=true for glow effect
+        skipCurrencySymbols: true,
       });
     }
   });

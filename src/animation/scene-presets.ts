@@ -5,6 +5,12 @@ import { ghosts } from "../core/objects";
 import { scene } from "../core/scene";
 import { slerpToLayDown, OBJECT_KEYS, GHOST_COLORS, isCurrencySymbol, isPacmanPart } from "./util";
 import {
+  setObjectOpacity,
+  setMaterialOpacity,
+  setMaterialTransparent,
+  resetGhostMaterialsToFullOpacity,
+} from "../core/material-utils";
+import {
   updateObjectRotation,
   syncStateFromObjects,
 } from "./object-state";
@@ -74,7 +80,7 @@ export function applyHomeLoopPreset(
       gsap.set(object.scale, { x: 1, y: 1, z: 1 });
     }
 
-    // Ensure all meshes are visible and opaque (except currencies)
+    // Ensure all meshes are visible (except currencies)
     object.traverse((child) => {
       if ((child as any).isMesh && (child as any).material) {
         const mesh = child as THREE.Mesh;
@@ -87,22 +93,12 @@ export function applyHomeLoopPreset(
         }
 
         mesh.visible = true;
-
-        if (Array.isArray(mesh.material)) {
-          mesh.material.forEach((mat: any) => {
-            mat.opacity = 1;
-            // CRITICAL: Keep transparent=true to preserve transmission glow effect
-            // MeshPhysicalMaterial with transmission needs transparent=true even at opacity 1.0
-            mat.transparent = true;
-          });
-        } else {
-          (mesh.material as any).opacity = 1;
-          // CRITICAL: Keep transparent=true to preserve transmission glow effect
-          // MeshPhysicalMaterial with transmission needs transparent=true even at opacity 1.0
-          (mesh.material as any).transparent = true;
-        }
       }
     });
+
+    // Use centralized material utility to set opacity consistently
+    // This ensures ghost materials with transmission always have transparent=true
+    resetGhostMaterialsToFullOpacity(object);
   });
 
   // Floor plane visible
@@ -184,13 +180,13 @@ export function applyHomeScrollPreset(
           mesh.visible = true;
 
           // Don't set opacity here - let home-scroll.ts handle it per object
-          // Just ensure materials are transparent-capable
+          // Just ensure materials are transparent-capable using centralized utility
           if (Array.isArray(mesh.material)) {
             mesh.material.forEach((mat: any) => {
-              mat.transparent = true;
+              setMaterialTransparent(mat, true, true);
             });
           } else {
-            (mesh.material as any).transparent = true;
+            setMaterialTransparent(mesh.material as any, true, true);
           }
         }
       });
@@ -404,24 +400,13 @@ export function applyIntroScrollPreset(
         // CRITICAL: Force visibility and opacity IMMEDIATELY
         mesh.visible = true;
 
-        // Set opacity DIRECTLY on material (not via GSAP to ensure immediate effect)
+        // Set opacity using centralized utility (not via GSAP to ensure immediate effect)
         if (Array.isArray(mesh.material)) {
           mesh.material.forEach((mat: any) => {
-            mat.opacity = 1;
-            mat.transparent = true;
-            // Force material update
-            if (mat.needsUpdate !== undefined) {
-              mat.needsUpdate = true;
-            }
+            setMaterialOpacity(mat, 1, true);
           });
         } else {
-          const mat = mesh.material as any;
-          mat.opacity = 1;
-          mat.transparent = true;
-          // Force material update
-          if (mat.needsUpdate !== undefined) {
-            mat.needsUpdate = true;
-          }
+          setMaterialOpacity(mesh.material as any, 1, true);
         }
 
         // Set ghost colors
@@ -482,12 +467,10 @@ export function applyPovScrollPreset(
           const mesh = child as THREE.Mesh;
           if (Array.isArray(mesh.material)) {
             mesh.material.forEach((mat: any) => {
-              mat.opacity = 1;
-              mat.transparent = true;
+              setMaterialOpacity(mat, 1, true);
             });
           } else {
-            (mesh.material as any).opacity = 1;
-            (mesh.material as any).transparent = true;
+            setMaterialOpacity(mesh.material as any, 1, true);
           }
         }
       });
