@@ -217,9 +217,9 @@ export function initHomeScrollAnimation() {
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
 
       // Get TO values: laydown rotation
-      const d1 = startRot.angleTo(LAY_DOWN_QUAT_1);
-      const d2 = startRot.angleTo(LAY_DOWN_QUAT_2);
-      const endRot = d1 < d2 ? LAY_DOWN_QUAT_1 : LAY_DOWN_QUAT_2;
+      // CRITICAL: Use the SAME end rotation for ALL objects to ensure consistent orientation
+      // Always use LAY_DOWN_QUAT_1 for all ghosts to avoid 180° rotation issues
+      const endRot = LAY_DOWN_QUAT_1;
       const endEuler = new THREE.Euler().setFromQuaternion(endRot);
 
       // Get path for this object
@@ -296,18 +296,25 @@ export function initHomeScrollAnimation() {
 
             // Apply opacity to all materials DIRECTLY
             // Get materials fresh from the object each frame to ensure we have the correct references
+            // CRITICAL: Always set transparent=true to preserve transmission/glow effects
+            // MeshPhysicalMaterial with transmission needs transparent=true even at opacity 1.0
+            // to maintain consistent rendering and glow effects
             data.object.traverse((child) => {
               if ((child as any).isMesh && (child as any).material) {
                 const mesh = child as THREE.Mesh;
                 if (Array.isArray(mesh.material)) {
                   mesh.material.forEach((mat: any) => {
                     mat.opacity = animProps.opacity;
-                    mat.transparent = animProps.opacity < 1.0;
+                    // Always keep transparent=true to preserve transmission glow effect
+                    // This ensures the glow effect is consistent even when opacity changes
+                    mat.transparent = true;
                   });
                 } else {
                   const mat = mesh.material as any;
                   mat.opacity = animProps.opacity;
-                  mat.transparent = animProps.opacity < 1.0;
+                  // Always keep transparent=true to preserve transmission glow effect
+                  // This ensures the glow effect is consistent even when opacity changes
+                  mat.transparent = true;
                 }
               }
             });
