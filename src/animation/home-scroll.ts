@@ -166,16 +166,19 @@ export function initHomeScrollAnimation() {
     allObjects.forEach(([key, object]) => {
       // Get current opacity from original materials BEFORE cloning
       // This preserves the actual current opacity state
-      let currentMaterialOpacity = 1.0;
+      // CRITICAL: Clamp to 0.9999 max to ensure consistent rendering with transmission
+      let currentMaterialOpacity = 0.9999;
       object.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
           const mesh = child as THREE.Mesh;
           if (Array.isArray(mesh.material)) {
             if (mesh.material.length > 0) {
-              currentMaterialOpacity = (mesh.material[0] as any).opacity ?? 1.0;
+              const rawOpacity = (mesh.material[0] as any).opacity ?? 0.9999;
+              currentMaterialOpacity = Math.min(rawOpacity, 0.9999);
             }
           } else {
-            currentMaterialOpacity = (mesh.material as any).opacity ?? 1.0;
+            const rawOpacity = (mesh.material as any).opacity ?? 0.9999;
+            currentMaterialOpacity = Math.min(rawOpacity, 0.9999);
           }
           return; // Only need first material
         }
@@ -235,7 +238,13 @@ export function initHomeScrollAnimation() {
       }
 
       // Get current opacity from materials (after cloning)
-      const startOpacity = materials.length > 0 ? materials[0].opacity : 1.0;
+      // CRITICAL: Use 0.9999 instead of 1.0 to ensure consistent rendering with transmission
+      // Three.js treats opacity 1.0 differently than 0.9999, causing the glow effect to disappear
+      let startOpacity = materials.length > 0 ? materials[0].opacity : 0.9999;
+      // Clamp to 0.9999 max to ensure consistent rendering
+      if (startOpacity >= 1.0) {
+        startOpacity = 0.9999;
+      }
 
       // Create animation props object - use progress for path animation
       const animProps = {
@@ -243,7 +252,7 @@ export function initHomeScrollAnimation() {
         rotX: startEuler.x,
         rotY: startEuler.y,
         rotZ: startEuler.z,
-        opacity: startOpacity, // Start from current opacity, not always 1.0
+        opacity: startOpacity, // Start from current opacity (clamped to 0.9999 max)
       };
 
       animPropsArray.push(animProps);
@@ -275,7 +284,7 @@ export function initHomeScrollAnimation() {
           rotX: data.startEuler.x,
           rotY: data.startEuler.y,
           rotZ: data.startEuler.z,
-          opacity: animProps.opacity, // Start from current opacity (from material)
+          opacity: animProps.opacity, // Start from current opacity (clamped to 0.9999 max for consistent rendering)
         },
         {
           // TO: progress 1 (end of path), laydown rotation, opacity 0
@@ -312,7 +321,10 @@ export function initHomeScrollAnimation() {
                     // CRITICAL: For MeshPhysicalMaterial with transmission, we need to maintain
                     // the transmission effect even when opacity changes. The glow effect comes
                     // from transmission, so we keep it constant while only changing opacity.
-                    mat.opacity = animProps.opacity;
+                    // Clamp opacity to 0.9999 max to ensure consistent rendering (Three.js treats
+                    // opacity 1.0 differently, causing the glow effect to disappear)
+                    const clampedOpacity = Math.min(animProps.opacity, 0.9999);
+                    mat.opacity = clampedOpacity;
                     // Always keep transparent=true to preserve transmission glow effect
                     // This ensures the glow effect is consistent even when opacity changes
                     mat.transparent = true;
@@ -333,7 +345,10 @@ export function initHomeScrollAnimation() {
                   // CRITICAL: For MeshPhysicalMaterial with transmission, we need to maintain
                   // the transmission effect even when opacity changes. The glow effect comes
                   // from transmission, so we keep it constant while only changing opacity.
-                  mat.opacity = animProps.opacity;
+                  // Clamp opacity to 0.9999 max to ensure consistent rendering (Three.js treats
+                  // opacity 1.0 differently, causing the glow effect to disappear)
+                  const clampedOpacity = Math.min(animProps.opacity, 0.9999);
+                  mat.opacity = clampedOpacity;
                   // Always keep transparent=true to preserve transmission glow effect
                   // This ensures the glow effect is consistent even when opacity changes
                   mat.transparent = true;
