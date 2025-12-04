@@ -2,7 +2,15 @@ import gsap from "gsap";
 import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
-import { slerpToLayDown, OBJECT_KEYS, GHOST_COLORS, isCurrencySymbol, isPacmanPart } from "./util";
+import {
+  slerpToLayDown,
+  rotateQuaternionAroundAxis,
+  applyRotations,
+  OBJECT_KEYS,
+  GHOST_COLORS,
+  isCurrencySymbol,
+  isPacmanPart,
+} from "./util";
 import {
   setMaterialOpacity,
   setMaterialTransparent,
@@ -206,34 +214,27 @@ export function applyIntroScrollPreset(
   // Calculate target quaternions ONCE (they don't change during scroll)
   // Rotate objects 180 degrees to match camera rotation
   if (!pacmanTargetQuaternion || !ghostTargetQuaternion) {
-    // Create rotation quaternions once
-    const xRotation180 = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(Math.PI, 0, 0)
-    );
-
     const pacmanObj = ghosts.pacman;
     if (pacmanObj) {
       if (!introInitialRotations["pacman"]) {
         introInitialRotations["pacman"] = pacmanObj.quaternion.clone();
       }
 
-      pacmanTargetQuaternion = introInitialRotations["pacman"].clone();
-      slerpToLayDown(pacmanObj, introInitialRotations["pacman"], 1.0);
-      // Add +90 degrees rotation on X-axis
-      const pacmanRotation90 = new THREE.Quaternion().setFromEuler(
-        new THREE.Euler(Math.PI / 2, 0, 0)
-      );
-      pacmanObj.quaternion.multiply(pacmanRotation90);
-      // Rotate 180 degrees on Y-axis to match camera rotation
-      const pacmanRotationY180 = new THREE.Quaternion().setFromEuler(
-        new THREE.Euler(0, Math.PI, 0)
-      );
-      pacmanObj.quaternion.multiply(pacmanRotationY180);
-      // Rotate another 180 degrees on Y-axis (total 360° = 0°, but adds to match camera)
-      pacmanObj.quaternion.multiply(pacmanRotationY180);
-      // Rotate 180 degrees on X-axis to fix upside-down orientation
-      pacmanObj.quaternion.multiply(xRotation180);
-      pacmanTargetQuaternion = pacmanObj.quaternion.clone();
+      // Start with laydown rotation
+      let quat = introInitialRotations["pacman"].clone();
+      slerpToLayDown(pacmanObj, quat, 1.0);
+      quat = pacmanObj.quaternion.clone();
+
+      // Apply rotations in sequence using helper function
+      // This makes it much clearer what rotations are being applied
+      quat = applyRotations(quat, [
+        { axis: "x", angle: Math.PI / 2 }, // +90° X-axis
+        { axis: "y", angle: Math.PI }, // +180° Y-axis
+        { axis: "y", angle: Math.PI }, // +180° Y-axis (again, total 360° = 0°)
+        { axis: "x", angle: Math.PI }, // +180° X-axis (fix upside-down)
+      ]);
+
+      pacmanTargetQuaternion = quat;
       pacmanObj.quaternion.copy(introInitialRotations["pacman"]);
     }
 
@@ -243,22 +244,22 @@ export function applyIntroScrollPreset(
         introInitialRotations["ghost1"] = ghostObj.quaternion.clone();
       }
 
-      ghostTargetQuaternion = introInitialRotations["ghost1"].clone();
-      slerpToLayDown(ghostObj, introInitialRotations["ghost1"], 1.0);
-      // Apply 180 degrees on X-axis (current rotation that makes heads face down)
-      ghostObj.quaternion.multiply(xRotation180);
-      // Add another 180 degrees on X-axis to flip them up
-      ghostObj.quaternion.multiply(xRotation180);
-      // Rotate 180 degrees on Y-axis to match camera rotation
-      const ghostRotationY180 = new THREE.Quaternion().setFromEuler(
-        new THREE.Euler(0, Math.PI, 0)
-      );
-      ghostObj.quaternion.multiply(ghostRotationY180);
-      // Rotate another 180 degrees on Y-axis (total 360° = 0°, but adds to match camera)
-      ghostObj.quaternion.multiply(ghostRotationY180);
-      // Rotate another 180 degrees on X-axis to fix upside-down orientation
-      ghostObj.quaternion.multiply(xRotation180);
-      ghostTargetQuaternion = ghostObj.quaternion.clone();
+      // Start with laydown rotation
+      let quat = introInitialRotations["ghost1"].clone();
+      slerpToLayDown(ghostObj, quat, 1.0);
+      quat = ghostObj.quaternion.clone();
+
+      // Apply rotations in sequence using helper function
+      // Much clearer than multiple multiply() calls
+      quat = applyRotations(quat, [
+        { axis: "x", angle: Math.PI }, // +180° X-axis (heads face down)
+        { axis: "x", angle: Math.PI }, // +180° X-axis (flip them up)
+        { axis: "y", angle: Math.PI }, // +180° Y-axis (match camera)
+        { axis: "y", angle: Math.PI }, // +180° Y-axis (again, total 360° = 0°)
+        { axis: "x", angle: Math.PI }, // +180° X-axis (fix upside-down)
+      ]);
+
+      ghostTargetQuaternion = quat;
       ghostObj.quaternion.copy(introInitialRotations["ghost1"]);
     }
 
