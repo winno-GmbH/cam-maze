@@ -80,44 +80,9 @@ export function setMaterialOpacity(
 }
 
 /**
- * Set transparent property on all materials of an object
- * CRITICAL: For ghost materials with transmission, transparent should always be true
- */
-export function setObjectTransparent(
-  object: THREE.Object3D,
-  transparent: boolean,
-  options?: {
-    preserveTransmission?: boolean; // If true, forces transparent=true for ghost materials (default: true)
-    skipCurrencySymbols?: boolean; // If true, skips currency symbol meshes (default: true)
-  }
-): void {
-  const preserveTransmission = options?.preserveTransmission !== false; // Default: true
-  const skipCurrencySymbols = options?.skipCurrencySymbols !== false; // Default: true
-
-  object.traverse((child) => {
-    if ((child as any).isMesh && (child as any).material) {
-      const mesh = child as THREE.Mesh;
-      const childName = child.name || "";
-
-      // Skip currency symbols if requested
-      if (skipCurrencySymbols && isCurrencySymbol(childName)) {
-        return;
-      }
-
-      if (Array.isArray(mesh.material)) {
-        mesh.material.forEach((mat: any) => {
-          setMaterialTransparent(mat, transparent, preserveTransmission);
-        });
-      } else {
-        setMaterialTransparent(mesh.material as any, transparent, preserveTransmission);
-      }
-    }
-  });
-}
-
-/**
  * Set transparent property on a single material
  * CRITICAL: For MeshPhysicalMaterial with transmission, transparent is always kept true
+ * NOTE: This is used internally by setMaterialOpacity, but can be used directly if needed
  */
 export function setMaterialTransparent(
   material: THREE.Material,
@@ -165,6 +130,7 @@ export function getObjectOpacity(object: THREE.Object3D): number {
 
 /**
  * Check if a material is a ghost material (has transmission)
+ * NOTE: Currently not used, but kept for potential future use
  */
 export function isGhostMaterial(material: THREE.Material): boolean {
   const mat = material as any;

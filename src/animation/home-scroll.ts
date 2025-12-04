@@ -1,14 +1,11 @@
 import gsap from "gsap";
 import * as THREE from "three";
 import { camera } from "../core/camera";
-import { ghosts, pacman } from "../core/objects";
-import {
-  getCameraHomeScrollPathPoints,
-  objectHomeScrollEndPathPoint,
-} from "../paths/pathpoints";
+import { ghosts } from "../core/objects";
+import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import { getHomeScrollPaths } from "../paths/paths";
 import { homeLoopHandler } from "./home-loop";
-import { LAY_DOWN_QUAT_1, LAY_DOWN_QUAT_2 } from "./util";
+import { LAY_DOWN_QUAT_1 } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import { updateObjectRotation, getCurrentRotations } from "./object-state";
 import { setObjectOpacity, getObjectOpacity } from "../core/material-utils";
@@ -39,6 +36,38 @@ export function initHomeScrollAnimation() {
     cameraPath.add(cameraCurve);
   }
 
+  // Shared function for onEnter and onEnterBack to avoid code duplication
+  const handleScrollEnter = () => {
+    requestAnimationFrame(() => {
+      const freshRotations = getCurrentRotations();
+      const scrollDir = getScrollDirection();
+
+      // CRITICAL: Store ACTUAL current positions (not t-values)
+      // These are the positions where objects are RIGHT NOW when entering home-scroll
+      const freshPositions: Record<string, THREE.Vector3> = {};
+      Object.entries(ghosts).forEach(([key, object]) => {
+        freshPositions[key] = object.position.clone();
+      });
+
+      // Store for use in animations
+      startPositions = freshPositions;
+
+      // Apply preset FIRST to set positions and opacity correctly
+      applyHomeScrollPreset(true, scrollDir, freshPositions, freshRotations);
+
+      // Update startPositions with the positions set by applyHomeScrollPreset
+      Object.entries(ghosts).forEach(([key, object]) => {
+        startPositions[key] = object.position.clone();
+      });
+
+      // Recreate animations with fresh FROM values (including camera)
+      // Create object animations FIRST (this clears the timeline)
+      createObjectAnimations();
+      // Then create camera animation (after timeline is cleared, so it's not removed)
+      createCameraAnimation();
+    });
+  };
+
   homeScrollTimeline = gsap.timeline({
     scrollTrigger: {
       id: "homeScroll",
@@ -46,80 +75,8 @@ export function initHomeScrollAnimation() {
       start: "top top",
       end: "bottom top",
       scrub: 0.5,
-      onEnter: () => {
-        requestAnimationFrame(() => {
-          const freshRotations = getCurrentRotations();
-          const scrollDir = getScrollDirection();
-
-          // CRITICAL: Store ACTUAL current positions (not t-values)
-          // These are the positions where objects are RIGHT NOW when entering home-scroll
-          const freshPositions: Record<string, THREE.Vector3> = {};
-
-          Object.entries(ghosts).forEach(([key, object]) => {
-            // Use actual object position (from home-loop or wherever it is)
-            freshPositions[key] = object.position.clone();
-          });
-
-          // Store for use in animations
-          startPositions = freshPositions;
-
-          // Apply preset FIRST to set positions and opacity correctly
-          applyHomeScrollPreset(
-            true,
-            scrollDir,
-            freshPositions,
-            freshRotations
-          );
-
-          // Update startPositions with the positions set by applyHomeScrollPreset
-          Object.entries(ghosts).forEach(([key, object]) => {
-            startPositions[key] = object.position.clone();
-          });
-
-          // Recreate animations with fresh FROM values (including camera)
-          // Create object animations FIRST (this clears the timeline)
-          createObjectAnimations();
-          // Then create camera animation (after timeline is cleared, so it's not removed)
-          createCameraAnimation();
-        });
-      },
-      onEnterBack: () => {
-        requestAnimationFrame(() => {
-          const freshRotations = getCurrentRotations();
-          const scrollDir = getScrollDirection();
-
-          // CRITICAL: Store ACTUAL current positions (not t-values)
-          // These are the positions where objects are RIGHT NOW when entering back
-          const freshPositions: Record<string, THREE.Vector3> = {};
-
-          Object.entries(ghosts).forEach(([key, object]) => {
-            // Use actual object position
-            freshPositions[key] = object.position.clone();
-          });
-
-          // Store for use in animations
-          startPositions = freshPositions;
-
-          // Apply preset FIRST to set positions and opacity correctly
-          applyHomeScrollPreset(
-            true,
-            scrollDir,
-            freshPositions,
-            freshRotations
-          );
-
-          // Update startPositions with the positions set by applyHomeScrollPreset
-          Object.entries(ghosts).forEach(([key, object]) => {
-            startPositions[key] = object.position.clone();
-          });
-
-          // Recreate animations with fresh FROM values (including camera)
-          // Create object animations FIRST (this clears the timeline)
-          createObjectAnimations();
-          // Then create camera animation (after timeline is cleared, so it's not removed)
-          createCameraAnimation();
-        });
-      },
+      onEnter: handleScrollEnter,
+      onEnterBack: handleScrollEnter,
       onScrubComplete: () => {
         requestAnimationFrame(() => {
           homeLoopHandler();
@@ -158,7 +115,6 @@ export function initHomeScrollAnimation() {
     const animationData: Array<{
       key: string;
       object: THREE.Object3D;
-      materials: any[];
       path: THREE.CurvePath<THREE.Vector3>;
       startEuler: THREE.Euler;
       endEuler: THREE.Euler;
@@ -168,11 +124,9 @@ export function initHomeScrollAnimation() {
       // Get current opacity using centralized utility
       const currentMaterialOpacity = getObjectOpacity(object);
 
-      // Get materials for opacity and CLONE them to avoid shared material issues
+      // Get materials and CLONE them to avoid shared material issues
       // Materials are shared between objects (e.g., ghostMaterial), so we need to clone them
       // This ensures each object has its own material instance and opacity can be animated independently
-      const materials: any[] = [];
-
       object.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
           const mesh = child as THREE.Mesh;
@@ -183,7 +137,6 @@ export function initHomeScrollAnimation() {
               // Preserve current opacity on cloned material
               clonedMat.opacity = currentMaterialOpacity;
               clonedMat.transparent = true; // Always allow transparency
-              materials.push(clonedMat);
               return clonedMat;
             });
             mesh.material = clonedMaterials;
@@ -193,7 +146,6 @@ export function initHomeScrollAnimation() {
             // Preserve current opacity on cloned material
             clonedMat.opacity = currentMaterialOpacity;
             clonedMat.transparent = true; // Always allow transparency
-            materials.push(clonedMat);
             mesh.material = clonedMat;
           }
         }
@@ -206,8 +158,7 @@ export function initHomeScrollAnimation() {
       // Get TO values: laydown rotation
       // CRITICAL: Use the SAME end rotation for ALL objects to ensure consistent orientation
       // Use LAY_DOWN_QUAT_1 (which has been adjusted by 180° in util.ts)
-      const endRot = LAY_DOWN_QUAT_1;
-      const endEuler = new THREE.Euler().setFromQuaternion(endRot);
+      const endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
 
       // Get path for this object
       const path = homeScrollPaths[key];
@@ -216,23 +167,19 @@ export function initHomeScrollAnimation() {
         return;
       }
 
-      // Get current opacity from materials (after cloning)
-      const startOpacity = materials.length > 0 ? materials[0].opacity : 1.0;
-
       // Create animation props object - use progress for path animation
       const animProps = {
         progress: 0, // Progress along path (0 to 1)
         rotX: startEuler.x,
         rotY: startEuler.y,
         rotZ: startEuler.z,
-        opacity: startOpacity, // Start from current opacity
+        opacity: currentMaterialOpacity, // Start from current opacity
       };
 
       animPropsArray.push(animProps);
       animationData.push({
         key,
         object,
-        materials,
         path,
         startEuler,
         endEuler,

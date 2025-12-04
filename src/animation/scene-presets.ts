@@ -5,7 +5,6 @@ import { ghosts } from "../core/objects";
 import { scene } from "../core/scene";
 import { slerpToLayDown, OBJECT_KEYS, GHOST_COLORS, isCurrencySymbol, isPacmanPart } from "./util";
 import {
-  setObjectOpacity,
   setMaterialOpacity,
   setMaterialTransparent,
   resetGhostMaterialsToFullOpacity,
