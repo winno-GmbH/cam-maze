@@ -123,22 +123,25 @@ function startHomeLoop() {
       const savedPosition = homeLoopStartPos[key];
       const savedRotation = homeLoopStartRot[key];
 
-      if (savedPosition) {
-        ghost.position.copy(savedPosition);
-        updateObjectPosition(key, savedPosition);
+      let initialPosition: THREE.Vector3 | null = null;
+
+      if (objectTValues[key] !== undefined) {
+        initialPosition = path.getPointAt(objectTValues[key]);
+      } else if (savedPosition) {
+        initialPosition = savedPosition;
       } else {
         const currentPositions = getCurrentPositions();
         const currentPosition = currentPositions[key];
         if (currentPosition) {
-          ghost.position.copy(currentPosition);
-          updateObjectPosition(key, currentPosition);
+          initialPosition = currentPosition;
         } else {
-          const position = path.getPointAt(pausedT);
-          if (position) {
-            ghost.position.copy(position);
-            updateObjectPosition(key, position);
-          }
+          initialPosition = path.getPointAt(pausedT);
         }
+      }
+
+      if (initialPosition) {
+        ghost.position.copy(initialPosition);
+        updateObjectPosition(key, initialPosition);
       }
 
       if (savedRotation) {
