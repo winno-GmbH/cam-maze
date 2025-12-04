@@ -165,20 +165,16 @@ export function initHomeScrollAnimation() {
 
     allObjects.forEach(([key, object]) => {
       // Get current opacity from original materials BEFORE cloning
-      // This preserves the actual current opacity state
-      // CRITICAL: Clamp to 0.9999 max to ensure consistent rendering with transmission
-      let currentMaterialOpacity = 0.9999;
+      let currentMaterialOpacity = 1.0;
       object.traverse((child) => {
         if ((child as any).isMesh && (child as any).material) {
           const mesh = child as THREE.Mesh;
           if (Array.isArray(mesh.material)) {
             if (mesh.material.length > 0) {
-              const rawOpacity = (mesh.material[0] as any).opacity ?? 0.9999;
-              currentMaterialOpacity = Math.min(rawOpacity, 0.9999);
+              currentMaterialOpacity = (mesh.material[0] as any).opacity ?? 1.0;
             }
           } else {
-            const rawOpacity = (mesh.material as any).opacity ?? 0.9999;
-            currentMaterialOpacity = Math.min(rawOpacity, 0.9999);
+            currentMaterialOpacity = (mesh.material as any).opacity ?? 1.0;
           }
           return; // Only need first material
         }
@@ -233,13 +229,7 @@ export function initHomeScrollAnimation() {
       }
 
       // Get current opacity from materials (after cloning)
-      // CRITICAL: Never use exactly 1.0 to ensure consistent rendering with transmission
-      // Three.js treats opacity 1.0 as non-transparent even with transparent=true
-      let startOpacity = materials.length > 0 ? materials[0].opacity : 0.99999;
-      // Clamp to 0.99999 max to ensure consistent rendering (never exactly 1.0)
-      if (startOpacity >= 1.0) {
-        startOpacity = 0.99999;
-      }
+      const startOpacity = materials.length > 0 ? materials[0].opacity : 1.0;
 
       // Create animation props object - use progress for path animation
       const animProps = {
@@ -247,7 +237,7 @@ export function initHomeScrollAnimation() {
         rotX: startEuler.x,
         rotY: startEuler.y,
         rotZ: startEuler.z,
-        opacity: startOpacity, // Start from current opacity (clamped to 0.9999 max)
+        opacity: startOpacity, // Start from current opacity
       };
 
       animPropsArray.push(animProps);
@@ -279,7 +269,7 @@ export function initHomeScrollAnimation() {
           rotX: data.startEuler.x,
           rotY: data.startEuler.y,
           rotZ: data.startEuler.z,
-          opacity: animProps.opacity, // Start from current opacity (clamped to 0.9999 max for consistent rendering)
+          opacity: animProps.opacity, // Start from current opacity
         },
         {
           // TO: progress 1 (end of path), laydown rotation, opacity 0
@@ -313,28 +303,7 @@ export function initHomeScrollAnimation() {
                 const mesh = child as THREE.Mesh;
                 if (Array.isArray(mesh.material)) {
                   mesh.material.forEach((mat: any) => {
-                    // CRITICAL: For MeshPhysicalMaterial with transmission, the glow effect
-                    // disappears when opacity changes from 1.0 to 0.999 because Three.js
-                    // treats opacity 1.0 as non-transparent even with transparent=true.
-                    // Solution: Never set opacity to exactly 1.0, use 0.99999 instead
-                    // This keeps the material in transparent mode and preserves the glow
-                    const targetOpacity = animProps.opacity;
-                    // Clamp opacity to never be exactly 1.0 to maintain transmission glow
-                    const clampedOpacity =
-                      targetOpacity >= 1.0 ? 0.99999 : targetOpacity;
-                    mat.opacity = clampedOpacity;
-
-                    // Keep transmission constant at 0.5 (don't scale it)
-                    // The glow effect should work if opacity is never exactly 1.0
-                    if (
-                      mat.transmission !== undefined &&
-                      mat.transmission !== 0.5
-                    ) {
-                      mat.transmission = 0.5;
-                    }
-
-                    // Always keep transparent=true to preserve transmission glow effect
-                    // This ensures the glow effect is consistent even when opacity changes
+                    mat.opacity = animProps.opacity;
                     mat.transparent = true;
                     // Preserve depthWrite setting (should be false for ghost materials)
                     if (
@@ -350,28 +319,7 @@ export function initHomeScrollAnimation() {
                   });
                 } else {
                   const mat = mesh.material as any;
-                  // CRITICAL: For MeshPhysicalMaterial with transmission, the glow effect
-                  // disappears when opacity changes from 1.0 to 0.999 because Three.js
-                  // treats opacity 1.0 as non-transparent even with transparent=true.
-                  // Solution: Never set opacity to exactly 1.0, use 0.99999 instead
-                  // This keeps the material in transparent mode and preserves the glow
-                  const targetOpacity = animProps.opacity;
-                  // Clamp opacity to never be exactly 1.0 to maintain transmission glow
-                  const clampedOpacity =
-                    targetOpacity >= 1.0 ? 0.99999 : targetOpacity;
-                  mat.opacity = clampedOpacity;
-
-                  // Keep transmission constant at 0.5 (don't scale it)
-                  // The glow effect should work if opacity is never exactly 1.0
-                  if (
-                    mat.transmission !== undefined &&
-                    mat.transmission !== 0.5
-                  ) {
-                    mat.transmission = 0.5;
-                  }
-
-                  // Always keep transparent=true to preserve transmission glow effect
-                  // This ensures the glow effect is consistent even when opacity changes
+                  mat.opacity = animProps.opacity;
                   mat.transparent = true;
                   // Preserve depthWrite setting (should be false for ghost materials)
                   if (
