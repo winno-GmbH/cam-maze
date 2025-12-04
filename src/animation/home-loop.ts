@@ -126,10 +126,7 @@ function startHomeLoop() {
       const savedPosition = homeLoopStartPos[key];
       const savedRotation = homeLoopStartRot[key];
 
-      if (savedPosition) {
-        ghost.position.copy(savedPosition);
-        updateObjectPosition(key, savedPosition);
-      } else {
+      if (!savedPosition) {
         const currentPositions = getCurrentPositions();
         const currentPosition = currentPositions[key];
         if (currentPosition) {
@@ -212,34 +209,12 @@ function updateHomeLoop(delta: number) {
         }
       }
 
-      if (isFirstFrame && homeLoopStartPos) {
-        const savedPosition = homeLoopStartPos[key];
-        if (savedPosition) {
-          const pathPosition = path.getPointAt(objectT);
-          if (pathPosition && savedPosition.distanceTo(pathPosition) > 0.001) {
-            ghost.position.copy(savedPosition);
-            updateObjectPosition(key, savedPosition);
-          } else {
-            ghost.position.copy(pathPosition);
-            updateObjectPosition(key, pathPosition);
-          }
-        } else {
-          const position = path.getPointAt(objectT);
-          if (position) {
-            ghost.position.copy(position);
-            updateObjectPosition(key, position);
-          }
-        }
-      } else {
+      if (!(isFirstFrame && homeLoopStartPos && homeLoopStartPos[key])) {
         const position = path.getPointAt(objectT);
         if (position) {
           ghost.position.copy(position);
           updateObjectPosition(key, position);
         }
-      }
-
-      if (isFirstFrame) {
-        isFirstFrame = false;
       }
 
       setObjectScale(ghost, key, "home");
@@ -273,6 +248,10 @@ function updateHomeLoop(delta: number) {
       updateObjectRotation(key, ghost.quaternion);
     }
   });
+
+  if (isFirstFrame) {
+    isFirstFrame = false;
+  }
 }
 
 export function homeLoopHandler() {
