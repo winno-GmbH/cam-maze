@@ -9,6 +9,8 @@ export function setObjectOpacity(
     skipCurrencySymbols?: boolean;
   }
 ): void {
+  if (!object) return;
+
   const preserveTransmission = options?.preserveTransmission !== false;
 
   forEachMaterial(
@@ -73,6 +75,8 @@ export function setMaterialTransparent(
 }
 
 export function getObjectOpacity(object: THREE.Object3D): number {
+  if (!object) return 1.0;
+
   let opacity = 1.0;
   let found = false;
 
@@ -107,6 +111,8 @@ export function forEachMaterial(
     objectKey?: string;
   }
 ): void {
+  if (!object) return;
+
   const skipCurrencySymbols = options?.skipCurrencySymbols === true;
   const skipPacmanParts = options?.skipPacmanParts === true;
   const objectKey = options?.objectKey;

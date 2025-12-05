@@ -60,6 +60,8 @@ export function setObjectScale(
 }
 
 export function killObjectAnimations(object: THREE.Object3D): void {
+  if (!object) return;
+
   gsap.killTweensOf(object);
   gsap.killTweensOf(object.scale);
   gsap.killTweensOf(object.position);
