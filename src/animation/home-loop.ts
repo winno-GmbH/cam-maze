@@ -167,6 +167,8 @@ function updateHomeLoop(delta: number) {
   const isTransitioning = hasBeenPausedBefore && transitionProgress < 1;
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
+    if (!ghost) return;
+
     const path = homePaths[key];
     if (path) {
       const objectT = t;

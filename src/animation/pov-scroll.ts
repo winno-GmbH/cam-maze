@@ -209,14 +209,14 @@ function handleAnimationStart() {
   }
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    if (povPaths[key] && key !== "pacman") {
-      const position = povPaths[key].getPointAt(0);
-      ghost.position.copy(position);
-      const tangent = povPaths[key].getTangentAt(0).normalize();
-      ghost.lookAt(position.clone().add(tangent));
-      ghost.visible = false;
-      setObjectScale(ghost, key, "pov");
-    }
+    if (!ghost || key === "pacman" || !povPaths[key]) return;
+
+    const position = povPaths[key].getPointAt(0);
+    ghost.position.copy(position);
+    const tangent = povPaths[key].getTangentAt(0).normalize();
+    ghost.lookAt(position.clone().add(tangent));
+    ghost.visible = false;
+    setObjectScale(ghost, key, "pov");
   });
 
   if (ghosts.pacman) {
@@ -646,23 +646,23 @@ function hideTextElements(elements: NodeListOf<Element>) {
 
 function handleLeavePOV() {
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    if (key !== "pacman") {
-      ghost.visible = false;
+    if (!ghost || key === "pacman") return;
 
-      const ghostIndex = parseInt(key.replace("ghost", "")) - 1;
-      const cached = domElementCache[ghostIndex];
+    ghost.visible = false;
 
-      if (cached?.parent) {
-        hideTextElements(cached.povElements);
-        hideTextElements(cached.camElements);
-        cached.parent.classList.add("no-visibility");
-      }
+    const ghostIndex = parseInt(key.replace("ghost", "")) - 1;
+    const cached = domElementCache[ghostIndex];
 
-      setObjectOpacity(ghost, 1.0, {
-        preserveTransmission: true,
-        skipCurrencySymbols: true,
-      });
+    if (cached?.parent) {
+      hideTextElements(cached.povElements);
+      hideTextElements(cached.camElements);
+      cached.parent.classList.add("no-visibility");
     }
+
+    setObjectOpacity(ghost, 1.0, {
+      preserveTransmission: true,
+      skipCurrencySymbols: true,
+    });
   });
 
   if (ghosts.pacman) {
