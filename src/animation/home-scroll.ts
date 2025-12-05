@@ -223,7 +223,7 @@ export function initHomeScrollAnimation() {
       });
     });
 
-    const baseEndTime = 0.9;
+    const baseEndTime = 1;
 
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];
