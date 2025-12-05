@@ -23,14 +23,7 @@ import {
   setObjectScale,
   killObjectAnimations,
 } from "./scene-utils";
-import {
-  SCALE,
-  COLOR,
-  OPACITY,
-  INTRO_POSITION_OFFSET,
-  INTRO_BASE_X_OFFSET,
-  INTRO_BEHIND_OFFSET_STEP,
-} from "./constants";
+import { SCALE, COLOR, OPACITY, INTRO_POSITION_OFFSET } from "./constants";
 
 export function applyHomeLoopPreset(
   isEntering: boolean,
@@ -181,87 +174,6 @@ export function applyIntroScrollPreset(
       }
     });
   }
-
-  const baseX = camera.position.x + INTRO_BASE_X_OFFSET;
-  const startPosition = new THREE.Vector3(
-    baseX + INTRO_POSITION_OFFSET.x,
-    camera.position.y + INTRO_POSITION_OFFSET.y,
-    camera.position.z + INTRO_POSITION_OFFSET.z
-  );
-
-  const objectsToAnimate = OBJECT_KEYS;
-
-  objectsToAnimate.forEach((key, index) => {
-    const object = ghosts[key];
-    if (!object) return;
-
-    killObjectAnimations(object);
-
-    const behindOffset = index === 0 ? 0 : INTRO_BEHIND_OFFSET_STEP * index;
-    const pos = new THREE.Vector3(
-      startPosition.x + behindOffset,
-      startPosition.y,
-      startPosition.z
-    );
-
-    gsap.set(object.position, {
-      x: pos.x,
-      y: pos.y,
-      z: pos.z,
-    });
-
-    if (key === "pacman" && pacmanTargetQuaternion) {
-      object.quaternion.copy(pacmanTargetQuaternion);
-    } else if (ghostTargetQuaternion) {
-      object.quaternion.copy(ghostTargetQuaternion);
-    }
-
-    setObjectScale(object, key, "intro");
-
-    gsap.set(object, { visible: true });
-
-    let hasVisibleMesh = false;
-    forEachMaterial(
-      object,
-      (mat: any, mesh: THREE.Mesh, childName: string) => {
-        if (
-          isCurrencySymbol(childName) ||
-          (key === "pacman" && isPacmanPart(childName))
-        ) {
-          mesh.visible = false;
-          return;
-        }
-
-        mesh.visible = true;
-        hasVisibleMesh = true;
-
-        setMaterialOpacity(mat, 1, true);
-      },
-      {
-        skipCurrencySymbols: false,
-        skipPacmanParts: false,
-        objectKey: key,
-      }
-    );
-
-    if (key === "ghost5" && !hasVisibleMesh) {
-      object.traverse((child) => {
-        if ((child as any).isMesh && !hasVisibleMesh) {
-          const mesh = child as THREE.Mesh;
-          mesh.visible = true;
-          hasVisibleMesh = true;
-          const mat = mesh.material;
-          if (mat) {
-            setMaterialOpacity(Array.isArray(mat) ? mat[0] : mat, 1, true);
-          }
-        }
-      });
-    }
-
-    object.updateMatrixWorld(true);
-  });
-
-  setFloorPlane(true, OPACITY.HIDDEN, true);
 }
 
 export function applyPovScrollPreset(
