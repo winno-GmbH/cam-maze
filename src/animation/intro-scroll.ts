@@ -336,7 +336,12 @@ function updateObjectsWalkBy(progress: number) {
         zPhase,
       }) => {
         const object = ghosts[key];
-        if (!object) return;
+        if (!object) {
+          if (key === "ghost5") {
+            console.warn("ghost5 object is missing!");
+          }
+          return;
+        }
 
         killObjectAnimations(object);
 
@@ -351,6 +356,25 @@ function updateObjectsWalkBy(progress: number) {
 
         object.position.set(finalX, finalY, finalZ);
 
+        if (
+          key === "ghost5" &&
+          (isNaN(finalX) || isNaN(finalY) || isNaN(finalZ))
+        ) {
+          console.warn("ghost5 has NaN position:", {
+            finalX,
+            finalY,
+            finalZ,
+            pacmanX,
+            pacmanY,
+            pacmanZ,
+            behindOffset,
+            xOffset,
+            staticYOffset,
+            zOffset,
+            zBounce,
+          });
+        }
+
         const pacmanQuat = getPacmanTargetQuaternion();
         const ghostQuat = getGhostTargetQuaternion();
         if (key === "pacman" && pacmanQuat) {
@@ -364,6 +388,7 @@ function updateObjectsWalkBy(progress: number) {
 
         const targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
 
+        let hasVisibleMesh = false;
         forEachMaterial(
           object,
           (mat: any, mesh: THREE.Mesh, childName: string) => {
@@ -376,6 +401,7 @@ function updateObjectsWalkBy(progress: number) {
             }
 
             mesh.visible = true;
+            hasVisibleMesh = true;
 
             setMaterialOpacity(mat, targetOpacity, true);
           },
@@ -385,6 +411,10 @@ function updateObjectsWalkBy(progress: number) {
             objectKey: key,
           }
         );
+
+        if (key === "ghost5" && !hasVisibleMesh) {
+          console.warn("ghost5 has no visible meshes!");
+        }
 
         object.updateMatrixWorld(true);
       }
