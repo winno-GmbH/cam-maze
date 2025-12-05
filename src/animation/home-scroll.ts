@@ -1,4 +1,5 @@
 import gsap from "gsap";
+import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
@@ -252,6 +253,11 @@ export function initHomeScrollAnimation() {
         value: 1,
         immediateRender: false,
         onUpdate: function () {
+          const introScrollTrigger = ScrollTrigger.getById("introScroll");
+          if (introScrollTrigger?.isActive) {
+            return;
+          }
+
           const progress = this.targets()[0].value;
           if (cameraPath && cameraPath.curves.length) {
             const cameraPoint = cameraPath.getPointAt(progress);

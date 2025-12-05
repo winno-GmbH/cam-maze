@@ -263,7 +263,22 @@ function updateObjectsWalkBy(progress: number) {
   const pacmanQuat = pacmanTargetQuaternion;
   const ghostQuat = ghostTargetQuaternion;
 
-  tempVector.set(camera.position.x, camera.position.y, camera.position.z);
+  const camX = camera.position.x;
+  const camY = camera.position.y;
+  const camZ = camera.position.z;
+
+  if (
+    !isFinite(camX) ||
+    !isFinite(camY) ||
+    !isFinite(camZ) ||
+    Math.abs(camX) > 1000 ||
+    Math.abs(camY) > 1000 ||
+    Math.abs(camZ) > 1000
+  ) {
+    return;
+  }
+
+  tempVector.set(camX, camY, camZ);
 
   const walkStart = tempVector.x - INTRO_WALK_DISTANCE;
   const walkEnd = tempVector.x + INTRO_WALK_DISTANCE;
@@ -321,9 +336,18 @@ function updateObjectsWalkBy(progress: number) {
 
   const normalizedProgress = clamp(progress);
   const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
+
+  if (!isFinite(baseX)) {
+    return;
+  }
+
   const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
   const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
   const pacmanZ = tempVector.z + INTRO_POSITION_OFFSET.z;
+
+  if (!isFinite(pacmanX) || !isFinite(pacmanY) || !isFinite(pacmanZ)) {
+    return;
+  }
 
   const baseGhostOpacity =
     normalizedProgress < INTRO_FADE_IN_DURATION
@@ -350,6 +374,16 @@ function updateObjectsWalkBy(progress: number) {
       const finalX = pacmanX + behindOffset + (xOffset || 0);
       const finalY = pacmanY + (staticYOffset || 0) - animatedYOffset;
       const finalZ = pacmanZ + zOffset - zBounce;
+
+      if (
+        !isFinite(finalX) ||
+        !isFinite(finalY) ||
+        !isFinite(finalZ) ||
+        Math.abs(finalZ) < 0.01 ||
+        Math.abs(finalZ) > 100
+      ) {
+        return;
+      }
 
       object.position.set(finalX, finalY, finalZ);
 
