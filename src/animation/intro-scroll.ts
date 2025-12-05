@@ -407,27 +407,7 @@ function updateObjectsWalkBy(progress: number) {
 
         if (key === "ghost5") {
           if (!hasVisibleMesh) {
-            console.warn(
-              "ghost5 has no visible meshes! Total meshes:",
-              meshCount,
-              "Currency meshes:",
-              currencyMeshCount,
-              "targetOpacity:",
-              targetOpacity,
-              "ghostOpacity:",
-              ghostOpacity,
-              "normalizedProgress:",
-              normalizedProgress
-            );
-            console.warn(
-              "ghost5 mesh names:",
-              allMeshes.map((m) => m.name || "unnamed")
-            );
-
-            if (meshCount > 0 && meshCount === currencyMeshCount) {
-              console.warn(
-                "ghost5: All meshes are currency symbols! Making first non-currency mesh visible."
-              );
+            if (meshCount > 0) {
               const firstNonCurrencyMesh = allMeshes.find(
                 (m) => !isCurrencySymbol(m.name || "")
               );
@@ -442,14 +422,29 @@ function updateObjectsWalkBy(progress: number) {
                     true
                   );
                 }
-              } else {
-                console.error(
-                  "ghost5: No non-currency mesh found! Making first mesh visible as fallback."
-                );
-                if (allMeshes.length > 0) {
-                  allMeshes[0].visible = true;
+              } else if (allMeshes.length > 0) {
+                allMeshes[0].visible = true;
+                hasVisibleMesh = true;
+                const mat = (allMeshes[0] as THREE.Mesh).material;
+                if (mat) {
+                  setMaterialOpacity(
+                    Array.isArray(mat) ? mat[0] : mat,
+                    targetOpacity,
+                    true
+                  );
+                }
+              }
+            }
+          }
+
+          if (!hasVisibleMesh) {
+            object.traverse((child) => {
+              if ((child as any).isMesh) {
+                const mesh = child as THREE.Mesh;
+                if (!mesh.visible) {
+                  mesh.visible = true;
                   hasVisibleMesh = true;
-                  const mat = (allMeshes[0] as THREE.Mesh).material;
+                  const mat = mesh.material;
                   if (mat) {
                     setMaterialOpacity(
                       Array.isArray(mat) ? mat[0] : mat,
@@ -459,16 +454,7 @@ function updateObjectsWalkBy(progress: number) {
                   }
                 }
               }
-            }
-          }
-          if (meshCount === 0) {
-            console.warn("ghost5 has no meshes at all!");
-          }
-          if (targetOpacity <= 0) {
-            console.warn(
-              "ghost5 targetOpacity is 0 or negative:",
-              targetOpacity
-            );
+            });
           }
         }
 

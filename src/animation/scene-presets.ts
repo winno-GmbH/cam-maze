@@ -220,6 +220,7 @@ export function applyIntroScrollPreset(
 
     gsap.set(object, { visible: true });
 
+    let hasVisibleMesh = false;
     forEachMaterial(
       object,
       (mat: any, mesh: THREE.Mesh, childName: string) => {
@@ -232,6 +233,7 @@ export function applyIntroScrollPreset(
         }
 
         mesh.visible = true;
+        hasVisibleMesh = true;
 
         setMaterialOpacity(mat, 1, true);
       },
@@ -241,6 +243,20 @@ export function applyIntroScrollPreset(
         objectKey: key,
       }
     );
+
+    if (key === "ghost5" && !hasVisibleMesh) {
+      object.traverse((child) => {
+        if ((child as any).isMesh && !hasVisibleMesh) {
+          const mesh = child as THREE.Mesh;
+          mesh.visible = true;
+          hasVisibleMesh = true;
+          const mat = mesh.material;
+          if (mat) {
+            setMaterialOpacity(Array.isArray(mat) ? mat[0] : mat, 1, true);
+          }
+        }
+      });
+    }
 
     object.updateMatrixWorld(true);
   });
