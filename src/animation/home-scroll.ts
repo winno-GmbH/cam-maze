@@ -248,7 +248,7 @@ export function initHomeScrollAnimation() {
           rotY: data.endEuler.y,
           rotZ: data.endEuler.z,
           opacity: OPACITY.HIDDEN,
-          ease: "power1.out",
+          ease: "power2.out",
           immediateRender: false,
           duration: duration,
           onUpdate: function () {
