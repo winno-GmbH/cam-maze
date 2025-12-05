@@ -97,25 +97,6 @@ export function resetGhostMaterialsToFullOpacity(object: THREE.Object3D): void {
   });
 }
 
-export function setGhostColor(
-  object: THREE.Object3D,
-  color: number,
-  options?: {
-    skipCurrencySymbols?: boolean;
-  }
-): void {
-  const skipCurrencySymbols = options?.skipCurrencySymbols !== false;
-
-  forEachMaterial(
-    object,
-    (mat: any) => {
-      if (mat.color && mat.color.getHex() !== color) {
-        mat.color.setHex(color);
-      }
-    },
-    { skipCurrencySymbols }
-  );
-}
 
 export function forEachMaterial(
   object: THREE.Object3D,

@@ -1,7 +1,7 @@
 import gsap from "gsap";
 import * as THREE from "three";
 import { scene } from "../core/scene";
-import { SCALE, COLOR, OPACITY } from "./constants";
+import { SCALE, OPACITY } from "./constants";
 import { forEachMaterial } from "../core/material-utils";
 
 export function setFloorPlane(
@@ -14,7 +14,7 @@ export function setFloorPlane(
       child.visible = visible;
       if (child instanceof THREE.Mesh && child.material) {
         const material = child.material as THREE.MeshBasicMaterial;
-        material.color.setHex(COLOR.WHITE);
+        material.color.setHex(0xffffff);
         material.opacity = opacity;
         material.transparent = transparent;
       }

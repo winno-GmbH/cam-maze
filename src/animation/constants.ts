@@ -11,10 +11,6 @@ export const OPACITY = {
   HIDDEN: 0.0,
 } as const;
 
-export const COLOR = {
-  WHITE: 0xffffff,
-} as const;
-
 export const SCROLL_SELECTORS = {
   HOME: ".sc--home.sc",
   INTRO: ".sc--intro.sc",
@@ -33,8 +29,6 @@ export const GHOST_FADE_OUT_DURATION = 0.1;
 
 export const INTRO_WALK_DISTANCE = 10.0;
 export const INTRO_FADE_IN_DURATION = 0.2;
-export const INTRO_BEHIND_OFFSET_STEP = -0.5;
-export const INTRO_BASE_X_OFFSET = -5.0;
 export const INTRO_POSITION_OFFSET = {
   x: 4.3,
   y: -2.0,
@@ -44,7 +38,7 @@ export const INTRO_POSITION_OFFSET = {
 export const FIND_CLOSEST_SAMPLES = 800;
 
 export const SCRUB_DURATION = 0.5;
-export const STAGGER_AMOUNT = 0.15;
+export const STAGGER_AMOUNT = 0.015;
 export const ROTATION_TRANSITION_DURATION = 1.5;
 
 export const POV_SEQUENCE_PHASE_END = 0.05;
@@ -72,12 +66,6 @@ export const INTRO_GHOST_OFFSETS = {
   GHOST3: -0.01,
   GHOST4: -0.015,
   GHOST5: -0.02,
-} as const;
-
-export const PI = {
-  HALF: Math.PI / 2,
-  FULL: Math.PI,
-  QUARTER: Math.PI / 4,
 } as const;
 
 export function clamp(value: number, min: number = 0, max: number = 1): number {

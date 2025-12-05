@@ -8,8 +8,6 @@ import { getHomeScrollPaths } from "../paths/paths";
 import { LAY_DOWN_QUAT_1 } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import {
-  updateObjectRotation,
-  updateObjectPosition,
   getCurrentRotations,
   getCurrentPositions,
   getHomeLoopStartPositions,
@@ -20,7 +18,6 @@ import {
   getObjectOpacity,
   forEachMaterial,
   setMaterialOpacity,
-  setMaterialTransparent,
 } from "../core/material-utils";
 import { killObjectAnimations } from "./scene-utils";
 import {
@@ -226,8 +223,7 @@ export function initHomeScrollAnimation() {
       });
     });
 
-    const totalObjects = animationData.length;
-    const baseEndTime = 0.6;
+    const baseEndTime = 0.8;
 
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];

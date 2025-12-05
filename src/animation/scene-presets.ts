@@ -6,7 +6,6 @@ import {
   slerpToLayDown,
   applyRotations,
   OBJECT_KEYS,
-  GHOST_COLORS,
   isCurrencySymbol,
   isPacmanPart,
 } from "./util";
@@ -14,16 +13,14 @@ import {
   setMaterialOpacity,
   setMaterialTransparent,
   resetGhostMaterialsToFullOpacity,
-  setGhostColor,
   forEachMaterial,
 } from "../core/material-utils";
-import { updateObjectRotation } from "./object-state";
 import {
   setFloorPlane,
   setObjectScale,
   killObjectAnimations,
 } from "./scene-utils";
-import { SCALE, COLOR, OPACITY, INTRO_POSITION_OFFSET } from "./constants";
+import { SCALE, OPACITY, INTRO_POSITION_OFFSET } from "./constants";
 
 export function applyHomeLoopPreset(
   isEntering: boolean,
@@ -105,14 +102,6 @@ export { INTRO_POSITION_OFFSET };
 let pacmanTargetQuaternion: THREE.Quaternion | null = null;
 let ghostTargetQuaternion: THREE.Quaternion | null = null;
 let introInitialRotations: Record<string, THREE.Quaternion> = {};
-
-export function getPacmanTargetQuaternion(): THREE.Quaternion | null {
-  return pacmanTargetQuaternion;
-}
-
-export function getGhostTargetQuaternion(): THREE.Quaternion | null {
-  return ghostTargetQuaternion;
-}
 
 export function applyIntroScrollPreset(
   isEntering: boolean,
@@ -219,10 +208,4 @@ export function getScrollDirection(): "up" | "down" {
   const direction = currentScrollY > lastScrollY ? "down" : "up";
   lastScrollY = currentScrollY;
   return direction;
-}
-
-export function resetPresetCaches() {
-  pacmanTargetQuaternion = null;
-  ghostTargetQuaternion = null;
-  introInitialRotations = {};
 }

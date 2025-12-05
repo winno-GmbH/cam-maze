@@ -1081,10 +1081,6 @@ export function getStartPosition() {
   return startPosition;
 }
 
-export function getSecondPosition() {
-  return secondPosition;
-}
-
 export function getLookAtPosition() {
   return lookAtPosition;
 }
