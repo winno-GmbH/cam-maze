@@ -18,6 +18,8 @@ export let pacmanMixer: THREE.AnimationMixer;
 
 export const pacman = new THREE.Group();
 
+export const pill = new THREE.Group();
+
 export const ghosts: GhostContainer = {
   pacman: pacman,
   ghost1: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
@@ -25,6 +27,7 @@ export const ghosts: GhostContainer = {
   ghost3: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
   ghost4: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
   ghost5: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
+  pill: pill,
 };
 
 const ghostContainers = {
@@ -38,6 +41,7 @@ const ghostContainers = {
 export async function loadModel(scene: THREE.Scene): Promise<void> {
   Object.values(ghosts).forEach((ghost) => scene.add(ghost));
   scene.add(pacman);
+  scene.add(pill);
   return new Promise((resolve, reject) => {
     loader.load(
       ASSETS.mazeModel,
@@ -152,6 +156,16 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             if (ghostContainer) {
               ghostContainer.add(ghostGroup);
             }
+          } else if (child.name === "CAM-Shell_Bottom_Orange") {
+            const children: THREE.Object3D[] = [];
+            child.traverse((subChild: THREE.Object3D) => {
+              if ((subChild as any).isMesh) {
+                children.push(subChild);
+              }
+            });
+            children.forEach((item) => pill.add(item));
+            pill.scale.set(0.05, 0.05, 0.05);
+            pill.visible = false;
           }
 
           if ((child as any).isMesh) {

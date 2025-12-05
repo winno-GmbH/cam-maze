@@ -285,6 +285,11 @@ function initializeQuaternions() {
       introInitialRotations[key] = obj.quaternion.clone();
     }
   });
+
+  const pillObj = ghosts.pill;
+  if (pillObj && !introInitialRotations["pill"]) {
+    introInitialRotations["pill"] = pillObj.quaternion.clone();
+  }
 }
 
 let lastFloorState: {
@@ -407,6 +412,14 @@ function updateObjectsWalkBy(progress: number) {
       yOffset: -0.5,
       zPhase: Math.PI * 1.0,
     },
+    {
+      key: "pill",
+      behindOffset: -0.5,
+      zOffset: 0.5,
+      xOffset: -0.5,
+      yOffset: 0,
+      zPhase: Math.PI * 0.5,
+    },
   ];
 
   const normalizedProgress = clamp(progress);
@@ -442,10 +455,11 @@ function updateObjectsWalkBy(progress: number) {
       if (!object) return;
 
       const zBounce =
-        key === "pacman"
+        key === "pacman" || key === "pill"
           ? 0
           : Math.sin(normalizedProgress * Math.PI * 2 * 20 + zPhase) * 0.01;
-      const animatedYOffset = key === "pacman" ? 0 : zBounce * 1.5;
+      const animatedYOffset =
+        key === "pacman" || key === "pill" ? 0 : zBounce * 1.5;
       const finalX = pacmanX + behindOffset + xOffset;
       const finalY = pacmanY + staticYOffset - animatedYOffset;
       const finalZ = pacmanZ + zOffset - zBounce;
@@ -462,13 +476,18 @@ function updateObjectsWalkBy(progress: number) {
 
       object.position.set(finalX, finalY, finalZ);
 
-      const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
+      const targetQuat =
+        key === "pacman" ? pacmanQuat : key === "pill" ? pacmanQuat : ghostQuat;
       if (targetQuat) {
         object.quaternion.copy(targetQuat);
       }
 
       const targetScale =
-        key === "pacman" ? SCALE.PACMAN_INTRO : SCALE.GHOST_INTRO;
+        key === "pacman"
+          ? SCALE.PACMAN_INTRO
+          : key === "pill"
+          ? SCALE.PACMAN_INTRO
+          : SCALE.GHOST_INTRO;
       if (objectScales[key] !== targetScale) {
         object.scale.set(targetScale, targetScale, targetScale);
         objectScales[key] = targetScale;
@@ -476,7 +495,8 @@ function updateObjectsWalkBy(progress: number) {
 
       object.visible = true;
 
-      const targetOpacity = key === "pacman" ? OPACITY.FULL : baseGhostOpacity;
+      const targetOpacity =
+        key === "pacman" || key === "pill" ? OPACITY.FULL : baseGhostOpacity;
 
       if (objectOpacities[key] !== targetOpacity) {
         const meshes = objectMeshes[key] || [];
