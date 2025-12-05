@@ -325,14 +325,10 @@ function updateObjectsWalkBy(progress: number) {
   const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
   const pacmanZ = tempVector.z + INTRO_POSITION_OFFSET.z;
 
-  const ghostOpacity =
+  const baseGhostOpacity =
     normalizedProgress < INTRO_FADE_IN_DURATION
       ? normalizedProgress / INTRO_FADE_IN_DURATION
       : 1.0;
-
-  const meshes: THREE.Mesh[] = [];
-  const materialsToUpdate: any[] = [];
-  const meshesToHide: THREE.Mesh[] = [];
 
   objectsToAnimate.forEach(
     ({
@@ -367,7 +363,7 @@ function updateObjectsWalkBy(progress: number) {
 
       object.visible = true;
 
-      const targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
+      const targetOpacity = key === "pacman" ? OPACITY.FULL : baseGhostOpacity;
 
       object.traverse((child) => {
         if ((child as any).isMesh) {
@@ -378,43 +374,29 @@ function updateObjectsWalkBy(progress: number) {
             isCurrencySymbol(childName) ||
             (key === "pacman" && isPacmanPart(childName))
           ) {
-            meshesToHide.push(mesh);
+            mesh.visible = false;
             return;
           }
 
-          meshes.push(mesh);
+          mesh.visible = true;
 
           const mat = mesh.material;
           if (mat) {
             const materials = Array.isArray(mat) ? mat : [mat];
             materials.forEach((material: any) => {
-              materialsToUpdate.push(material);
+              material.opacity = targetOpacity;
+              if (
+                material.transmission !== undefined &&
+                material.transmission > 0
+              ) {
+                material.transparent = true;
+              } else {
+                material.transparent = targetOpacity < 1.0;
+              }
             });
           }
         }
       });
     }
   );
-
-  meshes.forEach((mesh) => {
-    mesh.visible = true;
-  });
-
-  meshesToHide.forEach((mesh) => {
-    mesh.visible = false;
-  });
-
-  const targetOpacity =
-    normalizedProgress < INTRO_FADE_IN_DURATION
-      ? normalizedProgress / INTRO_FADE_IN_DURATION
-      : 1.0;
-
-  materialsToUpdate.forEach((material: any) => {
-    material.opacity = targetOpacity;
-    if (material.transmission !== undefined && material.transmission > 0) {
-      material.transparent = true;
-    } else {
-      material.transparent = targetOpacity < 1.0;
-    }
-  });
 }
