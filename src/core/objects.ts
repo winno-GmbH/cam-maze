@@ -156,16 +156,18 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             if (ghostContainer) {
               ghostContainer.add(ghostGroup);
             }
-          } else if (child.name === "CAM-Shell_Bottom_Orange") {
+          } else if (child.name && child.name.includes("Shell_Bottom_Orange")) {
             const children: THREE.Object3D[] = [];
             child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
                 children.push(subChild);
               }
             });
-            children.forEach((item) => pill.add(item));
-            pill.scale.set(0.05, 0.05, 0.05);
-            pill.visible = false;
+            if (children.length > 0) {
+              children.forEach((item) => pill.add(item));
+              pill.scale.set(0.05, 0.05, 0.05);
+              pill.visible = false;
+            }
           }
 
           if ((child as any).isMesh) {

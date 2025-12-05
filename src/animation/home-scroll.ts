@@ -236,7 +236,9 @@ export function initHomeScrollAnimation() {
       });
     });
 
-    const baseEndTime = 1;
+    const totalObjects = animationData.length;
+    const lastGhostEndTime = 0.95;
+    const baseEndTime = lastGhostEndTime - (totalObjects - 1) * STAGGER_AMOUNT;
 
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];

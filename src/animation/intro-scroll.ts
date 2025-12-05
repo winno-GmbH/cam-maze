@@ -49,7 +49,8 @@ function resetIntroScrollCache() {
 
 function cacheObjectMeshes() {
   Object.entries(ghosts).forEach(([key, object]) => {
-    if (!objectMeshes[key]) {
+    if (!object || !objectMeshes[key]) {
+      if (!object) return;
       objectMeshes[key] = [];
       object.traverse((child) => {
         if ((child as any).isMesh) {
@@ -452,7 +453,7 @@ function updateObjectsWalkBy(progress: number) {
       zPhase,
     }) => {
       const object = ghosts[key];
-      if (!object) return;
+      if (!object || !object.traverse) return;
 
       const zBounce =
         key === "pacman" || key === "pill"
