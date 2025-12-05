@@ -185,15 +185,12 @@ export function initHomeScrollAnimation() {
     });
 
     const totalObjects = animationData.length;
-    const cameraCenterReachTime = 0.8;
-    const timelineEnd = 1;
-    const maxStagger = (totalObjects - 1) * STAGGER_AMOUNT;
-    const objectAnimationDuration = cameraCenterReachTime - maxStagger;
+    const baseEndTime = 0.6;
 
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];
-      const startOffset = index * STAGGER_AMOUNT;
-      const duration = timelineEnd - startOffset;
+      const endTime = baseEndTime + index * STAGGER_AMOUNT;
+      const duration = endTime;
 
       const startPathPoint = data.path.getPointAt(0);
       data.object.position.copy(startPathPoint);
@@ -238,7 +235,7 @@ export function initHomeScrollAnimation() {
             });
           },
         },
-        startOffset
+        0
       );
     });
   };
