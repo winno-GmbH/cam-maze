@@ -94,9 +94,7 @@ function initializeIntroScrollState() {
     });
   };
 
-  setVisibilityForAll();
   applyIntroScrollPreset(true, getScrollDirection());
-  setVisibilityForAll();
 
   isUpdating = false;
 
@@ -160,7 +158,11 @@ export function initIntroScrollAnimation() {
             !isUpdating
           ) {
             lastIntroProgress = self.progress;
-            updateObjectsWalkBy(self.progress);
+            requestAnimationFrame(() => {
+              if (isIntroScrollActive && !isUpdating) {
+                updateObjectsWalkBy(self.progress);
+              }
+            });
           }
         },
         id: "introScroll",
@@ -386,7 +388,16 @@ function updateObjectsWalkBy(progress: number) {
         object.visible = true;
         setObjectScale(object, key, "intro");
 
-        const targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
+        let targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
+
+        if (key === "ghost5") {
+          if (targetOpacity <= 0.01) {
+            targetOpacity = Math.max(0.01, ghostOpacity);
+          }
+          if (normalizedProgress > 0.1 && normalizedProgress < 0.9) {
+            targetOpacity = Math.max(targetOpacity, 0.5);
+          }
+        }
 
         let hasVisibleMesh = false;
         let meshCount = 0;
