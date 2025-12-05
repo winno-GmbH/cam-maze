@@ -184,9 +184,24 @@ export function initHomeScrollAnimation() {
       });
     });
 
+    const totalObjects = animationData.length;
+    const objectAnimationDuration = 0.7;
+    const cameraCenterReachTime = 0.8;
+
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];
-      const startOffset = index * STAGGER_AMOUNT;
+      const desiredStartOffset = index * STAGGER_AMOUNT;
+      const endTime = desiredStartOffset + objectAnimationDuration;
+
+      let finalStartOffset: number;
+      if (endTime > cameraCenterReachTime) {
+        finalStartOffset = Math.max(
+          0,
+          cameraCenterReachTime - objectAnimationDuration
+        );
+      } else {
+        finalStartOffset = desiredStartOffset;
+      }
 
       const startPathPoint = data.path.getPointAt(0);
       data.object.position.copy(startPathPoint);
@@ -208,7 +223,7 @@ export function initHomeScrollAnimation() {
           opacity: OPACITY.HIDDEN,
           ease: "power1.out",
           immediateRender: false,
-          duration: 1,
+          duration: objectAnimationDuration,
           onUpdate: function () {
             const introScrollTrigger = ScrollTrigger.getById("introScroll");
             if (introScrollTrigger?.isActive) {
@@ -231,7 +246,7 @@ export function initHomeScrollAnimation() {
             });
           },
         },
-        startOffset
+        finalStartOffset
       );
     });
   };
