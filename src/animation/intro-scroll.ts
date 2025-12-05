@@ -29,20 +29,6 @@ let introInitialRotations: Record<string, THREE.Quaternion> = {};
 let cachedCameraPosition: THREE.Vector3 | null = null;
 let lastCameraUpdateFrame = -1;
 
-function pauseOtherScrollTriggers() {
-  const homeScrollTrigger = gsap.getById("homeScroll");
-  if (homeScrollTrigger) {
-    const homeTimeline = (homeScrollTrigger as any).timeline;
-    homeTimeline?.pause?.();
-  }
-
-  const povScrollTrigger = ScrollTrigger.getById("povScroll");
-  if (povScrollTrigger) {
-    const povTimeline = (povScrollTrigger as any).timeline;
-    povTimeline?.pause?.();
-  }
-}
-
 function resetIntroScrollCache() {
   cachedCameraPosition = null;
   lastCameraUpdateFrame = -1;
@@ -100,13 +86,11 @@ export function initIntroScrollAnimation() {
         onEnter: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
-          pauseOtherScrollTriggers();
           setIntroScrollLocked(true);
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
-          pauseOtherScrollTriggers();
           setIntroScrollLocked(true);
         },
         onLeave: () => {
