@@ -5,7 +5,6 @@ import { camera } from "../core/camera";
 import { ghosts, pacmanMixer } from "../core/objects";
 import { clock } from "../core/scene";
 import { slerpToLayDown, applyRotations } from "./util";
-import { setMaterialOpacity, forEachMaterial } from "../core/material-utils";
 import { isCurrencySymbol, isPacmanPart } from "./util";
 import {
   SCROLL_SELECTORS,
@@ -233,8 +232,6 @@ let lastFloorState: {
 } | null = null;
 
 const tempVector = new THREE.Vector3();
-const meshesToShowCache: THREE.Mesh[] = [];
-const meshesToHideCache: THREE.Mesh[] = [];
 
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive || isUpdating) return;
@@ -372,63 +369,37 @@ function updateObjectsWalkBy(progress: number) {
 
         const targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
 
-        meshesToShowCache.length = 0;
-        meshesToHideCache.length = 0;
+        object.traverse((child) => {
+          if ((child as any).isMesh) {
+            const mesh = child as THREE.Mesh;
+            const childName = child.name || "";
 
-        let hasVisibleMesh = false;
-
-        forEachMaterial(
-          object,
-          (mat: any, mesh: THREE.Mesh, childName: string) => {
             if (
               isCurrencySymbol(childName) ||
               (key === "pacman" && isPacmanPart(childName))
             ) {
-              if (mesh.visible) {
-                meshesToHideCache.push(mesh);
-              }
+              mesh.visible = false;
               return;
             }
 
-            if (!mesh.visible) {
-              meshesToShowCache.push(mesh);
+            mesh.visible = true;
+
+            const mat = mesh.material;
+            if (mat) {
+              const materials = Array.isArray(mat) ? mat : [mat];
+              materials.forEach((material: any) => {
+                material.opacity = targetOpacity;
+                if (
+                  material.transmission !== undefined &&
+                  material.transmission > 0
+                ) {
+                  material.transparent = true;
+                } else {
+                  material.transparent = targetOpacity < 1.0;
+                }
+              });
             }
-            hasVisibleMesh = true;
-            setMaterialOpacity(mat, targetOpacity, true);
-          },
-          {
-            skipCurrencySymbols: false,
-            skipPacmanParts: false,
-            objectKey: key,
           }
-        );
-
-        if (key === "ghost5" && !hasVisibleMesh) {
-          let foundFallback = false;
-          object.traverse((child) => {
-            if ((child as any).isMesh && !foundFallback) {
-              const mesh = child as THREE.Mesh;
-              if (!mesh.visible) {
-                meshesToShowCache.push(mesh);
-              }
-              foundFallback = true;
-              const mat = mesh.material;
-              if (mat) {
-                setMaterialOpacity(
-                  Array.isArray(mat) ? mat[0] : mat,
-                  targetOpacity,
-                  true
-                );
-              }
-            }
-          });
-        }
-
-        meshesToShowCache.forEach((mesh) => {
-          mesh.visible = true;
-        });
-        meshesToHideCache.forEach((mesh) => {
-          mesh.visible = false;
         });
       }
     );
