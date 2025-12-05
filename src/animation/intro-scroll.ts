@@ -90,6 +90,7 @@ export function initIntroScrollAnimation() {
         end: "bottom bottom",
         scrub: SCRUB_DURATION,
         refreshPriority: 1,
+        markers: true,
         onEnter: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
@@ -122,6 +123,7 @@ export function initIntroScrollAnimation() {
         id: "introScroll",
       },
     })
+    .addLabel("intro-text-start", 0)
     .fromTo(
       ".sc_h--intro",
       { scale: KEYFRAME_SCALE.START, opacity: OPACITY.HIDDEN },
@@ -150,6 +152,17 @@ export function initIntroScrollAnimation() {
         ],
       }
     )
+    .addLabel("intro-text-fade-in", KEYFRAME_DURATION.NONE)
+    .addLabel(
+      "intro-text-hold",
+      KEYFRAME_DURATION.NONE + KEYFRAME_DURATION.FADE_IN
+    )
+    .addLabel(
+      "intro-text-fade-out",
+      KEYFRAME_DURATION.NONE +
+        KEYFRAME_DURATION.FADE_IN +
+        KEYFRAME_DURATION.HOLD
+    )
     .fromTo(
       ".sc_b--intro",
       { scale: KEYFRAME_SCALE.START, opacity: OPACITY.HIDDEN },
@@ -177,6 +190,13 @@ export function initIntroScrollAnimation() {
           },
         ],
       }
+    )
+    .addLabel(
+      "intro-text-end",
+      KEYFRAME_DURATION.NONE +
+        KEYFRAME_DURATION.FADE_IN +
+        KEYFRAME_DURATION.HOLD +
+        KEYFRAME_DURATION.FADE_OUT
     );
 }
 

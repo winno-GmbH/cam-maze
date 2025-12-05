@@ -100,6 +100,7 @@ export function initHomeScrollAnimation() {
       start: "top top",
       end: "bottom top",
       scrub: SCRUB_DURATION,
+      markers: true,
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
     },
@@ -187,6 +188,8 @@ export function initHomeScrollAnimation() {
     const totalObjects = animationData.length;
     const baseEndTime = 0.6;
 
+    homeScrollTimeline!.addLabel("home-scroll-all-objects-start", 0);
+
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];
       const endTime = baseEndTime + index * STAGGER_AMOUNT;
@@ -237,7 +240,11 @@ export function initHomeScrollAnimation() {
         },
         0
       );
+      homeScrollTimeline!.addLabel(`object-${data.key}-laydown`, duration);
     });
+
+    const maxEndTime = baseEndTime + (totalObjects - 1) * STAGGER_AMOUNT;
+    homeScrollTimeline!.addLabel("home-scroll-all-objects-laydown", maxEndTime);
   };
 
   let cameraProgressWrapper: { value: number } | null = null;
@@ -253,6 +260,7 @@ export function initHomeScrollAnimation() {
       return;
     }
 
+    homeScrollTimeline!.addLabel("camera-start", 0);
     homeScrollTimeline!.fromTo(
       cameraProgressWrapper,
       { value: 0 },
@@ -295,6 +303,8 @@ export function initHomeScrollAnimation() {
       },
       0
     );
+    homeScrollTimeline!.addLabel("camera-center", 0.5);
+    homeScrollTimeline!.addLabel("camera-end", 1);
   };
 
   createObjectAnimations();

@@ -173,6 +173,7 @@ export function initPovScrollAnimation() {
         },
       },
     })
+    .addLabel("pov-animation-start", 0)
     .to(
       { progress: 0 },
       {
@@ -191,7 +192,10 @@ export function initPovScrollAnimation() {
           resetState();
         },
       }
-    );
+    )
+    .addLabel("pov-animation-sequence-phase", POV_SEQUENCE_PHASE_END)
+    .addLabel("pov-animation-transition-phase", POV_TRANSITION_PHASE_END)
+    .addLabel("pov-animation-end", 1);
 }
 
 function handleAnimationStart() {
