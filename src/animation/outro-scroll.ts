@@ -18,7 +18,7 @@ export function initOutroScrollAnimation() {
         start: "top center",
         end: "bottom bottom",
         scrub: SCRUB_DURATION,
-        markers: true,
+        markers: false,
         onEnter: () => {
           const scrollDir = getScrollDirection();
           applyOutroScrollPreset(true, scrollDir);

@@ -90,7 +90,7 @@ export function initIntroScrollAnimation() {
         end: "bottom bottom",
         scrub: SCRUB_DURATION,
         refreshPriority: 1,
-        markers: true,
+        markers: false,
         onEnter: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();

@@ -100,7 +100,13 @@ export function initHomeScrollAnimation() {
       start: "top top",
       end: "bottom top",
       scrub: SCRUB_DURATION,
-      markers: true,
+      markers: {
+        startColor: "green",
+        endColor: "red",
+        fontSize: "12px",
+        fontWeight: "bold",
+        indent: 20,
+      },
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
     },
@@ -268,6 +274,7 @@ export function initHomeScrollAnimation() {
         value: 1,
         immediateRender: false,
         duration: 1,
+        ease: "none",
         onUpdate: function () {
           const introScrollTrigger = ScrollTrigger.getById("introScroll");
           if (introScrollTrigger?.isActive) {
@@ -276,7 +283,8 @@ export function initHomeScrollAnimation() {
 
           const progress = this.targets()[0].value;
           if (cameraPath && cameraPath.curves.length) {
-            const cameraPoint = cameraPath.getPointAt(progress);
+            const clampedProgress = Math.min(1, Math.max(0, progress));
+            const cameraPoint = cameraPath.getPointAt(clampedProgress);
             camera.position.copy(cameraPoint);
 
             const lookAtPoints: THREE.Vector3[] = [];
@@ -300,10 +308,31 @@ export function initHomeScrollAnimation() {
             camera.updateProjectionMatrix();
           }
         },
+        onComplete: function () {
+          const endPoint = cameraPath.getPointAt(1);
+          camera.position.copy(endPoint);
+          const lookAtPoints: THREE.Vector3[] = [];
+          cameraPathPoints.forEach((point) => {
+            if ("lookAt" in point && point.lookAt) {
+              lookAtPoints.push(point.lookAt);
+            }
+          });
+          if (lookAtPoints.length >= 4) {
+            const lookAtCurve = new THREE.CubicBezierCurve3(
+              lookAtPoints[0],
+              lookAtPoints[1],
+              lookAtPoints[2],
+              lookAtPoints[3]
+            );
+            const endLookAt = lookAtCurve.getPoint(1);
+            camera.lookAt(endLookAt);
+          }
+          camera.fov = originalFOV;
+          camera.updateProjectionMatrix();
+        },
       },
       0
     );
-    homeScrollTimeline!.addLabel("camera-center", 0.5);
     homeScrollTimeline!.addLabel("camera-end", 1);
   };
 

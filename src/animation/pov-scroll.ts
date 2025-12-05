@@ -160,7 +160,7 @@ export function initPovScrollAnimation() {
         trigger: DOM_ELEMENTS.povSection,
         start: "top bottom",
         end: "bottom top",
-        markers: true,
+        markers: false,
         scrub: SCRUB_DURATION,
         toggleActions: "play none none reverse",
         onEnter: () => {
