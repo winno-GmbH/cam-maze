@@ -259,6 +259,7 @@ export function initHomeScrollAnimation() {
       {
         value: 1,
         immediateRender: false,
+        duration: 1,
         onUpdate: function () {
           const introScrollTrigger = ScrollTrigger.getById("introScroll");
           if (introScrollTrigger?.isActive) {
