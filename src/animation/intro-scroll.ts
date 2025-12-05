@@ -343,7 +343,7 @@ function updateObjectsWalkBy(progress: number) {
         const zBounce =
           key === "pacman"
             ? 0
-            : Math.sin(normalizedProgress * Math.PI * 2 * 10 + zPhase) * 0.05;
+            : Math.sin(normalizedProgress * Math.PI * 2 * 10 + zPhase) * 0.005;
         const animatedYOffset = key === "pacman" ? 0 : zBounce * 1.5;
         const finalX = pacmanX + behindOffset + (xOffset || 0);
         const finalY = pacmanY + (staticYOffset || 0) - animatedYOffset;
