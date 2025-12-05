@@ -453,7 +453,7 @@ function updateObjectsWalkBy(progress: number) {
       zPhase,
     }) => {
       const object = ghosts[key];
-      if (!object || !object.traverse) return;
+      if (!object) return;
 
       const zBounce =
         key === "pacman" || key === "pill"

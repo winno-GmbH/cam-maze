@@ -62,6 +62,8 @@ export function initHomeScrollAnimation() {
       const scrollDir = getScrollDirection();
 
       Object.entries(ghosts).forEach(([key, object]) => {
+        if (!object) return;
+
         if (homeLoopStartPos[key]) {
           object.position.copy(homeLoopStartPos[key]);
           startPositions[key] = homeLoopStartPos[key].clone();
@@ -154,7 +156,9 @@ export function initHomeScrollAnimation() {
     }
 
     allObjects.forEach(([key, object]) => {
-      killObjectAnimations(object);
+      if (object) {
+        killObjectAnimations(object);
+      }
     });
 
     const homeScrollPaths = getHomeScrollPaths(startPositions);
@@ -169,6 +173,10 @@ export function initHomeScrollAnimation() {
     }> = [];
 
     allObjects.forEach(([key, object]) => {
+      if (!object) {
+        return;
+      }
+
       const currentMaterialOpacity = getObjectOpacity(object);
       const meshesToUpdate: Array<{
         mesh: THREE.Mesh;
