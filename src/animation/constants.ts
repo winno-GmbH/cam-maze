@@ -38,7 +38,7 @@ export const INTRO_POSITION_OFFSET = {
 export const FIND_CLOSEST_SAMPLES = 800;
 
 export const SCRUB_DURATION = 0.5;
-export const STAGGER_AMOUNT = 0.015;
+export const STAGGER_AMOUNT = 0.025;
 export const ROTATION_TRANSITION_DURATION = 1.5;
 
 export const POV_SEQUENCE_PHASE_END = 0.05;
