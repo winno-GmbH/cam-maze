@@ -103,7 +103,11 @@ export function initIntroScrollAnimation() {
             typeof self.progress === "number" &&
             !isUpdating
           ) {
-            updateObjectsWalkBy(self.progress);
+            requestAnimationFrame(() => {
+              if (isIntroScrollActive && !isUpdating) {
+                updateObjectsWalkBy(self.progress);
+              }
+            });
           }
         },
         id: "introScroll",
@@ -232,6 +236,11 @@ let lastFloorState: {
   transparent: boolean;
 } | null = null;
 
+const tempVector = new THREE.Vector3();
+const meshesToShowCache: THREE.Mesh[] = [];
+const meshesToHideCache: THREE.Mesh[] = [];
+const lastObjectOpacities: Record<string, number> = {};
+
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive || isUpdating) return;
 
@@ -266,14 +275,10 @@ function updateObjectsWalkBy(progress: number) {
     const pacmanQuat = pacmanTargetQuaternion;
     const ghostQuat = ghostTargetQuaternion;
 
-    const baseCenter = new THREE.Vector3(
-      camera.position.x,
-      camera.position.y,
-      camera.position.z
-    );
+    tempVector.set(camera.position.x, camera.position.y, camera.position.z);
 
-    const walkStart = baseCenter.x - INTRO_WALK_DISTANCE;
-    const walkEnd = baseCenter.x + INTRO_WALK_DISTANCE;
+    const walkStart = tempVector.x - INTRO_WALK_DISTANCE;
+    const walkEnd = tempVector.x + INTRO_WALK_DISTANCE;
 
     const objectsToAnimate = [
       {
@@ -329,8 +334,8 @@ function updateObjectsWalkBy(progress: number) {
     const normalizedProgress = clamp(progress);
     const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
     const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
-    const pacmanY = baseCenter.y + INTRO_POSITION_OFFSET.y;
-    const pacmanZ = baseCenter.z + INTRO_POSITION_OFFSET.z;
+    const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
+    const pacmanZ = tempVector.z + INTRO_POSITION_OFFSET.z;
 
     const ghostOpacity =
       normalizedProgress < INTRO_FADE_IN_DURATION
@@ -358,17 +363,20 @@ function updateObjectsWalkBy(progress: number) {
         const finalY = pacmanY + (staticYOffset || 0) - animatedYOffset;
         const finalZ = pacmanZ + zOffset - zBounce;
 
-        if (
-          !object.position.equals(new THREE.Vector3(finalX, finalY, finalZ))
-        ) {
-          object.position.set(finalX, finalY, finalZ);
+        tempVector.set(finalX, finalY, finalZ);
+        if (!object.position.equals(tempVector)) {
+          object.position.copy(tempVector);
         }
 
         const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
-        if (targetQuat && !object.quaternion.equals(targetQuat)) {
-          if (key === "pacman" && pacmanQuat) {
+        if (targetQuat) {
+          if (
+            key === "pacman" &&
+            pacmanQuat &&
+            !object.quaternion.equals(pacmanQuat)
+          ) {
             object.quaternion.copy(pacmanQuat);
-          } else if (ghostQuat) {
+          } else if (ghostQuat && !object.quaternion.equals(ghostQuat)) {
             object.quaternion.copy(ghostQuat);
           }
         }
@@ -383,70 +391,49 @@ function updateObjectsWalkBy(progress: number) {
           object.visible = shouldBeVisible;
         }
 
-        const targetOpacity =
-          key === "pacman"
-            ? OPACITY.FULL
-            : key === "ghost5"
-            ? Math.max(ghostOpacity, 0.3)
-            : ghostOpacity;
+        const targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
 
-        let hasVisibleMesh = false;
-        const meshesToShow: THREE.Mesh[] = [];
-        const meshesToHide: THREE.Mesh[] = [];
+        const lastOpacity = lastObjectOpacities[key] ?? -1;
+        const opacityChanged = Math.abs(lastOpacity - targetOpacity) > 0.001;
 
-        forEachMaterial(
-          object,
-          (mat: any, mesh: THREE.Mesh, childName: string) => {
-            if (
-              isCurrencySymbol(childName) ||
-              (key === "pacman" && isPacmanPart(childName))
-            ) {
-              if (mesh.visible) {
-                meshesToHide.push(mesh);
+        if (opacityChanged) {
+          lastObjectOpacities[key] = targetOpacity;
+
+          meshesToShowCache.length = 0;
+          meshesToHideCache.length = 0;
+
+          forEachMaterial(
+            object,
+            (mat: any, mesh: THREE.Mesh, childName: string) => {
+              if (
+                isCurrencySymbol(childName) ||
+                (key === "pacman" && isPacmanPart(childName))
+              ) {
+                if (mesh.visible) {
+                  meshesToHideCache.push(mesh);
+                }
+                return;
               }
-              return;
-            }
 
-            if (!mesh.visible) {
-              meshesToShow.push(mesh);
-            }
-            hasVisibleMesh = true;
-            setMaterialOpacity(mat, targetOpacity, true);
-          },
-          {
-            skipCurrencySymbols: false,
-            skipPacmanParts: false,
-            objectKey: key,
-          }
-        );
-
-        if (key === "ghost5" && !hasVisibleMesh) {
-          let foundFallback = false;
-          object.traverse((child) => {
-            if ((child as any).isMesh && !foundFallback) {
-              const mesh = child as THREE.Mesh;
               if (!mesh.visible) {
-                meshesToShow.push(mesh);
+                meshesToShowCache.push(mesh);
               }
-              foundFallback = true;
-              const mat = mesh.material;
-              if (mat) {
-                setMaterialOpacity(
-                  Array.isArray(mat) ? mat[0] : mat,
-                  targetOpacity,
-                  true
-                );
-              }
+              setMaterialOpacity(mat, targetOpacity, true);
+            },
+            {
+              skipCurrencySymbols: false,
+              skipPacmanParts: false,
+              objectKey: key,
             }
+          );
+
+          meshesToShowCache.forEach((mesh) => {
+            mesh.visible = true;
+          });
+          meshesToHideCache.forEach((mesh) => {
+            mesh.visible = false;
           });
         }
-
-        meshesToShow.forEach((mesh) => {
-          mesh.visible = true;
-        });
-        meshesToHide.forEach((mesh) => {
-          mesh.visible = false;
-        });
       }
     );
   } finally {
