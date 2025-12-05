@@ -47,7 +47,24 @@ function pauseOtherScrollTriggers() {
 }
 
 function restoreFloor() {
-  setFloorPlane(true, OPACITY.FULL, false);
+  const floorState = {
+    visible: true,
+    opacity: OPACITY.FULL,
+    transparent: false,
+  };
+  if (
+    !lastFloorState ||
+    lastFloorState.visible !== floorState.visible ||
+    lastFloorState.opacity !== floorState.opacity ||
+    lastFloorState.transparent !== floorState.transparent
+  ) {
+    setFloorPlane(
+      floorState.visible,
+      floorState.opacity,
+      floorState.transparent
+    );
+    lastFloorState = floorState;
+  }
 }
 
 export function initIntroScrollAnimation() {
@@ -67,22 +84,10 @@ export function initIntroScrollAnimation() {
         onEnter: () => {
           isIntroScrollActive = true;
           pauseOtherScrollTriggers();
-          const scrollTrigger = ScrollTrigger.getById("introScroll");
-          const progress =
-            scrollTrigger && typeof scrollTrigger.progress === "number"
-              ? scrollTrigger.progress
-              : 0;
-          updateObjectsWalkBy(progress);
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           pauseOtherScrollTriggers();
-          const scrollTrigger = ScrollTrigger.getById("introScroll");
-          const progress =
-            scrollTrigger && typeof scrollTrigger.progress === "number"
-              ? scrollTrigger.progress
-              : 0;
-          updateObjectsWalkBy(progress);
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -221,6 +226,12 @@ function initializeQuaternions() {
   });
 }
 
+let lastFloorState: {
+  visible: boolean;
+  opacity: number;
+  transparent: boolean;
+} | null = null;
+
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive || isUpdating) return;
 
@@ -233,7 +244,24 @@ function updateObjectsWalkBy(progress: number) {
       pacmanMixer.update(clock.getDelta());
     }
 
-    setFloorPlane(true, OPACITY.HIDDEN, true);
+    const floorState = {
+      visible: true,
+      opacity: OPACITY.HIDDEN,
+      transparent: true,
+    };
+    if (
+      !lastFloorState ||
+      lastFloorState.visible !== floorState.visible ||
+      lastFloorState.opacity !== floorState.opacity ||
+      lastFloorState.transparent !== floorState.transparent
+    ) {
+      setFloorPlane(
+        floorState.visible,
+        floorState.opacity,
+        floorState.transparent
+      );
+      lastFloorState = floorState;
+    }
 
     const pacmanQuat = pacmanTargetQuaternion;
     const ghostQuat = ghostTargetQuaternion;
@@ -330,16 +358,23 @@ function updateObjectsWalkBy(progress: number) {
         const finalY = pacmanY + (staticYOffset || 0) - animatedYOffset;
         const finalZ = pacmanZ + zOffset - zBounce;
 
-        object.position.set(finalX, finalY, finalZ);
+        if (
+          !object.position.equals(new THREE.Vector3(finalX, finalY, finalZ))
+        ) {
+          object.position.set(finalX, finalY, finalZ);
+        }
 
-        if (key === "pacman" && pacmanQuat) {
-          object.quaternion.copy(pacmanQuat);
-        } else if (ghostQuat) {
-          object.quaternion.copy(ghostQuat);
+        const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
+        if (targetQuat && !object.quaternion.equals(targetQuat)) {
+          if (key === "pacman" && pacmanQuat) {
+            object.quaternion.copy(pacmanQuat);
+          } else if (ghostQuat) {
+            object.quaternion.copy(ghostQuat);
+          }
         }
 
         const targetScale = key === "pacman" ? 0.1 : 1.5;
-        if (object.scale.x !== targetScale) {
+        if (Math.abs(object.scale.x - targetScale) > 0.001) {
           setObjectScale(object, key, "intro");
         }
 

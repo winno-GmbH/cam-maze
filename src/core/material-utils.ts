@@ -55,12 +55,17 @@ export function setMaterialTransparent(
   preserveTransmission: boolean = true
 ): void {
   const mat = material as any;
+  const currentTransparent = mat.transparent ?? false;
 
-  if (preserveTransmission && mat.transmission !== undefined && mat.transmission > 0) {
-    mat.transparent = true;
-  } else {
-    mat.transparent = transparent;
+  const shouldBeTransparent = preserveTransmission && mat.transmission !== undefined && mat.transmission > 0
+    ? true
+    : transparent;
+
+  if (currentTransparent === shouldBeTransparent) {
+    return;
   }
+
+  mat.transparent = shouldBeTransparent;
 
   if (mat.needsUpdate !== undefined) {
     mat.needsUpdate = true;
