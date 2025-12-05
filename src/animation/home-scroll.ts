@@ -267,7 +267,7 @@ export function initHomeScrollAnimation() {
         value: 1,
         immediateRender: false,
         duration: 1,
-        ease: "power2.out",
+        ease: "none",
         onUpdate: function () {
           const introScrollTrigger = ScrollTrigger.getById("introScroll");
           if (introScrollTrigger?.isActive) {
@@ -277,8 +277,7 @@ export function initHomeScrollAnimation() {
           const progress = this.targets()[0].value;
           if (cameraPath && cameraPath.curves.length) {
             const clampedProgress = Math.min(1, Math.max(0, progress));
-            const easedProgress = Math.pow(clampedProgress, 0.5);
-            const cameraPoint = cameraPath.getPointAt(easedProgress);
+            const cameraPoint = cameraPath.getPointAt(clampedProgress);
             camera.position.copy(cameraPoint);
 
             const lookAtPoints: THREE.Vector3[] = [];
@@ -295,7 +294,7 @@ export function initHomeScrollAnimation() {
                 lookAtPoints[2],
                 lookAtPoints[3]
               );
-              const lookAtPoint = lookAtCurve.getPoint(easedProgress);
+              const lookAtPoint = lookAtCurve.getPoint(clampedProgress);
               camera.lookAt(lookAtPoint);
             }
             camera.fov = originalFOV;
