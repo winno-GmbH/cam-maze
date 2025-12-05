@@ -100,14 +100,11 @@ export function initHomeScrollAnimation() {
       end: "bottom top",
       scrub: SCRUB_DURATION,
       markers: false,
+      refreshPriority: 0,
+      invalidateOnRefresh: false,
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
       onUpdate: (self) => {
-        const introScrollTrigger = ScrollTrigger.getById("introScroll");
-        if (introScrollTrigger?.isActive) {
-          return;
-        }
-
         if (cameraPath && cameraPath.curves.length) {
           const progress = self.progress;
           const clampedProgress = Math.min(1, Math.max(0, progress));
@@ -133,6 +130,18 @@ export function initHomeScrollAnimation() {
           }
           camera.fov = originalFOV;
           camera.updateProjectionMatrix();
+        }
+      },
+      onLeave: () => {
+        const introScrollTrigger = ScrollTrigger.getById("introScroll");
+        if (!introScrollTrigger?.isActive) {
+          homeScrollTimeline?.resume();
+        }
+      },
+      onLeaveBack: () => {
+        const introScrollTrigger = ScrollTrigger.getById("introScroll");
+        if (!introScrollTrigger?.isActive) {
+          homeScrollTimeline?.resume();
         }
       },
     },
