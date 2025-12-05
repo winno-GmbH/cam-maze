@@ -22,7 +22,7 @@ const cameraPathPointsConfig = {
   cameraHomeScrollEndLookAt: new THREE.Vector3(0.55675, -5, 0.35),
   thirdPosition: new THREE.Vector3(0.55675, 3, 0.45175),
 
-  cameraHomeScrollEndPathPoint: new THREE.Vector3(0.55675, 0.25, 0.45175),
+  cameraHomeScrollEndPathPoint: new THREE.Vector3(0.55675, 0.75, 0.45175),
 };
 
 const startPosition = isMobile
