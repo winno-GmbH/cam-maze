@@ -286,7 +286,7 @@ function updateObjectsWalkBy(progress: number) {
         behindOffset: INTRO_GHOST_OFFSETS.GHOST2,
         zOffset: 0.5,
         xOffset: 1,
-        yOffset: -5,
+        yOffset: -2,
         zPhase: Math.PI * 1.5,
       },
       {
