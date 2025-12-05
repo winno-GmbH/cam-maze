@@ -5,10 +5,9 @@ import { camera } from "../core/camera";
 import { ghosts, pacmanMixer } from "../core/objects";
 import { clock } from "../core/scene";
 import {
-  applyIntroScrollPreset,
-  getScrollDirection,
   getPacmanTargetQuaternion,
   getGhostTargetQuaternion,
+  applyIntroScrollPreset,
 } from "./scene-presets";
 import { setMaterialOpacity, forEachMaterial } from "../core/material-utils";
 import { isCurrencySymbol, isPacmanPart } from "./util";
@@ -48,19 +47,6 @@ function pauseOtherScrollTriggers() {
   }
 }
 
-function initializeIntroScrollState() {
-  pauseOtherScrollTriggers();
-  applyIntroScrollPreset(true, getScrollDirection());
-  isUpdating = false;
-
-  const scrollTrigger = ScrollTrigger.getById("introScroll");
-  const progress =
-    scrollTrigger && typeof scrollTrigger.progress === "number"
-      ? scrollTrigger.progress
-      : 0;
-  updateObjectsWalkBy(progress);
-}
-
 function restoreFloor() {
   setFloorPlane(true, OPACITY.FULL, false);
 }
@@ -81,11 +67,13 @@ export function initIntroScrollAnimation() {
         refreshPriority: 1,
         onEnter: () => {
           isIntroScrollActive = true;
-          initializeIntroScrollState();
+          pauseOtherScrollTriggers();
+          applyIntroScrollPreset(true);
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
-          initializeIntroScrollState();
+          pauseOtherScrollTriggers();
+          applyIntroScrollPreset(true);
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -176,6 +164,9 @@ function updateObjectsWalkBy(progress: number) {
     }
 
     setFloorPlane(true, OPACITY.HIDDEN, true);
+
+    const pacmanQuat = getPacmanTargetQuaternion();
+    const ghostQuat = getGhostTargetQuaternion();
 
     const baseCenter = new THREE.Vector3(
       camera.position.x,
@@ -271,8 +262,6 @@ function updateObjectsWalkBy(progress: number) {
 
         object.position.set(finalX, finalY, finalZ);
 
-        const pacmanQuat = getPacmanTargetQuaternion();
-        const ghostQuat = getGhostTargetQuaternion();
         if (key === "pacman" && pacmanQuat) {
           object.quaternion.copy(pacmanQuat);
         } else if (ghostQuat) {
