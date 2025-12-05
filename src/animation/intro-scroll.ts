@@ -112,6 +112,7 @@ export function initIntroScrollAnimation() {
           isIntroScrollActive = false;
           cachedCameraPosition = null;
           lastCameraUpdateFrame = -1;
+          lastUpdateProgress = null;
           restoreFloor();
 
           Object.values(ghosts).forEach((obj) => {
@@ -124,6 +125,7 @@ export function initIntroScrollAnimation() {
           isIntroScrollActive = false;
           cachedCameraPosition = null;
           lastCameraUpdateFrame = -1;
+          lastUpdateProgress = null;
           restoreFloor();
 
           Object.values(ghosts).forEach((obj) => {

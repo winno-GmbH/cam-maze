@@ -56,11 +56,20 @@ export function initHomeScrollAnimation() {
 
   const handleScrollEnter = () => {
     requestAnimationFrame(() => {
+      const introScrollTrigger = ScrollTrigger.getById("introScroll");
+      if (introScrollTrigger?.isActive) {
+        return;
+      }
+
       const homeLoopStartPos = getHomeLoopStartPositions();
       const homeLoopStartRot = getHomeLoopStartRotations();
       const scrollDir = getScrollDirection();
 
       Object.entries(ghosts).forEach(([key, object]) => {
+        if (object.userData?.introScrollLocked) {
+          return;
+        }
+
         if (homeLoopStartPos[key]) {
           object.position.copy(homeLoopStartPos[key]);
           startPositions[key] = homeLoopStartPos[key].clone();
