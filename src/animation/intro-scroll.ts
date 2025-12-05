@@ -16,9 +16,10 @@ import {
   KEYFRAME_SCALE,
   KEYFRAME_DURATION,
   INTRO_GHOST_OFFSETS,
+  SCALE,
   clamp,
 } from "./constants";
-import { setFloorPlane, setObjectScale } from "./scene-utils";
+import { setFloorPlane } from "./scene-utils";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -29,10 +30,45 @@ let introInitialRotations: Record<string, THREE.Quaternion> = {};
 let cachedCameraPosition: THREE.Vector3 | null = null;
 let lastCameraUpdateFrame = -1;
 
+const objectMeshes: Record<
+  string,
+  Array<{
+    mesh: THREE.Mesh;
+    material: THREE.Material | THREE.Material[];
+    name: string;
+  }>
+> = {};
+const objectScales: Record<string, number> = {};
+const objectOpacities: Record<string, number> = {};
+
 function resetIntroScrollCache() {
   cachedCameraPosition = null;
   lastCameraUpdateFrame = -1;
   lastUpdateProgress = null;
+}
+
+function cacheObjectMeshes() {
+  Object.entries(ghosts).forEach(([key, object]) => {
+    if (!objectMeshes[key]) {
+      objectMeshes[key] = [];
+      object.traverse((child) => {
+        if ((child as any).isMesh) {
+          const mesh = child as THREE.Mesh;
+          const childName = child.name || "";
+          if (
+            !isCurrencySymbol(childName) &&
+            !(key === "pacman" && isPacmanPart(childName))
+          ) {
+            objectMeshes[key].push({
+              mesh,
+              material: mesh.material,
+              name: childName,
+            });
+          }
+        }
+      });
+    }
+  });
 }
 
 function setIntroScrollLocked(locked: boolean) {
@@ -86,11 +122,13 @@ export function initIntroScrollAnimation() {
         onEnter: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
+          cacheObjectMeshes();
           setIntroScrollLocked(true);
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
+          cacheObjectMeshes();
           setIntroScrollLocked(true);
         },
         onLeave: () => {
@@ -429,44 +467,33 @@ function updateObjectsWalkBy(progress: number) {
         object.quaternion.copy(targetQuat);
       }
 
-      setObjectScale(object, key, "intro");
+      const targetScale =
+        key === "pacman" ? SCALE.PACMAN_INTRO : SCALE.GHOST_INTRO;
+      if (objectScales[key] !== targetScale) {
+        object.scale.set(targetScale, targetScale, targetScale);
+        objectScales[key] = targetScale;
+      }
 
       object.visible = true;
 
       const targetOpacity = key === "pacman" ? OPACITY.FULL : baseGhostOpacity;
 
-      object.traverse((child) => {
-        if ((child as any).isMesh) {
-          const mesh = child as THREE.Mesh;
-          const childName = child.name || "";
-
-          if (
-            isCurrencySymbol(childName) ||
-            (key === "pacman" && isPacmanPart(childName))
-          ) {
-            mesh.visible = false;
-            return;
-          }
-
+      if (objectOpacities[key] !== targetOpacity) {
+        const meshes = objectMeshes[key] || [];
+        meshes.forEach(({ mesh, material }) => {
           mesh.visible = true;
-
-          const mat = mesh.material;
-          if (mat) {
-            const materials = Array.isArray(mat) ? mat : [mat];
-            materials.forEach((material: any) => {
-              material.opacity = targetOpacity;
-              if (
-                material.transmission !== undefined &&
-                material.transmission > 0
-              ) {
-                material.transparent = true;
-              } else {
-                material.transparent = targetOpacity < 1.0;
-              }
-            });
-          }
-        }
-      });
+          const materials = Array.isArray(material) ? material : [material];
+          materials.forEach((mat: any) => {
+            mat.opacity = targetOpacity;
+            if (mat.transmission !== undefined && mat.transmission > 0) {
+              mat.transparent = true;
+            } else {
+              mat.transparent = targetOpacity < 1.0;
+            }
+          });
+        });
+        objectOpacities[key] = targetOpacity;
+      }
     }
   );
 }

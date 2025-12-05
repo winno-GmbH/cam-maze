@@ -16,7 +16,6 @@ import {
 import {
   setObjectOpacity,
   getObjectOpacity,
-  forEachMaterial,
   setMaterialOpacity,
 } from "../core/material-utils";
 import { killObjectAnimations } from "./scene-utils";
@@ -171,26 +170,40 @@ export function initHomeScrollAnimation() {
 
     allObjects.forEach(([key, object]) => {
       const currentMaterialOpacity = getObjectOpacity(object);
+      const meshesToUpdate: Array<{
+        mesh: THREE.Mesh;
+        mat: any;
+        index?: number;
+      }> = [];
 
-      forEachMaterial(
-        object,
-        (mat: any, mesh: THREE.Mesh) => {
-          const clonedMat = mat.clone();
-          setMaterialOpacity(clonedMat, currentMaterialOpacity, true);
-
-          if (Array.isArray(mesh.material)) {
-            const index = mesh.material.indexOf(mat);
-            if (index !== -1) {
-              const clonedMaterials = [...mesh.material];
-              clonedMaterials[index] = clonedMat;
-              mesh.material = clonedMaterials;
+      object.traverse((child) => {
+        if ((child as any).isMesh) {
+          const mesh = child as THREE.Mesh;
+          const mat = mesh.material;
+          if (mat) {
+            if (Array.isArray(mat)) {
+              mat.forEach((m, idx) => {
+                meshesToUpdate.push({ mesh, mat: m, index: idx });
+              });
+            } else {
+              meshesToUpdate.push({ mesh, mat });
             }
-          } else {
-            mesh.material = clonedMat;
           }
-        },
-        { skipCurrencySymbols: false }
-      );
+        }
+      });
+
+      meshesToUpdate.forEach(({ mesh, mat, index }) => {
+        const clonedMat = mat.clone();
+        setMaterialOpacity(clonedMat, currentMaterialOpacity, true);
+
+        if (index !== undefined && Array.isArray(mesh.material)) {
+          const clonedMaterials = [...mesh.material];
+          clonedMaterials[index] = clonedMat;
+          mesh.material = clonedMaterials;
+        } else {
+          mesh.material = clonedMat;
+        }
+      });
 
       const homeLoopStartRot = getHomeLoopStartRotations();
       const startRot =
