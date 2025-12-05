@@ -11,15 +11,12 @@ import {
   getGhostTargetQuaternion,
 } from "./scene-presets";
 import { setMaterialOpacity, forEachMaterial } from "../core/material-utils";
-import { OBJECT_KEYS, isCurrencySymbol, isPacmanPart } from "./util";
+import { isCurrencySymbol, isPacmanPart } from "./util";
 import {
   SCROLL_SELECTORS,
-  SCALE,
   OPACITY,
   INTRO_WALK_DISTANCE,
   INTRO_FADE_IN_DURATION,
-  INTRO_BEHIND_OFFSET_STEP,
-  INTRO_BASE_X_OFFSET,
   INTRO_POSITION_OFFSET,
   SCRUB_DURATION,
   KEYFRAME_SCALE,
@@ -35,7 +32,6 @@ import {
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
-let lastIntroProgress = 0;
 let isUpdating = false;
 
 function pauseOtherScrollTriggers() {
@@ -56,34 +52,6 @@ function pauseOtherScrollTriggers() {
   }
 }
 
-function setObjectVisibilityAndOpacity(key: string, obj: THREE.Object3D) {
-  killObjectAnimations(obj);
-  obj.visible = true;
-
-  forEachMaterial(
-    obj,
-    (mat: any, mesh: THREE.Mesh, childName: string) => {
-      if (
-        isCurrencySymbol(childName) ||
-        (key === "pacman" && isPacmanPart(childName))
-      ) {
-        mesh.visible = false;
-        return;
-      }
-
-      mesh.visible = true;
-      setMaterialOpacity(mat, 1, true);
-    },
-    {
-      skipCurrencySymbols: false,
-      skipPacmanParts: false,
-      objectKey: key,
-    }
-  );
-
-  obj.updateMatrixWorld(true);
-}
-
 function initializeIntroScrollState() {
   pauseOtherScrollTriggers();
   applyIntroScrollPreset(true, getScrollDirection());
@@ -94,7 +62,6 @@ function initializeIntroScrollState() {
     scrollTrigger && typeof scrollTrigger.progress === "number"
       ? scrollTrigger.progress
       : 0;
-  lastIntroProgress = progress;
   updateObjectsWalkBy(progress);
 }
 
@@ -138,7 +105,6 @@ export function initIntroScrollAnimation() {
             typeof self.progress === "number" &&
             !isUpdating
           ) {
-            lastIntroProgress = self.progress;
             updateObjectsWalkBy(self.progress);
           }
         },
@@ -200,25 +166,6 @@ export function initIntroScrollAnimation() {
           },
         ],
       }
-    )
-    .to(
-      { progress: 0 },
-      {
-        progress: 1,
-        duration: 1,
-        immediateRender: false,
-        onComplete: () => {
-          if (isIntroScrollActive) {
-            updateObjectsWalkBy(lastIntroProgress);
-          }
-        },
-        onReverseComplete: () => {
-          if (isIntroScrollActive) {
-            updateObjectsWalkBy(lastIntroProgress);
-          }
-        },
-      },
-      0
     );
 }
 
@@ -315,12 +262,7 @@ function updateObjectsWalkBy(progress: number) {
         zPhase,
       }) => {
         const object = ghosts[key];
-        if (!object) {
-          if (key === "ghost5") {
-            console.warn("ghost5 object is missing!");
-          }
-          return;
-        }
+        if (!object) return;
 
         killObjectAnimations(object);
 
@@ -334,25 +276,6 @@ function updateObjectsWalkBy(progress: number) {
         const finalZ = pacmanZ + zOffset - zBounce;
 
         object.position.set(finalX, finalY, finalZ);
-
-        if (
-          key === "ghost5" &&
-          (isNaN(finalX) || isNaN(finalY) || isNaN(finalZ))
-        ) {
-          console.warn("ghost5 has NaN position:", {
-            finalX,
-            finalY,
-            finalZ,
-            pacmanX,
-            pacmanY,
-            pacmanZ,
-            behindOffset,
-            xOffset,
-            staticYOffset,
-            zOffset,
-            zBounce,
-          });
-        }
 
         const pacmanQuat = getPacmanTargetQuaternion();
         const ghostQuat = getGhostTargetQuaternion();
@@ -372,30 +295,20 @@ function updateObjectsWalkBy(progress: number) {
         }
 
         let hasVisibleMesh = false;
-        let meshCount = 0;
-        let currencyMeshCount = 0;
-        const allMeshes: THREE.Mesh[] = [];
 
         forEachMaterial(
           object,
           (mat: any, mesh: THREE.Mesh, childName: string) => {
-            meshCount++;
-            allMeshes.push(mesh);
-
             if (
               isCurrencySymbol(childName) ||
               (key === "pacman" && isPacmanPart(childName))
             ) {
               mesh.visible = false;
-              if (isCurrencySymbol(childName)) {
-                currencyMeshCount++;
-              }
               return;
             }
 
             mesh.visible = true;
             hasVisibleMesh = true;
-
             setMaterialOpacity(mat, targetOpacity, true);
           },
           {
@@ -405,57 +318,22 @@ function updateObjectsWalkBy(progress: number) {
           }
         );
 
-        if (key === "ghost5") {
-          if (!hasVisibleMesh) {
-            if (meshCount > 0) {
-              const firstNonCurrencyMesh = allMeshes.find(
-                (m) => !isCurrencySymbol(m.name || "")
-              );
-              if (firstNonCurrencyMesh) {
-                firstNonCurrencyMesh.visible = true;
-                hasVisibleMesh = true;
-                const mat = (firstNonCurrencyMesh as THREE.Mesh).material;
-                if (mat) {
-                  setMaterialOpacity(
-                    Array.isArray(mat) ? mat[0] : mat,
-                    targetOpacity,
-                    true
-                  );
-                }
-              } else if (allMeshes.length > 0) {
-                allMeshes[0].visible = true;
-                hasVisibleMesh = true;
-                const mat = (allMeshes[0] as THREE.Mesh).material;
-                if (mat) {
-                  setMaterialOpacity(
-                    Array.isArray(mat) ? mat[0] : mat,
-                    targetOpacity,
-                    true
-                  );
-                }
+        if (key === "ghost5" && !hasVisibleMesh) {
+          object.traverse((child) => {
+            if ((child as any).isMesh && !hasVisibleMesh) {
+              const mesh = child as THREE.Mesh;
+              mesh.visible = true;
+              hasVisibleMesh = true;
+              const mat = mesh.material;
+              if (mat) {
+                setMaterialOpacity(
+                  Array.isArray(mat) ? mat[0] : mat,
+                  targetOpacity,
+                  true
+                );
               }
             }
-          }
-
-          if (!hasVisibleMesh) {
-            object.traverse((child) => {
-              if ((child as any).isMesh) {
-                const mesh = child as THREE.Mesh;
-                if (!mesh.visible) {
-                  mesh.visible = true;
-                  hasVisibleMesh = true;
-                  const mat = mesh.material;
-                  if (mat) {
-                    setMaterialOpacity(
-                      Array.isArray(mat) ? mat[0] : mat,
-                      targetOpacity,
-                      true
-                    );
-                  }
-                }
-              }
-            });
-          }
+          });
         }
 
         object.updateMatrixWorld(true);
