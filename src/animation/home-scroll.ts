@@ -184,13 +184,9 @@ export function initHomeScrollAnimation() {
       });
     });
 
-    const totalObjects = animationData.length;
-    const baseDuration = 1;
-    const staggerDuration = STAGGER_AMOUNT;
-
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];
-      const duration = baseDuration + index * staggerDuration;
+      const startOffset = index * STAGGER_AMOUNT;
 
       const startPathPoint = data.path.getPointAt(0);
       data.object.position.copy(startPathPoint);
@@ -212,7 +208,7 @@ export function initHomeScrollAnimation() {
           opacity: OPACITY.HIDDEN,
           ease: "power1.out",
           immediateRender: false,
-          duration: duration,
+          duration: 1,
           onUpdate: function () {
             const introScrollTrigger = ScrollTrigger.getById("introScroll");
             if (introScrollTrigger?.isActive) {
@@ -235,7 +231,7 @@ export function initHomeScrollAnimation() {
             });
           },
         },
-        0
+        startOffset
       );
     });
   };
