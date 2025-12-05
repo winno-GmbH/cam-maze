@@ -97,7 +97,7 @@ export function initHomeScrollAnimation() {
       id: "homeScroll",
       trigger: SCROLL_SELECTORS.HOME,
       start: "top top",
-      end: "bottom bottom",
+      end: "bottom top",
       scrub: SCRUB_DURATION,
       markers: {
         startColor: "green",
