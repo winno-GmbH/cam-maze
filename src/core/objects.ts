@@ -15,6 +15,7 @@ export { clock };
 const loader = new THREE.GLTFLoader();
 
 export let pacmanMixer: THREE.AnimationMixer;
+export let isModelLoaded = false;
 
 export const pacman = new THREE.Group();
 
@@ -214,6 +215,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
         scene.add(model);
         model.position.set(0.5, 0.5, 0.5);
 
+        isModelLoaded = true;
         resolve();
       },
       undefined,

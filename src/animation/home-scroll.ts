@@ -57,11 +57,23 @@ export function initHomeScrollAnimation() {
         return;
       }
 
+      const allObjects = Object.entries(ghosts).filter(([key, object]) => {
+        if (!object) return false;
+        if (
+          key === "pill" &&
+          object instanceof THREE.Group &&
+          object.children.length === 0
+        ) {
+          return false;
+        }
+        return true;
+      });
+
       const homeLoopStartPos = getHomeLoopStartPositions();
       const homeLoopStartRot = getHomeLoopStartRotations();
       const scrollDir = getScrollDirection();
 
-      Object.entries(ghosts).forEach(([key, object]) => {
+      allObjects.forEach(([key, object]) => {
         if (!object) return;
 
         if (homeLoopStartPos[key]) {
@@ -145,19 +157,32 @@ export function initHomeScrollAnimation() {
     },
   });
 
-  const allObjects = Object.entries(ghosts);
-  allObjects.forEach(([key, object]) => {
-    startPositions[key] = object.position.clone();
-  });
-
   const createObjectAnimations = () => {
     if (homeScrollTimeline) {
       homeScrollTimeline.clear();
     }
 
+    const allObjects = Object.entries(ghosts).filter(([key, object]) => {
+      if (!object) return false;
+      if (
+        key === "pill" &&
+        object instanceof THREE.Group &&
+        object.children.length === 0
+      ) {
+        return false;
+      }
+      return true;
+    });
+
     allObjects.forEach(([key, object]) => {
       if (object) {
         killObjectAnimations(object);
+      }
+    });
+
+    allObjects.forEach(([key, object]) => {
+      if (object) {
+        startPositions[key] = object.position.clone();
       }
     });
 
@@ -173,7 +198,7 @@ export function initHomeScrollAnimation() {
     }> = [];
 
     allObjects.forEach(([key, object]) => {
-      if (!object) {
+      if (!object || typeof object.traverse !== "function") {
         return;
       }
 

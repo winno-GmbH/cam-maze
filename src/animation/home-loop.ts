@@ -4,6 +4,7 @@ import { ghosts, pacmanMixer } from "../core/objects";
 import { clock, onFrame } from "../core/scene";
 import { getHomePaths, TangentSmoother } from "../paths/paths";
 import { initHomeScrollAnimation } from "./home-scroll";
+import { isModelLoaded } from "../core/objects";
 import { calculateObjectOrientation, OBJECT_KEYS } from "./util";
 import { applyHomeLoopPreset } from "./scene-presets";
 import {
@@ -55,11 +56,15 @@ function stopHomeLoop() {
   setHomeLoopStartT(exactT);
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    updateObjectPosition(key, ghost.position.clone(), true, true);
-    updateObjectRotation(key, ghost.quaternion.clone(), true);
+    if (ghost) {
+      updateObjectPosition(key, ghost.position.clone(), true, true);
+      updateObjectRotation(key, ghost.quaternion.clone(), true);
+    }
   });
 
-  initHomeScrollAnimation();
+  if (isModelLoaded) {
+    initHomeScrollAnimation();
+  }
 }
 
 export function startHomeLoop() {
