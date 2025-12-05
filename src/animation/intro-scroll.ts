@@ -22,7 +22,7 @@ import { setFloorPlane, setObjectScale } from "./scene-utils";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
-let isUpdating = false;
+let lastUpdateProgress: number | null = null;
 let pacmanTargetQuaternion: THREE.Quaternion | null = null;
 let ghostTargetQuaternion: THREE.Quaternion | null = null;
 let introInitialRotations: Record<string, THREE.Quaternion> = {};
@@ -97,11 +97,7 @@ export function initIntroScrollAnimation() {
           restoreFloor();
         },
         onUpdate: (self) => {
-          if (
-            isIntroScrollActive &&
-            typeof self.progress === "number" &&
-            !isUpdating
-          ) {
+          if (isIntroScrollActive && typeof self.progress === "number") {
             updateObjectsWalkBy(self.progress);
           }
         },
@@ -234,176 +230,191 @@ let lastFloorState: {
 const tempVector = new THREE.Vector3();
 
 function updateObjectsWalkBy(progress: number) {
-  if (!isIntroScrollActive || isUpdating) return;
+  if (!isIntroScrollActive) return;
 
-  isUpdating = true;
+  if (lastUpdateProgress === progress) return;
+  lastUpdateProgress = progress;
 
-  try {
-    initializeQuaternions();
+  initializeQuaternions();
 
-    if (pacmanMixer) {
-      pacmanMixer.update(clock.getDelta());
-    }
-
-    const floorState = {
-      visible: true,
-      opacity: OPACITY.HIDDEN,
-      transparent: true,
-    };
-    if (
-      !lastFloorState ||
-      lastFloorState.visible !== floorState.visible ||
-      lastFloorState.opacity !== floorState.opacity ||
-      lastFloorState.transparent !== floorState.transparent
-    ) {
-      setFloorPlane(
-        floorState.visible,
-        floorState.opacity,
-        floorState.transparent
-      );
-      lastFloorState = floorState;
-    }
-
-    const pacmanQuat = pacmanTargetQuaternion;
-    const ghostQuat = ghostTargetQuaternion;
-
-    tempVector.set(camera.position.x, camera.position.y, camera.position.z);
-
-    const walkStart = tempVector.x - INTRO_WALK_DISTANCE;
-    const walkEnd = tempVector.x + INTRO_WALK_DISTANCE;
-
-    const objectsToAnimate = [
-      {
-        key: "pacman",
-        behindOffset: 1.5,
-        zOffset: 0.5,
-        xOffset: 0,
-        yOffset: 0,
-        zPhase: 0,
-      },
-      {
-        key: "ghost1",
-        behindOffset: INTRO_GHOST_OFFSETS.GHOST1,
-        zOffset: 0.5,
-        xOffset: 0.5,
-        yOffset: -0.5,
-        zPhase: Math.PI * 1.0,
-      },
-      {
-        key: "ghost2",
-        behindOffset: INTRO_GHOST_OFFSETS.GHOST2,
-        zOffset: 0.5,
-        xOffset: 0,
-        yOffset: -1,
-        zPhase: Math.PI * 1.5,
-      },
-      {
-        key: "ghost3",
-        behindOffset: INTRO_GHOST_OFFSETS.GHOST3,
-        zOffset: 0.5,
-        xOffset: 0.5,
-        yOffset: 0.5,
-        zPhase: Math.PI * 1.0,
-      },
-      {
-        key: "ghost4",
-        behindOffset: INTRO_GHOST_OFFSETS.GHOST4,
-        zOffset: 0.5,
-        xOffset: 0.75,
-        yOffset: 0.25,
-        zPhase: Math.PI * 1.0,
-      },
-      {
-        key: "ghost5",
-        behindOffset: INTRO_GHOST_OFFSETS.GHOST5,
-        zOffset: 0.5,
-        xOffset: 0,
-        yOffset: -0.5,
-        zPhase: Math.PI * 1.0,
-      },
-    ];
-
-    const normalizedProgress = clamp(progress);
-    const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
-    const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
-    const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
-    const pacmanZ = tempVector.z + INTRO_POSITION_OFFSET.z;
-
-    const ghostOpacity =
-      normalizedProgress < INTRO_FADE_IN_DURATION
-        ? normalizedProgress / INTRO_FADE_IN_DURATION
-        : 1.0;
-
-    objectsToAnimate.forEach(
-      ({
-        key,
-        behindOffset,
-        zOffset,
-        xOffset,
-        yOffset: staticYOffset,
-        zPhase,
-      }) => {
-        const object = ghosts[key];
-        if (!object) return;
-
-        const zBounce =
-          key === "pacman"
-            ? 0
-            : Math.sin(normalizedProgress * Math.PI * 2 * 20 + zPhase) * 0.01;
-        const animatedYOffset = key === "pacman" ? 0 : zBounce * 1.5;
-        const finalX = pacmanX + behindOffset + (xOffset || 0);
-        const finalY = pacmanY + (staticYOffset || 0) - animatedYOffset;
-        const finalZ = pacmanZ + zOffset - zBounce;
-
-        object.position.set(finalX, finalY, finalZ);
-
-        if (key === "pacman" && pacmanQuat) {
-          object.quaternion.copy(pacmanQuat);
-        } else if (ghostQuat) {
-          object.quaternion.copy(ghostQuat);
-        }
-
-        setObjectScale(object, key, "intro");
-
-        object.visible = true;
-
-        const targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
-
-        object.traverse((child) => {
-          if ((child as any).isMesh) {
-            const mesh = child as THREE.Mesh;
-            const childName = child.name || "";
-
-            if (
-              isCurrencySymbol(childName) ||
-              (key === "pacman" && isPacmanPart(childName))
-            ) {
-              mesh.visible = false;
-              return;
-            }
-
-            mesh.visible = true;
-
-            const mat = mesh.material;
-            if (mat) {
-              const materials = Array.isArray(mat) ? mat : [mat];
-              materials.forEach((material: any) => {
-                material.opacity = targetOpacity;
-                if (
-                  material.transmission !== undefined &&
-                  material.transmission > 0
-                ) {
-                  material.transparent = true;
-                } else {
-                  material.transparent = targetOpacity < 1.0;
-                }
-              });
-            }
-          }
-        });
-      }
-    );
-  } finally {
-    isUpdating = false;
+  if (pacmanMixer) {
+    pacmanMixer.update(clock.getDelta());
   }
+
+  const floorState = {
+    visible: true,
+    opacity: OPACITY.HIDDEN,
+    transparent: true,
+  };
+  if (
+    !lastFloorState ||
+    lastFloorState.visible !== floorState.visible ||
+    lastFloorState.opacity !== floorState.opacity ||
+    lastFloorState.transparent !== floorState.transparent
+  ) {
+    setFloorPlane(
+      floorState.visible,
+      floorState.opacity,
+      floorState.transparent
+    );
+    lastFloorState = floorState;
+  }
+
+  const pacmanQuat = pacmanTargetQuaternion;
+  const ghostQuat = ghostTargetQuaternion;
+
+  tempVector.set(camera.position.x, camera.position.y, camera.position.z);
+
+  const walkStart = tempVector.x - INTRO_WALK_DISTANCE;
+  const walkEnd = tempVector.x + INTRO_WALK_DISTANCE;
+
+  const objectsToAnimate = [
+    {
+      key: "pacman",
+      behindOffset: 1.5,
+      zOffset: 0.5,
+      xOffset: 0,
+      yOffset: 0,
+      zPhase: 0,
+    },
+    {
+      key: "ghost1",
+      behindOffset: INTRO_GHOST_OFFSETS.GHOST1,
+      zOffset: 0.5,
+      xOffset: 0.5,
+      yOffset: -0.5,
+      zPhase: Math.PI * 1.0,
+    },
+    {
+      key: "ghost2",
+      behindOffset: INTRO_GHOST_OFFSETS.GHOST2,
+      zOffset: 0.5,
+      xOffset: 0,
+      yOffset: -1,
+      zPhase: Math.PI * 1.5,
+    },
+    {
+      key: "ghost3",
+      behindOffset: INTRO_GHOST_OFFSETS.GHOST3,
+      zOffset: 0.5,
+      xOffset: 0.5,
+      yOffset: 0.5,
+      zPhase: Math.PI * 1.0,
+    },
+    {
+      key: "ghost4",
+      behindOffset: INTRO_GHOST_OFFSETS.GHOST4,
+      zOffset: 0.5,
+      xOffset: 0.75,
+      yOffset: 0.25,
+      zPhase: Math.PI * 1.0,
+    },
+    {
+      key: "ghost5",
+      behindOffset: INTRO_GHOST_OFFSETS.GHOST5,
+      zOffset: 0.5,
+      xOffset: 0,
+      yOffset: -0.5,
+      zPhase: Math.PI * 1.0,
+    },
+  ];
+
+  const normalizedProgress = clamp(progress);
+  const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
+  const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
+  const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
+  const pacmanZ = tempVector.z + INTRO_POSITION_OFFSET.z;
+
+  const ghostOpacity =
+    normalizedProgress < INTRO_FADE_IN_DURATION
+      ? normalizedProgress / INTRO_FADE_IN_DURATION
+      : 1.0;
+
+  const meshes: THREE.Mesh[] = [];
+  const materialsToUpdate: any[] = [];
+  const meshesToHide: THREE.Mesh[] = [];
+
+  objectsToAnimate.forEach(
+    ({
+      key,
+      behindOffset,
+      zOffset,
+      xOffset,
+      yOffset: staticYOffset,
+      zPhase,
+    }) => {
+      const object = ghosts[key];
+      if (!object) return;
+
+      const zBounce =
+        key === "pacman"
+          ? 0
+          : Math.sin(normalizedProgress * Math.PI * 2 * 20 + zPhase) * 0.01;
+      const animatedYOffset = key === "pacman" ? 0 : zBounce * 1.5;
+      const finalX = pacmanX + behindOffset + (xOffset || 0);
+      const finalY = pacmanY + (staticYOffset || 0) - animatedYOffset;
+      const finalZ = pacmanZ + zOffset - zBounce;
+
+      object.position.set(finalX, finalY, finalZ);
+
+      if (key === "pacman" && pacmanQuat) {
+        object.quaternion.copy(pacmanQuat);
+      } else if (ghostQuat) {
+        object.quaternion.copy(ghostQuat);
+      }
+
+      setObjectScale(object, key, "intro");
+
+      object.visible = true;
+
+      const targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
+
+      object.traverse((child) => {
+        if ((child as any).isMesh) {
+          const mesh = child as THREE.Mesh;
+          const childName = child.name || "";
+
+          if (
+            isCurrencySymbol(childName) ||
+            (key === "pacman" && isPacmanPart(childName))
+          ) {
+            meshesToHide.push(mesh);
+            return;
+          }
+
+          meshes.push(mesh);
+
+          const mat = mesh.material;
+          if (mat) {
+            const materials = Array.isArray(mat) ? mat : [mat];
+            materials.forEach((material: any) => {
+              materialsToUpdate.push(material);
+            });
+          }
+        }
+      });
+    }
+  );
+
+  meshes.forEach((mesh) => {
+    mesh.visible = true;
+  });
+
+  meshesToHide.forEach((mesh) => {
+    mesh.visible = false;
+  });
+
+  const targetOpacity =
+    normalizedProgress < INTRO_FADE_IN_DURATION
+      ? normalizedProgress / INTRO_FADE_IN_DURATION
+      : 1.0;
+
+  materialsToUpdate.forEach((material: any) => {
+    material.opacity = targetOpacity;
+    if (material.transmission !== undefined && material.transmission > 0) {
+      material.transparent = true;
+    } else {
+      material.transparent = targetOpacity < 1.0;
+    }
+  });
 }
