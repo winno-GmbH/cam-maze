@@ -280,14 +280,7 @@ function updateObjectsWalkBy(progress: number) {
     const camY = camera.position.y;
     const camZ = camera.position.z;
 
-    if (
-      !isFinite(camX) ||
-      !isFinite(camY) ||
-      !isFinite(camZ) ||
-      Math.abs(camX) > 1000 ||
-      Math.abs(camY) > 1000 ||
-      Math.abs(camZ) > 1000
-    ) {
+    if (!isFinite(camX) || !isFinite(camY) || !isFinite(camZ)) {
       if (cachedCameraPosition) {
         tempVector.copy(cachedCameraPosition);
       } else {
@@ -428,39 +421,13 @@ function updateObjectsWalkBy(progress: number) {
       const finalY = pacmanY + (staticYOffset || 0) - animatedYOffset;
       const finalZ = pacmanZ + zOffset - zBounce;
 
-      if (!isFinite(finalX) || !isFinite(finalY) || !isFinite(finalZ)) {
-        return;
-      }
-
-      if (Math.abs(finalZ) < 0.01 || Math.abs(finalZ) > 100) {
-        console.warn(`[INTRO-SCROLL] Invalid Z position for ${key}:`, {
-          finalZ,
-          pacmanZ,
-          zOffset,
-          zBounce,
-          progress: normalizedProgress,
-          cameraZ: tempVector.z,
-        });
-        return;
-      }
-
-      const distanceFromCamera = Math.sqrt(
-        Math.pow(finalX - tempVector.x, 2) +
-          Math.pow(finalY - tempVector.y, 2) +
-          Math.pow(finalZ - tempVector.z, 2)
-      );
-
-      if (distanceFromCamera < 0.1 || distanceFromCamera > 200) {
-        console.warn(`[INTRO-SCROLL] Invalid distance for ${key}:`, {
-          distanceFromCamera,
-          finalX,
-          finalY,
-          finalZ,
-          cameraX: tempVector.x,
-          cameraY: tempVector.y,
-          cameraZ: tempVector.z,
-          progress: normalizedProgress,
-        });
+      if (
+        !isFinite(finalX) ||
+        !isFinite(finalY) ||
+        !isFinite(finalZ) ||
+        Math.abs(finalZ) < 0.01 ||
+        Math.abs(finalZ) > 100
+      ) {
         return;
       }
 
