@@ -389,14 +389,24 @@ function updateObjectsWalkBy(progress: number) {
         const targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
 
         let hasVisibleMesh = false;
+        let meshCount = 0;
+        let currencyMeshCount = 0;
+        const allMeshes: THREE.Mesh[] = [];
+
         forEachMaterial(
           object,
           (mat: any, mesh: THREE.Mesh, childName: string) => {
+            meshCount++;
+            allMeshes.push(mesh);
+
             if (
               isCurrencySymbol(childName) ||
               (key === "pacman" && isPacmanPart(childName))
             ) {
               mesh.visible = false;
+              if (isCurrencySymbol(childName)) {
+                currencyMeshCount++;
+              }
               return;
             }
 
@@ -412,8 +422,71 @@ function updateObjectsWalkBy(progress: number) {
           }
         );
 
-        if (key === "ghost5" && !hasVisibleMesh) {
-          console.warn("ghost5 has no visible meshes!");
+        if (key === "ghost5") {
+          if (!hasVisibleMesh) {
+            console.warn(
+              "ghost5 has no visible meshes! Total meshes:",
+              meshCount,
+              "Currency meshes:",
+              currencyMeshCount,
+              "targetOpacity:",
+              targetOpacity,
+              "ghostOpacity:",
+              ghostOpacity,
+              "normalizedProgress:",
+              normalizedProgress
+            );
+            console.warn(
+              "ghost5 mesh names:",
+              allMeshes.map((m) => m.name || "unnamed")
+            );
+
+            if (meshCount > 0 && meshCount === currencyMeshCount) {
+              console.warn(
+                "ghost5: All meshes are currency symbols! Making first non-currency mesh visible."
+              );
+              const firstNonCurrencyMesh = allMeshes.find(
+                (m) => !isCurrencySymbol(m.name || "")
+              );
+              if (firstNonCurrencyMesh) {
+                firstNonCurrencyMesh.visible = true;
+                hasVisibleMesh = true;
+                const mat = (firstNonCurrencyMesh as THREE.Mesh).material;
+                if (mat) {
+                  setMaterialOpacity(
+                    Array.isArray(mat) ? mat[0] : mat,
+                    targetOpacity,
+                    true
+                  );
+                }
+              } else {
+                console.error(
+                  "ghost5: No non-currency mesh found! Making first mesh visible as fallback."
+                );
+                if (allMeshes.length > 0) {
+                  allMeshes[0].visible = true;
+                  hasVisibleMesh = true;
+                  const mat = (allMeshes[0] as THREE.Mesh).material;
+                  if (mat) {
+                    setMaterialOpacity(
+                      Array.isArray(mat) ? mat[0] : mat,
+                      targetOpacity,
+                      true
+                    );
+                  }
+                }
+              }
+            }
+          }
+          if (meshCount === 0) {
+            console.warn("ghost5 has no meshes at all!");
+          }
+          if (targetOpacity <= 0) {
+            console.warn(
+              "ghost5 targetOpacity is 0 or negative:",
+              targetOpacity
+            );
+          }
         }
 
         object.updateMatrixWorld(true);
