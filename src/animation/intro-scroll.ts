@@ -24,11 +24,7 @@ import {
   INTRO_GHOST_OFFSETS,
   clamp,
 } from "./constants";
-import {
-  setFloorPlane,
-  setObjectScale,
-  killObjectAnimations,
-} from "./scene-utils";
+import { setFloorPlane, setObjectScale } from "./scene-utils";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -264,8 +260,6 @@ function updateObjectsWalkBy(progress: number) {
         const object = ghosts[key];
         if (!object) return;
 
-        killObjectAnimations(object);
-
         const zBounce =
           key === "pacman"
             ? 0
@@ -285,14 +279,15 @@ function updateObjectsWalkBy(progress: number) {
           object.quaternion.copy(ghostQuat);
         }
 
-        object.visible = true;
         setObjectScale(object, key, "intro");
+        object.visible = true;
 
-        let targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
-
-        if (key === "ghost5") {
-          targetOpacity = Math.max(targetOpacity, 0.3);
-        }
+        const targetOpacity =
+          key === "pacman"
+            ? OPACITY.FULL
+            : key === "ghost5"
+            ? Math.max(ghostOpacity, 0.3)
+            : ghostOpacity;
 
         let hasVisibleMesh = false;
 
@@ -335,8 +330,6 @@ function updateObjectsWalkBy(progress: number) {
             }
           });
         }
-
-        object.updateMatrixWorld(true);
       }
     );
   } finally {
