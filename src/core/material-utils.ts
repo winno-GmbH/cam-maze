@@ -28,16 +28,24 @@ export function setMaterialOpacity(
   preserveTransmission: boolean = true
 ): void {
   const mat = material as any;
-  mat.opacity = opacity;
+  const currentOpacity = mat.opacity ?? 1;
+  const currentTransparent = mat.transparent ?? false;
 
-  if (preserveTransmission && mat.transmission !== undefined && mat.transmission > 0) {
-    mat.transparent = true;
-  } else {
-    mat.transparent = opacity < 1.0;
+  if (Math.abs(currentOpacity - opacity) < 0.0001) {
+    return;
   }
 
-  if (mat.needsUpdate !== undefined) {
-    mat.needsUpdate = true;
+  mat.opacity = opacity;
+
+  const shouldBeTransparent = preserveTransmission && mat.transmission !== undefined && mat.transmission > 0
+    ? true
+    : opacity < 1.0;
+
+  if (currentTransparent !== shouldBeTransparent) {
+    mat.transparent = shouldBeTransparent;
+    if (mat.needsUpdate !== undefined) {
+      mat.needsUpdate = true;
+    }
   }
 }
 

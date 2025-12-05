@@ -67,10 +67,22 @@ export function initIntroScrollAnimation() {
         onEnter: () => {
           isIntroScrollActive = true;
           pauseOtherScrollTriggers();
+          const scrollTrigger = ScrollTrigger.getById("introScroll");
+          const progress =
+            scrollTrigger && typeof scrollTrigger.progress === "number"
+              ? scrollTrigger.progress
+              : 0;
+          updateObjectsWalkBy(progress);
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           pauseOtherScrollTriggers();
+          const scrollTrigger = ScrollTrigger.getById("introScroll");
+          const progress =
+            scrollTrigger && typeof scrollTrigger.progress === "number"
+              ? scrollTrigger.progress
+              : 0;
+          updateObjectsWalkBy(progress);
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -344,6 +356,8 @@ function updateObjectsWalkBy(progress: number) {
             : ghostOpacity;
 
         let hasVisibleMesh = false;
+        const meshesToShow: THREE.Mesh[] = [];
+        const meshesToHide: THREE.Mesh[] = [];
 
         forEachMaterial(
           object,
@@ -352,19 +366,17 @@ function updateObjectsWalkBy(progress: number) {
               isCurrencySymbol(childName) ||
               (key === "pacman" && isPacmanPart(childName))
             ) {
-              mesh.visible = false;
+              if (mesh.visible) {
+                meshesToHide.push(mesh);
+              }
               return;
             }
 
             if (!mesh.visible) {
-              mesh.visible = true;
+              meshesToShow.push(mesh);
             }
             hasVisibleMesh = true;
-
-            const currentOpacity = (mat as any).opacity ?? 1;
-            if (Math.abs(currentOpacity - targetOpacity) > 0.001) {
-              setMaterialOpacity(mat, targetOpacity, true);
-            }
+            setMaterialOpacity(mat, targetOpacity, true);
           },
           {
             skipCurrencySymbols: false,
@@ -374,11 +386,14 @@ function updateObjectsWalkBy(progress: number) {
         );
 
         if (key === "ghost5" && !hasVisibleMesh) {
+          let foundFallback = false;
           object.traverse((child) => {
-            if ((child as any).isMesh && !hasVisibleMesh) {
+            if ((child as any).isMesh && !foundFallback) {
               const mesh = child as THREE.Mesh;
-              mesh.visible = true;
-              hasVisibleMesh = true;
+              if (!mesh.visible) {
+                meshesToShow.push(mesh);
+              }
+              foundFallback = true;
               const mat = mesh.material;
               if (mat) {
                 setMaterialOpacity(
@@ -390,6 +405,13 @@ function updateObjectsWalkBy(progress: number) {
             }
           });
         }
+
+        meshesToShow.forEach((mesh) => {
+          mesh.visible = true;
+        });
+        meshesToHide.forEach((mesh) => {
+          mesh.visible = false;
+        });
       }
     );
   } finally {
