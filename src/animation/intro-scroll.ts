@@ -271,14 +271,14 @@ function updateObjectsWalkBy(progress: number) {
         behindOffset: INTRO_GHOST_OFFSETS.GHOST1,
         zOffset: 0.5,
         xOffset: 0.2,
-        yPhase: Math.PI * 0.2,
+        yPhase: Math.PI * 1.0,
       },
       {
         key: "ghost2",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST2,
         zOffset: 0.5,
         xOffset: 0.2,
-        yPhase: Math.PI * 0.6,
+        yPhase: Math.PI * 1.0,
       },
       {
         key: "ghost3",
@@ -292,14 +292,14 @@ function updateObjectsWalkBy(progress: number) {
         behindOffset: INTRO_GHOST_OFFSETS.GHOST4,
         zOffset: 0.5,
         xOffset: 0.2,
-        yPhase: Math.PI * 1.4,
+        yPhase: Math.PI * 1.0,
       },
       {
         key: "ghost5",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST5,
         zOffset: 0.5,
         xOffset: 0.2,
-        yPhase: Math.PI * 1.8,
+        yPhase: Math.PI * 1.0,
       },
     ];
 
