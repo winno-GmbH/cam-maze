@@ -26,6 +26,8 @@ let lastUpdateProgress: number | null = null;
 let pacmanTargetQuaternion: THREE.Quaternion | null = null;
 let ghostTargetQuaternion: THREE.Quaternion | null = null;
 let introInitialRotations: Record<string, THREE.Quaternion> = {};
+let cachedCameraPosition: THREE.Vector3 | null = null;
+let lastCameraUpdateFrame = -1;
 
 function pauseOtherScrollTriggers() {
   const homeScrollTrigger = gsap.getById("homeScroll");
@@ -82,19 +84,53 @@ export function initIntroScrollAnimation() {
         refreshPriority: 1,
         onEnter: () => {
           isIntroScrollActive = true;
+          cachedCameraPosition = null;
+          lastCameraUpdateFrame = -1;
+          lastUpdateProgress = null;
           pauseOtherScrollTriggers();
+
+          Object.values(ghosts).forEach((obj) => {
+            if (obj) {
+              obj.userData.introScrollLocked = true;
+            }
+          });
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
+          cachedCameraPosition = null;
+          lastCameraUpdateFrame = -1;
+          lastUpdateProgress = null;
           pauseOtherScrollTriggers();
+
+          Object.values(ghosts).forEach((obj) => {
+            if (obj) {
+              obj.userData.introScrollLocked = true;
+            }
+          });
         },
         onLeave: () => {
           isIntroScrollActive = false;
+          cachedCameraPosition = null;
+          lastCameraUpdateFrame = -1;
           restoreFloor();
+
+          Object.values(ghosts).forEach((obj) => {
+            if (obj) {
+              obj.userData.introScrollLocked = false;
+            }
+          });
         },
         onLeaveBack: () => {
           isIntroScrollActive = false;
+          cachedCameraPosition = null;
+          lastCameraUpdateFrame = -1;
           restoreFloor();
+
+          Object.values(ghosts).forEach((obj) => {
+            if (obj) {
+              obj.userData.introScrollLocked = false;
+            }
+          });
         },
         onUpdate: (self) => {
           if (isIntroScrollActive && typeof self.progress === "number") {
@@ -235,6 +271,38 @@ function updateObjectsWalkBy(progress: number) {
   if (lastUpdateProgress === progress) return;
   lastUpdateProgress = progress;
 
+  const currentFrame = performance.now();
+
+  if (!cachedCameraPosition || currentFrame - lastCameraUpdateFrame > 16) {
+    const camX = camera.position.x;
+    const camY = camera.position.y;
+    const camZ = camera.position.z;
+
+    if (
+      !isFinite(camX) ||
+      !isFinite(camY) ||
+      !isFinite(camZ) ||
+      Math.abs(camX) > 1000 ||
+      Math.abs(camY) > 1000 ||
+      Math.abs(camZ) > 1000
+    ) {
+      if (cachedCameraPosition) {
+        tempVector.copy(cachedCameraPosition);
+      } else {
+        return;
+      }
+    } else {
+      if (!cachedCameraPosition) {
+        cachedCameraPosition = new THREE.Vector3();
+      }
+      cachedCameraPosition.set(camX, camY, camZ);
+      lastCameraUpdateFrame = currentFrame;
+      tempVector.copy(cachedCameraPosition);
+    }
+  } else {
+    tempVector.copy(cachedCameraPosition!);
+  }
+
   initializeQuaternions();
 
   if (pacmanMixer) {
@@ -262,23 +330,6 @@ function updateObjectsWalkBy(progress: number) {
 
   const pacmanQuat = pacmanTargetQuaternion;
   const ghostQuat = ghostTargetQuaternion;
-
-  const camX = camera.position.x;
-  const camY = camera.position.y;
-  const camZ = camera.position.z;
-
-  if (
-    !isFinite(camX) ||
-    !isFinite(camY) ||
-    !isFinite(camZ) ||
-    Math.abs(camX) > 1000 ||
-    Math.abs(camY) > 1000 ||
-    Math.abs(camZ) > 1000
-  ) {
-    return;
-  }
-
-  tempVector.set(camX, camY, camZ);
 
   const walkStart = tempVector.x - INTRO_WALK_DISTANCE;
   const walkEnd = tempVector.x + INTRO_WALK_DISTANCE;
@@ -375,13 +426,39 @@ function updateObjectsWalkBy(progress: number) {
       const finalY = pacmanY + (staticYOffset || 0) - animatedYOffset;
       const finalZ = pacmanZ + zOffset - zBounce;
 
-      if (
-        !isFinite(finalX) ||
-        !isFinite(finalY) ||
-        !isFinite(finalZ) ||
-        Math.abs(finalZ) < 0.01 ||
-        Math.abs(finalZ) > 100
-      ) {
+      if (!isFinite(finalX) || !isFinite(finalY) || !isFinite(finalZ)) {
+        return;
+      }
+
+      if (Math.abs(finalZ) < 0.01 || Math.abs(finalZ) > 100) {
+        console.warn(`[INTRO-SCROLL] Invalid Z position for ${key}:`, {
+          finalZ,
+          pacmanZ,
+          zOffset,
+          zBounce,
+          progress: normalizedProgress,
+          cameraZ: tempVector.z,
+        });
+        return;
+      }
+
+      const distanceFromCamera = Math.sqrt(
+        Math.pow(finalX - tempVector.x, 2) +
+          Math.pow(finalY - tempVector.y, 2) +
+          Math.pow(finalZ - tempVector.z, 2)
+      );
+
+      if (distanceFromCamera < 0.1 || distanceFromCamera > 200) {
+        console.warn(`[INTRO-SCROLL] Invalid distance for ${key}:`, {
+          distanceFromCamera,
+          finalX,
+          finalY,
+          finalZ,
+          cameraX: tempVector.x,
+          cameraY: tempVector.y,
+          cameraZ: tempVector.z,
+          progress: normalizedProgress,
+        });
         return;
       }
 

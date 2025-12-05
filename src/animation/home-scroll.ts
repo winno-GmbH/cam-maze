@@ -212,6 +212,11 @@ export function initHomeScrollAnimation() {
           immediateRender: false,
           duration: duration,
           onUpdate: function () {
+            const introScrollTrigger = ScrollTrigger.getById("introScroll");
+            if (introScrollTrigger?.isActive) {
+              return;
+            }
+
             const pathPoint = data.path.getPointAt(animProps.progress);
             data.object.position.copy(pathPoint);
 
