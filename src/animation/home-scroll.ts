@@ -187,26 +187,13 @@ export function initHomeScrollAnimation() {
     const totalObjects = animationData.length;
     const cameraCenterReachTime = 0.8;
     const timelineEnd = 1;
+    const maxStagger = (totalObjects - 1) * STAGGER_AMOUNT;
+    const objectAnimationDuration = cameraCenterReachTime - maxStagger;
 
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];
-      const desiredStartOffset = index * STAGGER_AMOUNT;
-      const desiredDuration = timelineEnd - desiredStartOffset;
-      const desiredEndTime = desiredStartOffset + desiredDuration;
-
-      let finalStartOffset: number;
-      let finalDuration: number;
-
-      if (desiredEndTime > cameraCenterReachTime) {
-        finalStartOffset = Math.max(
-          0,
-          cameraCenterReachTime - (cameraCenterReachTime - desiredStartOffset)
-        );
-        finalDuration = timelineEnd - finalStartOffset;
-      } else {
-        finalStartOffset = desiredStartOffset;
-        finalDuration = desiredDuration;
-      }
+      const startOffset = index * STAGGER_AMOUNT;
+      const duration = timelineEnd - startOffset;
 
       const startPathPoint = data.path.getPointAt(0);
       data.object.position.copy(startPathPoint);
@@ -228,7 +215,7 @@ export function initHomeScrollAnimation() {
           opacity: OPACITY.HIDDEN,
           ease: "power1.out",
           immediateRender: false,
-          duration: finalDuration,
+          duration: duration,
           onUpdate: function () {
             const introScrollTrigger = ScrollTrigger.getById("introScroll");
             if (introScrollTrigger?.isActive) {
@@ -251,7 +238,7 @@ export function initHomeScrollAnimation() {
             });
           },
         },
-        finalStartOffset
+        startOffset
       );
     });
   };
