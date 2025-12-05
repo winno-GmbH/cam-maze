@@ -89,7 +89,6 @@ export function initHomeScrollAnimation() {
       applyHomeScrollPreset(true, scrollDir, startPositions, rotationsToUse);
 
       createObjectAnimations();
-      createCameraAnimation();
     });
   };
 
@@ -98,7 +97,7 @@ export function initHomeScrollAnimation() {
       id: "homeScroll",
       trigger: SCROLL_SELECTORS.HOME,
       start: "top top",
-      end: "bottom top",
+      end: "bottom bottom",
       scrub: SCRUB_DURATION,
       markers: {
         startColor: "green",
@@ -109,6 +108,39 @@ export function initHomeScrollAnimation() {
       },
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
+      onUpdate: (self) => {
+        const introScrollTrigger = ScrollTrigger.getById("introScroll");
+        if (introScrollTrigger?.isActive) {
+          return;
+        }
+
+        if (cameraPath && cameraPath.curves.length) {
+          const progress = self.progress;
+          const clampedProgress = Math.min(1, Math.max(0, progress));
+          const cameraPoint = cameraPath.getPointAt(clampedProgress);
+          camera.position.copy(cameraPoint);
+
+          const lookAtPoints: THREE.Vector3[] = [];
+          cameraPathPoints.forEach((point) => {
+            if ("lookAt" in point && point.lookAt) {
+              lookAtPoints.push(point.lookAt);
+            }
+          });
+
+          if (lookAtPoints.length >= 4) {
+            const lookAtCurve = new THREE.CubicBezierCurve3(
+              lookAtPoints[0],
+              lookAtPoints[1],
+              lookAtPoints[2],
+              lookAtPoints[3]
+            );
+            const lookAtPoint = lookAtCurve.getPoint(clampedProgress);
+            camera.lookAt(lookAtPoint);
+          }
+          camera.fov = originalFOV;
+          camera.updateProjectionMatrix();
+        }
+      },
     },
   });
 
@@ -247,87 +279,5 @@ export function initHomeScrollAnimation() {
     });
   };
 
-  let cameraProgressWrapper: { value: number } | null = null;
-
-  const createCameraAnimation = () => {
-    if (cameraProgressWrapper) {
-      gsap.killTweensOf(cameraProgressWrapper);
-    }
-
-    cameraProgressWrapper = { value: 0 };
-
-    if (!cameraPath || !cameraPath.curves.length) {
-      return;
-    }
-
-    homeScrollTimeline!.fromTo(
-      cameraProgressWrapper,
-      { value: 0 },
-      {
-        value: 1,
-        immediateRender: false,
-        duration: 1,
-        ease: "none",
-        onUpdate: function () {
-          const introScrollTrigger = ScrollTrigger.getById("introScroll");
-          if (introScrollTrigger?.isActive) {
-            return;
-          }
-
-          const progress = this.targets()[0].value;
-          if (cameraPath && cameraPath.curves.length) {
-            const clampedProgress = Math.min(1, Math.max(0, progress));
-            const cameraPoint = cameraPath.getPointAt(clampedProgress);
-            camera.position.copy(cameraPoint);
-
-            const lookAtPoints: THREE.Vector3[] = [];
-            cameraPathPoints.forEach((point) => {
-              if ("lookAt" in point && point.lookAt) {
-                lookAtPoints.push(point.lookAt);
-              }
-            });
-
-            if (lookAtPoints.length >= 4) {
-              const lookAtCurve = new THREE.CubicBezierCurve3(
-                lookAtPoints[0],
-                lookAtPoints[1],
-                lookAtPoints[2],
-                lookAtPoints[3]
-              );
-              const lookAtPoint = lookAtCurve.getPoint(clampedProgress);
-              camera.lookAt(lookAtPoint);
-            }
-            camera.fov = originalFOV;
-            camera.updateProjectionMatrix();
-          }
-        },
-        onComplete: function () {
-          const endPoint = cameraPath.getPointAt(1);
-          camera.position.copy(endPoint);
-          const lookAtPoints: THREE.Vector3[] = [];
-          cameraPathPoints.forEach((point) => {
-            if ("lookAt" in point && point.lookAt) {
-              lookAtPoints.push(point.lookAt);
-            }
-          });
-          if (lookAtPoints.length >= 4) {
-            const lookAtCurve = new THREE.CubicBezierCurve3(
-              lookAtPoints[0],
-              lookAtPoints[1],
-              lookAtPoints[2],
-              lookAtPoints[3]
-            );
-            const endLookAt = lookAtCurve.getPoint(1);
-            camera.lookAt(endLookAt);
-          }
-          camera.fov = originalFOV;
-          camera.updateProjectionMatrix();
-        },
-      },
-      0
-    );
-  };
-
   createObjectAnimations();
-  createCameraAnimation();
 }
