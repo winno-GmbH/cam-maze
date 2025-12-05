@@ -276,9 +276,9 @@ function updateObjectsWalkBy(progress: number) {
       {
         key: "ghost2",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST2,
-        zOffset: 0.3,
+        zOffset: 0.5,
         xOffset: 1,
-        yPhase: Math.PI * 1.0,
+        yPhase: Math.PI * 1.5,
       },
       {
         key: "ghost3",
