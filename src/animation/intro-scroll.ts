@@ -103,11 +103,7 @@ export function initIntroScrollAnimation() {
             typeof self.progress === "number" &&
             !isUpdating
           ) {
-            requestAnimationFrame(() => {
-              if (isIntroScrollActive && !isUpdating) {
-                updateObjectsWalkBy(self.progress);
-              }
-            });
+            updateObjectsWalkBy(self.progress);
           }
         },
         id: "introScroll",
@@ -402,6 +398,8 @@ function updateObjectsWalkBy(progress: number) {
           meshesToShowCache.length = 0;
           meshesToHideCache.length = 0;
 
+          let hasVisibleMesh = false;
+
           forEachMaterial(
             object,
             (mat: any, mesh: THREE.Mesh, childName: string) => {
@@ -418,6 +416,7 @@ function updateObjectsWalkBy(progress: number) {
               if (!mesh.visible) {
                 meshesToShowCache.push(mesh);
               }
+              hasVisibleMesh = true;
               setMaterialOpacity(mat, targetOpacity, true);
             },
             {
@@ -426,6 +425,27 @@ function updateObjectsWalkBy(progress: number) {
               objectKey: key,
             }
           );
+
+          if (key === "ghost5" && !hasVisibleMesh) {
+            let foundFallback = false;
+            object.traverse((child) => {
+              if ((child as any).isMesh && !foundFallback) {
+                const mesh = child as THREE.Mesh;
+                if (!mesh.visible) {
+                  meshesToShowCache.push(mesh);
+                }
+                foundFallback = true;
+                const mat = mesh.material;
+                if (mat) {
+                  setMaterialOpacity(
+                    Array.isArray(mat) ? mat[0] : mat,
+                    targetOpacity,
+                    true
+                  );
+                }
+              }
+            });
+          }
 
           meshesToShowCache.forEach((mesh) => {
             mesh.visible = true;
