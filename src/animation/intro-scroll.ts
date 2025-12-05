@@ -326,8 +326,15 @@ function updateObjectsWalkBy(progress: number) {
           object.quaternion.copy(ghostQuat);
         }
 
-        setObjectScale(object, key, "intro");
-        object.visible = true;
+        const targetScale = key === "pacman" ? 0.1 : 1.5;
+        if (object.scale.x !== targetScale) {
+          setObjectScale(object, key, "intro");
+        }
+
+        const shouldBeVisible = true;
+        if (object.visible !== shouldBeVisible) {
+          object.visible = shouldBeVisible;
+        }
 
         const targetOpacity =
           key === "pacman"
@@ -349,9 +356,15 @@ function updateObjectsWalkBy(progress: number) {
               return;
             }
 
-            mesh.visible = true;
+            if (!mesh.visible) {
+              mesh.visible = true;
+            }
             hasVisibleMesh = true;
-            setMaterialOpacity(mat, targetOpacity, true);
+
+            const currentOpacity = (mat as any).opacity ?? 1;
+            if (Math.abs(currentOpacity - targetOpacity) > 0.001) {
+              setMaterialOpacity(mat, targetOpacity, true);
+            }
           },
           {
             skipCurrencySymbols: false,

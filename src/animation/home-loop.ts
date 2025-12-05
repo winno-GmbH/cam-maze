@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import ScrollTrigger from "gsap/ScrollTrigger";
 import { ghosts, pacmanMixer } from "../core/objects";
 import { clock, onFrame } from "../core/scene";
 import { getHomePaths, TangentSmoother } from "../paths/paths";
@@ -140,6 +141,9 @@ export function startHomeLoop() {
 
 function updateHomeLoop(delta: number) {
   if (!isHomeLoopActive) return;
+
+  const introScrollTrigger = ScrollTrigger.getById("introScroll");
+  if (introScrollTrigger?.isActive) return;
 
   const maxDelta = 0.1;
   const clampedDelta = Math.min(delta, maxDelta);
