@@ -265,41 +265,53 @@ function updateObjectsWalkBy(progress: number) {
     const walkEnd = baseCenter.x + INTRO_WALK_DISTANCE;
 
     const objectsToAnimate = [
-      { key: "pacman", behindOffset: 1.5, zOffset: 0.5, xOffset: 0, yPhase: 0 },
+      {
+        key: "pacman",
+        behindOffset: 1.5,
+        zOffset: 0.5,
+        xOffset: 0,
+        yOffset: 0,
+        zPhase: 0,
+      },
       {
         key: "ghost1",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST1,
         zOffset: 0.5,
         xOffset: 1,
-        yPhase: Math.PI * 1.0,
+        yOffset: 0,
+        zPhase: Math.PI * 1.0,
       },
       {
         key: "ghost2",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST2,
         zOffset: 0.5,
         xOffset: 1,
-        yPhase: Math.PI * 1.5,
+        yOffset: 0,
+        zPhase: Math.PI * 1.5,
       },
       {
         key: "ghost3",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST3,
         zOffset: 0.5,
         xOffset: 1,
-        yPhase: Math.PI * 1.0,
+        yOffset: 0,
+        zPhase: Math.PI * 1.0,
       },
       {
         key: "ghost4",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST4,
         zOffset: 0.5,
         xOffset: 1,
-        yPhase: Math.PI * 1.0,
+        yOffset: 0,
+        zPhase: Math.PI * 1.0,
       },
       {
         key: "ghost5",
         behindOffset: INTRO_GHOST_OFFSETS.GHOST5,
         zOffset: 0.5,
         xOffset: 1,
-        yPhase: Math.PI * 1.0,
+        yOffset: 0,
+        zPhase: Math.PI * 1.0,
       },
     ];
 
@@ -315,20 +327,27 @@ function updateObjectsWalkBy(progress: number) {
         : 1.0;
 
     objectsToAnimate.forEach(
-      ({ key, behindOffset, zOffset, xOffset, yPhase }) => {
+      ({
+        key,
+        behindOffset,
+        zOffset,
+        xOffset,
+        yOffset: staticYOffset,
+        zPhase,
+      }) => {
         const object = ghosts[key];
         if (!object) return;
 
         killObjectAnimations(object);
 
-        const yBounce =
+        const zBounce =
           key === "pacman"
             ? 0
-            : Math.sin(normalizedProgress * Math.PI * 2 + yPhase) * 0.1;
-        const yOffset = key === "pacman" ? 0 : yBounce * 1.5;
+            : Math.sin(normalizedProgress * Math.PI * 2 + zPhase) * 0.1;
+        const animatedYOffset = key === "pacman" ? 0 : zBounce * 1.5;
         const finalX = pacmanX + behindOffset + (xOffset || 0);
-        const finalY = pacmanY - yOffset;
-        const finalZ = pacmanZ + zOffset;
+        const finalY = pacmanY + (staticYOffset || 0) - animatedYOffset;
+        const finalZ = pacmanZ + zOffset - zBounce;
 
         object.position.set(finalX, finalY, finalZ);
 
