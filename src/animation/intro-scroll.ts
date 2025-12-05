@@ -86,16 +86,7 @@ function setObjectVisibilityAndOpacity(key: string, obj: THREE.Object3D) {
 
 function initializeIntroScrollState() {
   pauseOtherScrollTriggers();
-
-  const setVisibilityForAll = () => {
-    OBJECT_KEYS.forEach((key) => {
-      const obj = ghosts[key];
-      if (obj) setObjectVisibilityAndOpacity(key, obj);
-    });
-  };
-
   applyIntroScrollPreset(true, getScrollDirection());
-
   isUpdating = false;
 
   const scrollTrigger = ScrollTrigger.getById("introScroll");
@@ -105,16 +96,6 @@ function initializeIntroScrollState() {
       : 0;
   lastIntroProgress = progress;
   updateObjectsWalkBy(progress);
-
-  requestAnimationFrame(() => {
-    const scrollTrigger = ScrollTrigger.getById("introScroll");
-    const progress =
-      scrollTrigger && typeof scrollTrigger.progress === "number"
-        ? scrollTrigger.progress
-        : 0;
-    lastIntroProgress = progress;
-    updateObjectsWalkBy(progress);
-  });
 }
 
 function restoreFloor() {
@@ -158,11 +139,7 @@ export function initIntroScrollAnimation() {
             !isUpdating
           ) {
             lastIntroProgress = self.progress;
-            requestAnimationFrame(() => {
-              if (isIntroScrollActive && !isUpdating) {
-                updateObjectsWalkBy(self.progress);
-              }
-            });
+            updateObjectsWalkBy(self.progress);
           }
         },
         id: "introScroll",
@@ -391,12 +368,7 @@ function updateObjectsWalkBy(progress: number) {
         let targetOpacity = key === "pacman" ? OPACITY.FULL : ghostOpacity;
 
         if (key === "ghost5") {
-          if (targetOpacity <= 0.01) {
-            targetOpacity = Math.max(0.01, ghostOpacity);
-          }
-          if (normalizedProgress > 0.1 && normalizedProgress < 0.9) {
-            targetOpacity = Math.max(targetOpacity, 0.5);
-          }
+          targetOpacity = Math.max(targetOpacity, 0.3);
         }
 
         let hasVisibleMesh = false;
