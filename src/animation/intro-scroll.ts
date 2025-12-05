@@ -4,11 +4,7 @@ import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts, pacmanMixer } from "../core/objects";
 import { clock } from "../core/scene";
-import {
-  getPacmanTargetQuaternion,
-  getGhostTargetQuaternion,
-  applyIntroScrollPreset,
-} from "./scene-presets";
+import { slerpToLayDown, applyRotations } from "./util";
 import { setMaterialOpacity, forEachMaterial } from "../core/material-utils";
 import { isCurrencySymbol, isPacmanPart } from "./util";
 import {
@@ -28,6 +24,9 @@ import { setFloorPlane, setObjectScale } from "./scene-utils";
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
 let isUpdating = false;
+let pacmanTargetQuaternion: THREE.Quaternion | null = null;
+let ghostTargetQuaternion: THREE.Quaternion | null = null;
+let introInitialRotations: Record<string, THREE.Quaternion> = {};
 
 function pauseOtherScrollTriggers() {
   const homeScrollTrigger = gsap.getById("homeScroll");
@@ -68,12 +67,10 @@ export function initIntroScrollAnimation() {
         onEnter: () => {
           isIntroScrollActive = true;
           pauseOtherScrollTriggers();
-          applyIntroScrollPreset(true);
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           pauseOtherScrollTriggers();
-          applyIntroScrollPreset(true);
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -153,20 +150,81 @@ export function initIntroScrollAnimation() {
     );
 }
 
+function initializeQuaternions() {
+  if (pacmanTargetQuaternion && ghostTargetQuaternion) return;
+
+  const pacmanObj = ghosts.pacman;
+  if (pacmanObj) {
+    if (!introInitialRotations["pacman"]) {
+      introInitialRotations["pacman"] = pacmanObj.quaternion.clone();
+    }
+
+    let quat = introInitialRotations["pacman"].clone();
+    const tempObj = new THREE.Object3D();
+    tempObj.quaternion.copy(quat);
+    slerpToLayDown(tempObj, quat, OPACITY.FULL);
+    quat = tempObj.quaternion.clone();
+
+    quat = applyRotations(quat, [
+      { axis: "x", angle: Math.PI / 2 },
+      { axis: "y", angle: Math.PI },
+      { axis: "y", angle: Math.PI },
+      { axis: "x", angle: Math.PI },
+      { axis: "x", angle: Math.PI },
+      { axis: "y", angle: Math.PI },
+    ]);
+
+    pacmanTargetQuaternion = quat;
+  }
+
+  const ghostObj = ghosts.ghost1;
+  if (ghostObj) {
+    if (!introInitialRotations["ghost1"]) {
+      introInitialRotations["ghost1"] = ghostObj.quaternion.clone();
+    }
+
+    let quat = introInitialRotations["ghost1"].clone();
+    const tempObj = new THREE.Object3D();
+    tempObj.quaternion.copy(quat);
+    slerpToLayDown(tempObj, quat, OPACITY.FULL);
+    quat = tempObj.quaternion.clone();
+
+    quat = applyRotations(quat, [
+      { axis: "x", angle: Math.PI },
+      { axis: "x", angle: Math.PI },
+      { axis: "y", angle: Math.PI },
+      { axis: "y", angle: Math.PI },
+      { axis: "x", angle: Math.PI },
+      { axis: "x", angle: Math.PI },
+    ]);
+
+    ghostTargetQuaternion = quat;
+  }
+
+  Object.keys(ghosts).forEach((key) => {
+    const obj = ghosts[key as keyof typeof ghosts];
+    if (obj && !introInitialRotations[key]) {
+      introInitialRotations[key] = obj.quaternion.clone();
+    }
+  });
+}
+
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive || isUpdating) return;
 
   isUpdating = true;
 
   try {
+    initializeQuaternions();
+
     if (pacmanMixer) {
       pacmanMixer.update(clock.getDelta());
     }
 
     setFloorPlane(true, OPACITY.HIDDEN, true);
 
-    const pacmanQuat = getPacmanTargetQuaternion();
-    const ghostQuat = getGhostTargetQuaternion();
+    const pacmanQuat = pacmanTargetQuaternion;
+    const ghostQuat = ghostTargetQuaternion;
 
     const baseCenter = new THREE.Vector3(
       camera.position.x,
