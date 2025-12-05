@@ -105,7 +105,7 @@ export function initHomeScrollAnimation() {
         endColor: "red",
         fontSize: "12px",
         fontWeight: "bold",
-        indent: 20,
+        indent: 40,
       },
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
