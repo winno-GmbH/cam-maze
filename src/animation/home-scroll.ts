@@ -99,13 +99,7 @@ export function initHomeScrollAnimation() {
       start: "top top",
       end: "bottom top",
       scrub: SCRUB_DURATION,
-      markers: {
-        startColor: "green",
-        endColor: "red",
-        fontSize: "12px",
-        fontWeight: "bold",
-        indent: 60,
-      },
+      markers: false,
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
       onUpdate: (self) => {

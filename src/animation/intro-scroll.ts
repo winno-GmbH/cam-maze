@@ -90,7 +90,13 @@ export function initIntroScrollAnimation() {
         end: "bottom bottom",
         scrub: SCRUB_DURATION,
         refreshPriority: 1,
-        markers: false,
+        markers: {
+          startColor: "green",
+          endColor: "red",
+          fontSize: "12px",
+          fontWeight: "bold",
+          indent: 60,
+        },
         onEnter: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
