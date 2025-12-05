@@ -66,21 +66,14 @@ export function initHomeScrollAnimation() {
       const scrollDir = getScrollDirection();
 
       Object.entries(ghosts).forEach(([key, object]) => {
-        if (object.userData?.introScrollLocked) {
-          return;
-        }
-
         if (homeLoopStartPos[key]) {
           object.position.copy(homeLoopStartPos[key]);
           startPositions[key] = homeLoopStartPos[key].clone();
         } else {
           const currentPositions = getCurrentPositions();
-          if (currentPositions[key]) {
-            object.position.copy(currentPositions[key]);
-            startPositions[key] = currentPositions[key].clone();
-          } else {
-            startPositions[key] = object.position.clone();
-          }
+          const position = currentPositions[key] || object.position;
+          object.position.copy(position);
+          startPositions[key] = position.clone();
         }
 
         if (homeLoopStartRot[key]) {

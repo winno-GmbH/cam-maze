@@ -33,18 +33,26 @@ function pauseOtherScrollTriggers() {
   const homeScrollTrigger = gsap.getById("homeScroll");
   if (homeScrollTrigger) {
     const homeTimeline = (homeScrollTrigger as any).timeline;
-    if (homeTimeline?.pause) {
-      homeTimeline.pause();
-    }
+    homeTimeline?.pause?.();
   }
 
   const povScrollTrigger = ScrollTrigger.getById("povScroll");
   if (povScrollTrigger) {
     const povTimeline = (povScrollTrigger as any).timeline;
-    if (povTimeline?.pause) {
-      povTimeline.pause();
-    }
+    povTimeline?.pause?.();
   }
+}
+
+function resetIntroScrollCache() {
+  cachedCameraPosition = null;
+  lastCameraUpdateFrame = -1;
+  lastUpdateProgress = null;
+}
+
+function setIntroScrollLocked(locked: boolean) {
+  Object.values(ghosts).forEach((obj) => {
+    obj.userData.introScrollLocked = locked;
+  });
 }
 
 function restoreFloor() {
@@ -84,58 +92,30 @@ export function initIntroScrollAnimation() {
         refreshPriority: 1,
         onEnter: () => {
           isIntroScrollActive = true;
-          cachedCameraPosition = null;
-          lastCameraUpdateFrame = -1;
-          lastUpdateProgress = null;
+          resetIntroScrollCache();
           pauseOtherScrollTriggers();
-
-          Object.values(ghosts).forEach((obj) => {
-            if (obj) {
-              obj.userData.introScrollLocked = true;
-            }
-          });
+          setIntroScrollLocked(true);
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
-          cachedCameraPosition = null;
-          lastCameraUpdateFrame = -1;
-          lastUpdateProgress = null;
+          resetIntroScrollCache();
           pauseOtherScrollTriggers();
-
-          Object.values(ghosts).forEach((obj) => {
-            if (obj) {
-              obj.userData.introScrollLocked = true;
-            }
-          });
+          setIntroScrollLocked(true);
         },
         onLeave: () => {
           isIntroScrollActive = false;
-          cachedCameraPosition = null;
-          lastCameraUpdateFrame = -1;
-          lastUpdateProgress = null;
+          resetIntroScrollCache();
           restoreFloor();
-
-          Object.values(ghosts).forEach((obj) => {
-            if (obj) {
-              obj.userData.introScrollLocked = false;
-            }
-          });
+          setIntroScrollLocked(false);
         },
         onLeaveBack: () => {
           isIntroScrollActive = false;
-          cachedCameraPosition = null;
-          lastCameraUpdateFrame = -1;
-          lastUpdateProgress = null;
+          resetIntroScrollCache();
           restoreFloor();
-
-          Object.values(ghosts).forEach((obj) => {
-            if (obj) {
-              obj.userData.introScrollLocked = false;
-            }
-          });
+          setIntroScrollLocked(false);
         },
         onUpdate: (self) => {
-          if (isIntroScrollActive && typeof self.progress === "number") {
+          if (typeof self.progress === "number") {
             updateObjectsWalkBy(self.progress);
           }
         },
@@ -274,18 +254,19 @@ function updateObjectsWalkBy(progress: number) {
   lastUpdateProgress = progress;
 
   const currentFrame = performance.now();
+  const shouldUpdateCache =
+    !cachedCameraPosition || currentFrame - lastCameraUpdateFrame > 16;
 
-  if (!cachedCameraPosition || currentFrame - lastCameraUpdateFrame > 16) {
+  if (shouldUpdateCache) {
     const camX = camera.position.x;
     const camY = camera.position.y;
     const camZ = camera.position.z;
 
     if (!isFinite(camX) || !isFinite(camY) || !isFinite(camZ)) {
-      if (cachedCameraPosition) {
-        tempVector.copy(cachedCameraPosition);
-      } else {
+      if (!cachedCameraPosition) {
         return;
       }
+      tempVector.copy(cachedCameraPosition);
     } else {
       if (!cachedCameraPosition) {
         cachedCameraPosition = new THREE.Vector3();
@@ -382,16 +363,16 @@ function updateObjectsWalkBy(progress: number) {
 
   const normalizedProgress = clamp(progress);
   const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
-
-  if (!isFinite(baseX)) {
-    return;
-  }
-
   const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
   const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
   const pacmanZ = tempVector.z + INTRO_POSITION_OFFSET.z;
 
-  if (!isFinite(pacmanX) || !isFinite(pacmanY) || !isFinite(pacmanZ)) {
+  if (
+    !isFinite(baseX) ||
+    !isFinite(pacmanX) ||
+    !isFinite(pacmanY) ||
+    !isFinite(pacmanZ)
+  ) {
     return;
   }
 
@@ -417,8 +398,8 @@ function updateObjectsWalkBy(progress: number) {
           ? 0
           : Math.sin(normalizedProgress * Math.PI * 2 * 20 + zPhase) * 0.01;
       const animatedYOffset = key === "pacman" ? 0 : zBounce * 1.5;
-      const finalX = pacmanX + behindOffset + (xOffset || 0);
-      const finalY = pacmanY + (staticYOffset || 0) - animatedYOffset;
+      const finalX = pacmanX + behindOffset + xOffset;
+      const finalY = pacmanY + staticYOffset - animatedYOffset;
       const finalZ = pacmanZ + zOffset - zBounce;
 
       if (
@@ -433,10 +414,9 @@ function updateObjectsWalkBy(progress: number) {
 
       object.position.set(finalX, finalY, finalZ);
 
-      if (key === "pacman" && pacmanQuat) {
-        object.quaternion.copy(pacmanQuat);
-      } else if (ghostQuat) {
-        object.quaternion.copy(ghostQuat);
+      const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
+      if (targetQuat) {
+        object.quaternion.copy(targetQuat);
       }
 
       setObjectScale(object, key, "intro");
