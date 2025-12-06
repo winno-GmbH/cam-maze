@@ -40,8 +40,10 @@ export function calculateObjectOrientation(
       Math.PI,
       -(targetRotation + Math.PI / 2)
     );
+    object.quaternion.setFromEuler(object.rotation);
   } else if (objectType === "ghost") {
     object.rotation.set(0, targetRotation, 0);
+    object.quaternion.setFromEuler(object.rotation);
   } else if (objectType === "camera") {
     const lookAtPoint = object.position.clone().add(tangent);
     object.lookAt(lookAtPoint);

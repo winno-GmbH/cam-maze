@@ -21,6 +21,9 @@ import {
   killObjectAnimations,
 } from "./scene-utils";
 import { SCALE, OPACITY, INTRO_POSITION_OFFSET } from "./constants";
+import { quaternionPool } from "../core/object-pool";
+
+const ghostKeys = Object.keys(ghosts);
 
 export function applyHomeLoopPreset(
   isEntering: boolean,
@@ -28,7 +31,9 @@ export function applyHomeLoopPreset(
 ) {
   if (!isEntering) return;
 
-  Object.entries(ghosts).forEach(([key, object]) => {
+  ghostKeys.forEach((key) => {
+    const object = ghosts[key as keyof typeof ghosts];
+    if (!object) return;
     gsap.set(object, { visible: true });
     setObjectScale(object, key, "home");
 
@@ -59,7 +64,9 @@ export function applyHomeScrollPreset(
   if (!isEntering) return;
 
   if (pausedPositions && pausedRotations) {
-    Object.entries(ghosts).forEach(([key, object]) => {
+    ghostKeys.forEach((key) => {
+      const object = ghosts[key as keyof typeof ghosts];
+      if (!object) return;
       if (pausedPositions[key]) {
         object.position.set(
           pausedPositions[key].x,
@@ -112,15 +119,17 @@ export function applyIntroScrollPreset(
   if (!pacmanTargetQuaternion || !ghostTargetQuaternion) {
     const pacmanObj = ghosts.pacman;
     if (pacmanObj) {
+      const tempQuat = quaternionPool.acquire();
       if (!introInitialRotations["pacman"]) {
-        introInitialRotations["pacman"] = pacmanObj.quaternion.clone();
+        tempQuat.copy(pacmanObj.quaternion);
+        introInitialRotations["pacman"] = tempQuat.clone();
       }
 
-      let quat = introInitialRotations["pacman"].clone();
-      slerpToLayDown(pacmanObj, quat, OPACITY.FULL);
-      quat = pacmanObj.quaternion.clone();
+      tempQuat.copy(introInitialRotations["pacman"]);
+      slerpToLayDown(pacmanObj, tempQuat, OPACITY.FULL);
+      tempQuat.copy(pacmanObj.quaternion);
 
-      quat = applyRotations(quat, [
+      const resultQuat = applyRotations(tempQuat, [
         { axis: "x", angle: Math.PI / 2 },
         { axis: "y", angle: Math.PI },
         { axis: "y", angle: Math.PI },
@@ -129,21 +138,24 @@ export function applyIntroScrollPreset(
         { axis: "y", angle: Math.PI },
       ]);
 
-      pacmanTargetQuaternion = quat;
+      pacmanTargetQuaternion = resultQuat.clone();
+      quaternionPool.release(tempQuat);
       pacmanObj.quaternion.copy(introInitialRotations["pacman"]);
     }
 
     const ghostObj = ghosts.ghost1;
     if (ghostObj) {
+      const tempQuat = quaternionPool.acquire();
       if (!introInitialRotations["ghost1"]) {
-        introInitialRotations["ghost1"] = ghostObj.quaternion.clone();
+        tempQuat.copy(ghostObj.quaternion);
+        introInitialRotations["ghost1"] = tempQuat.clone();
       }
 
-      let quat = introInitialRotations["ghost1"].clone();
-      slerpToLayDown(ghostObj, quat, OPACITY.FULL);
-      quat = ghostObj.quaternion.clone();
+      tempQuat.copy(introInitialRotations["ghost1"]);
+      slerpToLayDown(ghostObj, tempQuat, OPACITY.FULL);
+      tempQuat.copy(ghostObj.quaternion);
 
-      quat = applyRotations(quat, [
+      const resultQuat = applyRotations(tempQuat, [
         { axis: "x", angle: Math.PI },
         { axis: "x", angle: Math.PI },
         { axis: "y", angle: Math.PI },
@@ -152,16 +164,20 @@ export function applyIntroScrollPreset(
         { axis: "x", angle: Math.PI },
       ]);
 
-      ghostTargetQuaternion = quat;
+      ghostTargetQuaternion = resultQuat.clone();
+      quaternionPool.release(tempQuat);
       ghostObj.quaternion.copy(introInitialRotations["ghost1"]);
     }
 
+    const tempQuat = quaternionPool.acquire();
     OBJECT_KEYS.forEach((key) => {
       const obj = ghosts[key];
       if (obj && !introInitialRotations[key]) {
-        introInitialRotations[key] = obj.quaternion.clone();
+        tempQuat.copy(obj.quaternion);
+        introInitialRotations[key] = tempQuat.clone();
       }
     });
+    quaternionPool.release(tempQuat);
   }
 }
 
@@ -175,19 +191,20 @@ export function applyPovScrollPreset(
     gsap.set(ghosts.pacman, { visible: false });
   }
 
-  Object.entries(ghosts).forEach(([key, object]) => {
-    if (key !== "pacman") {
-      gsap.set(object, { visible: false });
-      setObjectScale(object, key, "pov");
+  ghostKeys.forEach((key) => {
+    if (key === "pacman") return;
+    const object = ghosts[key as keyof typeof ghosts];
+    if (!object) return;
+    gsap.set(object, { visible: false });
+    setObjectScale(object, key, "pov");
 
-      forEachMaterial(
-        object,
-        (mat: any) => {
-          setMaterialOpacity(mat, 1, true);
-        },
-        { skipCurrencySymbols: false }
-      );
-    }
+    forEachMaterial(
+      object,
+      (mat: any) => {
+        setMaterialOpacity(mat, 1, true);
+      },
+      { skipCurrencySymbols: false }
+    );
   });
 
   setFloorPlane(true, OPACITY.FULL, false);

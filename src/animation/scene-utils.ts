@@ -4,22 +4,33 @@ import { scene } from "../core/scene";
 import { SCALE, OPACITY } from "./constants";
 import { forEachMaterial } from "../core/material-utils";
 
+let cachedFloorObject: THREE.Object3D | null = null;
+
+function findFloorObject(): THREE.Object3D | null {
+  if (cachedFloorObject) return cachedFloorObject;
+  scene.traverse((child) => {
+    if (child.name === "CAM-Floor" && !cachedFloorObject) {
+      cachedFloorObject = child;
+    }
+  });
+  return cachedFloorObject;
+}
+
 export function setFloorPlane(
   visible: boolean,
   opacity: number = OPACITY.FULL,
   transparent: boolean = false
 ): void {
-  scene.traverse((child) => {
-    if (child.name === "CAM-Floor") {
-      child.visible = visible;
-      if (child instanceof THREE.Mesh && child.material) {
-        const material = child.material as THREE.MeshBasicMaterial;
-        material.color.setHex(0xffffff);
-        material.opacity = opacity;
-        material.transparent = transparent;
-      }
-    }
-  });
+  const floorObject = findFloorObject();
+  if (!floorObject) return;
+  
+  floorObject.visible = visible;
+  if (floorObject instanceof THREE.Mesh && floorObject.material) {
+    const material = floorObject.material as THREE.MeshBasicMaterial;
+    material.color.setHex(0xffffff);
+    material.opacity = opacity;
+    material.transparent = transparent;
+  }
 }
 
 export function setObjectScale(
@@ -41,9 +52,11 @@ export function setObjectScale(
     }
   }
 
-  object.scale.set(scale, scale, scale);
-  object.updateMatrixWorld(true);
-  gsap.set(object.scale, { x: scale, y: scale, z: scale });
+  if (object.scale.x !== scale || object.scale.y !== scale || object.scale.z !== scale) {
+    object.scale.set(scale, scale, scale);
+    object.updateMatrixWorld(true);
+    gsap.set(object.scale, { x: scale, y: scale, z: scale });
+  }
 }
 
 export function killObjectAnimations(object: THREE.Object3D): void {

@@ -19,6 +19,7 @@ import {
   clamp,
 } from "./constants";
 import { setFloorPlane, setObjectScale } from "./scene-utils";
+import { vector3Pool, quaternionPool, object3DPool } from "../core/object-pool";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -33,6 +34,12 @@ const objectMaterialCache: Record<
   Array<{ mesh: THREE.Mesh; material: THREE.Material; childName: string }>
 > = {};
 const objectScaleCache: Record<string, { key: string; sceneType: string }> = {};
+const ghostKeys = Object.keys(ghosts);
+const tempVector = vector3Pool.acquire();
+const tempQuat = quaternionPool.acquire();
+const tempObj = object3DPool.acquire();
+let lastIntroUpdateTime = 0;
+const INTRO_UPDATE_THROTTLE = 16;
 
 function resetIntroScrollCache() {
   cachedCameraPosition = null;
@@ -41,29 +48,32 @@ function resetIntroScrollCache() {
 }
 
 function initializeObjectMaterialCache() {
-  Object.entries(ghosts).forEach(([key, object]) => {
-    if (!objectMaterialCache[key]) {
-      objectMaterialCache[key] = [];
-      object.traverse((child) => {
-        if ((child as any).isMesh) {
-          const mesh = child as THREE.Mesh;
-          const childName = child.name || "";
-          const mat = mesh.material;
-          if (mat) {
-            const materials = Array.isArray(mat) ? mat : [mat];
-            materials.forEach((material) => {
-              objectMaterialCache[key].push({ mesh, material, childName });
-            });
-          }
+  ghostKeys.forEach((key) => {
+    const object = ghosts[key as keyof typeof ghosts];
+    if (!object || objectMaterialCache[key]) return;
+    objectMaterialCache[key] = [];
+    object.traverse((child) => {
+      if ((child as any).isMesh) {
+        const mesh = child as THREE.Mesh;
+        const childName = child.name || "";
+        const mat = mesh.material;
+        if (mat) {
+          const materials = Array.isArray(mat) ? mat : [mat];
+          materials.forEach((material) => {
+            objectMaterialCache[key].push({ mesh, material, childName });
+          });
         }
-      });
-    }
+      }
+    });
   });
 }
 
 function setIntroScrollLocked(locked: boolean) {
-  Object.values(ghosts).forEach((obj) => {
-    obj.userData.introScrollLocked = locked;
+  ghostKeys.forEach((key) => {
+    const obj = ghosts[key as keyof typeof ghosts];
+    if (obj) {
+      obj.userData.introScrollLocked = locked;
+    }
   });
 }
 
@@ -134,6 +144,9 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(false);
         },
         onUpdate: (self) => {
+          const now = performance.now();
+          if (now - lastIntroUpdateTime < INTRO_UPDATE_THROTTLE) return;
+          lastIntroUpdateTime = now;
           if (typeof self.progress === "number") {
             updateObjectsWalkBy(self.progress);
           }
@@ -224,16 +237,16 @@ function initializeQuaternions() {
   const pacmanObj = ghosts.pacman;
   if (pacmanObj) {
     if (!introInitialRotations["pacman"]) {
-      introInitialRotations["pacman"] = pacmanObj.quaternion.clone();
+      tempQuat.copy(pacmanObj.quaternion);
+      introInitialRotations["pacman"] = tempQuat.clone();
     }
 
-    let quat = introInitialRotations["pacman"].clone();
-    const tempObj = new THREE.Object3D();
-    tempObj.quaternion.copy(quat);
-    slerpToLayDown(tempObj, quat, OPACITY.FULL);
-    quat = tempObj.quaternion.clone();
+    tempQuat.copy(introInitialRotations["pacman"]);
+    tempObj.quaternion.copy(tempQuat);
+    slerpToLayDown(tempObj, tempQuat, OPACITY.FULL);
+    tempQuat.copy(tempObj.quaternion);
 
-    quat = applyRotations(quat, [
+    const resultQuat = applyRotations(tempQuat, [
       { axis: "x", angle: Math.PI / 2 },
       { axis: "y", angle: Math.PI },
       { axis: "y", angle: Math.PI },
@@ -242,22 +255,22 @@ function initializeQuaternions() {
       { axis: "y", angle: Math.PI },
     ]);
 
-    pacmanTargetQuaternion = quat;
+    pacmanTargetQuaternion = resultQuat.clone();
   }
 
   const ghostObj = ghosts.ghost1;
   if (ghostObj) {
     if (!introInitialRotations["ghost1"]) {
-      introInitialRotations["ghost1"] = ghostObj.quaternion.clone();
+      tempQuat.copy(ghostObj.quaternion);
+      introInitialRotations["ghost1"] = tempQuat.clone();
     }
 
-    let quat = introInitialRotations["ghost1"].clone();
-    const tempObj = new THREE.Object3D();
-    tempObj.quaternion.copy(quat);
-    slerpToLayDown(tempObj, quat, OPACITY.FULL);
-    quat = tempObj.quaternion.clone();
+    tempQuat.copy(introInitialRotations["ghost1"]);
+    tempObj.quaternion.copy(tempQuat);
+    slerpToLayDown(tempObj, tempQuat, OPACITY.FULL);
+    tempQuat.copy(tempObj.quaternion);
 
-    quat = applyRotations(quat, [
+    const resultQuat = applyRotations(tempQuat, [
       { axis: "x", angle: Math.PI },
       { axis: "x", angle: Math.PI },
       { axis: "y", angle: Math.PI },
@@ -266,13 +279,14 @@ function initializeQuaternions() {
       { axis: "x", angle: Math.PI },
     ]);
 
-    ghostTargetQuaternion = quat;
+    ghostTargetQuaternion = resultQuat.clone();
   }
 
-  Object.keys(ghosts).forEach((key) => {
+  ghostKeys.forEach((key) => {
     const obj = ghosts[key as keyof typeof ghosts];
     if (obj && !introInitialRotations[key]) {
-      introInitialRotations[key] = obj.quaternion.clone();
+      tempQuat.copy(obj.quaternion);
+      introInitialRotations[key] = tempQuat.clone();
     }
   });
 }
@@ -282,8 +296,6 @@ let lastFloorState: {
   opacity: number;
   transparent: boolean;
 } | null = null;
-
-const tempVector = new THREE.Vector3();
 
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive) return;
