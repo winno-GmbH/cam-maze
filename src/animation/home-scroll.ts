@@ -26,6 +26,7 @@ import {
   STAGGER_AMOUNT,
   OPACITY,
 } from "./constants";
+import { vector3PoolTemp } from "../core/object-pool";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
@@ -65,12 +66,16 @@ export function initHomeScrollAnimation() {
       Object.entries(ghosts).forEach(([key, object]) => {
         if (homeLoopStartPos[key]) {
           object.position.copy(homeLoopStartPos[key]);
-          startPositions[key] = homeLoopStartPos[key].clone();
+          const tempPos = vector3PoolTemp.acquire();
+          tempPos.copy(homeLoopStartPos[key]);
+          startPositions[key] = tempPos;
         } else {
           const currentPositions = getCurrentPositions();
           const position = currentPositions[key] || object.position;
           object.position.copy(position);
-          startPositions[key] = position.clone();
+          const tempPos = vector3PoolTemp.acquire();
+          tempPos.copy(position);
+          startPositions[key] = tempPos;
         }
 
         if (homeLoopStartRot[key]) {
@@ -146,7 +151,9 @@ export function initHomeScrollAnimation() {
 
   const allObjects = Object.entries(ghosts);
   allObjects.forEach(([key, object]) => {
-    startPositions[key] = object.position.clone();
+    const tempPos = vector3PoolTemp.acquire();
+    tempPos.copy(object.position);
+    startPositions[key] = tempPos;
   });
 
   const createObjectAnimations = () => {

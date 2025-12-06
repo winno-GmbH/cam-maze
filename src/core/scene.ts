@@ -85,44 +85,15 @@ export function setupLighting(): void {
   directionalLight.castShadow = true;
 }
 
-let throttleFactor = 1.0;
-let artificialDelay = 0;
-let lastThrottledFrameTime = 0;
-
 export function startRenderLoop(): void {
   const render = () => {
-    const now = performance.now();
-    const elapsed = now - lastThrottledFrameTime;
-    const targetFrameTime = (1000 / 60) * throttleFactor;
+    frameCallbacks.forEach((callback) => callback());
 
-    if (elapsed >= targetFrameTime) {
-      frameCallbacks.forEach((callback) => callback());
-
-      renderer.render(scene, camera);
-      lastThrottledFrameTime = now;
-
-      if (artificialDelay > 0) {
-        const start = performance.now();
-        while (performance.now() - start < artificialDelay) {}
-      }
-    }
+    renderer.render(scene, camera);
 
     requestAnimationFrame(render);
   };
-  lastThrottledFrameTime = performance.now();
   render();
-}
-
-export function setRenderThrottle(factor: number, delay: number): void {
-  throttleFactor = Math.max(0.1, Math.min(10, factor));
-  artificialDelay = Math.max(0, delay);
-  lastThrottledFrameTime = 0;
-}
-
-export function resetRenderThrottle(): void {
-  throttleFactor = 1.0;
-  artificialDelay = 0;
-  lastThrottledFrameTime = 0;
 }
 
 export function onFrame(callback: () => void): void {

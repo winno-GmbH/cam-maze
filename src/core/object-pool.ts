@@ -63,3 +63,13 @@ export const object3DPool = new ObjectPool<THREE.Object3D>(
   resetObject3D
 );
 
+export const vector3PoolTemp = new ObjectPool<THREE.Vector3>(
+  () => new THREE.Vector3(),
+  resetVector3
+);
+
+export const quaternionPoolTemp = new ObjectPool<THREE.Quaternion>(
+  () => new THREE.Quaternion(),
+  resetQuaternion
+);
+

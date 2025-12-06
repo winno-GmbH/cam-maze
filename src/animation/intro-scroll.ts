@@ -19,7 +19,11 @@ import {
   clamp,
 } from "./constants";
 import { setFloorPlane, setObjectScale } from "./scene-utils";
-import { quaternionPool, object3DPool } from "../core/object-pool";
+import {
+  quaternionPool,
+  object3DPool,
+  quaternionPoolTemp,
+} from "../core/object-pool";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -225,7 +229,9 @@ function initializeQuaternions() {
   const pacmanObj = ghosts.pacman;
   if (pacmanObj) {
     if (!introInitialRotations["pacman"]) {
-      introInitialRotations["pacman"] = pacmanObj.quaternion.clone();
+      const tempRot = quaternionPoolTemp.acquire();
+      tempRot.copy(pacmanObj.quaternion);
+      introInitialRotations["pacman"] = tempRot;
     }
 
     const quat = quaternionPool.acquire();
@@ -245,14 +251,18 @@ function initializeQuaternions() {
       { axis: "y", angle: Math.PI },
     ]);
 
-    pacmanTargetQuaternion = rotatedQuat.clone();
+    const finalQuat = quaternionPoolTemp.acquire();
+    finalQuat.copy(rotatedQuat);
+    pacmanTargetQuaternion = finalQuat;
     quaternionPool.release(quat);
   }
 
   const ghostObj = ghosts.ghost1;
   if (ghostObj) {
     if (!introInitialRotations["ghost1"]) {
-      introInitialRotations["ghost1"] = ghostObj.quaternion.clone();
+      const tempRot = quaternionPoolTemp.acquire();
+      tempRot.copy(ghostObj.quaternion);
+      introInitialRotations["ghost1"] = tempRot;
     }
 
     const quat = quaternionPool.acquire();
@@ -272,14 +282,18 @@ function initializeQuaternions() {
       { axis: "x", angle: Math.PI },
     ]);
 
-    ghostTargetQuaternion = rotatedQuat.clone();
+    const finalQuat = quaternionPoolTemp.acquire();
+    finalQuat.copy(rotatedQuat);
+    ghostTargetQuaternion = finalQuat;
     quaternionPool.release(quat);
   }
 
   Object.keys(ghosts).forEach((key) => {
     const obj = ghosts[key as keyof typeof ghosts];
     if (obj && !introInitialRotations[key]) {
-      introInitialRotations[key] = obj.quaternion.clone();
+      const tempRot = quaternionPoolTemp.acquire();
+      tempRot.copy(obj.quaternion);
+      introInitialRotations[key] = tempRot;
     }
   });
 }

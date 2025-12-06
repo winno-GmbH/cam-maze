@@ -27,7 +27,8 @@ import {
 } from "./constants";
 import { setObjectScale } from "./scene-utils";
 import { setObjectOpacity } from "../core/material-utils";
-import { vector3Pool } from "../core/object-pool";
+import { vector3Pool, vector3PoolTemp } from "../core/object-pool";
+import { pathCache } from "../paths/path-cache";
 
 const domElementCache: Record<
   number,
@@ -84,7 +85,8 @@ function getCustomLookAtForProgress(
         const toTarget = firstPoint.lookAtSequence[toIndex];
         const tempResult = vector3Pool.acquire();
         tempResult.copy(fromTarget).lerp(toTarget, segmentProgress);
-        const result = tempResult.clone();
+        const result = vector3PoolTemp.acquire();
+        result.copy(tempResult);
         vector3Pool.release(tempResult);
         return result;
       }
@@ -96,8 +98,12 @@ function getCustomLookAtForProgress(
       const finalSequenceLookAt =
         firstPoint.lookAtSequence[firstPoint.lookAtSequence.length - 1];
 
-      const position = povPaths.camera.getPointAt(progress);
-      const tangent = povPaths.camera.getTangentAt(progress).normalize();
+      const tempPos = vector3PoolTemp.acquire();
+      pathCache.getPoint(povPaths.camera, progress, tempPos);
+      const position = tempPos;
+      const tempTan = vector3PoolTemp.acquire();
+      pathCache.getTangent(povPaths.camera, progress, tempTan).normalize();
+      const tangent = tempTan;
 
       const constrainedTangent = vector3Pool.acquire();
       constrainedTangent.set(tangent.x, 0, tangent.z).normalize();
@@ -112,11 +118,14 @@ function getCustomLookAtForProgress(
       tempResult
         .copy(finalSequenceLookAt)
         .lerp(defaultLookAt, transitionProgress);
-      const result = tempResult.clone();
+      const result = vector3PoolTemp.acquire();
+      result.copy(tempResult);
 
       vector3Pool.release(constrainedTangent);
       vector3Pool.release(defaultLookAt);
       vector3Pool.release(tempResult);
+      vector3PoolTemp.release(tempPos);
+      vector3PoolTemp.release(tempTan);
 
       return result;
     }
@@ -213,21 +222,27 @@ function handleAnimationStart() {
   const povPaths = getPovPaths();
 
   if (povTangentSmoothers.camera && povPaths.camera) {
-    const initialCameraTangent = povPaths.camera.getTangentAt(0);
-    if (initialCameraTangent) {
-      povTangentSmoothers.camera.reset(initialCameraTangent);
+    const tempTangent = vector3PoolTemp.acquire();
+    pathCache.getTangent(povPaths.camera, 0, tempTangent);
+    if (tempTangent.length() > 0) {
+      povTangentSmoothers.camera.reset(tempTangent);
     }
+    vector3PoolTemp.release(tempTangent);
   }
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     if (povPaths[key] && key !== "pacman") {
-      const position = povPaths[key].getPointAt(0);
-      ghost.position.copy(position);
-      const tangent = povPaths[key].getTangentAt(0).normalize();
+      const tempPos = vector3PoolTemp.acquire();
+      pathCache.getPoint(povPaths[key], 0, tempPos);
+      ghost.position.copy(tempPos);
+      const tempTan = vector3PoolTemp.acquire();
+      pathCache.getTangent(povPaths[key], 0, tempTan).normalize();
       const lookAtPoint = vector3Pool.acquire();
-      lookAtPoint.copy(position).add(tangent);
+      lookAtPoint.copy(tempPos).add(tempTan);
       ghost.lookAt(lookAtPoint);
       vector3Pool.release(lookAtPoint);
+      vector3PoolTemp.release(tempPos);
+      vector3PoolTemp.release(tempTan);
       ghost.visible = false;
       setObjectScale(ghost, key, "pov");
     }
@@ -245,15 +260,20 @@ function handleAnimationUpdate(this: gsap.core.Tween) {
 
   if (!povPaths.camera) return;
 
-  const cameraPosition = povPaths.camera.getPointAt(overallProgress);
+  const tempCameraPos = vector3PoolTemp.acquire();
+  pathCache.getPoint(povPaths.camera, overallProgress, tempCameraPos);
+  const cameraPosition = tempCameraPos;
 
   if (previousCameraPosition) {
     updateCamera(overallProgress, povPaths, cameraPosition);
     updateGhosts(cameraPosition, overallProgress, povPaths);
     previousCameraPosition.copy(cameraPosition);
   } else {
-    previousCameraPosition = cameraPosition.clone();
+    const tempPrevPos = vector3PoolTemp.acquire();
+    tempPrevPos.copy(cameraPosition);
+    previousCameraPosition = tempPrevPos;
   }
+  vector3PoolTemp.release(tempCameraPos);
 }
 
 function updateCamera(
@@ -278,8 +298,10 @@ function updateCamera(
     return;
   }
 
-  const rawTangent = povPaths.camera.getTangentAt(progress).normalize();
+  const rawTangent = vector3PoolTemp.acquire();
+  pathCache.getTangent(povPaths.camera, progress, rawTangent).normalize();
   let smoothTangent = rawTangent;
+  let shouldReleaseRawTangent = true;
 
   if (povTangentSmoothers.camera && progress > 0) {
     smoothTangent = povTangentSmoothers.camera.update(rawTangent);
@@ -288,12 +310,19 @@ function updateCamera(
   if (progress <= POV_Y_CONSTRAINT_THRESHOLD) {
     const constrainedTangent = vector3Pool.acquire();
     constrainedTangent.set(smoothTangent.x, 0, smoothTangent.z).normalize();
+    if (smoothTangent === rawTangent) {
+      shouldReleaseRawTangent = false;
+    }
     smoothTangent = constrainedTangent;
   }
 
   const defaultLookAt = vector3Pool.acquire();
   defaultLookAt.copy(position).add(smoothTangent);
   handleDefaultOrientation(progress, defaultLookAt);
+
+  if (shouldReleaseRawTangent && smoothTangent !== rawTangent) {
+    vector3PoolTemp.release(rawTangent);
+  }
 
   if (progress <= POV_Y_CONSTRAINT_THRESHOLD) {
     vector3Pool.release(smoothTangent as THREE.Vector3);
@@ -456,10 +485,12 @@ function updateGhost(
       state.hasBeenTriggered = true;
 
       if (povTangentSmoothers[key]) {
-        const initialTangent = path.getTangentAt(0);
-        if (initialTangent) {
-          povTangentSmoothers[key].reset(initialTangent);
+        const tempTangent = vector3PoolTemp.acquire();
+        pathCache.getTangent(path, 0, tempTangent);
+        if (tempTangent.length() > 0) {
+          povTangentSmoothers[key].reset(tempTangent);
         }
+        vector3PoolTemp.release(tempTangent);
       }
     }
 
@@ -477,16 +508,20 @@ function updateGhost(
 
     ghostProgress = state.currentPathT;
 
-    const pathPoint = path.getPointAt(ghostProgress);
-    ghost.position.copy(pathPoint);
+    const tempPathPoint = vector3PoolTemp.acquire();
+    pathCache.getPoint(path, ghostProgress, tempPathPoint);
+    ghost.position.copy(tempPathPoint);
 
     if (povTangentSmoothers[key] && ghostProgress > 0) {
-      const rawTangent = path.getTangentAt(ghostProgress);
-      if (rawTangent && rawTangent.length() > 0) {
+      const rawTangent = vector3PoolTemp.acquire();
+      pathCache.getTangent(path, ghostProgress, rawTangent);
+      if (rawTangent.length() > 0) {
         const smoothTangent = povTangentSmoothers[key].update(rawTangent);
         calculateObjectOrientation(ghost, smoothTangent, "ghost");
       }
+      vector3PoolTemp.release(rawTangent);
     }
+    vector3PoolTemp.release(tempPathPoint);
 
     const targetOpacity =
       ghostProgress > GHOST_FADE_THRESHOLD
