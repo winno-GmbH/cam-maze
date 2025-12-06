@@ -25,6 +25,7 @@ import {
   STAGGER_AMOUNT,
   OPACITY,
 } from "./constants";
+import { isModelLoaded } from "../core/objects";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
@@ -98,7 +99,9 @@ export function initHomeScrollAnimation() {
 
       applyHomeScrollPreset(true, scrollDir, startPositions, rotationsToUse);
 
-      createObjectAnimations();
+      if (isModelLoaded) {
+        createObjectAnimations();
+      }
     });
   };
 
@@ -158,12 +161,16 @@ export function initHomeScrollAnimation() {
   });
 
   const createObjectAnimations = () => {
+    if (!isModelLoaded) {
+      return;
+    }
+
     if (homeScrollTimeline) {
       homeScrollTimeline.clear();
     }
 
     const allObjects = Object.entries(ghosts).filter(([key, object]) => {
-      if (!object) return false;
+      if (!object || typeof object.traverse !== "function") return false;
       if (
         key === "pill" &&
         object instanceof THREE.Group &&
@@ -326,5 +333,7 @@ export function initHomeScrollAnimation() {
     });
   };
 
-  createObjectAnimations();
+  if (isModelLoaded) {
+    createObjectAnimations();
+  }
 }
