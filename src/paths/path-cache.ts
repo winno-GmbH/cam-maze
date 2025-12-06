@@ -11,7 +11,8 @@ class PathCache {
   private readonly cacheSize = 10;
 
   private getCacheKey(path: THREE.CurvePath<THREE.Vector3>, t: number): string {
-    return `${path.uuid || Math.random()}_${t.toFixed(6)}`;
+    const pathId = (path as any).uuid || Math.random().toString();
+    return `${pathId}_${t.toFixed(6)}`;
   }
 
   getPoint(
@@ -32,7 +33,9 @@ class PathCache {
 
     if (this.cache.size >= this.cacheSize) {
       const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
     }
 
     const entry: PathCacheEntry = {
@@ -63,7 +66,9 @@ class PathCache {
 
     if (this.cache.size >= this.cacheSize) {
       const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
     }
 
     const point = path.getPointAt(t);
@@ -83,4 +88,3 @@ class PathCache {
 }
 
 export const pathCache = new PathCache();
-
