@@ -4,7 +4,6 @@ import { ghosts, pacmanMixer } from "../core/objects";
 import { clock, onFrame } from "../core/scene";
 import { getHomePaths, TangentSmoother } from "../paths/paths";
 import { initHomeScrollAnimation } from "./home-scroll";
-import { isModelLoaded } from "../core/objects";
 import { calculateObjectOrientation, OBJECT_KEYS } from "./util";
 import { applyHomeLoopPreset } from "./scene-presets";
 import {
@@ -62,9 +61,7 @@ function stopHomeLoop() {
     }
   });
 
-  if (isModelLoaded) {
-    initHomeScrollAnimation();
-  }
+  initHomeScrollAnimation();
 }
 
 export function startHomeLoop() {
