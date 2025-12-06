@@ -44,19 +44,6 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
       function (gltf) {
         const model = gltf.scene;
 
-        console.log("=== All objects in 3D file ===");
-        model.traverse((child: THREE.Object3D) => {
-          if (child.name) {
-            console.log(
-              "Object name:",
-              child.name,
-              "Type:",
-              (child as any).isMesh ? "Mesh" : "Group/Object3D"
-            );
-          }
-        });
-        console.log("=== End of object list ===");
-
         model.traverse((child: THREE.Object3D) => {
           if (child.name === "CAM-Pacman") {
             const children: THREE.Object3D[] = [];
