@@ -29,6 +29,7 @@ import {
   quaternionPoolTemp,
 } from "../core/object-pool";
 import { pathCache } from "../paths/path-cache";
+import { throttle } from "../core/throttle";
 
 const LOOP_DURATION = 50;
 let isHomeLoopActive = true;
@@ -64,7 +65,8 @@ function stopHomeLoop() {
   const exactT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   setHomeLoopStartT(exactT);
 
-  Object.entries(ghosts).forEach(([key, ghost]) => {
+  for (const key of OBJECT_KEYS) {
+    const ghost = ghosts[key];
     const tempPos = vector3PoolTemp.acquire();
     tempPos.copy(ghost.position);
     updateObjectPosition(key, tempPos, true, true);
@@ -74,7 +76,7 @@ function stopHomeLoop() {
     tempRot.copy(ghost.quaternion);
     updateObjectRotation(key, tempRot, true);
     quaternionPoolTemp.release(tempRot);
-  });
+  }
 
   initHomeScrollAnimation();
 }
@@ -98,7 +100,8 @@ export function startHomeLoop() {
 
   initializeHomeLoopTangentSmoothers();
 
-  Object.entries(ghosts).forEach(([key, ghost]) => {
+  for (const key of OBJECT_KEYS) {
+    const ghost = ghosts[key];
     const path = homePaths[key];
     if (path) {
       if (hasBeenPausedBefore && savedT !== null) {
@@ -131,7 +134,11 @@ export function startHomeLoop() {
       if (key !== "pacman") {
         ghost.visible = true;
       }
-      setObjectScale(ghost, key, "home");
+      const scaleKey = `${key}-home`;
+      if (homeLoopScaleCache[scaleKey] !== "home") {
+        setObjectScale(ghost, key, "home");
+        homeLoopScaleCache[scaleKey] = "home";
+      }
 
       if (homeLoopTangentSmoothers[key] && savedT !== null) {
         const tempTangent = vector3PoolTemp.acquire();
@@ -142,7 +149,7 @@ export function startHomeLoop() {
         vector3PoolTemp.release(tempTangent);
       }
     }
-  });
+  }
 
   if (!homeLoopFrameRegistered) {
     let lastTime = clock.getElapsedTime();
@@ -252,7 +259,7 @@ export function homeLoopHandler() {
 }
 
 export function setupHomeLoopScrollHandler() {
-  window.addEventListener("scroll", () => {
+  const throttledScrollHandler = throttle(() => {
     if (window.scrollY === 0) {
       if (!isHomeLoopActive) {
         startHomeLoop();
@@ -262,5 +269,7 @@ export function setupHomeLoopScrollHandler() {
         stopHomeLoop();
       }
     }
-  });
+  }, 16);
+
+  window.addEventListener("scroll", throttledScrollHandler, { passive: true });
 }

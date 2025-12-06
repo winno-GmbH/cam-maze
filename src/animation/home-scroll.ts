@@ -5,7 +5,7 @@ import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
 import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import { getHomeScrollPaths } from "../paths/paths";
-import { LAY_DOWN_QUAT_1 } from "./util";
+import { LAY_DOWN_QUAT_1, OBJECT_KEYS } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import {
   getCurrentRotations,
@@ -26,7 +26,7 @@ import {
   STAGGER_AMOUNT,
   OPACITY,
 } from "./constants";
-import { vector3PoolTemp } from "../core/object-pool";
+import { vector3PoolTemp, quaternionPoolTemp } from "../core/object-pool";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
@@ -63,7 +63,8 @@ export function initHomeScrollAnimation() {
       const homeLoopStartRot = getHomeLoopStartRotations();
       const scrollDir = getScrollDirection();
 
-      Object.entries(ghosts).forEach(([key, object]) => {
+      for (const key of OBJECT_KEYS) {
+        const object = ghosts[key];
         if (homeLoopStartPos[key]) {
           object.position.copy(homeLoopStartPos[key]);
           const tempPos = vector3PoolTemp.acquire();
@@ -81,7 +82,7 @@ export function initHomeScrollAnimation() {
         if (homeLoopStartRot[key]) {
           object.quaternion.copy(homeLoopStartRot[key]);
         }
-      });
+      }
 
       const rotationsToUse =
         Object.keys(homeLoopStartRot).length > 0
@@ -149,21 +150,21 @@ export function initHomeScrollAnimation() {
     },
   });
 
-  const allObjects = Object.entries(ghosts);
-  allObjects.forEach(([key, object]) => {
+  for (const key of OBJECT_KEYS) {
+    const object = ghosts[key];
     const tempPos = vector3PoolTemp.acquire();
     tempPos.copy(object.position);
     startPositions[key] = tempPos;
-  });
+  }
 
   const createObjectAnimations = () => {
     if (homeScrollTimeline) {
       homeScrollTimeline.clear();
     }
 
-    allObjects.forEach(([key, object]) => {
-      killObjectAnimations(object);
-    });
+    for (const key of OBJECT_KEYS) {
+      killObjectAnimations(ghosts[key]);
+    }
 
     const homeScrollPaths = getHomeScrollPaths(startPositions);
 
@@ -176,7 +177,8 @@ export function initHomeScrollAnimation() {
       endEuler: THREE.Euler;
     }> = [];
 
-    allObjects.forEach(([key, object]) => {
+    for (const key of OBJECT_KEYS) {
+      const object = ghosts[key];
       const currentMaterialOpacity = getObjectOpacity(object);
 
       forEachMaterial(
@@ -200,12 +202,20 @@ export function initHomeScrollAnimation() {
       );
 
       const homeLoopStartRot = getHomeLoopStartRotations();
-      const startRot =
-        homeLoopStartRot[key] ||
-        getCurrentRotations()[key] ||
-        object.quaternion.clone();
-      const startEuler = new THREE.Euler().setFromQuaternion(startRot);
+      const tempQuat = quaternionPoolTemp.acquire();
+      if (homeLoopStartRot[key]) {
+        tempQuat.copy(homeLoopStartRot[key]);
+      } else {
+        const currentRots = getCurrentRotations();
+        if (currentRots[key]) {
+          tempQuat.copy(currentRots[key]);
+        } else {
+          tempQuat.copy(object.quaternion);
+        }
+      }
+      const startEuler = new THREE.Euler().setFromQuaternion(tempQuat);
       const endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
+      quaternionPoolTemp.release(tempQuat);
 
       const path = homeScrollPaths[key];
       if (!path) {
@@ -228,7 +238,7 @@ export function initHomeScrollAnimation() {
         startEuler,
         endEuler,
       });
-    });
+    }
 
     const baseEndTime = 1;
 
