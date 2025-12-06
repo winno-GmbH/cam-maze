@@ -3,7 +3,9 @@ import {
   initRenderer,
   setupLighting,
   scene,
+  renderer,
 } from "./core/scene";
+import { performanceMonitor } from "./core/performance-monitor";
 import {
   setupHomeLoopScrollHandler,
   startHomeLoop,
@@ -49,6 +51,19 @@ async function main() {
   initOutroScrollAnimation();
   initSkipButton();
   startRenderLoop();
+
+  if (typeof window !== "undefined") {
+    (window as any).performanceMonitor = performanceMonitor;
+    (window as any).enablePerformanceMonitor = () => {
+      performanceMonitor.enable(renderer);
+    };
+    (window as any).disablePerformanceMonitor = () => {
+      performanceMonitor.disable();
+    };
+    (window as any).togglePerformanceMonitor = () => {
+      performanceMonitor.toggle(renderer);
+    };
+  }
 }
 
 main();
