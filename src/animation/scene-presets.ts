@@ -29,8 +29,6 @@ export function applyHomeLoopPreset(
   if (!isEntering) return;
 
   Object.entries(ghosts).forEach(([key, object]) => {
-    if (!object) return;
-
     gsap.set(object, { visible: true });
     setObjectScale(object, key, "home");
 
@@ -62,8 +60,6 @@ export function applyHomeScrollPreset(
 
   if (pausedPositions && pausedRotations) {
     Object.entries(ghosts).forEach(([key, object]) => {
-      if (!object) return;
-
       if (pausedPositions[key]) {
         object.position.set(
           pausedPositions[key].x,
@@ -180,18 +176,18 @@ export function applyPovScrollPreset(
   }
 
   Object.entries(ghosts).forEach(([key, object]) => {
-    if (!object || key === "pacman") return;
+    if (key !== "pacman") {
+      gsap.set(object, { visible: false });
+      setObjectScale(object, key, "pov");
 
-    gsap.set(object, { visible: false });
-    setObjectScale(object, key, "pov");
-
-    forEachMaterial(
-      object,
-      (mat: any) => {
-        setMaterialOpacity(mat, 1, true);
-      },
-      { skipCurrencySymbols: false }
-    );
+      forEachMaterial(
+        object,
+        (mat: any) => {
+          setMaterialOpacity(mat, 1, true);
+        },
+        { skipCurrencySymbols: false }
+      );
+    }
   });
 
   setFloorPlane(true, OPACITY.FULL, false);

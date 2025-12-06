@@ -15,11 +15,8 @@ export { clock };
 const loader = new THREE.GLTFLoader();
 
 export let pacmanMixer: THREE.AnimationMixer;
-export let isModelLoaded = false;
 
 export const pacman = new THREE.Group();
-
-export const pill = new THREE.Group();
 
 export const ghosts: GhostContainer = {
   pacman: pacman,
@@ -28,7 +25,6 @@ export const ghosts: GhostContainer = {
   ghost3: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
   ghost4: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
   ghost5: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
-  pill: pill,
 };
 
 const ghostContainers = {
@@ -42,25 +38,11 @@ const ghostContainers = {
 export async function loadModel(scene: THREE.Scene): Promise<void> {
   Object.values(ghosts).forEach((ghost) => scene.add(ghost));
   scene.add(pacman);
-  scene.add(pill);
   return new Promise((resolve, reject) => {
     loader.load(
       ASSETS.mazeModel,
       function (gltf) {
         const model = gltf.scene;
-
-        console.log("=== All objects in 3D file ===");
-        model.traverse((child: THREE.Object3D) => {
-          if (child.name) {
-            console.log(
-              "Object name:",
-              child.name,
-              "Type:",
-              (child as any).isMesh ? "Mesh" : "Group/Object3D"
-            );
-          }
-        });
-        console.log("=== End of object list ===");
 
         model.traverse((child: THREE.Object3D) => {
           if (child.name === "CAM-Pacman") {
@@ -157,18 +139,6 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             if (ghostContainer) {
               ghostContainer.add(ghostGroup);
             }
-          } else if (child.name && child.name.includes("Shell_Bottom_Orange")) {
-            const children: THREE.Object3D[] = [];
-            child.traverse((subChild: THREE.Object3D) => {
-              if ((subChild as any).isMesh) {
-                children.push(subChild);
-              }
-            });
-            if (children.length > 0) {
-              children.forEach((item) => pill.add(item));
-              pill.scale.set(0.05, 0.05, 0.05);
-              pill.visible = false;
-            }
           }
 
           if ((child as any).isMesh) {
@@ -215,7 +185,6 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
         scene.add(model);
         model.position.set(0.5, 0.5, 0.5);
 
-        isModelLoaded = true;
         resolve();
       },
       undefined,

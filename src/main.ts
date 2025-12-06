@@ -14,7 +14,6 @@ import { setupCamera } from "./core/camera";
 import { initIntroScrollAnimation } from "./animation/intro-scroll";
 import { initOutroScrollAnimation } from "./animation/outro-scroll";
 import { initializeObjectStates } from "./animation/object-state";
-import { initHomeScrollAnimation } from "./animation/home-scroll";
 
 function initSkipButton() {
   const skipButton = document.querySelector(".wr_p--skip.wr_p");
@@ -40,15 +39,14 @@ async function main() {
 
   initializeObjectStates();
 
-  initHomeScrollAnimation();
-  initPovScrollAnimation();
-  initIntroScrollAnimation();
-  initOutroScrollAnimation();
-
   setupHomeLoopScrollHandler();
   if (window.scrollY === 0) {
     startHomeLoop();
   }
+
+  initPovScrollAnimation();
+  initIntroScrollAnimation();
+  initOutroScrollAnimation();
   initSkipButton();
   startRenderLoop();
 }

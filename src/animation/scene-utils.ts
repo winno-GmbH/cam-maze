@@ -22,8 +22,6 @@ export function setFloorPlane(
   });
 }
 
-const scaleCache: Record<string, number> = {};
-
 export function setObjectScale(
   object: THREE.Object3D,
   key: string,
@@ -43,25 +41,12 @@ export function setObjectScale(
     }
   }
 
-  const cacheKey = `${key}-${sceneType}`;
-  if (scaleCache[cacheKey] === scale && object.scale.x === scale) {
-    return;
-  }
-
   object.scale.set(scale, scale, scale);
-  scaleCache[cacheKey] = scale;
-  
-  if (sceneType === "intro") {
-    object.updateMatrixWorld(false);
-  } else {
-    object.updateMatrixWorld(true);
-  }
+  object.updateMatrixWorld(true);
   gsap.set(object.scale, { x: scale, y: scale, z: scale });
 }
 
 export function killObjectAnimations(object: THREE.Object3D): void {
-  if (!object) return;
-
   gsap.killTweensOf(object);
   gsap.killTweensOf(object.scale);
   gsap.killTweensOf(object.position);

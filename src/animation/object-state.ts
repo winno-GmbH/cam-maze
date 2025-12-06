@@ -47,8 +47,6 @@ export function updateHomeLoopT(t: number, animationTime: number) {
 
 export function initializeObjectStates() {
   Object.entries(ghosts).forEach(([key, object]) => {
-    if (!object) return;
-
     const initialOpacity = getObjectOpacity(object);
 
     currentObjectStates[key] = {

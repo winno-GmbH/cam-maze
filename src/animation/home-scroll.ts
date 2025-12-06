@@ -16,6 +16,7 @@ import {
 import {
   setObjectOpacity,
   getObjectOpacity,
+  forEachMaterial,
   setMaterialOpacity,
 } from "../core/material-utils";
 import { killObjectAnimations } from "./scene-utils";
@@ -57,25 +58,11 @@ export function initHomeScrollAnimation() {
         return;
       }
 
-      const allObjects = Object.entries(ghosts).filter(([key, object]) => {
-        if (!object) return false;
-        if (
-          key === "pill" &&
-          object instanceof THREE.Group &&
-          object.children.length === 0
-        ) {
-          return false;
-        }
-        return true;
-      });
-
       const homeLoopStartPos = getHomeLoopStartPositions();
       const homeLoopStartRot = getHomeLoopStartRotations();
       const scrollDir = getScrollDirection();
 
-      allObjects.forEach(([key, object]) => {
-        if (!object) return;
-
+      Object.entries(ghosts).forEach(([key, object]) => {
         if (homeLoopStartPos[key]) {
           object.position.copy(homeLoopStartPos[key]);
           startPositions[key] = homeLoopStartPos[key].clone();
@@ -157,33 +144,18 @@ export function initHomeScrollAnimation() {
     },
   });
 
+  const allObjects = Object.entries(ghosts);
+  allObjects.forEach(([key, object]) => {
+    startPositions[key] = object.position.clone();
+  });
+
   const createObjectAnimations = () => {
     if (homeScrollTimeline) {
       homeScrollTimeline.clear();
     }
 
-    const allObjects = Object.entries(ghosts).filter(([key, object]) => {
-      if (!object) return false;
-      if (
-        key === "pill" &&
-        object instanceof THREE.Group &&
-        object.children.length === 0
-      ) {
-        return false;
-      }
-      return true;
-    });
-
     allObjects.forEach(([key, object]) => {
-      if (object) {
-        killObjectAnimations(object);
-      }
-    });
-
-    allObjects.forEach(([key, object]) => {
-      if (object) {
-        startPositions[key] = object.position.clone();
-      }
+      killObjectAnimations(object);
     });
 
     const homeScrollPaths = getHomeScrollPaths(startPositions);
@@ -198,45 +170,27 @@ export function initHomeScrollAnimation() {
     }> = [];
 
     allObjects.forEach(([key, object]) => {
-      if (!object) {
-        return;
-      }
-
       const currentMaterialOpacity = getObjectOpacity(object);
-      const meshesToUpdate: Array<{
-        mesh: THREE.Mesh;
-        mat: any;
-        index?: number;
-      }> = [];
 
-      object.traverse((child) => {
-        if ((child as any).isMesh) {
-          const mesh = child as THREE.Mesh;
-          const mat = mesh.material;
-          if (mat) {
-            if (Array.isArray(mat)) {
-              mat.forEach((m, idx) => {
-                meshesToUpdate.push({ mesh, mat: m, index: idx });
-              });
-            } else {
-              meshesToUpdate.push({ mesh, mat });
+      forEachMaterial(
+        object,
+        (mat: any, mesh: THREE.Mesh) => {
+          const clonedMat = mat.clone();
+          setMaterialOpacity(clonedMat, currentMaterialOpacity, true);
+
+          if (Array.isArray(mesh.material)) {
+            const index = mesh.material.indexOf(mat);
+            if (index !== -1) {
+              const clonedMaterials = [...mesh.material];
+              clonedMaterials[index] = clonedMat;
+              mesh.material = clonedMaterials;
             }
+          } else {
+            mesh.material = clonedMat;
           }
-        }
-      });
-
-      meshesToUpdate.forEach(({ mesh, mat, index }) => {
-        const clonedMat = mat.clone();
-        setMaterialOpacity(clonedMat, currentMaterialOpacity, true);
-
-        if (index !== undefined && Array.isArray(mesh.material)) {
-          const clonedMaterials = [...mesh.material];
-          clonedMaterials[index] = clonedMat;
-          mesh.material = clonedMaterials;
-        } else {
-          mesh.material = clonedMat;
-        }
-      });
+        },
+        { skipCurrencySymbols: false }
+      );
 
       const homeLoopStartRot = getHomeLoopStartRotations();
       const startRot =
@@ -269,9 +223,7 @@ export function initHomeScrollAnimation() {
       });
     });
 
-    const totalObjects = animationData.length;
-    const lastGhostEndTime = 0.95;
-    const baseEndTime = lastGhostEndTime - (totalObjects - 1) * STAGGER_AMOUNT;
+    const baseEndTime = 1;
 
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];

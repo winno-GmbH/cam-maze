@@ -29,6 +29,9 @@ let animationTime = 0;
 let homeLoopFrameRegistered = false;
 let rotationTransitionTime = 0;
 let startRotations: Record<string, THREE.Quaternion> = {};
+let cachedHomePaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null =
+  null;
+const homeLoopScaleCache: Record<string, string> = {};
 let hasBeenPausedBefore = false;
 
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
@@ -55,10 +58,8 @@ function stopHomeLoop() {
   setHomeLoopStartT(exactT);
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    if (ghost) {
-      updateObjectPosition(key, ghost.position.clone(), true, true);
-      updateObjectRotation(key, ghost.quaternion.clone(), true);
-    }
+    updateObjectPosition(key, ghost.position.clone(), true, true);
+    updateObjectRotation(key, ghost.quaternion.clone(), true);
   });
 
   initHomeScrollAnimation();
@@ -157,7 +158,10 @@ function updateHomeLoop(delta: number) {
 
   updateHomeLoopT(t, animationTime);
 
-  const homePaths = getHomePaths();
+  if (!cachedHomePaths) {
+    cachedHomePaths = getHomePaths();
+  }
+  const homePaths = cachedHomePaths;
   if (pacmanMixer) {
     pacmanMixer.update(delta);
   }
@@ -169,8 +173,6 @@ function updateHomeLoop(delta: number) {
   const isTransitioning = hasBeenPausedBefore && transitionProgress < 1;
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
-    if (!ghost) return;
-
     const path = homePaths[key];
     if (path) {
       const objectT = t;
@@ -181,7 +183,11 @@ function updateHomeLoop(delta: number) {
         updateObjectPosition(key, position);
       }
 
-      setObjectScale(ghost, key, "home");
+      const scaleKey = `${key}-home`;
+      if (homeLoopScaleCache[scaleKey] !== "home") {
+        setObjectScale(ghost, key, "home");
+        homeLoopScaleCache[scaleKey] = "home";
+      }
 
       const targetQuat = new THREE.Quaternion();
       if (homeLoopTangentSmoothers[key] && objectT > 0) {
