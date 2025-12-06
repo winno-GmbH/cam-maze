@@ -38,8 +38,6 @@ const ghostKeys = Object.keys(ghosts);
 const tempVector = vector3Pool.acquire();
 const tempQuat = quaternionPool.acquire();
 const tempObj = object3DPool.acquire();
-let lastIntroUpdateTime = 0;
-const INTRO_UPDATE_THROTTLE = 16;
 
 function resetIntroScrollCache() {
   cachedCameraPosition = null;
@@ -144,9 +142,6 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(false);
         },
         onUpdate: (self) => {
-          const now = performance.now();
-          if (now - lastIntroUpdateTime < INTRO_UPDATE_THROTTLE) return;
-          lastIntroUpdateTime = now;
           if (typeof self.progress === "number") {
             updateObjectsWalkBy(self.progress);
           }
@@ -319,7 +314,7 @@ function updateObjectsWalkBy(progress: number) {
       tempVector.copy(cachedCameraPosition);
     } else {
       if (!cachedCameraPosition) {
-        cachedCameraPosition = new THREE.Vector3();
+        cachedCameraPosition = vector3Pool.acquire();
       }
       cachedCameraPosition.set(camX, camY, camZ);
       lastCameraUpdateFrame = currentFrame;
