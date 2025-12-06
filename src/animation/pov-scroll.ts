@@ -27,7 +27,6 @@ import {
 } from "./constants";
 import { setObjectScale } from "./scene-utils";
 import { setObjectOpacity } from "../core/material-utils";
-import { vector3Pool } from "../core/object-pool";
 
 const domElementCache: Record<
   number,
@@ -50,21 +49,12 @@ const startRotationPoint = new THREE.Vector3(0.55675, 0.55, 1.306);
 const endRotationPoint = new THREE.Vector3(-0.14675, 1, 1.8085);
 
 const wideFOV = 80;
-let lastPovFOV = wideFOV;
 
 let cachedStartYAngle: number | null = null;
-let cachedPovPaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null =
-  null;
 
 const ghostStates: Record<string, any> = {};
 
 const povTangentSmoothers: Record<string, TangentSmoother> = {};
-const povTriggerKeys = Object.keys(povTriggerPositions);
-const tempVector1 = vector3Pool.acquire();
-const tempVector2 = vector3Pool.acquire();
-const tempVector3 = vector3Pool.acquire();
-let lastPovUpdateTime = 0;
-const POV_UPDATE_THROTTLE = 16;
 
 function getCustomLookAtForProgress(
   progress: number,
@@ -91,8 +81,7 @@ function getCustomLookAtForProgress(
       } else {
         const fromTarget = firstPoint.lookAtSequence[fromIndex];
         const toTarget = firstPoint.lookAtSequence[toIndex];
-        tempVector1.copy(fromTarget).lerp(toTarget, segmentProgress);
-        return tempVector1;
+        return fromTarget.clone().lerp(toTarget, segmentProgress);
       }
     }
   } else if (progress <= POV_TRANSITION_PHASE_END) {
@@ -105,18 +94,20 @@ function getCustomLookAtForProgress(
       const position = povPaths.camera.getPointAt(progress);
       const tangent = povPaths.camera.getTangentAt(progress).normalize();
 
-      tempVector1.set(tangent.x, 0, tangent.z).normalize();
-      tempVector2.copy(position).add(tempVector1);
-      const defaultLookAt = tempVector2;
+      const constrainedTangent = new THREE.Vector3(
+        tangent.x,
+        0,
+        tangent.z
+      ).normalize();
+      const defaultLookAt = position.clone().add(constrainedTangent);
 
       const transitionProgress =
         (progress - POV_SEQUENCE_PHASE_END) /
         (POV_TRANSITION_PHASE_END - POV_SEQUENCE_PHASE_END);
 
-      tempVector1
-        .copy(finalSequenceLookAt)
+      return finalSequenceLookAt
+        .clone()
         .lerp(defaultLookAt, transitionProgress);
-      return tempVector1;
     }
   }
 
@@ -126,16 +117,14 @@ function getCustomLookAtForProgress(
 function initializePovTangentSmoothers() {
   const smoothingFactor = TANGENT_SMOOTHING.POV;
 
-  tempVector1.set(0, 0, -1);
   povTangentSmoothers.camera = new TangentSmoother(
-    tempVector1.clone(),
+    new THREE.Vector3(0, 0, -1),
     smoothingFactor
   );
 
-  tempVector1.set(1, 0, 0);
   for (let i = 1; i <= 5; i++) {
     povTangentSmoothers[`ghost${i}`] = new TangentSmoother(
-      tempVector1.clone(),
+      new THREE.Vector3(1, 0, 0),
       smoothingFactor
     );
   }
@@ -149,7 +138,7 @@ export function initPovScrollAnimation() {
 
   initializePovTangentSmoothers();
 
-  povTriggerKeys.forEach((key) => {
+  Object.keys(povTriggerPositions).forEach((key) => {
     ghostStates[key] = {
       hasBeenTriggered: false,
       triggerCameraProgress: null,
@@ -210,10 +199,7 @@ export function initPovScrollAnimation() {
 }
 
 function handleAnimationStart() {
-  if (!cachedPovPaths) {
-    cachedPovPaths = getPovPaths();
-  }
-  const povPaths = cachedPovPaths;
+  const povPaths = getPovPaths();
 
   if (povTangentSmoothers.camera && povPaths.camera) {
     const initialCameraTangent = povPaths.camera.getTangentAt(0);
@@ -222,16 +208,15 @@ function handleAnimationStart() {
     }
   }
 
-  Object.keys(ghosts).forEach((key) => {
-    const ghost = ghosts[key as keyof typeof ghosts];
-    if (!ghost || key === "pacman" || !povPaths[key]) return;
-    const position = povPaths[key].getPointAt(0);
-    ghost.position.copy(position);
-    const tangent = povPaths[key].getTangentAt(0).normalize();
-    tempVector1.copy(position).add(tangent);
-    ghost.lookAt(tempVector1);
-    ghost.visible = false;
-    setObjectScale(ghost, key, "pov");
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    if (povPaths[key] && key !== "pacman") {
+      const position = povPaths[key].getPointAt(0);
+      ghost.position.copy(position);
+      const tangent = povPaths[key].getTangentAt(0).normalize();
+      ghost.lookAt(position.clone().add(tangent));
+      ghost.visible = false;
+      setObjectScale(ghost, key, "pov");
+    }
   });
 
   if (ghosts.pacman) {
@@ -240,16 +225,9 @@ function handleAnimationStart() {
 }
 
 function handleAnimationUpdate(this: gsap.core.Tween) {
-  const now = performance.now();
-  if (now - lastPovUpdateTime < POV_UPDATE_THROTTLE) return;
-  lastPovUpdateTime = now;
-
   const overallProgress = (this.targets()[0] as any).progress;
 
-  if (!cachedPovPaths) {
-    cachedPovPaths = getPovPaths();
-  }
-  const povPaths = cachedPovPaths;
+  const povPaths = getPovPaths();
 
   if (!povPaths.camera) return;
 
@@ -277,19 +255,12 @@ function updateCamera(
   }
 
   camera.position.copy(position);
-  if (camera.fov !== wideFOV) {
-    camera.fov = wideFOV;
-    camera.updateProjectionMatrix();
-    lastPovFOV = wideFOV;
-  }
+  camera.fov = wideFOV;
 
   const customLookAt = getCustomLookAtForProgress(progress, povPaths);
   if (customLookAt) {
     camera.lookAt(customLookAt);
-    if (camera.fov !== lastPovFOV) {
-      camera.updateProjectionMatrix();
-      lastPovFOV = camera.fov;
-    }
+    camera.updateProjectionMatrix();
     return;
   }
 
@@ -301,28 +272,24 @@ function updateCamera(
   }
 
   if (progress <= POV_Y_CONSTRAINT_THRESHOLD) {
-    tempVector1.set(smoothTangent.x, 0, smoothTangent.z).normalize();
-    smoothTangent = tempVector1;
+    smoothTangent = new THREE.Vector3(
+      smoothTangent.x,
+      0,
+      smoothTangent.z
+    ).normalize();
   }
 
-  tempVector2.copy(position).add(smoothTangent);
-  const defaultLookAt = tempVector2;
+  const defaultLookAt = position.clone().add(smoothTangent);
   handleDefaultOrientation(progress, defaultLookAt);
 
-  if (camera.fov !== lastPovFOV) {
-    camera.updateProjectionMatrix();
-    lastPovFOV = camera.fov;
-  }
+  camera.updateProjectionMatrix();
 }
 
 function handleDefaultOrientation(
   progress: number,
   defaultLookAt: THREE.Vector3
 ) {
-  if (!cachedPovPaths) {
-    cachedPovPaths = getPovPaths();
-  }
-  const povPaths = cachedPovPaths;
+  const povPaths = getPovPaths();
   const startRotationProgress = findClosestProgressOnPath(
     povPaths.camera,
     startRotationPoint
@@ -351,13 +318,11 @@ function updateGhosts(
   overallProgress: number,
   povPaths: Record<string, THREE.CurvePath<THREE.Vector3>>
 ) {
-  povTriggerKeys.forEach((key) => {
-    const triggerData =
-      povTriggerPositions[key as keyof typeof povTriggerPositions];
-    const ghost = ghosts[key as keyof typeof ghosts];
+  Object.entries(povTriggerPositions).forEach(([key, triggerData]) => {
+    const ghost = ghosts[key];
     const path = povPaths[key];
 
-    if (!ghost || !path || key === "pacman" || !triggerData) return;
+    if (!ghost || !path || key === "pacman") return;
     const forceEndProgress =
       overallProgress > triggerData.forceEndProgress.start &&
       overallProgress < triggerData.forceEndProgress.end;
@@ -662,12 +627,11 @@ function updateTextVisibility(
 function resetTangentSmoothers() {
   Object.keys(povTangentSmoothers).forEach((key) => {
     if (povTangentSmoothers[key]) {
-      if (key === "camera") {
-        tempVector1.set(0, 0, -1);
-      } else {
-        tempVector1.set(1, 0, 0);
-      }
-      povTangentSmoothers[key].reset(tempVector1);
+      const resetVector =
+        key === "camera"
+          ? new THREE.Vector3(0, 0, -1)
+          : new THREE.Vector3(1, 0, 0);
+      povTangentSmoothers[key].reset(resetVector);
     }
   });
 }
@@ -681,25 +645,24 @@ function hideTextElements(elements: NodeListOf<Element>) {
 }
 
 function handleLeavePOV() {
-  Object.keys(ghosts).forEach((key) => {
-    if (key === "pacman") return;
-    const ghost = ghosts[key as keyof typeof ghosts];
-    if (!ghost) return;
-    ghost.visible = false;
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    if (key !== "pacman") {
+      ghost.visible = false;
 
-    const ghostIndex = parseInt(key.replace("ghost", "")) - 1;
-    const cached = domElementCache[ghostIndex];
+      const ghostIndex = parseInt(key.replace("ghost", "")) - 1;
+      const cached = domElementCache[ghostIndex];
 
-    if (cached?.parent) {
-      hideTextElements(cached.povElements);
-      hideTextElements(cached.camElements);
-      cached.parent.classList.add("no-visibility");
+      if (cached?.parent) {
+        hideTextElements(cached.povElements);
+        hideTextElements(cached.camElements);
+        cached.parent.classList.add("no-visibility");
+      }
+
+      setObjectOpacity(ghost, 1.0, {
+        preserveTransmission: true,
+        skipCurrencySymbols: true,
+      });
     }
-
-    setObjectOpacity(ghost, 1.0, {
-      preserveTransmission: true,
-      skipCurrencySymbols: true,
-    });
   });
 
   if (ghosts.pacman) {

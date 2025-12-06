@@ -5,7 +5,6 @@ import {
   forEachMaterial,
   getObjectOpacity,
 } from "../core/material-utils";
-import { vector3Pool, quaternionPool } from "../core/object-pool";
 
 export interface ObjectState {
   position: THREE.Vector3;
@@ -46,12 +45,8 @@ export function updateHomeLoopT(t: number, animationTime: number) {
   homeLoopState.animationTime = animationTime;
 }
 
-const ghostKeys = Object.keys(ghosts);
-
 export function initializeObjectStates() {
-  ghostKeys.forEach((key) => {
-    const object = ghosts[key as keyof typeof ghosts];
-    if (!object) return;
+  Object.entries(ghosts).forEach(([key, object]) => {
     const initialOpacity = getObjectOpacity(object);
 
     currentObjectStates[key] = {
@@ -66,22 +61,16 @@ export function initializeObjectStates() {
 
 export function getCurrentPositions(): Record<string, THREE.Vector3> {
   const positions: Record<string, THREE.Vector3> = {};
-  ghostKeys.forEach((key) => {
-    const state = currentObjectStates[key];
-    if (state) {
-      positions[key] = state.position.clone();
-    }
+  Object.entries(currentObjectStates).forEach(([key, state]) => {
+    positions[key] = state.position.clone();
   });
   return positions;
 }
 
 export function getCurrentRotations(): Record<string, THREE.Quaternion> {
   const rotations: Record<string, THREE.Quaternion> = {};
-  ghostKeys.forEach((key) => {
-    const state = currentObjectStates[key];
-    if (state) {
-      rotations[key] = state.rotation.clone();
-    }
+  Object.entries(currentObjectStates).forEach(([key, state]) => {
+    rotations[key] = state.rotation.clone();
   });
   return rotations;
 }
@@ -124,11 +113,10 @@ export function updateObjectRotation(
 }
 
 export function getHomeLoopStartRotations(): Record<string, THREE.Quaternion> {
-  const rotations: Record<string, THREE.Quaternion> = {};
-  Object.keys(homeLoopStartRotations).forEach((key) => {
-    rotations[key] = homeLoopStartRotations[key].clone();
-  });
-  return rotations;
+  return Object.entries(homeLoopStartRotations).reduce((acc, [key, rot]) => {
+    acc[key] = rot.clone();
+    return acc;
+  }, {} as Record<string, THREE.Quaternion>);
 }
 
 export function setHomeLoopStartT(t: number): void {

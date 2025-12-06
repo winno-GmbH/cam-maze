@@ -26,19 +26,11 @@ import {
   STAGGER_AMOUNT,
   OPACITY,
 } from "./constants";
-import { vector3Pool, eulerPool } from "../core/object-pool";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
-let lastFOV = originalFOV;
-let cachedLookAtCurve: THREE.CubicBezierCurve3 | null = null;
-let lastUpdateTime = 0;
-const UPDATE_THROTTLE = 16;
 
 let startPositions: Record<string, THREE.Vector3> = {};
-const ghostKeys = Object.keys(ghosts);
-const tempVector = vector3Pool.acquire();
-const tempEuler = eulerPool.acquire();
 
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
@@ -70,9 +62,7 @@ export function initHomeScrollAnimation() {
       const homeLoopStartRot = getHomeLoopStartRotations();
       const scrollDir = getScrollDirection();
 
-      ghostKeys.forEach((key) => {
-        const object = ghosts[key as keyof typeof ghosts];
-        if (!object) return;
+      Object.entries(ghosts).forEach(([key, object]) => {
         if (homeLoopStartPos[key]) {
           object.position.copy(homeLoopStartPos[key]);
           startPositions[key] = homeLoopStartPos[key].clone();
@@ -112,44 +102,31 @@ export function initHomeScrollAnimation() {
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
       onUpdate: (self) => {
-        const now = performance.now();
-        if (now - lastUpdateTime < UPDATE_THROTTLE) return;
-        lastUpdateTime = now;
-
         if (cameraPath && cameraPath.curves.length) {
           const progress = self.progress;
           const clampedProgress = Math.min(1, Math.max(0, progress));
           const cameraPoint = cameraPath.getPointAt(clampedProgress);
           camera.position.copy(cameraPoint);
 
-          if (!cachedLookAtCurve) {
-            const lookAtPoints: THREE.Vector3[] = [];
-            cameraPathPoints.forEach((point) => {
-              if ("lookAt" in point && point.lookAt) {
-                lookAtPoints.push(point.lookAt);
-              }
-            });
-
-            if (lookAtPoints.length >= 4) {
-              cachedLookAtCurve = new THREE.CubicBezierCurve3(
-                lookAtPoints[0],
-                lookAtPoints[1],
-                lookAtPoints[2],
-                lookAtPoints[3]
-              );
+          const lookAtPoints: THREE.Vector3[] = [];
+          cameraPathPoints.forEach((point) => {
+            if ("lookAt" in point && point.lookAt) {
+              lookAtPoints.push(point.lookAt);
             }
-          }
+          });
 
-          if (cachedLookAtCurve) {
-            const lookAtPoint = cachedLookAtCurve.getPoint(clampedProgress);
+          if (lookAtPoints.length >= 4) {
+            const lookAtCurve = new THREE.CubicBezierCurve3(
+              lookAtPoints[0],
+              lookAtPoints[1],
+              lookAtPoints[2],
+              lookAtPoints[3]
+            );
+            const lookAtPoint = lookAtCurve.getPoint(clampedProgress);
             camera.lookAt(lookAtPoint);
           }
-
-          if (camera.fov !== originalFOV) {
-            camera.fov = originalFOV;
-            camera.updateProjectionMatrix();
-            lastFOV = originalFOV;
-          }
+          camera.fov = originalFOV;
+          camera.updateProjectionMatrix();
         }
       },
       onLeave: () => {
@@ -167,11 +144,9 @@ export function initHomeScrollAnimation() {
     },
   });
 
-  ghostKeys.forEach((key) => {
-    const object = ghosts[key as keyof typeof ghosts];
-    if (object) {
-      startPositions[key] = object.position.clone();
-    }
+  const allObjects = Object.entries(ghosts);
+  allObjects.forEach(([key, object]) => {
+    startPositions[key] = object.position.clone();
   });
 
   const createObjectAnimations = () => {
@@ -179,11 +154,8 @@ export function initHomeScrollAnimation() {
       homeScrollTimeline.clear();
     }
 
-    ghostKeys.forEach((key) => {
-      const object = ghosts[key as keyof typeof ghosts];
-      if (object) {
-        killObjectAnimations(object);
-      }
+    allObjects.forEach(([key, object]) => {
+      killObjectAnimations(object);
     });
 
     const homeScrollPaths = getHomeScrollPaths(startPositions);
@@ -197,18 +169,12 @@ export function initHomeScrollAnimation() {
       endEuler: THREE.Euler;
     }> = [];
 
-    ghostKeys.forEach((key) => {
-      const object = ghosts[key as keyof typeof ghosts];
-      if (!object) return;
-
+    allObjects.forEach(([key, object]) => {
       const currentMaterialOpacity = getObjectOpacity(object);
 
       forEachMaterial(
         object,
         (mat: any, mesh: THREE.Mesh) => {
-          if (!mat.needsUpdate && mat.opacity === currentMaterialOpacity) {
-            return;
-          }
           const clonedMat = mat.clone();
           setMaterialOpacity(clonedMat, currentMaterialOpacity, true);
 
@@ -231,10 +197,8 @@ export function initHomeScrollAnimation() {
         homeLoopStartRot[key] ||
         getCurrentRotations()[key] ||
         object.quaternion.clone();
-      tempEuler.setFromQuaternion(startRot);
-      const startEuler = tempEuler;
-      tempEuler.setFromQuaternion(LAY_DOWN_QUAT_1);
-      const endEuler = tempEuler;
+      const startEuler = new THREE.Euler().setFromQuaternion(startRot);
+      const endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
 
       const path = homeScrollPaths[key];
       if (!path) {
@@ -296,8 +260,11 @@ export function initHomeScrollAnimation() {
             const pathPoint = data.path.getPointAt(animProps.progress);
             data.object.position.copy(pathPoint);
 
-            tempEuler.set(animProps.rotX, animProps.rotY, animProps.rotZ);
-            data.object.rotation.copy(tempEuler);
+            data.object.rotation.set(
+              animProps.rotX,
+              animProps.rotY,
+              animProps.rotZ
+            );
             data.object.quaternion.setFromEuler(data.object.rotation);
 
             setObjectOpacity(data.object, animProps.opacity, {

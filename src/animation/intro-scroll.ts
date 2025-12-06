@@ -19,7 +19,6 @@ import {
   clamp,
 } from "./constants";
 import { setFloorPlane, setObjectScale } from "./scene-utils";
-import { vector3Pool, quaternionPool, object3DPool } from "../core/object-pool";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -29,15 +28,6 @@ let ghostTargetQuaternion: THREE.Quaternion | null = null;
 let introInitialRotations: Record<string, THREE.Quaternion> = {};
 let cachedCameraPosition: THREE.Vector3 | null = null;
 let lastCameraUpdateFrame = -1;
-const objectMaterialCache: Record<
-  string,
-  Array<{ mesh: THREE.Mesh; material: THREE.Material; childName: string }>
-> = {};
-const objectScaleCache: Record<string, { key: string; sceneType: string }> = {};
-const ghostKeys = Object.keys(ghosts);
-const tempVector = vector3Pool.acquire();
-const tempQuat = quaternionPool.acquire();
-const tempObj = object3DPool.acquire();
 
 function resetIntroScrollCache() {
   cachedCameraPosition = null;
@@ -45,33 +35,9 @@ function resetIntroScrollCache() {
   lastUpdateProgress = null;
 }
 
-function initializeObjectMaterialCache() {
-  ghostKeys.forEach((key) => {
-    const object = ghosts[key as keyof typeof ghosts];
-    if (!object || objectMaterialCache[key]) return;
-    objectMaterialCache[key] = [];
-    object.traverse((child) => {
-      if ((child as any).isMesh) {
-        const mesh = child as THREE.Mesh;
-        const childName = child.name || "";
-        const mat = mesh.material;
-        if (mat) {
-          const materials = Array.isArray(mat) ? mat : [mat];
-          materials.forEach((material) => {
-            objectMaterialCache[key].push({ mesh, material, childName });
-          });
-        }
-      }
-    });
-  });
-}
-
 function setIntroScrollLocked(locked: boolean) {
-  ghostKeys.forEach((key) => {
-    const obj = ghosts[key as keyof typeof ghosts];
-    if (obj) {
-      obj.userData.introScrollLocked = locked;
-    }
+  Object.values(ghosts).forEach((obj) => {
+    obj.userData.introScrollLocked = locked;
   });
 }
 
@@ -120,13 +86,11 @@ export function initIntroScrollAnimation() {
         onEnter: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
-          initializeObjectMaterialCache();
           setIntroScrollLocked(true);
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
-          initializeObjectMaterialCache();
           setIntroScrollLocked(true);
         },
         onLeave: () => {
@@ -232,16 +196,16 @@ function initializeQuaternions() {
   const pacmanObj = ghosts.pacman;
   if (pacmanObj) {
     if (!introInitialRotations["pacman"]) {
-      tempQuat.copy(pacmanObj.quaternion);
-      introInitialRotations["pacman"] = tempQuat.clone();
+      introInitialRotations["pacman"] = pacmanObj.quaternion.clone();
     }
 
-    tempQuat.copy(introInitialRotations["pacman"]);
-    tempObj.quaternion.copy(tempQuat);
-    slerpToLayDown(tempObj, tempQuat, OPACITY.FULL);
-    tempQuat.copy(tempObj.quaternion);
+    let quat = introInitialRotations["pacman"].clone();
+    const tempObj = new THREE.Object3D();
+    tempObj.quaternion.copy(quat);
+    slerpToLayDown(tempObj, quat, OPACITY.FULL);
+    quat = tempObj.quaternion.clone();
 
-    const resultQuat = applyRotations(tempQuat, [
+    quat = applyRotations(quat, [
       { axis: "x", angle: Math.PI / 2 },
       { axis: "y", angle: Math.PI },
       { axis: "y", angle: Math.PI },
@@ -250,22 +214,22 @@ function initializeQuaternions() {
       { axis: "y", angle: Math.PI },
     ]);
 
-    pacmanTargetQuaternion = resultQuat.clone();
+    pacmanTargetQuaternion = quat;
   }
 
   const ghostObj = ghosts.ghost1;
   if (ghostObj) {
     if (!introInitialRotations["ghost1"]) {
-      tempQuat.copy(ghostObj.quaternion);
-      introInitialRotations["ghost1"] = tempQuat.clone();
+      introInitialRotations["ghost1"] = ghostObj.quaternion.clone();
     }
 
-    tempQuat.copy(introInitialRotations["ghost1"]);
-    tempObj.quaternion.copy(tempQuat);
-    slerpToLayDown(tempObj, tempQuat, OPACITY.FULL);
-    tempQuat.copy(tempObj.quaternion);
+    let quat = introInitialRotations["ghost1"].clone();
+    const tempObj = new THREE.Object3D();
+    tempObj.quaternion.copy(quat);
+    slerpToLayDown(tempObj, quat, OPACITY.FULL);
+    quat = tempObj.quaternion.clone();
 
-    const resultQuat = applyRotations(tempQuat, [
+    quat = applyRotations(quat, [
       { axis: "x", angle: Math.PI },
       { axis: "x", angle: Math.PI },
       { axis: "y", angle: Math.PI },
@@ -274,14 +238,13 @@ function initializeQuaternions() {
       { axis: "x", angle: Math.PI },
     ]);
 
-    ghostTargetQuaternion = resultQuat.clone();
+    ghostTargetQuaternion = quat;
   }
 
-  ghostKeys.forEach((key) => {
+  Object.keys(ghosts).forEach((key) => {
     const obj = ghosts[key as keyof typeof ghosts];
     if (obj && !introInitialRotations[key]) {
-      tempQuat.copy(obj.quaternion);
-      introInitialRotations[key] = tempQuat.clone();
+      introInitialRotations[key] = obj.quaternion.clone();
     }
   });
 }
@@ -291,6 +254,8 @@ let lastFloorState: {
   opacity: number;
   transparent: boolean;
 } | null = null;
+
+const tempVector = new THREE.Vector3();
 
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive) return;
@@ -314,7 +279,7 @@ function updateObjectsWalkBy(progress: number) {
       tempVector.copy(cachedCameraPosition);
     } else {
       if (!cachedCameraPosition) {
-        cachedCameraPosition = vector3Pool.acquire();
+        cachedCameraPosition = new THREE.Vector3();
       }
       cachedCameraPosition.set(camX, camY, camZ);
       lastCameraUpdateFrame = currentFrame;
@@ -464,23 +429,17 @@ function updateObjectsWalkBy(progress: number) {
         object.quaternion.copy(targetQuat);
       }
 
-      const scaleKey = `${key}-intro`;
-      if (!objectScaleCache[scaleKey]) {
-        setObjectScale(object, key, "intro");
-        objectScaleCache[scaleKey] = { key, sceneType: "intro" };
-      }
+      setObjectScale(object, key, "intro");
 
       object.visible = true;
 
       const targetOpacity = key === "pacman" ? OPACITY.FULL : baseGhostOpacity;
 
-      if (!objectMaterialCache[key]) {
-        initializeObjectMaterialCache();
-      }
+      object.traverse((child) => {
+        if ((child as any).isMesh) {
+          const mesh = child as THREE.Mesh;
+          const childName = child.name || "";
 
-      const materialCache = objectMaterialCache[key];
-      if (materialCache) {
-        materialCache.forEach(({ mesh, material, childName }) => {
           if (
             isCurrencySymbol(childName) ||
             (key === "pacman" && isPacmanPart(childName))
@@ -491,17 +450,23 @@ function updateObjectsWalkBy(progress: number) {
 
           mesh.visible = true;
 
-          const mat = material as any;
-          if (Math.abs(mat.opacity - targetOpacity) > 0.001) {
-            mat.opacity = targetOpacity;
-            if (mat.transmission !== undefined && mat.transmission > 0) {
-              mat.transparent = true;
-            } else {
-              mat.transparent = targetOpacity < 1.0;
-            }
+          const mat = mesh.material;
+          if (mat) {
+            const materials = Array.isArray(mat) ? mat : [mat];
+            materials.forEach((material: any) => {
+              material.opacity = targetOpacity;
+              if (
+                material.transmission !== undefined &&
+                material.transmission > 0
+              ) {
+                material.transparent = true;
+              } else {
+                material.transparent = targetOpacity < 1.0;
+              }
+            });
           }
-        });
-      }
+        }
+      });
     }
   );
 }
