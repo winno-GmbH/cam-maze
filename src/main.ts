@@ -52,6 +52,8 @@ async function main() {
   initSkipButton();
   startRenderLoop();
 
+  performanceMonitor.enable(renderer);
+
   if (typeof window !== "undefined") {
     (window as any).performanceMonitor = performanceMonitor;
     (window as any).enablePerformanceMonitor = () => {
