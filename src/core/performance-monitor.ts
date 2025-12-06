@@ -19,6 +19,8 @@ class PerformanceMonitor {
   private fps: number = 0;
   private frameTime: number = 0;
   private renderer: THREE.WebGLRenderer | null = null;
+  private throttleFactor: number = 1.0;
+  private artificialDelay: number = 0;
 
   enable(renderer: THREE.WebGLRenderer): void {
     this.enabled = true;
@@ -142,6 +144,44 @@ class PerformanceMonitor {
       geometries: this.renderer.info.memory.geometries,
       textures: this.renderer.info.memory.textures,
     };
+  }
+
+  setThrottleFactor(factor: number): void {
+    this.throttleFactor = Math.max(0.1, Math.min(10, factor));
+  }
+
+  setArtificialDelay(ms: number): void {
+    this.artificialDelay = Math.max(0, ms);
+  }
+
+  simulateSlowDevice(level: "low" | "medium" | "very-low" = "medium"): void {
+    switch (level) {
+      case "low":
+        this.setThrottleFactor(2.0);
+        this.setArtificialDelay(8);
+        break;
+      case "medium":
+        this.setThrottleFactor(3.0);
+        this.setArtificialDelay(16);
+        break;
+      case "very-low":
+        this.setThrottleFactor(5.0);
+        this.setArtificialDelay(33);
+        break;
+    }
+  }
+
+  resetThrottle(): void {
+    this.throttleFactor = 1.0;
+    this.artificialDelay = 0;
+  }
+
+  getThrottleFactor(): number {
+    return this.throttleFactor;
+  }
+
+  getArtificialDelay(): number {
+    return this.artificialDelay;
   }
 }
 

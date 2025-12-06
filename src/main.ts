@@ -4,6 +4,8 @@ import {
   setupLighting,
   scene,
   renderer,
+  setRenderThrottle,
+  resetRenderThrottle,
 } from "./core/scene";
 import { performanceMonitor } from "./core/performance-monitor";
 import {
@@ -64,6 +66,22 @@ async function main() {
     };
     (window as any).togglePerformanceMonitor = () => {
       performanceMonitor.toggle(renderer);
+    };
+    (window as any).simulateSlowDevice = (
+      level: "low" | "medium" | "very-low" = "medium"
+    ) => {
+      performanceMonitor.simulateSlowDevice(level);
+      const throttleFactor = performanceMonitor.getThrottleFactor();
+      const delay = performanceMonitor.getArtificialDelay();
+      setRenderThrottle(throttleFactor, delay);
+      console.log(
+        `Slow device simulation activated: ${level} (throttle: ${throttleFactor}x, delay: ${delay}ms)`
+      );
+    };
+    (window as any).resetPerformanceThrottle = () => {
+      performanceMonitor.resetThrottle();
+      resetRenderThrottle();
+      console.log("Performance throttle reset");
     };
   }
 }
