@@ -19,6 +19,7 @@ import {
   clamp,
 } from "./constants";
 import { setFloorPlane, setObjectScale } from "./scene-utils";
+import { quaternionPool, object3DPool } from "../core/object-pool";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -227,13 +228,15 @@ function initializeQuaternions() {
       introInitialRotations["pacman"] = pacmanObj.quaternion.clone();
     }
 
-    let quat = introInitialRotations["pacman"].clone();
-    const tempObj = new THREE.Object3D();
+    const quat = quaternionPool.acquire();
+    quat.copy(introInitialRotations["pacman"]);
+    const tempObj = object3DPool.acquire();
     tempObj.quaternion.copy(quat);
     slerpToLayDown(tempObj, quat, OPACITY.FULL);
-    quat = tempObj.quaternion.clone();
+    quat.copy(tempObj.quaternion);
+    object3DPool.release(tempObj);
 
-    quat = applyRotations(quat, [
+    const rotatedQuat = applyRotations(quat, [
       { axis: "x", angle: Math.PI / 2 },
       { axis: "y", angle: Math.PI },
       { axis: "y", angle: Math.PI },
@@ -242,7 +245,8 @@ function initializeQuaternions() {
       { axis: "y", angle: Math.PI },
     ]);
 
-    pacmanTargetQuaternion = quat;
+    pacmanTargetQuaternion = rotatedQuat.clone();
+    quaternionPool.release(quat);
   }
 
   const ghostObj = ghosts.ghost1;
@@ -251,13 +255,15 @@ function initializeQuaternions() {
       introInitialRotations["ghost1"] = ghostObj.quaternion.clone();
     }
 
-    let quat = introInitialRotations["ghost1"].clone();
-    const tempObj = new THREE.Object3D();
+    const quat = quaternionPool.acquire();
+    quat.copy(introInitialRotations["ghost1"]);
+    const tempObj = object3DPool.acquire();
     tempObj.quaternion.copy(quat);
     slerpToLayDown(tempObj, quat, OPACITY.FULL);
-    quat = tempObj.quaternion.clone();
+    quat.copy(tempObj.quaternion);
+    object3DPool.release(tempObj);
 
-    quat = applyRotations(quat, [
+    const rotatedQuat = applyRotations(quat, [
       { axis: "x", angle: Math.PI },
       { axis: "x", angle: Math.PI },
       { axis: "y", angle: Math.PI },
@@ -266,7 +272,8 @@ function initializeQuaternions() {
       { axis: "x", angle: Math.PI },
     ]);
 
-    ghostTargetQuaternion = quat;
+    ghostTargetQuaternion = rotatedQuat.clone();
+    quaternionPool.release(quat);
   }
 
   Object.keys(ghosts).forEach((key) => {

@@ -22,6 +22,7 @@ import {
   getHomeLoopStartT,
 } from "./object-state";
 import { isCurrencySymbol } from "./util";
+import { quaternionPool, object3DPool } from "../core/object-pool";
 
 const LOOP_DURATION = 50;
 let isHomeLoopActive = true;
@@ -189,7 +190,7 @@ function updateHomeLoop(delta: number) {
         homeLoopScaleCache[scaleKey] = "home";
       }
 
-      const targetQuat = new THREE.Quaternion();
+      const targetQuat = quaternionPool.acquire();
       if (homeLoopTangentSmoothers[key] && objectT > 0) {
         const rawTangent = path.getTangentAt(objectT);
         if (rawTangent && rawTangent.length() > 0) {
@@ -197,9 +198,10 @@ function updateHomeLoop(delta: number) {
             homeLoopTangentSmoothers[key].update(rawTangent);
           const objectType = key === "pacman" ? "pacman" : "ghost";
 
-          const tempObject = new THREE.Object3D();
+          const tempObject = object3DPool.acquire();
           calculateObjectOrientation(tempObject, smoothTangent, objectType);
           targetQuat.copy(tempObject.quaternion);
+          object3DPool.release(tempObject);
         }
       }
 
@@ -208,14 +210,16 @@ function updateHomeLoop(delta: number) {
           transitionProgress *
           transitionProgress *
           (3 - 2 * transitionProgress);
-        ghost.quaternion.copy(
-          startRotations[key].clone().slerp(targetQuat, easedProgress)
-        );
+        const tempQuat = quaternionPool.acquire();
+        tempQuat.copy(startRotations[key]).slerp(targetQuat, easedProgress);
+        ghost.quaternion.copy(tempQuat);
+        quaternionPool.release(tempQuat);
       } else {
         ghost.quaternion.copy(targetQuat);
       }
 
       updateObjectRotation(key, ghost.quaternion);
+      quaternionPool.release(targetQuat);
     }
   });
 }

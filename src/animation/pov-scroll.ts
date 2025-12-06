@@ -27,6 +27,7 @@ import {
 } from "./constants";
 import { setObjectScale } from "./scene-utils";
 import { setObjectOpacity } from "../core/material-utils";
+import { vector3Pool } from "../core/object-pool";
 
 const domElementCache: Record<
   number,
@@ -81,7 +82,11 @@ function getCustomLookAtForProgress(
       } else {
         const fromTarget = firstPoint.lookAtSequence[fromIndex];
         const toTarget = firstPoint.lookAtSequence[toIndex];
-        return fromTarget.clone().lerp(toTarget, segmentProgress);
+        const tempResult = vector3Pool.acquire();
+        tempResult.copy(fromTarget).lerp(toTarget, segmentProgress);
+        const result = tempResult.clone();
+        vector3Pool.release(tempResult);
+        return result;
       }
     }
   } else if (progress <= POV_TRANSITION_PHASE_END) {
@@ -94,20 +99,26 @@ function getCustomLookAtForProgress(
       const position = povPaths.camera.getPointAt(progress);
       const tangent = povPaths.camera.getTangentAt(progress).normalize();
 
-      const constrainedTangent = new THREE.Vector3(
-        tangent.x,
-        0,
-        tangent.z
-      ).normalize();
-      const defaultLookAt = position.clone().add(constrainedTangent);
+      const constrainedTangent = vector3Pool.acquire();
+      constrainedTangent.set(tangent.x, 0, tangent.z).normalize();
+      const defaultLookAt = vector3Pool.acquire();
+      defaultLookAt.copy(position).add(constrainedTangent);
 
       const transitionProgress =
         (progress - POV_SEQUENCE_PHASE_END) /
         (POV_TRANSITION_PHASE_END - POV_SEQUENCE_PHASE_END);
 
-      return finalSequenceLookAt
-        .clone()
+      const tempResult = vector3Pool.acquire();
+      tempResult
+        .copy(finalSequenceLookAt)
         .lerp(defaultLookAt, transitionProgress);
+      const result = tempResult.clone();
+
+      vector3Pool.release(constrainedTangent);
+      vector3Pool.release(defaultLookAt);
+      vector3Pool.release(tempResult);
+
+      return result;
     }
   }
 
@@ -213,7 +224,10 @@ function handleAnimationStart() {
       const position = povPaths[key].getPointAt(0);
       ghost.position.copy(position);
       const tangent = povPaths[key].getTangentAt(0).normalize();
-      ghost.lookAt(position.clone().add(tangent));
+      const lookAtPoint = vector3Pool.acquire();
+      lookAtPoint.copy(position).add(tangent);
+      ghost.lookAt(lookAtPoint);
+      vector3Pool.release(lookAtPoint);
       ghost.visible = false;
       setObjectScale(ghost, key, "pov");
     }
@@ -272,15 +286,19 @@ function updateCamera(
   }
 
   if (progress <= POV_Y_CONSTRAINT_THRESHOLD) {
-    smoothTangent = new THREE.Vector3(
-      smoothTangent.x,
-      0,
-      smoothTangent.z
-    ).normalize();
+    const constrainedTangent = vector3Pool.acquire();
+    constrainedTangent.set(smoothTangent.x, 0, smoothTangent.z).normalize();
+    smoothTangent = constrainedTangent;
   }
 
-  const defaultLookAt = position.clone().add(smoothTangent);
+  const defaultLookAt = vector3Pool.acquire();
+  defaultLookAt.copy(position).add(smoothTangent);
   handleDefaultOrientation(progress, defaultLookAt);
+
+  if (progress <= POV_Y_CONSTRAINT_THRESHOLD) {
+    vector3Pool.release(smoothTangent as THREE.Vector3);
+  }
+  vector3Pool.release(defaultLookAt);
 
   camera.updateProjectionMatrix();
 }
