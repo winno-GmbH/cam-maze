@@ -30,6 +30,7 @@ import {
 } from "../core/object-pool";
 import { pathCache } from "../paths/path-cache";
 import { throttle } from "../core/throttle";
+import { adaptivePerformance } from "../core/adaptive-performance";
 
 const LOOP_DURATION = 50;
 let isHomeLoopActive = true;
@@ -159,6 +160,10 @@ export function startHomeLoop() {
         return;
       }
 
+      if (!adaptivePerformance.update()) {
+        return;
+      }
+
       const currentTime = clock.getElapsedTime();
       const delta = currentTime - lastTime;
       lastTime = currentTime;
@@ -177,9 +182,11 @@ function updateHomeLoop(delta: number) {
 
   const maxDelta = 0.1;
   const clampedDelta = Math.min(delta, maxDelta);
+  const updateInterval = adaptivePerformance.getUpdateInterval();
+  const adjustedDelta = clampedDelta * updateInterval;
 
-  animationTime += clampedDelta;
-  rotationTransitionTime += clampedDelta;
+  animationTime += adjustedDelta;
+  rotationTransitionTime += adjustedDelta;
 
   const t = (animationTime % LOOP_DURATION) / LOOP_DURATION;
 
@@ -190,7 +197,7 @@ function updateHomeLoop(delta: number) {
   }
   const homePaths = cachedHomePaths;
   if (pacmanMixer) {
-    pacmanMixer.update(delta);
+    pacmanMixer.update(adjustedDelta);
   }
 
   const transitionProgress = Math.min(
@@ -198,6 +205,8 @@ function updateHomeLoop(delta: number) {
     1
   );
   const isTransitioning = hasBeenPausedBefore && transitionProgress < 1;
+
+  const shouldSimplify = adaptivePerformance.getCurrentFps() < 20;
 
   Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
@@ -221,8 +230,10 @@ function updateHomeLoop(delta: number) {
         const rawTangent = vector3PoolTemp.acquire();
         pathCache.getTangent(path, objectT, rawTangent);
         if (rawTangent.length() > 0) {
-          const smoothTangent =
-            homeLoopTangentSmoothers[key].update(rawTangent);
+          let smoothTangent = rawTangent;
+          if (!shouldSimplify) {
+            smoothTangent = homeLoopTangentSmoothers[key].update(rawTangent);
+          }
           const objectType = key === "pacman" ? "pacman" : "ghost";
 
           const tempObject = object3DPool.acquire();

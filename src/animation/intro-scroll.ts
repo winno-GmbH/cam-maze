@@ -24,6 +24,7 @@ import {
   object3DPool,
   quaternionPoolTemp,
 } from "../core/object-pool";
+import { adaptivePerformance } from "../core/adaptive-performance";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -341,7 +342,9 @@ function updateObjectsWalkBy(progress: number) {
   initializeQuaternions();
 
   if (pacmanMixer) {
-    pacmanMixer.update(clock.getDelta());
+    const delta = clock.getDelta();
+    const updateInterval = adaptivePerformance.getUpdateInterval();
+    pacmanMixer.update(delta * updateInterval);
   }
 
   const floorState = {

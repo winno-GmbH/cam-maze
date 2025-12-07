@@ -86,10 +86,18 @@ export function setupLighting(): void {
 }
 
 export function startRenderLoop(): void {
-  const render = () => {
-    frameCallbacks.forEach((callback) => callback());
+  let lastRenderTime = 0;
+  const minRenderInterval = 16.67;
 
-    renderer.render(scene, camera);
+  const render = () => {
+    const now = performance.now();
+    const timeSinceLastRender = now - lastRenderTime;
+
+    if (timeSinceLastRender >= minRenderInterval) {
+      frameCallbacks.forEach((callback) => callback());
+      renderer.render(scene, camera);
+      lastRenderTime = now;
+    }
 
     requestAnimationFrame(render);
   };
