@@ -20,7 +20,8 @@ export class TangentSmoother {
 
   update(targetTangent: THREE.Vector3): THREE.Vector3 {
     this.currentTangent.lerp(targetTangent, this.smoothing);
-    return this.currentTangent.normalize();
+    this.currentTangent.normalize();
+    return this.currentTangent;
   }
 
   reset(newTangent: THREE.Vector3): void {

@@ -13,13 +13,14 @@ import {
 } from "./constants";
 import { setObjectScale } from "./scene-utils";
 import {
-  updateObjectPosition,
-  updateObjectRotation,
   setHomeLoopActive,
   updateHomeLoopT,
   getHomeLoopStartRotations,
   setHomeLoopStartT,
   getHomeLoopStartT,
+  currentObjectStates,
+  homeLoopStartPositions,
+  homeLoopStartRotations,
 } from "./object-state";
 import { isCurrencySymbol } from "./util";
 import {
@@ -30,7 +31,6 @@ import {
 } from "../core/object-pool";
 import { pathCache } from "../paths/path-cache";
 import { throttle } from "../core/throttle";
-import { adaptivePerformance } from "../core/adaptive-performance";
 
 const LOOP_DURATION = 50;
 let isHomeLoopActive = true;
@@ -70,12 +70,22 @@ function stopHomeLoop() {
     const ghost = ghosts[key];
     const tempPos = vector3PoolTemp.acquire();
     tempPos.copy(ghost.position);
-    updateObjectPosition(key, tempPos, true, true);
+    if (currentObjectStates[key]) {
+      currentObjectStates[key].position.copy(tempPos);
+    }
+    const tempPos2 = vector3PoolTemp.acquire();
+    tempPos2.copy(tempPos);
+    homeLoopStartPositions[key] = tempPos2;
     vector3PoolTemp.release(tempPos);
 
     const tempRot = quaternionPoolTemp.acquire();
     tempRot.copy(ghost.quaternion);
-    updateObjectRotation(key, tempRot, true);
+    if (currentObjectStates[key]) {
+      currentObjectStates[key].rotation.copy(tempRot);
+    }
+    const tempRot2 = quaternionPoolTemp.acquire();
+    tempRot2.copy(tempRot);
+    homeLoopStartRotations[key] = tempRot2;
     quaternionPoolTemp.release(tempRot);
   }
 
@@ -109,7 +119,9 @@ export function startHomeLoop() {
         const tempPos = vector3PoolTemp.acquire();
         pathCache.getPoint(path, savedT, tempPos);
         ghost.position.copy(tempPos);
-        updateObjectPosition(key, tempPos);
+        if (currentObjectStates[key]) {
+          currentObjectStates[key].position.copy(tempPos);
+        }
         vector3PoolTemp.release(tempPos);
       }
 
@@ -117,14 +129,18 @@ export function startHomeLoop() {
 
       if (savedRotation) {
         ghost.quaternion.copy(savedRotation);
-        updateObjectRotation(key, savedRotation);
+        if (currentObjectStates[key]) {
+          currentObjectStates[key].rotation.copy(savedRotation);
+        }
         if (hasBeenPausedBefore) {
           const tempRot = quaternionPoolTemp.acquire();
           tempRot.copy(savedRotation);
           startRotations[key] = tempRot;
         }
       } else {
-        updateObjectRotation(key, ghost.quaternion);
+        if (currentObjectStates[key]) {
+          currentObjectStates[key].rotation.copy(ghost.quaternion);
+        }
         if (hasBeenPausedBefore) {
           const tempRot = quaternionPoolTemp.acquire();
           tempRot.copy(ghost.quaternion);
@@ -160,10 +176,6 @@ export function startHomeLoop() {
         return;
       }
 
-      if (!adaptivePerformance.update()) {
-        return;
-      }
-
       const currentTime = clock.getElapsedTime();
       const delta = currentTime - lastTime;
       lastTime = currentTime;
@@ -182,11 +194,9 @@ function updateHomeLoop(delta: number) {
 
   const maxDelta = 0.1;
   const clampedDelta = Math.min(delta, maxDelta);
-  const updateInterval = adaptivePerformance.getUpdateInterval();
-  const adjustedDelta = clampedDelta * updateInterval;
 
-  animationTime += adjustedDelta;
-  rotationTransitionTime += adjustedDelta;
+  animationTime += clampedDelta;
+  rotationTransitionTime += clampedDelta;
 
   const t = (animationTime % LOOP_DURATION) / LOOP_DURATION;
 
@@ -197,7 +207,7 @@ function updateHomeLoop(delta: number) {
   }
   const homePaths = cachedHomePaths;
   if (pacmanMixer) {
-    pacmanMixer.update(adjustedDelta);
+    pacmanMixer.update(clampedDelta);
   }
 
   const transitionProgress = Math.min(
@@ -206,9 +216,8 @@ function updateHomeLoop(delta: number) {
   );
   const isTransitioning = hasBeenPausedBefore && transitionProgress < 1;
 
-  const shouldSimplify = adaptivePerformance.getCurrentFps() < 20;
-
-  Object.entries(ghosts).forEach(([key, ghost]) => {
+  for (const key of OBJECT_KEYS) {
+    const ghost = ghosts[key];
     const path = homePaths[key];
     if (path) {
       const objectT = t;
@@ -216,7 +225,9 @@ function updateHomeLoop(delta: number) {
       const tempPos = vector3PoolTemp.acquire();
       pathCache.getPoint(path, objectT, tempPos);
       ghost.position.copy(tempPos);
-      updateObjectPosition(key, tempPos);
+      if (currentObjectStates[key]) {
+        currentObjectStates[key].position.copy(tempPos);
+      }
       vector3PoolTemp.release(tempPos);
 
       const scaleKey = `${key}-home`;
@@ -230,10 +241,8 @@ function updateHomeLoop(delta: number) {
         const rawTangent = vector3PoolTemp.acquire();
         pathCache.getTangent(path, objectT, rawTangent);
         if (rawTangent.length() > 0) {
-          let smoothTangent = rawTangent;
-          if (!shouldSimplify) {
-            smoothTangent = homeLoopTangentSmoothers[key].update(rawTangent);
-          }
+          const smoothTangent =
+            homeLoopTangentSmoothers[key].update(rawTangent);
           const objectType = key === "pacman" ? "pacman" : "ghost";
 
           const tempObject = object3DPool.acquire();
@@ -257,10 +266,12 @@ function updateHomeLoop(delta: number) {
         ghost.quaternion.copy(targetQuat);
       }
 
-      updateObjectRotation(key, ghost.quaternion);
+      if (currentObjectStates[key]) {
+        currentObjectStates[key].rotation.copy(ghost.quaternion);
+      }
       quaternionPool.release(targetQuat);
     }
-  });
+  }
 }
 
 export function homeLoopHandler() {
