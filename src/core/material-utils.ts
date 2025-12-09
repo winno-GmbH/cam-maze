@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { isCurrencySymbol, isPacmanPart } from "../animation/util";
+import { performanceProfiler } from "./performance-profiler";
 
 export function setObjectOpacity(
   object: THREE.Object3D,
@@ -111,26 +112,28 @@ export function forEachMaterial(
   const skipPacmanParts = options?.skipPacmanParts === true;
   const objectKey = options?.objectKey;
 
-  object.traverse((child) => {
-    if ((child as any).isMesh && (child as any).material) {
-      const mesh = child as THREE.Mesh;
-      const childName = child.name || "";
+  performanceProfiler.measure("forEachMaterial-traverse", () => {
+    object.traverse((child) => {
+      if ((child as any).isMesh && (child as any).material) {
+        const mesh = child as THREE.Mesh;
+        const childName = child.name || "";
 
-      if (skipCurrencySymbols && isCurrencySymbol(childName)) {
-        return;
-      }
+        if (skipCurrencySymbols && isCurrencySymbol(childName)) {
+          return;
+        }
 
-      if (skipPacmanParts && objectKey === "pacman" && isPacmanPart(childName)) {
-        return;
-      }
+        if (skipPacmanParts && objectKey === "pacman" && isPacmanPart(childName)) {
+          return;
+        }
 
-      if (Array.isArray(mesh.material)) {
-        mesh.material.forEach((mat: any) => {
-          callback(mat, mesh, childName);
-        });
-      } else {
-        callback(mesh.material as any, mesh, childName);
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((mat: any) => {
+            callback(mat, mesh, childName);
+          });
+        } else {
+          callback(mesh.material as any, mesh, childName);
+        }
       }
-    }
+    });
   });
 }

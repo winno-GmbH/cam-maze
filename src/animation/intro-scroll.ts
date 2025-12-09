@@ -24,6 +24,7 @@ import {
   object3DPool,
   quaternionPoolTemp,
 } from "../core/object-pool";
+import { performanceProfiler } from "../core/performance-profiler";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -312,210 +313,213 @@ function updateObjectsWalkBy(progress: number) {
   if (lastUpdateProgress === progress) return;
   lastUpdateProgress = progress;
 
-  const currentFrame = performance.now();
-  const shouldUpdateCache =
-    !cachedCameraPosition || currentFrame - lastCameraUpdateFrame > 16;
+  performanceProfiler.measure("intro-scroll-update", () => {
+    const currentFrame = performance.now();
+    const shouldUpdateCache =
+      !cachedCameraPosition || currentFrame - lastCameraUpdateFrame > 16;
 
-  if (shouldUpdateCache) {
-    const camX = camera.position.x;
-    const camY = camera.position.y;
-    const camZ = camera.position.z;
+    if (shouldUpdateCache) {
+      const camX = camera.position.x;
+      const camY = camera.position.y;
+      const camZ = camera.position.z;
 
-    if (!isFinite(camX) || !isFinite(camY) || !isFinite(camZ)) {
-      if (!cachedCameraPosition) {
-        return;
+      if (!isFinite(camX) || !isFinite(camY) || !isFinite(camZ)) {
+        if (!cachedCameraPosition) {
+          return;
+        }
+        tempVector.copy(cachedCameraPosition);
+      } else {
+        if (!cachedCameraPosition) {
+          cachedCameraPosition = new THREE.Vector3();
+        }
+        cachedCameraPosition.set(camX, camY, camZ);
+        lastCameraUpdateFrame = currentFrame;
+        tempVector.copy(cachedCameraPosition);
       }
-      tempVector.copy(cachedCameraPosition);
     } else {
-      if (!cachedCameraPosition) {
-        cachedCameraPosition = new THREE.Vector3();
-      }
-      cachedCameraPosition.set(camX, camY, camZ);
-      lastCameraUpdateFrame = currentFrame;
-      tempVector.copy(cachedCameraPosition);
+      tempVector.copy(cachedCameraPosition!);
     }
-  } else {
-    tempVector.copy(cachedCameraPosition!);
-  }
 
-  initializeQuaternions();
+    initializeQuaternions();
 
-  if (pacmanMixer) {
-    pacmanMixer.update(clock.getDelta());
-  }
+    if (pacmanMixer) {
+      pacmanMixer.update(clock.getDelta());
+    }
 
-  const floorState = {
-    visible: true,
-    opacity: OPACITY.HIDDEN,
-    transparent: true,
-  };
-  if (
-    !lastFloorState ||
-    lastFloorState.visible !== floorState.visible ||
-    lastFloorState.opacity !== floorState.opacity ||
-    lastFloorState.transparent !== floorState.transparent
-  ) {
-    setFloorPlane(
-      floorState.visible,
-      floorState.opacity,
-      floorState.transparent
-    );
-    lastFloorState = floorState;
-  }
+    const floorState = {
+      visible: true,
+      opacity: OPACITY.HIDDEN,
+      transparent: true,
+    };
+    if (
+      !lastFloorState ||
+      lastFloorState.visible !== floorState.visible ||
+      lastFloorState.opacity !== floorState.opacity ||
+      lastFloorState.transparent !== floorState.transparent
+    ) {
+      setFloorPlane(
+        floorState.visible,
+        floorState.opacity,
+        floorState.transparent
+      );
+      lastFloorState = floorState;
+    }
 
-  const pacmanQuat = pacmanTargetQuaternion;
-  const ghostQuat = ghostTargetQuaternion;
+    const pacmanQuat = pacmanTargetQuaternion;
+    const ghostQuat = ghostTargetQuaternion;
 
-  const walkStart = tempVector.x - INTRO_WALK_DISTANCE;
-  const walkEnd = tempVector.x + INTRO_WALK_DISTANCE;
+    const walkStart = tempVector.x - INTRO_WALK_DISTANCE;
+    const walkEnd = tempVector.x + INTRO_WALK_DISTANCE;
 
-  const objectsToAnimate = [
-    {
-      key: "pacman",
-      behindOffset: 1.5,
-      zOffset: 0.5,
-      xOffset: 0,
-      yOffset: 0,
-      zPhase: 0,
-    },
-    {
-      key: "ghost1",
-      behindOffset: INTRO_GHOST_OFFSETS.GHOST1,
-      zOffset: 0.5,
-      xOffset: 0.5,
-      yOffset: -0.5,
-      zPhase: Math.PI * 1.0,
-    },
-    {
-      key: "ghost2",
-      behindOffset: INTRO_GHOST_OFFSETS.GHOST2,
-      zOffset: 0.5,
-      xOffset: 0,
-      yOffset: -1,
-      zPhase: Math.PI * 1.5,
-    },
-    {
-      key: "ghost3",
-      behindOffset: INTRO_GHOST_OFFSETS.GHOST3,
-      zOffset: 0.5,
-      xOffset: 0.5,
-      yOffset: 0.5,
-      zPhase: Math.PI * 1.0,
-    },
-    {
-      key: "ghost4",
-      behindOffset: INTRO_GHOST_OFFSETS.GHOST4,
-      zOffset: 0.5,
-      xOffset: 0.75,
-      yOffset: 0.25,
-      zPhase: Math.PI * 1.0,
-    },
-    {
-      key: "ghost5",
-      behindOffset: INTRO_GHOST_OFFSETS.GHOST5,
-      zOffset: 0.5,
-      xOffset: 0,
-      yOffset: -0.5,
-      zPhase: Math.PI * 1.0,
-    },
-  ];
+    const objectsToAnimate = [
+      {
+        key: "pacman",
+        behindOffset: 1.5,
+        zOffset: 0.5,
+        xOffset: 0,
+        yOffset: 0,
+        zPhase: 0,
+      },
+      {
+        key: "ghost1",
+        behindOffset: INTRO_GHOST_OFFSETS.GHOST1,
+        zOffset: 0.5,
+        xOffset: 0.5,
+        yOffset: -0.5,
+        zPhase: Math.PI * 1.0,
+      },
+      {
+        key: "ghost2",
+        behindOffset: INTRO_GHOST_OFFSETS.GHOST2,
+        zOffset: 0.5,
+        xOffset: 0,
+        yOffset: -1,
+        zPhase: Math.PI * 1.5,
+      },
+      {
+        key: "ghost3",
+        behindOffset: INTRO_GHOST_OFFSETS.GHOST3,
+        zOffset: 0.5,
+        xOffset: 0.5,
+        yOffset: 0.5,
+        zPhase: Math.PI * 1.0,
+      },
+      {
+        key: "ghost4",
+        behindOffset: INTRO_GHOST_OFFSETS.GHOST4,
+        zOffset: 0.5,
+        xOffset: 0.75,
+        yOffset: 0.25,
+        zPhase: Math.PI * 1.0,
+      },
+      {
+        key: "ghost5",
+        behindOffset: INTRO_GHOST_OFFSETS.GHOST5,
+        zOffset: 0.5,
+        xOffset: 0,
+        yOffset: -0.5,
+        zPhase: Math.PI * 1.0,
+      },
+    ];
 
-  const normalizedProgress = clamp(progress);
-  const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
-  const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
-  const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
-  const pacmanZ = tempVector.z + INTRO_POSITION_OFFSET.z;
+    const normalizedProgress = clamp(progress);
+    const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
+    const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
+    const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
+    const pacmanZ = tempVector.z + INTRO_POSITION_OFFSET.z;
 
-  if (
-    !isFinite(baseX) ||
-    !isFinite(pacmanX) ||
-    !isFinite(pacmanY) ||
-    !isFinite(pacmanZ)
-  ) {
-    return;
-  }
+    if (
+      !isFinite(baseX) ||
+      !isFinite(pacmanX) ||
+      !isFinite(pacmanY) ||
+      !isFinite(pacmanZ)
+    ) {
+      return;
+    }
 
-  const baseGhostOpacity =
-    normalizedProgress < INTRO_FADE_IN_DURATION
-      ? normalizedProgress / INTRO_FADE_IN_DURATION
-      : 1.0;
+    const baseGhostOpacity =
+      normalizedProgress < INTRO_FADE_IN_DURATION
+        ? normalizedProgress / INTRO_FADE_IN_DURATION
+        : 1.0;
 
-  objectsToAnimate.forEach(
-    ({
-      key,
-      behindOffset,
-      zOffset,
-      xOffset,
-      yOffset: staticYOffset,
-      zPhase,
-    }) => {
-      const object = ghosts[key];
-      if (!object) return;
+    objectsToAnimate.forEach(
+      ({
+        key,
+        behindOffset,
+        zOffset,
+        xOffset,
+        yOffset: staticYOffset,
+        zPhase,
+      }) => {
+        const object = ghosts[key];
+        if (!object) return;
 
-      const zBounce =
-        key === "pacman"
-          ? 0
-          : Math.sin(normalizedProgress * Math.PI * 2 * 20 + zPhase) * 0.01;
-      const animatedYOffset = key === "pacman" ? 0 : zBounce * 1.5;
-      const finalX = pacmanX + behindOffset + xOffset;
-      const finalY = pacmanY + staticYOffset - animatedYOffset;
-      const finalZ = pacmanZ + zOffset - zBounce;
+        const zBounce =
+          key === "pacman"
+            ? 0
+            : Math.sin(normalizedProgress * Math.PI * 2 * 20 + zPhase) * 0.01;
+        const animatedYOffset = key === "pacman" ? 0 : zBounce * 1.5;
+        const finalX = pacmanX + behindOffset + xOffset;
+        const finalY = pacmanY + staticYOffset - animatedYOffset;
+        const finalZ = pacmanZ + zOffset - zBounce;
 
-      if (
-        !isFinite(finalX) ||
-        !isFinite(finalY) ||
-        !isFinite(finalZ) ||
-        Math.abs(finalZ) < 0.01 ||
-        Math.abs(finalZ) > 100
-      ) {
-        return;
-      }
+        if (
+          !isFinite(finalX) ||
+          !isFinite(finalY) ||
+          !isFinite(finalZ) ||
+          Math.abs(finalZ) < 0.01 ||
+          Math.abs(finalZ) > 100
+        ) {
+          return;
+        }
 
-      object.position.set(finalX, finalY, finalZ);
+        object.position.set(finalX, finalY, finalZ);
 
-      const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
-      if (targetQuat) {
-        object.quaternion.copy(targetQuat);
-      }
+        const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
+        if (targetQuat) {
+          object.quaternion.copy(targetQuat);
+        }
 
-      const scaleKey = `${key}-intro`;
-      if (!objectScaleCache[scaleKey]) {
-        setObjectScale(object, key, "intro");
-        objectScaleCache[scaleKey] = { key, sceneType: "intro" };
-      }
+        const scaleKey = `${key}-intro`;
+        if (!objectScaleCache[scaleKey]) {
+          setObjectScale(object, key, "intro");
+          objectScaleCache[scaleKey] = { key, sceneType: "intro" };
+        }
 
-      object.visible = true;
+        object.visible = true;
 
-      const targetOpacity = key === "pacman" ? OPACITY.FULL : baseGhostOpacity;
+        const targetOpacity =
+          key === "pacman" ? OPACITY.FULL : baseGhostOpacity;
 
-      if (!objectMaterialCache[key]) {
-        initializeObjectMaterialCache();
-      }
+        if (!objectMaterialCache[key]) {
+          initializeObjectMaterialCache();
+        }
 
-      const materialCache = objectMaterialCache[key];
-      if (materialCache) {
-        materialCache.forEach(({ mesh, material, childName }) => {
-          if (
-            isCurrencySymbol(childName) ||
-            (key === "pacman" && isPacmanPart(childName))
-          ) {
-            mesh.visible = false;
-            return;
-          }
-
-          mesh.visible = true;
-
-          const mat = material as any;
-          if (Math.abs(mat.opacity - targetOpacity) > 0.001) {
-            mat.opacity = targetOpacity;
-            if (mat.transmission !== undefined && mat.transmission > 0) {
-              mat.transparent = true;
-            } else {
-              mat.transparent = targetOpacity < 1.0;
+        const materialCache = objectMaterialCache[key];
+        if (materialCache) {
+          materialCache.forEach(({ mesh, material, childName }) => {
+            if (
+              isCurrencySymbol(childName) ||
+              (key === "pacman" && isPacmanPart(childName))
+            ) {
+              mesh.visible = false;
+              return;
             }
-          }
-        });
+
+            mesh.visible = true;
+
+            const mat = material as any;
+            if (Math.abs(mat.opacity - targetOpacity) > 0.001) {
+              mat.opacity = targetOpacity;
+              if (mat.transmission !== undefined && mat.transmission > 0) {
+                mat.transparent = true;
+              } else {
+                mat.transparent = targetOpacity < 1.0;
+              }
+            }
+          });
+        }
       }
-    }
-  );
+    );
+  });
 }

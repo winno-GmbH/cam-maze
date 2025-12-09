@@ -31,6 +31,7 @@ import {
 } from "../core/object-pool";
 import { pathCache } from "../paths/path-cache";
 import { throttle } from "../core/throttle";
+import { performanceProfiler } from "../core/performance-profiler";
 
 const LOOP_DURATION = 50;
 let isHomeLoopActive = true;
@@ -180,7 +181,9 @@ export function startHomeLoop() {
       const delta = currentTime - lastTime;
       lastTime = currentTime;
 
-      updateHomeLoop(delta);
+      performanceProfiler.measure("home-loop-update", () => {
+        updateHomeLoop(delta);
+      });
     });
     homeLoopFrameRegistered = true;
   }

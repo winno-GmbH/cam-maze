@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { performanceProfiler } from "../core/performance-profiler";
 
 interface PathCacheEntry {
   point: THREE.Vector3;
@@ -28,7 +29,9 @@ class PathCache {
       return result;
     }
 
-    const point = path.getPointAt(t);
+    const point = performanceProfiler.measure("path-getPointAt", () =>
+      path.getPointAt(t)
+    );
     result.copy(point);
 
     if (this.cache.size >= this.cacheSize) {
@@ -61,7 +64,9 @@ class PathCache {
       return result;
     }
 
-    const tangent = path.getTangentAt(t);
+    const tangent = performanceProfiler.measure("path-getTangentAt", () =>
+      path.getTangentAt(t)
+    );
     result.copy(tangent);
 
     if (this.cache.size >= this.cacheSize) {

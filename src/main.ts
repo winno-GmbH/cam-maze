@@ -16,6 +16,7 @@ import { setupCamera } from "./core/camera";
 import { initIntroScrollAnimation } from "./animation/intro-scroll";
 import { initOutroScrollAnimation } from "./animation/outro-scroll";
 import { initializeObjectStates } from "./animation/object-state";
+import { performanceProfiler } from "./core/performance-profiler";
 
 function initSkipButton() {
   const skipButton = document.querySelector(".wr_p--skip.wr_p");
@@ -53,6 +54,7 @@ async function main() {
   startRenderLoop();
 
   performanceMonitor.enable(renderer);
+  performanceProfiler.enable();
 
   if (typeof window !== "undefined") {
     (window as any).performanceMonitor = performanceMonitor;

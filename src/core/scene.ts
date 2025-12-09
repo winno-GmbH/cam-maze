@@ -86,9 +86,13 @@ export function setupLighting(): void {
 }
 
 export function startRenderLoop(): void {
+  const { performanceProfiler } = require("./performance-profiler");
+
   const render = () => {
-    frameCallbacks.forEach((callback) => callback());
-    renderer.render(scene, camera);
+    performanceProfiler.measure("render-loop", () => {
+      frameCallbacks.forEach((callback) => callback());
+      renderer.render(scene, camera);
+    });
     requestAnimationFrame(render);
   };
   render();
