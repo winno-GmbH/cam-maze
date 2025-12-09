@@ -16,7 +16,7 @@ export const topMaterial = new THREE.MeshStandardMaterial({
   envMapIntensity: 10,
 });
 
-export const ghostMaterial = new THREE.MeshStandardMaterial({
+export const ghostMaterial = new THREE.MeshPhysicalMaterial({
   color: 0xffffff,
   opacity: 0.9999,
   transparent: true,
@@ -26,6 +26,7 @@ export const ghostMaterial = new THREE.MeshStandardMaterial({
   side: THREE.DoubleSide,
   roughness: 0.75,
   metalness: 0.2,
+  transmission: 0.5,
 });
 
 export const floorMaterial = new THREE.MeshStandardMaterial({

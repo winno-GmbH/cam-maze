@@ -3,9 +3,7 @@ import {
   initRenderer,
   setupLighting,
   scene,
-  renderer,
 } from "./core/scene";
-import { performanceMonitor } from "./core/performance-monitor";
 import {
   setupHomeLoopScrollHandler,
   startHomeLoop,
@@ -16,7 +14,6 @@ import { setupCamera } from "./core/camera";
 import { initIntroScrollAnimation } from "./animation/intro-scroll";
 import { initOutroScrollAnimation } from "./animation/outro-scroll";
 import { initializeObjectStates } from "./animation/object-state";
-import { performanceProfiler } from "./core/performance-profiler";
 
 function initSkipButton() {
   const skipButton = document.querySelector(".wr_p--skip.wr_p");
@@ -52,22 +49,6 @@ async function main() {
   initOutroScrollAnimation();
   initSkipButton();
   startRenderLoop();
-
-  performanceMonitor.enable(renderer);
-  performanceProfiler.enable();
-
-  if (typeof window !== "undefined") {
-    (window as any).performanceMonitor = performanceMonitor;
-    (window as any).enablePerformanceMonitor = () => {
-      performanceMonitor.enable(renderer);
-    };
-    (window as any).disablePerformanceMonitor = () => {
-      performanceMonitor.disable();
-    };
-    (window as any).togglePerformanceMonitor = () => {
-      performanceMonitor.toggle(renderer);
-    };
-  }
 }
 
 main();

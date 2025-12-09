@@ -5,7 +5,7 @@ import { camera } from "../core/camera";
 import { ghosts } from "../core/objects";
 import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import { getHomeScrollPaths } from "../paths/paths";
-import { LAY_DOWN_QUAT_1, OBJECT_KEYS } from "./util";
+import { LAY_DOWN_QUAT_1 } from "./util";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import {
   getCurrentRotations,
@@ -26,7 +26,6 @@ import {
   STAGGER_AMOUNT,
   OPACITY,
 } from "./constants";
-import { vector3PoolTemp, quaternionPoolTemp } from "../core/object-pool";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
@@ -63,26 +62,21 @@ export function initHomeScrollAnimation() {
       const homeLoopStartRot = getHomeLoopStartRotations();
       const scrollDir = getScrollDirection();
 
-      for (const key of OBJECT_KEYS) {
-        const object = ghosts[key];
+      Object.entries(ghosts).forEach(([key, object]) => {
         if (homeLoopStartPos[key]) {
           object.position.copy(homeLoopStartPos[key]);
-          const tempPos = vector3PoolTemp.acquire();
-          tempPos.copy(homeLoopStartPos[key]);
-          startPositions[key] = tempPos;
+          startPositions[key] = homeLoopStartPos[key].clone();
         } else {
           const currentPositions = getCurrentPositions();
           const position = currentPositions[key] || object.position;
           object.position.copy(position);
-          const tempPos = vector3PoolTemp.acquire();
-          tempPos.copy(position);
-          startPositions[key] = tempPos;
+          startPositions[key] = position.clone();
         }
 
         if (homeLoopStartRot[key]) {
           object.quaternion.copy(homeLoopStartRot[key]);
         }
-      }
+      });
 
       const rotationsToUse =
         Object.keys(homeLoopStartRot).length > 0
@@ -150,21 +144,19 @@ export function initHomeScrollAnimation() {
     },
   });
 
-  for (const key of OBJECT_KEYS) {
-    const object = ghosts[key];
-    const tempPos = vector3PoolTemp.acquire();
-    tempPos.copy(object.position);
-    startPositions[key] = tempPos;
-  }
+  const allObjects = Object.entries(ghosts);
+  allObjects.forEach(([key, object]) => {
+    startPositions[key] = object.position.clone();
+  });
 
   const createObjectAnimations = () => {
     if (homeScrollTimeline) {
       homeScrollTimeline.clear();
     }
 
-    for (const key of OBJECT_KEYS) {
-      killObjectAnimations(ghosts[key]);
-    }
+    allObjects.forEach(([key, object]) => {
+      killObjectAnimations(object);
+    });
 
     const homeScrollPaths = getHomeScrollPaths(startPositions);
 
@@ -177,8 +169,7 @@ export function initHomeScrollAnimation() {
       endEuler: THREE.Euler;
     }> = [];
 
-    for (const key of OBJECT_KEYS) {
-      const object = ghosts[key];
+    allObjects.forEach(([key, object]) => {
       const currentMaterialOpacity = getObjectOpacity(object);
 
       forEachMaterial(
@@ -202,20 +193,12 @@ export function initHomeScrollAnimation() {
       );
 
       const homeLoopStartRot = getHomeLoopStartRotations();
-      const tempQuat = quaternionPoolTemp.acquire();
-      if (homeLoopStartRot[key]) {
-        tempQuat.copy(homeLoopStartRot[key]);
-      } else {
-        const currentRots = getCurrentRotations();
-        if (currentRots[key]) {
-          tempQuat.copy(currentRots[key]);
-        } else {
-          tempQuat.copy(object.quaternion);
-        }
-      }
-      const startEuler = new THREE.Euler().setFromQuaternion(tempQuat);
+      const startRot =
+        homeLoopStartRot[key] ||
+        getCurrentRotations()[key] ||
+        object.quaternion.clone();
+      const startEuler = new THREE.Euler().setFromQuaternion(startRot);
       const endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
-      quaternionPoolTemp.release(tempQuat);
 
       const path = homeScrollPaths[key];
       if (!path) {
@@ -238,7 +221,7 @@ export function initHomeScrollAnimation() {
         startEuler,
         endEuler,
       });
-    }
+    });
 
     const baseEndTime = 1;
 

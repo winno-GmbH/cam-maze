@@ -2,7 +2,7 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
-import { ghosts, pacmanMixer } from "../core/objects";
+import { ghosts, pacmanMixer, pill } from "../core/objects";
 import { clock } from "../core/scene";
 import { slerpToLayDown, applyRotations } from "./util";
 import { isCurrencySymbol, isPacmanPart } from "./util";
@@ -19,12 +19,6 @@ import {
   clamp,
 } from "./constants";
 import { setFloorPlane, setObjectScale } from "./scene-utils";
-import {
-  quaternionPool,
-  object3DPool,
-  quaternionPoolTemp,
-} from "../core/object-pool";
-import { performanceProfiler } from "../core/performance-profiler";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -34,37 +28,11 @@ let ghostTargetQuaternion: THREE.Quaternion | null = null;
 let introInitialRotations: Record<string, THREE.Quaternion> = {};
 let cachedCameraPosition: THREE.Vector3 | null = null;
 let lastCameraUpdateFrame = -1;
-const objectMaterialCache: Record<
-  string,
-  Array<{ mesh: THREE.Mesh; material: THREE.Material; childName: string }>
-> = {};
-const objectScaleCache: Record<string, { key: string; sceneType: string }> = {};
 
 function resetIntroScrollCache() {
   cachedCameraPosition = null;
   lastCameraUpdateFrame = -1;
   lastUpdateProgress = null;
-}
-
-function initializeObjectMaterialCache() {
-  Object.entries(ghosts).forEach(([key, object]) => {
-    if (!objectMaterialCache[key]) {
-      objectMaterialCache[key] = [];
-      object.traverse((child) => {
-        if ((child as any).isMesh) {
-          const mesh = child as THREE.Mesh;
-          const childName = child.name || "";
-          const mat = mesh.material;
-          if (mat) {
-            const materials = Array.isArray(mat) ? mat : [mat];
-            materials.forEach((material) => {
-              objectMaterialCache[key].push({ mesh, material, childName });
-            });
-          }
-        }
-      });
-    }
-  });
 }
 
 function setIntroScrollLocked(locked: boolean) {
@@ -118,13 +86,11 @@ export function initIntroScrollAnimation() {
         onEnter: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
-          initializeObjectMaterialCache();
           setIntroScrollLocked(true);
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
-          initializeObjectMaterialCache();
           setIntroScrollLocked(true);
         },
         onLeave: () => {
@@ -230,20 +196,16 @@ function initializeQuaternions() {
   const pacmanObj = ghosts.pacman;
   if (pacmanObj) {
     if (!introInitialRotations["pacman"]) {
-      const tempRot = quaternionPoolTemp.acquire();
-      tempRot.copy(pacmanObj.quaternion);
-      introInitialRotations["pacman"] = tempRot;
+      introInitialRotations["pacman"] = pacmanObj.quaternion.clone();
     }
 
-    const quat = quaternionPool.acquire();
-    quat.copy(introInitialRotations["pacman"]);
-    const tempObj = object3DPool.acquire();
+    let quat = introInitialRotations["pacman"].clone();
+    const tempObj = new THREE.Object3D();
     tempObj.quaternion.copy(quat);
     slerpToLayDown(tempObj, quat, OPACITY.FULL);
-    quat.copy(tempObj.quaternion);
-    object3DPool.release(tempObj);
+    quat = tempObj.quaternion.clone();
 
-    const rotatedQuat = applyRotations(quat, [
+    quat = applyRotations(quat, [
       { axis: "x", angle: Math.PI / 2 },
       { axis: "y", angle: Math.PI },
       { axis: "y", angle: Math.PI },
@@ -252,29 +214,22 @@ function initializeQuaternions() {
       { axis: "y", angle: Math.PI },
     ]);
 
-    const finalQuat = quaternionPoolTemp.acquire();
-    finalQuat.copy(rotatedQuat);
-    pacmanTargetQuaternion = finalQuat;
-    quaternionPool.release(quat);
+    pacmanTargetQuaternion = quat;
   }
 
   const ghostObj = ghosts.ghost1;
   if (ghostObj) {
     if (!introInitialRotations["ghost1"]) {
-      const tempRot = quaternionPoolTemp.acquire();
-      tempRot.copy(ghostObj.quaternion);
-      introInitialRotations["ghost1"] = tempRot;
+      introInitialRotations["ghost1"] = ghostObj.quaternion.clone();
     }
 
-    const quat = quaternionPool.acquire();
-    quat.copy(introInitialRotations["ghost1"]);
-    const tempObj = object3DPool.acquire();
+    let quat = introInitialRotations["ghost1"].clone();
+    const tempObj = new THREE.Object3D();
     tempObj.quaternion.copy(quat);
     slerpToLayDown(tempObj, quat, OPACITY.FULL);
-    quat.copy(tempObj.quaternion);
-    object3DPool.release(tempObj);
+    quat = tempObj.quaternion.clone();
 
-    const rotatedQuat = applyRotations(quat, [
+    quat = applyRotations(quat, [
       { axis: "x", angle: Math.PI },
       { axis: "x", angle: Math.PI },
       { axis: "y", angle: Math.PI },
@@ -283,18 +238,13 @@ function initializeQuaternions() {
       { axis: "x", angle: Math.PI },
     ]);
 
-    const finalQuat = quaternionPoolTemp.acquire();
-    finalQuat.copy(rotatedQuat);
-    ghostTargetQuaternion = finalQuat;
-    quaternionPool.release(quat);
+    ghostTargetQuaternion = quat;
   }
 
   Object.keys(ghosts).forEach((key) => {
     const obj = ghosts[key as keyof typeof ghosts];
     if (obj && !introInitialRotations[key]) {
-      const tempRot = quaternionPoolTemp.acquire();
-      tempRot.copy(obj.quaternion);
-      introInitialRotations[key] = tempRot;
+      introInitialRotations[key] = obj.quaternion.clone();
     }
   });
 }
@@ -313,213 +263,228 @@ function updateObjectsWalkBy(progress: number) {
   if (lastUpdateProgress === progress) return;
   lastUpdateProgress = progress;
 
-  performanceProfiler.measure("intro-scroll-update", () => {
-    const currentFrame = performance.now();
-    const shouldUpdateCache =
-      !cachedCameraPosition || currentFrame - lastCameraUpdateFrame > 16;
+  const currentFrame = performance.now();
+  const shouldUpdateCache =
+    !cachedCameraPosition || currentFrame - lastCameraUpdateFrame > 16;
 
-    if (shouldUpdateCache) {
-      const camX = camera.position.x;
-      const camY = camera.position.y;
-      const camZ = camera.position.z;
+  if (shouldUpdateCache) {
+    const camX = camera.position.x;
+    const camY = camera.position.y;
+    const camZ = camera.position.z;
 
-      if (!isFinite(camX) || !isFinite(camY) || !isFinite(camZ)) {
-        if (!cachedCameraPosition) {
-          return;
-        }
-        tempVector.copy(cachedCameraPosition);
-      } else {
-        if (!cachedCameraPosition) {
-          cachedCameraPosition = new THREE.Vector3();
-        }
-        cachedCameraPosition.set(camX, camY, camZ);
-        lastCameraUpdateFrame = currentFrame;
-        tempVector.copy(cachedCameraPosition);
+    if (!isFinite(camX) || !isFinite(camY) || !isFinite(camZ)) {
+      if (!cachedCameraPosition) {
+        return;
       }
+      tempVector.copy(cachedCameraPosition);
     } else {
-      tempVector.copy(cachedCameraPosition!);
+      if (!cachedCameraPosition) {
+        cachedCameraPosition = new THREE.Vector3();
+      }
+      cachedCameraPosition.set(camX, camY, camZ);
+      lastCameraUpdateFrame = currentFrame;
+      tempVector.copy(cachedCameraPosition);
     }
+  } else {
+    tempVector.copy(cachedCameraPosition!);
+  }
 
-    initializeQuaternions();
+  initializeQuaternions();
 
-    if (pacmanMixer) {
-      pacmanMixer.update(clock.getDelta());
-    }
+  if (pacmanMixer) {
+    pacmanMixer.update(clock.getDelta());
+  }
 
-    const floorState = {
-      visible: true,
-      opacity: OPACITY.HIDDEN,
-      transparent: true,
-    };
-    if (
-      !lastFloorState ||
-      lastFloorState.visible !== floorState.visible ||
-      lastFloorState.opacity !== floorState.opacity ||
-      lastFloorState.transparent !== floorState.transparent
-    ) {
-      setFloorPlane(
-        floorState.visible,
-        floorState.opacity,
-        floorState.transparent
-      );
-      lastFloorState = floorState;
-    }
+  const floorState = {
+    visible: true,
+    opacity: OPACITY.HIDDEN,
+    transparent: true,
+  };
+  if (
+    !lastFloorState ||
+    lastFloorState.visible !== floorState.visible ||
+    lastFloorState.opacity !== floorState.opacity ||
+    lastFloorState.transparent !== floorState.transparent
+  ) {
+    setFloorPlane(
+      floorState.visible,
+      floorState.opacity,
+      floorState.transparent
+    );
+    lastFloorState = floorState;
+  }
 
-    const pacmanQuat = pacmanTargetQuaternion;
-    const ghostQuat = ghostTargetQuaternion;
+  const pacmanQuat = pacmanTargetQuaternion;
+  const ghostQuat = ghostTargetQuaternion;
 
-    const walkStart = tempVector.x - INTRO_WALK_DISTANCE;
-    const walkEnd = tempVector.x + INTRO_WALK_DISTANCE;
+  const walkStart = tempVector.x - INTRO_WALK_DISTANCE;
+  const walkEnd = tempVector.x + INTRO_WALK_DISTANCE;
 
-    const objectsToAnimate = [
-      {
-        key: "pacman",
-        behindOffset: 1.5,
-        zOffset: 0.5,
-        xOffset: 0,
-        yOffset: 0,
-        zPhase: 0,
-      },
-      {
-        key: "ghost1",
-        behindOffset: INTRO_GHOST_OFFSETS.GHOST1,
-        zOffset: 0.5,
-        xOffset: 0.5,
-        yOffset: -0.5,
-        zPhase: Math.PI * 1.0,
-      },
-      {
-        key: "ghost2",
-        behindOffset: INTRO_GHOST_OFFSETS.GHOST2,
-        zOffset: 0.5,
-        xOffset: 0,
-        yOffset: -1,
-        zPhase: Math.PI * 1.5,
-      },
-      {
-        key: "ghost3",
-        behindOffset: INTRO_GHOST_OFFSETS.GHOST3,
-        zOffset: 0.5,
-        xOffset: 0.5,
-        yOffset: 0.5,
-        zPhase: Math.PI * 1.0,
-      },
-      {
-        key: "ghost4",
-        behindOffset: INTRO_GHOST_OFFSETS.GHOST4,
-        zOffset: 0.5,
-        xOffset: 0.75,
-        yOffset: 0.25,
-        zPhase: Math.PI * 1.0,
-      },
-      {
-        key: "ghost5",
-        behindOffset: INTRO_GHOST_OFFSETS.GHOST5,
-        zOffset: 0.5,
-        xOffset: 0,
-        yOffset: -0.5,
-        zPhase: Math.PI * 1.0,
-      },
-    ];
+  const objectsToAnimate = [
+    {
+      key: "pacman",
+      behindOffset: 1.5,
+      zOffset: 0.5,
+      xOffset: 0,
+      yOffset: 0,
+      zPhase: 0,
+    },
+    {
+      key: "ghost1",
+      behindOffset: INTRO_GHOST_OFFSETS.GHOST1,
+      zOffset: 0.5,
+      xOffset: 0.5,
+      yOffset: -0.5,
+      zPhase: Math.PI * 1.0,
+    },
+    {
+      key: "ghost2",
+      behindOffset: INTRO_GHOST_OFFSETS.GHOST2,
+      zOffset: 0.5,
+      xOffset: 0,
+      yOffset: -1,
+      zPhase: Math.PI * 1.5,
+    },
+    {
+      key: "ghost3",
+      behindOffset: INTRO_GHOST_OFFSETS.GHOST3,
+      zOffset: 0.5,
+      xOffset: 0.5,
+      yOffset: 0.5,
+      zPhase: Math.PI * 1.0,
+    },
+    {
+      key: "ghost4",
+      behindOffset: INTRO_GHOST_OFFSETS.GHOST4,
+      zOffset: 0.5,
+      xOffset: 0.75,
+      yOffset: 0.25,
+      zPhase: Math.PI * 1.0,
+    },
+    {
+      key: "ghost5",
+      behindOffset: INTRO_GHOST_OFFSETS.GHOST5,
+      zOffset: 0.5,
+      xOffset: 0,
+      yOffset: -0.5,
+      zPhase: Math.PI * 1.0,
+    },
+    {
+      key: "pill",
+      behindOffset: -0.5,
+      zOffset: 0.5,
+      xOffset: 0,
+      yOffset: 0,
+      zPhase: Math.PI * 0.5,
+    },
+  ];
 
-    const normalizedProgress = clamp(progress);
-    const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
-    const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
-    const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
-    const pacmanZ = tempVector.z + INTRO_POSITION_OFFSET.z;
+  const normalizedProgress = clamp(progress);
+  const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
+  const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
+  const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
+  const pacmanZ = tempVector.z + INTRO_POSITION_OFFSET.z;
 
-    if (
-      !isFinite(baseX) ||
-      !isFinite(pacmanX) ||
-      !isFinite(pacmanY) ||
-      !isFinite(pacmanZ)
-    ) {
-      return;
-    }
+  if (
+    !isFinite(baseX) ||
+    !isFinite(pacmanX) ||
+    !isFinite(pacmanY) ||
+    !isFinite(pacmanZ)
+  ) {
+    return;
+  }
 
-    const baseGhostOpacity =
-      normalizedProgress < INTRO_FADE_IN_DURATION
-        ? normalizedProgress / INTRO_FADE_IN_DURATION
-        : 1.0;
+  const baseGhostOpacity =
+    normalizedProgress < INTRO_FADE_IN_DURATION
+      ? normalizedProgress / INTRO_FADE_IN_DURATION
+      : 1.0;
 
-    objectsToAnimate.forEach(
-      ({
-        key,
-        behindOffset,
-        zOffset,
-        xOffset,
-        yOffset: staticYOffset,
-        zPhase,
-      }) => {
-        const object = ghosts[key];
-        if (!object) return;
+  objectsToAnimate.forEach(
+    ({
+      key,
+      behindOffset,
+      zOffset,
+      xOffset,
+      yOffset: staticYOffset,
+      zPhase,
+    }) => {
+      const object = key === "pill" ? pill : ghosts[key];
+      if (!object) return;
 
-        const zBounce =
-          key === "pacman"
-            ? 0
-            : Math.sin(normalizedProgress * Math.PI * 2 * 20 + zPhase) * 0.01;
-        const animatedYOffset = key === "pacman" ? 0 : zBounce * 1.5;
-        const finalX = pacmanX + behindOffset + xOffset;
-        const finalY = pacmanY + staticYOffset - animatedYOffset;
-        const finalZ = pacmanZ + zOffset - zBounce;
+      const zBounce =
+        key === "pacman" || key === "pill"
+          ? 0
+          : Math.sin(normalizedProgress * Math.PI * 2 * 20 + zPhase) * 0.01;
+      const animatedYOffset =
+        key === "pacman" || key === "pill" ? 0 : zBounce * 1.5;
+      const finalX = pacmanX + behindOffset + xOffset;
+      const finalY = pacmanY + staticYOffset - animatedYOffset;
+      const finalZ = pacmanZ + zOffset - zBounce;
 
-        if (
-          !isFinite(finalX) ||
-          !isFinite(finalY) ||
-          !isFinite(finalZ) ||
-          Math.abs(finalZ) < 0.01 ||
-          Math.abs(finalZ) > 100
-        ) {
-          return;
-        }
+      if (
+        !isFinite(finalX) ||
+        !isFinite(finalY) ||
+        !isFinite(finalZ) ||
+        Math.abs(finalZ) < 0.01 ||
+        Math.abs(finalZ) > 100
+      ) {
+        return;
+      }
 
-        object.position.set(finalX, finalY, finalZ);
+      object.position.set(finalX, finalY, finalZ);
 
+      if (key === "pill") {
+        object.quaternion.copy(ghostQuat || new THREE.Quaternion());
+      } else {
         const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
         if (targetQuat) {
           object.quaternion.copy(targetQuat);
         }
-
-        const scaleKey = `${key}-intro`;
-        if (!objectScaleCache[scaleKey]) {
-          setObjectScale(object, key, "intro");
-          objectScaleCache[scaleKey] = { key, sceneType: "intro" };
-        }
-
-        object.visible = true;
-
-        const targetOpacity =
-          key === "pacman" ? OPACITY.FULL : baseGhostOpacity;
-
-        if (!objectMaterialCache[key]) {
-          initializeObjectMaterialCache();
-        }
-
-        const materialCache = objectMaterialCache[key];
-        if (materialCache) {
-          materialCache.forEach(({ mesh, material, childName }) => {
-            if (
-              isCurrencySymbol(childName) ||
-              (key === "pacman" && isPacmanPart(childName))
-            ) {
-              mesh.visible = false;
-              return;
-            }
-
-            mesh.visible = true;
-
-            const mat = material as any;
-            if (Math.abs(mat.opacity - targetOpacity) > 0.001) {
-              mat.opacity = targetOpacity;
-              if (mat.transmission !== undefined && mat.transmission > 0) {
-                mat.transparent = true;
-              } else {
-                mat.transparent = targetOpacity < 1.0;
-              }
-            }
-          });
-        }
       }
-    );
-  });
+
+      if (key !== "pill") {
+        setObjectScale(object, key, "intro");
+      } else {
+        object.scale.set(0.05, 0.05, 0.05);
+      }
+
+      object.visible = true;
+
+      const targetOpacity =
+        key === "pacman" || key === "pill" ? OPACITY.FULL : baseGhostOpacity;
+
+      object.traverse((child) => {
+        if ((child as any).isMesh) {
+          const mesh = child as THREE.Mesh;
+          const childName = child.name || "";
+
+          if (
+            isCurrencySymbol(childName) ||
+            (key === "pacman" && isPacmanPart(childName))
+          ) {
+            mesh.visible = false;
+            return;
+          }
+
+          mesh.visible = true;
+
+          const mat = mesh.material;
+          if (mat) {
+            const materials = Array.isArray(mat) ? mat : [mat];
+            materials.forEach((material: any) => {
+              material.opacity = targetOpacity;
+              if (
+                material.transmission !== undefined &&
+                material.transmission > 0
+              ) {
+                material.transparent = true;
+              } else {
+                material.transparent = targetOpacity < 1.0;
+              }
+            });
+          }
+        }
+      });
+    }
+  );
 }

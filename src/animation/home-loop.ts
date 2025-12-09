@@ -13,25 +13,15 @@ import {
 } from "./constants";
 import { setObjectScale } from "./scene-utils";
 import {
+  updateObjectPosition,
+  updateObjectRotation,
   setHomeLoopActive,
   updateHomeLoopT,
   getHomeLoopStartRotations,
   setHomeLoopStartT,
   getHomeLoopStartT,
-  currentObjectStates,
-  homeLoopStartPositions,
-  homeLoopStartRotations,
 } from "./object-state";
 import { isCurrencySymbol } from "./util";
-import {
-  quaternionPool,
-  object3DPool,
-  vector3PoolTemp,
-  quaternionPoolTemp,
-} from "../core/object-pool";
-import { pathCache } from "../paths/path-cache";
-import { throttle } from "../core/throttle";
-import { performanceProfiler } from "../core/performance-profiler";
 
 const LOOP_DURATION = 50;
 let isHomeLoopActive = true;
@@ -39,9 +29,6 @@ let animationTime = 0;
 let homeLoopFrameRegistered = false;
 let rotationTransitionTime = 0;
 let startRotations: Record<string, THREE.Quaternion> = {};
-let cachedHomePaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null =
-  null;
-const homeLoopScaleCache: Record<string, string> = {};
 let hasBeenPausedBefore = false;
 
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
@@ -67,28 +54,10 @@ function stopHomeLoop() {
   const exactT = (animationTime % LOOP_DURATION) / LOOP_DURATION;
   setHomeLoopStartT(exactT);
 
-  for (const key of OBJECT_KEYS) {
-    const ghost = ghosts[key];
-    const tempPos = vector3PoolTemp.acquire();
-    tempPos.copy(ghost.position);
-    if (currentObjectStates[key]) {
-      currentObjectStates[key].position.copy(tempPos);
-    }
-    const tempPos2 = vector3PoolTemp.acquire();
-    tempPos2.copy(tempPos);
-    homeLoopStartPositions[key] = tempPos2;
-    vector3PoolTemp.release(tempPos);
-
-    const tempRot = quaternionPoolTemp.acquire();
-    tempRot.copy(ghost.quaternion);
-    if (currentObjectStates[key]) {
-      currentObjectStates[key].rotation.copy(tempRot);
-    }
-    const tempRot2 = quaternionPoolTemp.acquire();
-    tempRot2.copy(tempRot);
-    homeLoopStartRotations[key] = tempRot2;
-    quaternionPoolTemp.release(tempRot);
-  }
+  Object.entries(ghosts).forEach(([key, ghost]) => {
+    updateObjectPosition(key, ghost.position.clone(), true, true);
+    updateObjectRotation(key, ghost.quaternion.clone(), true);
+  });
 
   initHomeScrollAnimation();
 }
@@ -112,62 +81,45 @@ export function startHomeLoop() {
 
   initializeHomeLoopTangentSmoothers();
 
-  for (const key of OBJECT_KEYS) {
-    const ghost = ghosts[key];
+  Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
       if (hasBeenPausedBefore && savedT !== null) {
-        const tempPos = vector3PoolTemp.acquire();
-        pathCache.getPoint(path, savedT, tempPos);
-        ghost.position.copy(tempPos);
-        if (currentObjectStates[key]) {
-          currentObjectStates[key].position.copy(tempPos);
+        const position = path.getPointAt(savedT);
+        if (position) {
+          ghost.position.copy(position);
+          updateObjectPosition(key, position);
         }
-        vector3PoolTemp.release(tempPos);
       }
 
       const savedRotation = homeLoopStartRot[key];
 
       if (savedRotation) {
         ghost.quaternion.copy(savedRotation);
-        if (currentObjectStates[key]) {
-          currentObjectStates[key].rotation.copy(savedRotation);
-        }
+        updateObjectRotation(key, savedRotation);
         if (hasBeenPausedBefore) {
-          const tempRot = quaternionPoolTemp.acquire();
-          tempRot.copy(savedRotation);
-          startRotations[key] = tempRot;
+          startRotations[key] = savedRotation.clone();
         }
       } else {
-        if (currentObjectStates[key]) {
-          currentObjectStates[key].rotation.copy(ghost.quaternion);
-        }
+        updateObjectRotation(key, ghost.quaternion);
         if (hasBeenPausedBefore) {
-          const tempRot = quaternionPoolTemp.acquire();
-          tempRot.copy(ghost.quaternion);
-          startRotations[key] = tempRot;
+          startRotations[key] = ghost.quaternion.clone();
         }
       }
 
       if (key !== "pacman") {
         ghost.visible = true;
       }
-      const scaleKey = `${key}-home`;
-      if (homeLoopScaleCache[scaleKey] !== "home") {
-        setObjectScale(ghost, key, "home");
-        homeLoopScaleCache[scaleKey] = "home";
-      }
+      setObjectScale(ghost, key, "home");
 
       if (homeLoopTangentSmoothers[key] && savedT !== null) {
-        const tempTangent = vector3PoolTemp.acquire();
-        pathCache.getTangent(path, savedT, tempTangent);
-        if (tempTangent.length() > 0) {
-          homeLoopTangentSmoothers[key].reset(tempTangent);
+        const initialTangent = path.getTangentAt(savedT);
+        if (initialTangent) {
+          homeLoopTangentSmoothers[key].reset(initialTangent);
         }
-        vector3PoolTemp.release(tempTangent);
       }
     }
-  }
+  });
 
   if (!homeLoopFrameRegistered) {
     let lastTime = clock.getElapsedTime();
@@ -181,9 +133,7 @@ export function startHomeLoop() {
       const delta = currentTime - lastTime;
       lastTime = currentTime;
 
-      performanceProfiler.measure("home-loop-update", () => {
-        updateHomeLoop(delta);
-      });
+      updateHomeLoop(delta);
     });
     homeLoopFrameRegistered = true;
   }
@@ -205,12 +155,9 @@ function updateHomeLoop(delta: number) {
 
   updateHomeLoopT(t, animationTime);
 
-  if (!cachedHomePaths) {
-    cachedHomePaths = getHomePaths();
-  }
-  const homePaths = cachedHomePaths;
+  const homePaths = getHomePaths();
   if (pacmanMixer) {
-    pacmanMixer.update(clampedDelta);
+    pacmanMixer.update(delta);
   }
 
   const transitionProgress = Math.min(
@@ -219,38 +166,31 @@ function updateHomeLoop(delta: number) {
   );
   const isTransitioning = hasBeenPausedBefore && transitionProgress < 1;
 
-  for (const key of OBJECT_KEYS) {
-    const ghost = ghosts[key];
+  Object.entries(ghosts).forEach(([key, ghost]) => {
     const path = homePaths[key];
     if (path) {
       const objectT = t;
 
-      const tempPos = vector3PoolTemp.acquire();
-      pathCache.getPoint(path, objectT, tempPos);
-      ghost.position.copy(tempPos);
-      vector3PoolTemp.release(tempPos);
-
-      const scaleKey = `${key}-home`;
-      if (homeLoopScaleCache[scaleKey] !== "home") {
-        setObjectScale(ghost, key, "home");
-        homeLoopScaleCache[scaleKey] = "home";
+      const position = path.getPointAt(objectT);
+      if (position) {
+        ghost.position.copy(position);
+        updateObjectPosition(key, position);
       }
 
-      const targetQuat = quaternionPool.acquire();
+      setObjectScale(ghost, key, "home");
+
+      const targetQuat = new THREE.Quaternion();
       if (homeLoopTangentSmoothers[key] && objectT > 0) {
-        const rawTangent = vector3PoolTemp.acquire();
-        pathCache.getTangent(path, objectT, rawTangent);
-        if (rawTangent.length() > 0) {
+        const rawTangent = path.getTangentAt(objectT);
+        if (rawTangent && rawTangent.length() > 0) {
           const smoothTangent =
             homeLoopTangentSmoothers[key].update(rawTangent);
           const objectType = key === "pacman" ? "pacman" : "ghost";
 
-          const tempObject = object3DPool.acquire();
+          const tempObject = new THREE.Object3D();
           calculateObjectOrientation(tempObject, smoothTangent, objectType);
           targetQuat.copy(tempObject.quaternion);
-          object3DPool.release(tempObject);
         }
-        vector3PoolTemp.release(rawTangent);
       }
 
       if (isTransitioning && startRotations[key]) {
@@ -258,17 +198,16 @@ function updateHomeLoop(delta: number) {
           transitionProgress *
           transitionProgress *
           (3 - 2 * transitionProgress);
-        const tempQuat = quaternionPool.acquire();
-        tempQuat.copy(startRotations[key]).slerp(targetQuat, easedProgress);
-        ghost.quaternion.copy(tempQuat);
-        quaternionPool.release(tempQuat);
+        ghost.quaternion.copy(
+          startRotations[key].clone().slerp(targetQuat, easedProgress)
+        );
       } else {
         ghost.quaternion.copy(targetQuat);
       }
-      quaternionPool.release(targetQuat);
+
+      updateObjectRotation(key, ghost.quaternion);
     }
-  }
-  performanceProfiler.end("home-loop-objects");
+  });
 }
 
 export function homeLoopHandler() {
@@ -278,7 +217,7 @@ export function homeLoopHandler() {
 }
 
 export function setupHomeLoopScrollHandler() {
-  const throttledScrollHandler = throttle(() => {
+  window.addEventListener("scroll", () => {
     if (window.scrollY === 0) {
       if (!isHomeLoopActive) {
         startHomeLoop();
@@ -288,7 +227,5 @@ export function setupHomeLoopScrollHandler() {
         stopHomeLoop();
       }
     }
-  }, 16);
-
-  window.addEventListener("scroll", throttledScrollHandler, { passive: true });
+  });
 }

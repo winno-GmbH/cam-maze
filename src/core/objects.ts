@@ -27,6 +27,8 @@ export const ghosts: GhostContainer = {
   ghost5: new THREE.Mesh(new THREE.BufferGeometry(), ghostMaterial),
 };
 
+export const pill = new THREE.Group();
+
 const ghostContainers = {
   Ghost_EUR: ghosts.ghost1,
   Ghost_CHF: ghosts.ghost2,
@@ -38,11 +40,20 @@ const ghostContainers = {
 export async function loadModel(scene: THREE.Scene): Promise<void> {
   Object.values(ghosts).forEach((ghost) => scene.add(ghost));
   scene.add(pacman);
+  scene.add(pill);
   return new Promise((resolve, reject) => {
     loader.load(
       ASSETS.mazeModel,
       function (gltf) {
         const model = gltf.scene;
+
+        const allObjectNames: string[] = [];
+        model.traverse((node: THREE.Object3D) => {
+          if (node.name) {
+            allObjectNames.push(node.name);
+          }
+        });
+        console.log("All objects in 3D file:", allObjectNames);
 
         model.traverse((child: THREE.Object3D) => {
           if (child.name === "CAM-Pacman") {
@@ -139,6 +150,27 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             if (ghostContainer) {
               ghostContainer.add(ghostGroup);
             }
+          } else if (
+            child.name &&
+            (child.name.toLowerCase().includes("pill") ||
+              child.name.toLowerCase().includes("pille") ||
+              child.name.toLowerCase().includes("pellet") ||
+              child.name.toLowerCase().includes("coin") ||
+              child.name.toLowerCase().includes("dot"))
+          ) {
+            console.log("Found pill object:", child.name);
+            const pillGroup = new THREE.Group();
+            child.traverse((subChild: THREE.Object3D) => {
+              if ((subChild as any).isMesh) {
+                const clonedSubChild = subChild.clone();
+                pillGroup.add(clonedSubChild);
+              }
+            });
+            if (pillGroup.children.length > 0) {
+              pill.add(pillGroup);
+              pill.scale.set(0.05, 0.05, 0.05);
+              pill.visible = false;
+            }
           }
 
           if ((child as any).isMesh) {
@@ -177,17 +209,8 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
 
         model.traverse(function (node: THREE.Object3D) {
           if ((node as any).isMesh) {
-            const mesh = node as THREE.Mesh;
-            if (
-              mesh.name &&
-              (mesh.name.includes("Arena") || mesh.name.includes("Floor"))
-            ) {
-              mesh.castShadow = true;
-              mesh.receiveShadow = true;
-            } else {
-              mesh.castShadow = false;
-              mesh.receiveShadow = false;
-            }
+            node.castShadow = true;
+            node.receiveShadow = true;
           }
         });
 

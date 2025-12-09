@@ -19,12 +19,8 @@ export class TangentSmoother {
   }
 
   update(targetTangent: THREE.Vector3): THREE.Vector3 {
-    const { performanceProfiler } = require("../core/performance-profiler");
-    return performanceProfiler.measure("tangent-smoother-update", () => {
-      this.currentTangent.lerp(targetTangent, this.smoothing);
-      this.currentTangent.normalize();
-      return this.currentTangent;
-    });
+    this.currentTangent.lerp(targetTangent, this.smoothing);
+    return this.currentTangent.normalize();
   }
 
   reset(newTangent: THREE.Vector3): void {

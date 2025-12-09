@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { isCurrencySymbol, isPacmanPart } from "../animation/util";
-import { performanceProfiler } from "./performance-profiler";
 
 export function setObjectOpacity(
   object: THREE.Object3D,
@@ -126,10 +125,9 @@ export function forEachMaterial(
       }
 
       if (Array.isArray(mesh.material)) {
-        const materials = mesh.material;
-        for (let i = 0; i < materials.length; i++) {
-          callback(materials[i], mesh, childName);
-        }
+        mesh.material.forEach((mat: any) => {
+          callback(mat, mesh, childName);
+        });
       } else {
         callback(mesh.material as any, mesh, childName);
       }

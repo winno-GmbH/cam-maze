@@ -6,13 +6,10 @@ import { camera } from "./camera";
 export const scene = new THREE.Scene();
 
 const renderer = new THREE.WebGLRenderer({
-  antialias: false,
+  antialias: true,
   alpha: true,
   powerPreference: "high-performance",
-  precision: "lowp",
-  logarithmicDepthBuffer: false,
-  stencil: false,
-  depth: true,
+  precision: "highp",
 });
 
 const clock = new THREE.Clock();
@@ -40,16 +37,16 @@ export function initRenderer(): void {
 
 function enhanceAntiAliasing(): void {
   if (isMobile) {
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   } else {
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.setPixelRatio(window.devicePixelRatio);
   }
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.BasicShadowMap;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 }
 
 function setPixelRatio(): void {
-  const pixelRatio = Math.min(window.devicePixelRatio, isMobile ? 1 : 1.5);
+  const pixelRatio = Math.min(window.devicePixelRatio, isMobile ? 2 : 3);
   renderer.setPixelRatio(pixelRatio);
 
   if (DOM_ELEMENTS.mazeContainer) {
@@ -75,8 +72,8 @@ export function setupLighting(): void {
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
   scene.add(directionalLight);
   directionalLight.position.set(-5, 15, 10);
-  directionalLight.shadow.mapSize.width = 2048;
-  directionalLight.shadow.mapSize.height = 2048;
+  directionalLight.shadow.mapSize.width = 4096;
+  directionalLight.shadow.mapSize.height = 4096;
   directionalLight.shadow.camera.left = -20;
   directionalLight.shadow.camera.right = 20;
   directionalLight.shadow.camera.top = 20;
@@ -84,23 +81,15 @@ export function setupLighting(): void {
   directionalLight.shadow.camera.near = 0.1;
   directionalLight.shadow.camera.far = 50;
   directionalLight.shadow.bias = -0.001;
-  directionalLight.shadow.radius = 2;
+  directionalLight.shadow.radius = 3;
   directionalLight.castShadow = true;
 }
 
 export function startRenderLoop(): void {
-  const { performanceProfiler } = require("./performance-profiler");
-
   const render = () => {
-    performanceProfiler.start("frame-callbacks");
-    for (let i = 0; i < frameCallbacks.length; i++) {
-      frameCallbacks[i]();
-    }
-    performanceProfiler.end("frame-callbacks");
+    frameCallbacks.forEach((callback) => callback());
 
-    performanceProfiler.start("renderer-render");
     renderer.render(scene, camera);
-    performanceProfiler.end("renderer-render");
 
     requestAnimationFrame(render);
   };
