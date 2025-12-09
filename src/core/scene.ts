@@ -9,7 +9,10 @@ const renderer = new THREE.WebGLRenderer({
   antialias: false,
   alpha: true,
   powerPreference: "high-performance",
-  precision: "mediump",
+  precision: "lowp",
+  logarithmicDepthBuffer: false,
+  stencil: false,
+  depth: true,
 });
 
 const clock = new THREE.Clock();
@@ -45,7 +48,7 @@ function enhanceAntiAliasing(): void {
 }
 
 function setPixelRatio(): void {
-  const pixelRatio = Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2);
+  const pixelRatio = Math.min(window.devicePixelRatio, isMobile ? 1 : 1.5);
   renderer.setPixelRatio(pixelRatio);
 
   if (DOM_ELEMENTS.mazeContainer) {
