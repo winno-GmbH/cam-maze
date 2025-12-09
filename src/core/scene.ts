@@ -44,7 +44,8 @@ function enhanceAntiAliasing(): void {
   } else {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   }
-  renderer.shadowMap.enabled = false;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.BasicShadowMap;
 }
 
 function setPixelRatio(): void {
@@ -74,7 +75,17 @@ export function setupLighting(): void {
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
   scene.add(directionalLight);
   directionalLight.position.set(-5, 15, 10);
-  directionalLight.castShadow = false;
+  directionalLight.shadow.mapSize.width = 2048;
+  directionalLight.shadow.mapSize.height = 2048;
+  directionalLight.shadow.camera.left = -20;
+  directionalLight.shadow.camera.right = 20;
+  directionalLight.shadow.camera.top = 20;
+  directionalLight.shadow.camera.bottom = -20;
+  directionalLight.shadow.camera.near = 0.1;
+  directionalLight.shadow.camera.far = 50;
+  directionalLight.shadow.bias = -0.001;
+  directionalLight.shadow.radius = 2;
+  directionalLight.castShadow = true;
 }
 
 export function startRenderLoop(): void {
