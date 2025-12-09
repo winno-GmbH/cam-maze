@@ -9,7 +9,7 @@ interface PathCacheEntry {
 
 class PathCache {
   private cache: Map<string, PathCacheEntry> = new Map();
-  private readonly cacheSize = 50;
+  private readonly cacheSize = 200;
 
   private getCacheKey(path: THREE.CurvePath<THREE.Vector3>, t: number): string {
     const pathId = (path as any).uuid || Math.random().toString();
@@ -21,7 +21,7 @@ class PathCache {
     t: number,
     result: THREE.Vector3
   ): THREE.Vector3 {
-    const roundedT = Math.round(t * 10000) / 10000;
+    const roundedT = Math.round(t * 5000) / 5000;
     const key = this.getCacheKey(path, roundedT);
     const cached = this.cache.get(key);
 
