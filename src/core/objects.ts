@@ -162,14 +162,26 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             const pillGroup = new THREE.Group();
             child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
-                const clonedSubChild = subChild.clone();
-                pillGroup.add(clonedSubChild);
+                const mesh = subChild as THREE.Mesh;
+                const clonedMesh = mesh.clone();
+                if (mesh.material) {
+                  if (Array.isArray(mesh.material)) {
+                    clonedMesh.material = mesh.material.map((mat) =>
+                      mat.clone()
+                    );
+                  } else {
+                    clonedMesh.material = (
+                      mesh.material as THREE.Material
+                    ).clone();
+                  }
+                }
+                clonedMesh.castShadow = true;
+                clonedMesh.receiveShadow = true;
+                pillGroup.add(clonedMesh);
               }
             });
             if (pillGroup.children.length > 0) {
               pill.add(pillGroup);
-              pill.scale.set(0.05, 0.05, 0.05);
-              pill.visible = false;
             }
           }
 
@@ -216,6 +228,11 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
 
         scene.add(model);
         model.position.set(0.5, 0.5, 0.5);
+
+        if (pill.children.length > 0) {
+          pill.scale.set(0.05, 0.05, 0.05);
+          pill.visible = false;
+        }
 
         resolve();
       },

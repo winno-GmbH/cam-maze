@@ -453,38 +453,57 @@ function updateObjectsWalkBy(progress: number) {
       const targetOpacity =
         key === "pacman" || key === "pill" ? OPACITY.FULL : baseGhostOpacity;
 
-      object.traverse((child) => {
-        if ((child as any).isMesh) {
-          const mesh = child as THREE.Mesh;
-          const childName = child.name || "";
-
-          if (
-            isCurrencySymbol(childName) ||
-            (key === "pacman" && isPacmanPart(childName))
-          ) {
-            mesh.visible = false;
-            return;
+      if (key === "pill") {
+        object.traverse((child) => {
+          if ((child as any).isMesh) {
+            const mesh = child as THREE.Mesh;
+            mesh.visible = true;
+            const mat = mesh.material;
+            if (mat) {
+              const materials = Array.isArray(mat) ? mat : [mat];
+              materials.forEach((material: any) => {
+                if (material.opacity !== undefined) {
+                  material.opacity = targetOpacity;
+                  material.transparent = targetOpacity < 1.0;
+                }
+              });
+            }
           }
+        });
+      } else {
+        object.traverse((child) => {
+          if ((child as any).isMesh) {
+            const mesh = child as THREE.Mesh;
+            const childName = child.name || "";
 
-          mesh.visible = true;
+            if (
+              isCurrencySymbol(childName) ||
+              (key === "pacman" && isPacmanPart(childName))
+            ) {
+              mesh.visible = false;
+              return;
+            }
 
-          const mat = mesh.material;
-          if (mat) {
-            const materials = Array.isArray(mat) ? mat : [mat];
-            materials.forEach((material: any) => {
-              material.opacity = targetOpacity;
-              if (
-                material.transmission !== undefined &&
-                material.transmission > 0
-              ) {
-                material.transparent = true;
-              } else {
-                material.transparent = targetOpacity < 1.0;
-              }
-            });
+            mesh.visible = true;
+
+            const mat = mesh.material;
+            if (mat) {
+              const materials = Array.isArray(mat) ? mat : [mat];
+              materials.forEach((material: any) => {
+                material.opacity = targetOpacity;
+                if (
+                  material.transmission !== undefined &&
+                  material.transmission > 0
+                ) {
+                  material.transparent = true;
+                } else {
+                  material.transparent = targetOpacity < 1.0;
+                }
+              });
+            }
           }
-        }
-      });
+        });
+      }
     }
   );
 }
