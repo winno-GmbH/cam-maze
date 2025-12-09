@@ -9,7 +9,7 @@ interface PathCacheEntry {
 
 class PathCache {
   private cache: Map<string, PathCacheEntry> = new Map();
-  private readonly cacheSize = 10;
+  private readonly cacheSize = 50;
 
   private getCacheKey(path: THREE.CurvePath<THREE.Vector3>, t: number): string {
     const pathId = (path as any).uuid || Math.random().toString();
@@ -21,17 +21,18 @@ class PathCache {
     t: number,
     result: THREE.Vector3
   ): THREE.Vector3 {
-    const key = this.getCacheKey(path, t);
+    const roundedT = Math.round(t * 10000) / 10000;
+    const key = this.getCacheKey(path, roundedT);
     const cached = this.cache.get(key);
 
-    if (cached && Math.abs(cached.t - t) < 0.0001) {
+    if (cached) {
       result.copy(cached.point);
       return result;
     }
 
-    const point = performanceProfiler.measure("path-getPointAt", () =>
-      path.getPointAt(t)
-    );
+    performanceProfiler.start("path-getPointAt");
+    const point = path.getPointAt(t);
+    performanceProfiler.end("path-getPointAt");
     result.copy(point);
 
     if (this.cache.size >= this.cacheSize) {
@@ -41,10 +42,13 @@ class PathCache {
       }
     }
 
+    performanceProfiler.start("path-getTangentAt");
+    const tangent = path.getTangentAt(t);
+    performanceProfiler.end("path-getTangentAt");
     const entry: PathCacheEntry = {
       point: point.clone(),
-      tangent: path.getTangentAt(t).clone(),
-      t,
+      tangent: tangent.clone(),
+      t: roundedT,
     };
     this.cache.set(key, entry);
 
@@ -56,17 +60,18 @@ class PathCache {
     t: number,
     result: THREE.Vector3
   ): THREE.Vector3 {
-    const key = this.getCacheKey(path, t);
+    const roundedT = Math.round(t * 10000) / 10000;
+    const key = this.getCacheKey(path, roundedT);
     const cached = this.cache.get(key);
 
-    if (cached && Math.abs(cached.t - t) < 0.0001) {
+    if (cached) {
       result.copy(cached.tangent);
       return result;
     }
 
-    const tangent = performanceProfiler.measure("path-getTangentAt", () =>
-      path.getTangentAt(t)
-    );
+    performanceProfiler.start("path-getTangentAt");
+    const tangent = path.getTangentAt(t);
+    performanceProfiler.end("path-getTangentAt");
     result.copy(tangent);
 
     if (this.cache.size >= this.cacheSize) {
@@ -76,11 +81,13 @@ class PathCache {
       }
     }
 
+    performanceProfiler.start("path-getPointAt");
     const point = path.getPointAt(t);
+    performanceProfiler.end("path-getPointAt");
     const entry: PathCacheEntry = {
       point: point.clone(),
       tangent: tangent.clone(),
-      t,
+      t: roundedT,
     };
     this.cache.set(key, entry);
 

@@ -228,9 +228,6 @@ function updateHomeLoop(delta: number) {
       const tempPos = vector3PoolTemp.acquire();
       pathCache.getPoint(path, objectT, tempPos);
       ghost.position.copy(tempPos);
-      if (currentObjectStates[key]) {
-        currentObjectStates[key].position.copy(tempPos);
-      }
       vector3PoolTemp.release(tempPos);
 
       const scaleKey = `${key}-home`;
@@ -268,13 +265,10 @@ function updateHomeLoop(delta: number) {
       } else {
         ghost.quaternion.copy(targetQuat);
       }
-
-      if (currentObjectStates[key]) {
-        currentObjectStates[key].rotation.copy(ghost.quaternion);
-      }
       quaternionPool.release(targetQuat);
     }
   }
+  performanceProfiler.end("home-loop-objects");
 }
 
 export function homeLoopHandler() {

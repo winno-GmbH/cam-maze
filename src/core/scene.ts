@@ -89,10 +89,16 @@ export function startRenderLoop(): void {
   const { performanceProfiler } = require("./performance-profiler");
 
   const render = () => {
-    performanceProfiler.measure("render-loop", () => {
-      frameCallbacks.forEach((callback) => callback());
-      renderer.render(scene, camera);
-    });
+    performanceProfiler.start("frame-callbacks");
+    for (let i = 0; i < frameCallbacks.length; i++) {
+      frameCallbacks[i]();
+    }
+    performanceProfiler.end("frame-callbacks");
+
+    performanceProfiler.start("renderer-render");
+    renderer.render(scene, camera);
+    performanceProfiler.end("renderer-render");
+
     requestAnimationFrame(render);
   };
   render();
