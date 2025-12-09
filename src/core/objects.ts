@@ -177,8 +177,17 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
 
         model.traverse(function (node: THREE.Object3D) {
           if ((node as any).isMesh) {
-            node.castShadow = true;
-            node.receiveShadow = true;
+            const mesh = node as THREE.Mesh;
+            if (
+              mesh.name &&
+              (mesh.name.includes("Arena") || mesh.name.includes("Floor"))
+            ) {
+              mesh.castShadow = true;
+              mesh.receiveShadow = true;
+            } else {
+              mesh.castShadow = false;
+              mesh.receiveShadow = false;
+            }
           }
         });
 
