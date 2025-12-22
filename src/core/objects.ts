@@ -159,19 +159,24 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             // Detect all pill and shell components (excluding pacman shells)
             console.log("Found pill/shell object:", child.name);
             const pillGroup = new THREE.Group();
+            pillGroup.visible = true;
+
+            // Make all meshes visible and clone them for the pill group
             child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
                 const mesh = subChild as THREE.Mesh;
+                // Make original visible
+                mesh.visible = true;
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                // Clone and add to pill group
                 const clonedMesh = mesh.clone();
-                // Keep original materials from the 3D file
                 clonedMesh.material = mesh.material;
-                clonedMesh.castShadow = true;
-                clonedMesh.receiveShadow = true;
-                // Make all pill and shell components visible
                 clonedMesh.visible = true;
                 pillGroup.add(clonedMesh);
               }
             });
+
             if (pillGroup.children.length > 0) {
               pill.add(pillGroup);
             }
@@ -205,6 +210,14 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               clonedChild.position.y = -0.5;
               clonedChild.receiveShadow = true;
               scene.add(clonedChild);
+            } else if (
+              child.name &&
+              (child.name.toLowerCase().includes("pill") ||
+                child.name.toLowerCase().includes("shell")) &&
+              !child.name.toLowerCase().includes("pacman")
+            ) {
+              // Don't hide pill/shell meshes - they're already handled above
+              (child as THREE.Mesh).visible = true;
             } else {
               (child as THREE.Mesh).visible = false;
             }
