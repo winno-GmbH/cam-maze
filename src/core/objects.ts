@@ -165,14 +165,69 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
                 const mesh = subChild as THREE.Mesh;
+
+                // Ensure original mesh has material and is visible
+                if (!mesh.material) {
+                  // If no material, create a default one (same as inlay approach)
+                  mesh.material = new THREE.MeshStandardMaterial({
+                    color: 0xffffff,
+                    opacity: 1,
+                    transparent: false,
+                  });
+                }
+
+                // Ensure material properties are set on original
+                const originalMaterials = Array.isArray(mesh.material)
+                  ? mesh.material
+                  : [mesh.material];
+                originalMaterials.forEach((mat: THREE.Material) => {
+                  if (mat) {
+                    (mat as any).needsUpdate = true;
+                    if ((mat as any).opacity !== undefined) {
+                      (mat as any).opacity = (mat as any).opacity ?? 1.0;
+                      (mat as any).transparent = (mat as any).opacity < 1.0;
+                    }
+                  }
+                });
+
                 // Make original visible
                 mesh.visible = true;
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
-                // Clone and add to pill group
+
+                // Clone and add to pill group (same approach as inlay)
                 const clonedMesh = mesh.clone();
-                clonedMesh.material = mesh.material;
+
+                // Properly clone materials
+                if (mesh.material) {
+                  if (Array.isArray(mesh.material)) {
+                    clonedMesh.material = mesh.material.map((mat) =>
+                      mat.clone()
+                    );
+                  } else {
+                    clonedMesh.material = (
+                      mesh.material as THREE.Material
+                    ).clone();
+                  }
+                }
+
+                // Ensure material properties are set correctly on clone
+                const clonedMaterials = Array.isArray(clonedMesh.material)
+                  ? clonedMesh.material
+                  : [clonedMesh.material];
+                clonedMaterials.forEach((mat: THREE.Material) => {
+                  if (mat) {
+                    (mat as any).needsUpdate = true;
+                    if ((mat as any).opacity !== undefined) {
+                      (mat as any).opacity = (mat as any).opacity ?? 1.0;
+                      (mat as any).transparent = (mat as any).opacity < 1.0;
+                    }
+                  }
+                });
+
                 clonedMesh.visible = true;
+                clonedMesh.castShadow = true;
+                clonedMesh.receiveShadow = true;
                 pillGroup.add(clonedMesh);
               }
             });
