@@ -163,17 +163,8 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               if ((subChild as any).isMesh) {
                 const mesh = subChild as THREE.Mesh;
                 const clonedMesh = mesh.clone();
-                if (mesh.material) {
-                  if (Array.isArray(mesh.material)) {
-                    clonedMesh.material = mesh.material.map((mat) =>
-                      mat.clone()
-                    );
-                  } else {
-                    clonedMesh.material = (
-                      mesh.material as THREE.Material
-                    ).clone();
-                  }
-                }
+                // Keep original materials from the 3D file
+                clonedMesh.material = mesh.material;
                 clonedMesh.castShadow = true;
                 clonedMesh.receiveShadow = true;
                 // Make all pill and shell components visible
