@@ -204,6 +204,39 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             if (pillGroup.children.length > 0) {
               pill.add(pillGroup);
             }
+          } else if (
+            child.name &&
+            child.name.toLowerCase().includes("shell") &&
+            (child.name.toLowerCase().includes("blue") ||
+              child.name.toLowerCase().includes("orange"))
+          ) {
+            // Detect pill shell components (CAM-Shell_Bottom_Blue, CAM-Shell_Top_Blue, etc.)
+            console.log("Found pill shell object:", child.name);
+            const pillShellGroup = new THREE.Group();
+            child.traverse((subChild: THREE.Object3D) => {
+              if ((subChild as any).isMesh) {
+                const mesh = subChild as THREE.Mesh;
+                const clonedMesh = mesh.clone();
+                if (mesh.material) {
+                  if (Array.isArray(mesh.material)) {
+                    clonedMesh.material = mesh.material.map((mat) =>
+                      mat.clone()
+                    );
+                  } else {
+                    clonedMesh.material = (
+                      mesh.material as THREE.Material
+                    ).clone();
+                  }
+                }
+                clonedMesh.castShadow = true;
+                clonedMesh.receiveShadow = true;
+                clonedMesh.visible = true;
+                pillShellGroup.add(clonedMesh);
+              }
+            });
+            if (pillShellGroup.children.length > 0) {
+              pill.add(pillShellGroup);
+            }
           }
 
           if ((child as any).isMesh) {
