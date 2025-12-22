@@ -157,41 +157,12 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               child.name.toLowerCase().includes("shell")) &&
             !child.name.toLowerCase().includes("pacman")
           ) {
-            // Detect all pill and shell components (excluding pacman shells)
-            console.log("Found pill/shell object:", child.name);
-
-            // Make all meshes visible
+            // Hide all pill and shell components
             child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
-                const mesh = subChild as THREE.Mesh;
-                const isShell =
-                  subChild.name &&
-                  subChild.name.toLowerCase().includes("shell");
-
-                // For shell components, use a bright visible test material
-                if (isShell) {
-                  console.log(
-                    "Applying test material to shell:",
-                    subChild.name
-                  );
-                  mesh.material = new THREE.MeshBasicMaterial({
-                    color: 0xff0000, // Bright red
-                    opacity: 1,
-                    transparent: false,
-                  });
-                }
-
-                mesh.visible = true;
-                mesh.castShadow = true;
-                mesh.receiveShadow = true;
+                (subChild as THREE.Mesh).visible = false;
               }
             });
-
-            // Scale up 10x
-            child.scale.multiplyScalar(10);
-
-            // Add original object directly to pill group (position will be set on pill group)
-            pill.add(child);
           }
 
           if ((child as any).isMesh) {
@@ -222,14 +193,6 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               clonedChild.position.y = -0.5;
               clonedChild.receiveShadow = true;
               scene.add(clonedChild);
-            } else if (
-              child.name &&
-              (child.name.toLowerCase().includes("pill") ||
-                child.name.toLowerCase().includes("shell")) &&
-              !child.name.toLowerCase().includes("pacman")
-            ) {
-              // Don't hide pill/shell meshes - they're already handled above
-              (child as THREE.Mesh).visible = true;
             } else {
               (child as THREE.Mesh).visible = false;
             }
@@ -247,23 +210,8 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
         model.position.set(0.5, 0.5, 0.5);
 
         if (pill.children.length > 0) {
-          console.log("Pill group has", pill.children.length, "children");
-          // Position pill group in front of camera (or use fixed position if camera not ready)
-          try {
-            const cameraDirection = new THREE.Vector3();
-            camera.getWorldDirection(cameraDirection);
-            const positionInFront = camera.position
-              .clone()
-              .add(cameraDirection.multiplyScalar(3));
-            pill.position.copy(positionInFront);
-            console.log("Positioned pill at:", positionInFront);
-          } catch (e) {
-            // Fallback to fixed position
-            pill.position.set(0, 1, 2);
-            console.log("Using fallback position for pill");
-          }
-          pill.visible = true;
-          console.log("Pill group visible:", pill.visible);
+          pill.scale.set(0.05, 0.05, 0.05);
+          pill.visible = false;
         }
 
         resolve();
