@@ -457,17 +457,7 @@ function updateObjectsWalkBy(progress: number) {
         object.traverse((child) => {
           if ((child as any).isMesh) {
             const mesh = child as THREE.Mesh;
-            mesh.visible = true;
-            const mat = mesh.material;
-            if (mat) {
-              const materials = Array.isArray(mat) ? mat : [mat];
-              materials.forEach((material: any) => {
-                if (material.opacity !== undefined) {
-                  material.opacity = targetOpacity;
-                  material.transparent = targetOpacity < 1.0;
-                }
-              });
-            }
+            mesh.visible = false;
           }
         });
       } else {
