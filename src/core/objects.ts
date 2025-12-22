@@ -160,15 +160,26 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
           ) {
             console.log("Found pill object:", child.name);
             const pillGroup = new THREE.Group();
+            const isInlay =
+              child.name && child.name.toLowerCase().includes("inlay");
+
+            if (isInlay) {
+              console.log("Found pill inlay/shell object:", child.name);
+            }
+
             child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
                 const mesh = subChild as THREE.Mesh;
                 const isShell =
                   subChild.name &&
-                  subChild.name.toLowerCase().includes("shell");
+                  (subChild.name.toLowerCase().includes("shell") ||
+                    subChild.name.toLowerCase().includes("inlay"));
 
                 if (isShell) {
-                  console.log("Found pill shell component:", subChild.name);
+                  console.log(
+                    "Found pill shell/inlay component:",
+                    subChild.name
+                  );
                 }
 
                 const clonedMesh = mesh.clone();
@@ -185,7 +196,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                 }
                 clonedMesh.castShadow = true;
                 clonedMesh.receiveShadow = true;
-                // Make shell components visible (unlike pacman where they're hidden)
+                // Make shell/inlay components visible (unlike pacman where they're hidden)
                 clonedMesh.visible = true;
                 pillGroup.add(clonedMesh);
               }
