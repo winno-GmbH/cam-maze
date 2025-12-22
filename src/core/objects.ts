@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { ASSETS } from "../config/config";
 import { GhostContainer } from "../types/types";
 import { clock } from "./scene";
+import { camera } from "./camera";
 import {
   mazeMaterial,
   topMaterial,
@@ -158,23 +159,14 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
           ) {
             // Detect all pill and shell components (excluding pacman shells)
             console.log("Found pill/shell object:", child.name);
-            const pillGroup = new THREE.Group();
-            pillGroup.visible = true;
 
-            const isShellObject =
-              child.name && child.name.toLowerCase().includes("shell");
-
-            // Clone the entire child object to preserve structure and positions
-            const clonedChild = child.clone();
-
-            // Make all meshes visible and apply materials
-            clonedChild.traverse((subChild: THREE.Object3D) => {
+            // Make all meshes visible
+            child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
                 const mesh = subChild as THREE.Mesh;
                 const isShell =
-                  isShellObject ||
-                  (subChild.name &&
-                    subChild.name.toLowerCase().includes("shell"));
+                  subChild.name &&
+                  subChild.name.toLowerCase().includes("shell");
 
                 // For shell components, use a bright visible test material
                 if (isShell) {
@@ -187,47 +179,27 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                     opacity: 1,
                     transparent: false,
                   });
-                } else if (!mesh.material) {
-                  // If no material, create a default one
-                  mesh.material = new THREE.MeshStandardMaterial({
-                    color: 0xffffff,
-                    opacity: 1,
-                    transparent: false,
-                  });
                 }
 
-                // Ensure material properties are set
-                const materials = Array.isArray(mesh.material)
-                  ? mesh.material
-                  : [mesh.material];
-                materials.forEach((mat: THREE.Material) => {
-                  if (mat) {
-                    (mat as any).needsUpdate = true;
-                    if ((mat as any).opacity !== undefined) {
-                      (mat as any).opacity = (mat as any).opacity ?? 1.0;
-                      (mat as any).transparent = (mat as any).opacity < 1.0;
-                    }
-                  }
-                });
-
                 mesh.visible = true;
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
               }
             });
 
-            // Also make original meshes visible
-            child.traverse((subChild: THREE.Object3D) => {
-              if ((subChild as any).isMesh) {
-                const mesh = subChild as THREE.Mesh;
-                mesh.visible = true;
-                mesh.castShadow = true;
-                mesh.receiveShadow = true;
-              }
-            });
+            // Scale up 10x
+            child.scale.multiplyScalar(10);
 
-            pillGroup.add(clonedChild);
-            pill.add(pillGroup);
+            // Position in front of camera
+            const cameraDirection = new THREE.Vector3();
+            camera.getWorldDirection(cameraDirection);
+            const positionInFront = camera.position
+              .clone()
+              .add(cameraDirection.multiplyScalar(2));
+            child.position.copy(positionInFront);
+
+            // Add original object directly to pill group
+            pill.add(child);
           }
 
           if ((child as any).isMesh) {
