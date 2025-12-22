@@ -41,7 +41,8 @@ const ghostContainers = {
 export async function loadModel(scene: THREE.Scene): Promise<void> {
   Object.values(ghosts).forEach((ghost) => scene.add(ghost));
   scene.add(pacman);
-  scene.add(pill);
+  // Don't add pill to scene - keep it completely hidden
+  // scene.add(pill);
   return new Promise((resolve, reject) => {
     loader.load(
       ASSETS.mazeModel,
@@ -157,11 +158,13 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               child.name.toLowerCase().includes("shell")) &&
             !child.name.toLowerCase().includes("pacman")
           ) {
-            // Hide all pill and shell components
+            // Hide all pill and shell components completely
+            child.visible = false;
             child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
                 (subChild as THREE.Mesh).visible = false;
               }
+              subChild.visible = false;
             });
           }
 
@@ -209,9 +212,16 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
         scene.add(model);
         model.position.set(0.5, 0.5, 0.5);
 
+        // Always hide pill group and all its children
+        pill.visible = false;
+        pill.traverse((child) => {
+          child.visible = false;
+          if ((child as any).isMesh) {
+            (child as THREE.Mesh).visible = false;
+          }
+        });
         if (pill.children.length > 0) {
           pill.scale.set(0.05, 0.05, 0.05);
-          pill.visible = false;
         }
 
         resolve();
