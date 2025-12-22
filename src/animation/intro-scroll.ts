@@ -444,11 +444,11 @@ function updateObjectsWalkBy(progress: number) {
 
       if (key !== "pill") {
         setObjectScale(object, key, "intro");
+        object.visible = true;
       } else {
         object.scale.set(0.05, 0.05, 0.05);
+        object.visible = false;
       }
-
-      object.visible = true;
 
       const targetOpacity =
         key === "pacman" || key === "pill" ? OPACITY.FULL : baseGhostOpacity;
