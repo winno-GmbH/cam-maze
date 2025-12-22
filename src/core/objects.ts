@@ -190,15 +190,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             // Scale up 10x
             child.scale.multiplyScalar(10);
 
-            // Position in front of camera
-            const cameraDirection = new THREE.Vector3();
-            camera.getWorldDirection(cameraDirection);
-            const positionInFront = camera.position
-              .clone()
-              .add(cameraDirection.multiplyScalar(2));
-            child.position.copy(positionInFront);
-
-            // Add original object directly to pill group
+            // Add original object directly to pill group (position will be set on pill group)
             pill.add(child);
           }
 
@@ -255,8 +247,23 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
         model.position.set(0.5, 0.5, 0.5);
 
         if (pill.children.length > 0) {
-          pill.scale.set(0.05, 0.05, 0.05);
-          pill.visible = false;
+          console.log("Pill group has", pill.children.length, "children");
+          // Position pill group in front of camera (or use fixed position if camera not ready)
+          try {
+            const cameraDirection = new THREE.Vector3();
+            camera.getWorldDirection(cameraDirection);
+            const positionInFront = camera.position
+              .clone()
+              .add(cameraDirection.multiplyScalar(3));
+            pill.position.copy(positionInFront);
+            console.log("Positioned pill at:", positionInFront);
+          } catch (e) {
+            // Fallback to fixed position
+            pill.position.set(0, 1, 2);
+            console.log("Using fallback position for pill");
+          }
+          pill.visible = true;
+          console.log("Pill group visible:", pill.visible);
         }
 
         resolve();
