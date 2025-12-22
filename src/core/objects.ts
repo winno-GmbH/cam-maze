@@ -28,6 +28,7 @@ export const ghosts: GhostContainer = {
 };
 
 export const pill = new THREE.Group();
+pill.visible = false;
 
 const ghostContainers = {
   Ghost_EUR: ghosts.ghost1,
@@ -40,7 +41,7 @@ const ghostContainers = {
 export async function loadModel(scene: THREE.Scene): Promise<void> {
   Object.values(ghosts).forEach((ghost) => scene.add(ghost));
   scene.add(pacman);
-  scene.add(pill);
+  // pill is not added to scene - kept invisible
   return new Promise((resolve, reject) => {
     loader.load(
       ASSETS.mazeModel,

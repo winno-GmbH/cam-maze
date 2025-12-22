@@ -369,14 +369,6 @@ function updateObjectsWalkBy(progress: number) {
       yOffset: -0.5,
       zPhase: Math.PI * 1.0,
     },
-    {
-      key: "pill",
-      behindOffset: -0.5,
-      zOffset: 0.5,
-      xOffset: 0,
-      yOffset: 0,
-      zPhase: Math.PI * 0.5,
-    },
   ];
 
   const normalizedProgress = clamp(progress);
