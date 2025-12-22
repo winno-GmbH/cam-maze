@@ -163,6 +163,14 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
                 const mesh = subChild as THREE.Mesh;
+                const isShell =
+                  subChild.name &&
+                  subChild.name.toLowerCase().includes("shell");
+
+                if (isShell) {
+                  console.log("Found pill shell component:", subChild.name);
+                }
+
                 const clonedMesh = mesh.clone();
                 if (mesh.material) {
                   if (Array.isArray(mesh.material)) {
@@ -177,6 +185,8 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                 }
                 clonedMesh.castShadow = true;
                 clonedMesh.receiveShadow = true;
+                // Make shell components visible (unlike pacman where they're hidden)
+                clonedMesh.visible = true;
                 pillGroup.add(clonedMesh);
               }
             });
