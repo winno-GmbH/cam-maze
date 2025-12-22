@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { ASSETS } from "../config/config";
 import { GhostContainer } from "../types/types";
 import { clock } from "./scene";
-import { camera } from "./camera";
 import {
   mazeMaterial,
   topMaterial,
@@ -41,8 +40,7 @@ const ghostContainers = {
 export async function loadModel(scene: THREE.Scene): Promise<void> {
   Object.values(ghosts).forEach((ghost) => scene.add(ghost));
   scene.add(pacman);
-  // Don't add pill to scene - keep it completely hidden
-  // scene.add(pill);
+  scene.add(pill);
   return new Promise((resolve, reject) => {
     loader.load(
       ASSETS.mazeModel,
@@ -155,17 +153,36 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
           } else if (
             child.name &&
             (child.name.toLowerCase().includes("pill") ||
-              child.name.toLowerCase().includes("shell")) &&
-            !child.name.toLowerCase().includes("pacman")
+              child.name.toLowerCase().includes("pille") ||
+              child.name.toLowerCase().includes("pellet") ||
+              child.name.toLowerCase().includes("coin") ||
+              child.name.toLowerCase().includes("dot"))
           ) {
-            // Hide all pill and shell components completely
-            child.visible = false;
+            console.log("Found pill object:", child.name);
+            const pillGroup = new THREE.Group();
             child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
-                (subChild as THREE.Mesh).visible = false;
+                const mesh = subChild as THREE.Mesh;
+                const clonedMesh = mesh.clone();
+                if (mesh.material) {
+                  if (Array.isArray(mesh.material)) {
+                    clonedMesh.material = mesh.material.map((mat) =>
+                      mat.clone()
+                    );
+                  } else {
+                    clonedMesh.material = (
+                      mesh.material as THREE.Material
+                    ).clone();
+                  }
+                }
+                clonedMesh.castShadow = true;
+                clonedMesh.receiveShadow = true;
+                pillGroup.add(clonedMesh);
               }
-              subChild.visible = false;
             });
+            if (pillGroup.children.length > 0) {
+              pill.add(pillGroup);
+            }
           }
 
           if ((child as any).isMesh) {
@@ -212,16 +229,9 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
         scene.add(model);
         model.position.set(0.5, 0.5, 0.5);
 
-        // Always hide pill group and all its children
-        pill.visible = false;
-        pill.traverse((child) => {
-          child.visible = false;
-          if ((child as any).isMesh) {
-            (child as THREE.Mesh).visible = false;
-          }
-        });
         if (pill.children.length > 0) {
           pill.scale.set(0.05, 0.05, 0.05);
+          pill.visible = false;
         }
 
         resolve();
