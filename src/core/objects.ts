@@ -153,35 +153,15 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
           } else if (
             child.name &&
             (child.name.toLowerCase().includes("pill") ||
-              child.name.toLowerCase().includes("pille") ||
-              child.name.toLowerCase().includes("pellet") ||
-              child.name.toLowerCase().includes("coin") ||
-              child.name.toLowerCase().includes("dot"))
+              child.name.toLowerCase().includes("shell")) &&
+            !child.name.toLowerCase().includes("pacman")
           ) {
-            console.log("Found pill object:", child.name);
+            // Detect all pill and shell components (excluding pacman shells)
+            console.log("Found pill/shell object:", child.name);
             const pillGroup = new THREE.Group();
-            const isInlay =
-              child.name && child.name.toLowerCase().includes("inlay");
-
-            if (isInlay) {
-              console.log("Found pill inlay/shell object:", child.name);
-            }
-
             child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
                 const mesh = subChild as THREE.Mesh;
-                const isShell =
-                  subChild.name &&
-                  (subChild.name.toLowerCase().includes("shell") ||
-                    subChild.name.toLowerCase().includes("inlay"));
-
-                if (isShell) {
-                  console.log(
-                    "Found pill shell/inlay component:",
-                    subChild.name
-                  );
-                }
-
                 const clonedMesh = mesh.clone();
                 if (mesh.material) {
                   if (Array.isArray(mesh.material)) {
@@ -196,46 +176,13 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                 }
                 clonedMesh.castShadow = true;
                 clonedMesh.receiveShadow = true;
-                // Make shell/inlay components visible (unlike pacman where they're hidden)
+                // Make all pill and shell components visible
                 clonedMesh.visible = true;
                 pillGroup.add(clonedMesh);
               }
             });
             if (pillGroup.children.length > 0) {
               pill.add(pillGroup);
-            }
-          } else if (
-            child.name &&
-            child.name.toLowerCase().includes("shell") &&
-            (child.name.toLowerCase().includes("blue") ||
-              child.name.toLowerCase().includes("orange"))
-          ) {
-            // Detect pill shell components (CAM-Shell_Bottom_Blue, CAM-Shell_Top_Blue, etc.)
-            console.log("Found pill shell object:", child.name);
-            const pillShellGroup = new THREE.Group();
-            child.traverse((subChild: THREE.Object3D) => {
-              if ((subChild as any).isMesh) {
-                const mesh = subChild as THREE.Mesh;
-                const clonedMesh = mesh.clone();
-                if (mesh.material) {
-                  if (Array.isArray(mesh.material)) {
-                    clonedMesh.material = mesh.material.map((mat) =>
-                      mat.clone()
-                    );
-                  } else {
-                    clonedMesh.material = (
-                      mesh.material as THREE.Material
-                    ).clone();
-                  }
-                }
-                clonedMesh.castShadow = true;
-                clonedMesh.receiveShadow = true;
-                clonedMesh.visible = true;
-                pillShellGroup.add(clonedMesh);
-              }
-            });
-            if (pillShellGroup.children.length > 0) {
-              pill.add(pillShellGroup);
             }
           }
 
