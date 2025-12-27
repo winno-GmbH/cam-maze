@@ -371,9 +371,9 @@ function updateObjectsWalkBy(progress: number) {
     },
     {
       key: "pill",
-      behindOffset: -0.5,
+      behindOffset: -0.025,
       zOffset: 0.5,
-      xOffset: 0,
+      xOffset: -0.5,
       yOffset: 0,
       zPhase: Math.PI * 0.5,
     },
