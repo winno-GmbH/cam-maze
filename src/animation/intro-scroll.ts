@@ -369,6 +369,14 @@ function updateObjectsWalkBy(progress: number) {
       yOffset: -0.5,
       zPhase: Math.PI * 1.0,
     },
+    {
+      key: "pill",
+      behindOffset: -0.5,
+      zOffset: 0.5,
+      xOffset: 0,
+      yOffset: 0,
+      zPhase: Math.PI * 0.5,
+    },
   ];
 
   const normalizedProgress = clamp(progress);
@@ -425,36 +433,23 @@ function updateObjectsWalkBy(progress: number) {
 
       object.position.set(finalX, finalY, finalZ);
 
-      if (key === "pill") {
-        object.quaternion.copy(ghostQuat || new THREE.Quaternion());
-      } else {
-        const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
-        if (targetQuat) {
-          object.quaternion.copy(targetQuat);
-      }
+      const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
+      if (targetQuat) {
+        object.quaternion.copy(targetQuat);
       }
 
-      if (key !== "pill") {
-        setObjectScale(object, key, "intro");
-      object.visible = true;
-      } else {
+      if (key === "pill") {
         object.scale.set(0.05, 0.05, 0.05);
-        object.visible = false;
+      } else {
+        setObjectScale(object, key, "intro");
       }
+      object.visible = true;
 
       const targetOpacity =
         key === "pacman" || key === "pill" ? OPACITY.FULL : baseGhostOpacity;
 
-      if (key === "pill") {
-        object.traverse((child) => {
-          if ((child as any).isMesh) {
-            const mesh = child as THREE.Mesh;
-            mesh.visible = false;
-          }
-        });
-      } else {
       object.traverse((child) => {
-          if ((child as any).isMesh) {
+        if ((child as any).isMesh) {
           const mesh = child as THREE.Mesh;
           const childName = child.name || "";
 
@@ -468,24 +463,23 @@ function updateObjectsWalkBy(progress: number) {
 
           mesh.visible = true;
 
-            const mat = mesh.material;
-            if (mat) {
-              const materials = Array.isArray(mat) ? mat : [mat];
-              materials.forEach((material: any) => {
-                material.opacity = targetOpacity;
-                if (
-                  material.transmission !== undefined &&
-                  material.transmission > 0
-                ) {
-                  material.transparent = true;
-          } else {
-                  material.transparent = targetOpacity < 1.0;
-                }
-              });
+          const mat = mesh.material;
+          if (mat) {
+            const materials = Array.isArray(mat) ? mat : [mat];
+            materials.forEach((material: any) => {
+              material.opacity = targetOpacity;
+              if (
+                material.transmission !== undefined &&
+                material.transmission > 0
+              ) {
+                material.transparent = true;
+              } else {
+                material.transparent = targetOpacity < 1.0;
+              }
+            });
           }
         }
       });
-      }
     }
   );
 }
