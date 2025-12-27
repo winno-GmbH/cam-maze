@@ -25,9 +25,16 @@ export function getPillDebugInfo(): PillDebugInfo {
       let materialColor: number | undefined;
 
       if (mat) {
-        materialType = mat.type;
-        if ((mat as any).color) {
-          materialColor = (mat as any).color.getHex();
+        if (Array.isArray(mat)) {
+          materialType = mat[0]?.type || "multiple";
+          if (mat[0] && (mat[0] as any).color) {
+            materialColor = (mat[0] as any).color.getHex();
+          }
+        } else {
+          materialType = mat.type;
+          if ((mat as any).color) {
+            materialColor = (mat as any).color.getHex();
+          }
         }
       }
 
@@ -91,8 +98,18 @@ export function setPillMaterialColor(color: number): void {
     if ((child as any).isMesh) {
       const mesh = child as THREE.Mesh;
       const mat = mesh.material;
-      if (mat && (mat as any).color) {
-        (mat as any).color.setHex(color);
+      if (mat) {
+        if (Array.isArray(mat)) {
+          mat.forEach((m) => {
+            if ((m as any).color) {
+              (m as any).color.setHex(color);
+            }
+          });
+        } else {
+          if ((mat as any).color) {
+            (mat as any).color.setHex(color);
+          }
+        }
       }
     }
   });
@@ -100,12 +117,23 @@ export function setPillMaterialColor(color: number): void {
 
 export function setPillMeshMaterialColor(namePattern: string, color: number): void {
   pill.traverse((child) => {
-    if ((child as any).isMesh && child.name) {
-      if (child.name.toLowerCase().includes(namePattern.toLowerCase())) {
+    if ((child as any).isMesh) {
+      const childName = child.name || "";
+      if (childName.toLowerCase().includes(namePattern.toLowerCase())) {
         const mesh = child as THREE.Mesh;
         const mat = mesh.material;
-        if (mat && (mat as any).color) {
-          (mat as any).color.setHex(color);
+        if (mat) {
+          if (Array.isArray(mat)) {
+            mat.forEach((m) => {
+              if ((m as any).color) {
+                (m as any).color.setHex(color);
+              }
+            });
+          } else {
+            if ((mat as any).color) {
+              (mat as any).color.setHex(color);
+            }
+          }
         }
       }
     }
@@ -119,8 +147,18 @@ export function resetPillMaterials(): void {
     if ((child as any).isMesh) {
       const mesh = child as THREE.Mesh;
       const mat = mesh.material;
-      if (mat && (mat as any).color) {
-        (mat as any).color.setHex(greenColor);
+      if (mat) {
+        if (Array.isArray(mat)) {
+          mat.forEach((m) => {
+            if ((m as any).color) {
+              (m as any).color.setHex(greenColor);
+            }
+          });
+        } else {
+          if ((mat as any).color) {
+            (mat as any).color.setHex(greenColor);
+          }
+        }
       }
     }
   });
