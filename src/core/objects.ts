@@ -184,6 +184,13 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             if (pillGroup.children.length > 0) {
               pill.add(pillGroup);
             }
+            // Hide the original pill object in the model
+            child.visible = false;
+            child.traverse((subChild: THREE.Object3D) => {
+              if ((subChild as any).isMesh) {
+                (subChild as THREE.Mesh).visible = false;
+              }
+            });
           }
 
           if ((child as any).isMesh) {

@@ -2,7 +2,7 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
-import { ghosts, pacmanMixer, pill } from "../core/objects";
+import { ghosts, pacmanMixer } from "../core/objects";
 import { clock } from "../core/scene";
 import { slerpToLayDown, applyRotations } from "./util";
 import { isCurrencySymbol, isPacmanPart } from "./util";
@@ -400,15 +400,15 @@ function updateObjectsWalkBy(progress: number) {
       yOffset: staticYOffset,
       zPhase,
     }) => {
-      const object = key === "pill" ? pill : ghosts[key];
+      const object = ghosts[key];
       if (!object) return;
 
       const zBounce =
-        key === "pacman" || key === "pill"
+        key === "pacman"
           ? 0
           : Math.sin(normalizedProgress * Math.PI * 2 * 20 + zPhase) * 0.01;
       const animatedYOffset =
-        key === "pacman" || key === "pill" ? 0 : zBounce * 1.5;
+        key === "pacman" ? 0 : zBounce * 1.5;
       const finalX = pacmanX + behindOffset + xOffset;
       const finalY = pacmanY + staticYOffset - animatedYOffset;
       const finalZ = pacmanZ + zOffset - zBounce;
@@ -425,35 +425,18 @@ function updateObjectsWalkBy(progress: number) {
 
       object.position.set(finalX, finalY, finalZ);
 
-      if (key === "pill") {
-        object.quaternion.copy(ghostQuat || new THREE.Quaternion());
-      } else {
-        const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
-        if (targetQuat) {
-          object.quaternion.copy(targetQuat);
-        }
+      const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
+      if (targetQuat) {
+        object.quaternion.copy(targetQuat);
       }
 
-      if (key !== "pill") {
-        setObjectScale(object, key, "intro");
-        object.visible = true;
-      } else {
-        object.scale.set(0.05, 0.05, 0.05);
-        object.visible = false;
-      }
+      setObjectScale(object, key, "intro");
+      object.visible = true;
 
       const targetOpacity =
-        key === "pacman" || key === "pill" ? OPACITY.FULL : baseGhostOpacity;
+        key === "pacman" ? OPACITY.FULL : baseGhostOpacity;
 
-      if (key === "pill") {
-        object.traverse((child) => {
-          if ((child as any).isMesh) {
-            const mesh = child as THREE.Mesh;
-            mesh.visible = false;
-          }
-        });
-      } else {
-        object.traverse((child) => {
+      object.traverse((child) => {
           if ((child as any).isMesh) {
             const mesh = child as THREE.Mesh;
             const childName = child.name || "";
