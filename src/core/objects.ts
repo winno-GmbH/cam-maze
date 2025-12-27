@@ -29,6 +29,7 @@ export const ghosts: GhostContainer = {
 };
 
 export const pill = new THREE.Group();
+pill.visible = true;
 
 const ghostContainers = {
   Ghost_EUR: ghosts.ghost1,
@@ -153,9 +154,9 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             }
           } else if (
             child.name &&
+            !child.name.toLowerCase().includes("pacman") &&
             (child.name === "CAM-Pill-Orange" ||
               (child.name.toLowerCase().includes("pill") &&
-                !child.name.toLowerCase().includes("pacman") &&
                 child.name.toLowerCase().includes("orange")))
           ) {
             console.log("Found pill object:", child.name);
@@ -179,7 +180,6 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             });
             if (pillGroup.children.length > 0) {
               pill.add(pillGroup);
-              pill.visible = true;
             }
           }
 
