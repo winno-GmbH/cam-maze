@@ -160,35 +160,23 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               child.name.toLowerCase().includes("dot"))
           ) {
             console.log("Found pill object:", child.name);
-            const pillGroup = new THREE.Group();
-            child.traverse((subChild: THREE.Object3D) => {
-              if ((subChild as any).isMesh) {
-                const mesh = subChild as THREE.Mesh;
-                const clonedMesh = mesh.clone();
-                if (mesh.material) {
-                  if (Array.isArray(mesh.material)) {
-                    clonedMesh.material = mesh.material.map((mat) =>
-                      mat.clone()
-                    );
-                  } else {
-                    clonedMesh.material = (
-                      mesh.material as THREE.Material
-                    ).clone();
-                  }
-                }
-                clonedMesh.castShadow = true;
-                clonedMesh.receiveShadow = true;
-                pillGroup.add(clonedMesh);
-              }
-            });
-            if (pillGroup.children.length > 0) {
-              pill.add(pillGroup);
-            }
-            // Hide the original pill object in the model
+            // Immediately hide the pill object and all its children
             child.visible = false;
             child.traverse((subChild: THREE.Object3D) => {
+              subChild.visible = false;
               if ((subChild as any).isMesh) {
                 (subChild as THREE.Mesh).visible = false;
+                // Also hide via material opacity as backup
+                const mesh = subChild as THREE.Mesh;
+                if (mesh.material) {
+                  const materials = Array.isArray(mesh.material)
+                    ? mesh.material
+                    : [mesh.material];
+                  materials.forEach((mat: any) => {
+                    mat.opacity = 0;
+                    mat.transparent = true;
+                  });
+                }
               }
             });
           }
@@ -232,15 +220,54 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             node.castShadow = true;
             node.receiveShadow = true;
           }
+          // Final check: hide any pill-related objects that might have been missed
+          const nodeName = node.name ? node.name.toLowerCase() : "";
+          const isPillObject =
+            nodeName.includes("pill") ||
+            nodeName.includes("pille") ||
+            nodeName.includes("pellet") ||
+            nodeName.includes("coin") ||
+            nodeName.includes("dot");
+
+          if (isPillObject) {
+            node.visible = false;
+            if ((node as any).isMesh) {
+              const mesh = node as THREE.Mesh;
+              mesh.visible = false;
+              // Set material opacity to 0 as backup
+              if (mesh.material) {
+                const materials = Array.isArray(mesh.material)
+                  ? mesh.material
+                  : [mesh.material];
+                materials.forEach((mat: any) => {
+                  mat.opacity = 0;
+                  mat.transparent = true;
+                });
+              }
+            }
+            // Hide all children recursively
+            node.traverse((subNode: THREE.Object3D) => {
+              subNode.visible = false;
+              if ((subNode as any).isMesh) {
+                const subMesh = subNode as THREE.Mesh;
+                subMesh.visible = false;
+                // Set material opacity to 0 as backup
+                if (subMesh.material) {
+                  const materials = Array.isArray(subMesh.material)
+                    ? subMesh.material
+                    : [subMesh.material];
+                  materials.forEach((mat: any) => {
+                    mat.opacity = 0;
+                    mat.transparent = true;
+                  });
+                }
+              }
+            });
+          }
         });
 
         scene.add(model);
         model.position.set(0.5, 0.5, 0.5);
-
-        if (pill.children.length > 0) {
-          pill.scale.set(0.05, 0.05, 0.05);
-          pill.visible = false;
-        }
 
         resolve();
       },
