@@ -167,11 +167,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                 const clonedMesh = mesh.clone();
                 const subChildName = subChild.name || "";
                 console.log("Pill subChild name:", subChildName);
-                const isShell =
-                  subChildName.toLowerCase().includes("shell") &&
-                  !subChildName.toLowerCase().includes("inlay");
-                const material = pillMaterialMap[isShell ? "shell" : "default"];
-                clonedMesh.material = material;
+                clonedMesh.material = pillMaterialMap.default;
                 clonedMesh.castShadow = true;
                 clonedMesh.receiveShadow = true;
                 pillGroup.add(clonedMesh);

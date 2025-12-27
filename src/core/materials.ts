@@ -57,14 +57,10 @@ const pacmanMaterials = {
 
 const pillMaterials = {
   shell: new THREE.MeshBasicMaterial({
-    color: 0xff0000, // Red
-    transparent: true,
-    opacity: 1,
+    color: 0x00ff00, // Green
   }),
   default: new THREE.MeshBasicMaterial({
-    color: 0xff8800, // Orange
-    transparent: true,
-    opacity: 1,
+    color: 0x00ff00, // Green
   }),
 };
 
