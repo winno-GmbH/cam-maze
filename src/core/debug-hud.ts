@@ -43,7 +43,7 @@ export function createPillDebugHUD(): void {
   toggleBtn.style.cssText = `
     position: fixed;
     top: 20px;
-    right: 20px;
+    right: 390px;
     padding: 10px 15px;
     background: #4CAF50;
     color: white;
@@ -52,8 +52,12 @@ export function createPillDebugHUD(): void {
     cursor: pointer;
     z-index: 10001;
     font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   `;
-  toggleBtn.addEventListener("click", () => {
+  toggleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    e.preventDefault();
     isVisible = !isVisible;
     if (hudContainer) {
       hudContainer.style.display = isVisible ? "block" : "none";
@@ -72,6 +76,11 @@ export function createPillDebugHUD(): void {
 
 function updateHUD(): void {
   if (!hudContainer) return;
+
+  // Preserve scroll positions
+  const containerScrollTop = hudContainer.scrollTop;
+  const meshListScrollable = hudContainer.querySelector('[style*="overflow-y"]') as HTMLElement;
+  const meshListScrollTop = meshListScrollable ? meshListScrollable.scrollTop : 0;
 
   const info = getPillDebugInfo();
 
@@ -144,6 +153,17 @@ function updateHUD(): void {
     </div>
   `;
 
+  // Restore scroll positions after DOM update
+  if (containerScrollTop > 0) {
+    hudContainer.scrollTop = containerScrollTop;
+  }
+
+  // Restore mesh list scroll position
+  const newMeshListScrollable = hudContainer.querySelector('[style*="overflow-y"]') as HTMLElement;
+  if (newMeshListScrollable && meshListScrollTop > 0) {
+    newMeshListScrollable.scrollTop = meshListScrollTop;
+  }
+
   // Attach event listeners
   attachEventListeners();
 }
@@ -156,19 +176,34 @@ function attachEventListeners(): void {
   const hideAllBtn = hudContainer.querySelector("#pill-hide-all");
   const resetColorsBtn = hudContainer.querySelector("#pill-reset-colors");
 
-  showAllBtn?.addEventListener("click", () => {
+  showAllBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setUserInteracting(true);
     setPillVisibility(true);
-    updateHUD();
+    setTimeout(() => {
+      updateHUD();
+      setUserInteracting(false);
+    }, 100);
   });
 
-  hideAllBtn?.addEventListener("click", () => {
+  hideAllBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setUserInteracting(true);
     setPillVisibility(false);
-    updateHUD();
+    setTimeout(() => {
+      updateHUD();
+      setUserInteracting(false);
+    }, 100);
   });
 
-  resetColorsBtn?.addEventListener("click", () => {
+  resetColorsBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setUserInteracting(true);
     resetPillMaterials();
-    updateHUD();
+    setTimeout(() => {
+      updateHUD();
+      setUserInteracting(false);
+    }, 100);
   });
 
   // Shell controls
@@ -177,24 +212,44 @@ function attachEventListeners(): void {
   const shellRedBtn = hudContainer.querySelector("#pill-shell-red");
   const shellGreenBtn = hudContainer.querySelector("#pill-shell-green");
 
-  shellShowBtn?.addEventListener("click", () => {
+  shellShowBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setUserInteracting(true);
     setPillMeshVisibility("shell", true);
-    updateHUD();
+    setTimeout(() => {
+      updateHUD();
+      setUserInteracting(false);
+    }, 100);
   });
 
-  shellHideBtn?.addEventListener("click", () => {
+  shellHideBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setUserInteracting(true);
     setPillMeshVisibility("shell", false);
-    updateHUD();
+    setTimeout(() => {
+      updateHUD();
+      setUserInteracting(false);
+    }, 100);
   });
 
-  shellRedBtn?.addEventListener("click", () => {
+  shellRedBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setUserInteracting(true);
     setPillMeshMaterialColor("shell", 0xff0000);
-    updateHUD();
+    setTimeout(() => {
+      updateHUD();
+      setUserInteracting(false);
+    }, 100);
   });
 
-  shellGreenBtn?.addEventListener("click", () => {
+  shellGreenBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setUserInteracting(true);
     setPillMeshMaterialColor("shell", 0x00ff00);
-    updateHUD();
+    setTimeout(() => {
+      updateHUD();
+      setUserInteracting(false);
+    }, 100);
   });
 
   // Inlay controls
@@ -202,30 +257,50 @@ function attachEventListeners(): void {
   const inlayHideBtn = hudContainer.querySelector("#pill-inlay-hide");
   const inlayOrangeBtn = hudContainer.querySelector("#pill-inlay-orange");
 
-  inlayShowBtn?.addEventListener("click", () => {
+  inlayShowBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setUserInteracting(true);
     setPillMeshVisibility("inlay", true);
-    updateHUD();
+    setTimeout(() => {
+      updateHUD();
+      setUserInteracting(false);
+    }, 100);
   });
 
-  inlayHideBtn?.addEventListener("click", () => {
+  inlayHideBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setUserInteracting(true);
     setPillMeshVisibility("inlay", false);
-    updateHUD();
+    setTimeout(() => {
+      updateHUD();
+      setUserInteracting(false);
+    }, 100);
   });
 
-  inlayOrangeBtn?.addEventListener("click", () => {
+  inlayOrangeBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setUserInteracting(true);
     setPillMeshMaterialColor("inlay", 0xff8800);
-    updateHUD();
+    setTimeout(() => {
+      updateHUD();
+      setUserInteracting(false);
+    }, 100);
   });
 
   // Global color picker
   const colorPicker = hudContainer.querySelector("#pill-color-picker") as HTMLInputElement;
   const applyColorBtn = hudContainer.querySelector("#pill-apply-color");
 
-  applyColorBtn?.addEventListener("click", () => {
+  applyColorBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
     if (colorPicker) {
+      setUserInteracting(true);
       const color = parseInt(colorPicker.value.replace("#", ""), 16);
       setPillMaterialColor(color);
-      updateHUD();
+      setTimeout(() => {
+        updateHUD();
+        setUserInteracting(false);
+      }, 100);
     }
   });
 
@@ -233,14 +308,19 @@ function attachEventListeners(): void {
   const meshToggleBtns = hudContainer.querySelectorAll(".mesh-toggle");
   meshToggleBtns.forEach((btn) => {
     btn.addEventListener("click", (e) => {
+      e.stopPropagation();
       const target = e.target as HTMLElement;
       const name = target.getAttribute("data-name");
       if (name) {
+        setUserInteracting(true);
         const info = getPillDebugInfo();
         const mesh = info.meshes.find((m) => m.name === name);
         if (mesh) {
           setPillMeshVisibility(name, !mesh.visible);
-          updateHUD();
+          setTimeout(() => {
+            updateHUD();
+            setUserInteracting(false);
+          }, 100);
         }
       }
     });
@@ -249,11 +329,16 @@ function attachEventListeners(): void {
   const meshColorBtns = hudContainer.querySelectorAll(".mesh-color");
   meshColorBtns.forEach((btn) => {
     btn.addEventListener("click", (e) => {
+      e.stopPropagation();
       const target = e.target as HTMLElement;
       const name = target.getAttribute("data-name");
       if (name) {
+        setUserInteracting(true);
         setPillMeshMaterialColor(name, 0xff0000);
-        updateHUD();
+        setTimeout(() => {
+          updateHUD();
+          setUserInteracting(false);
+        }, 100);
       }
     });
   });
@@ -261,28 +346,58 @@ function attachEventListeners(): void {
   const meshColorGreenBtns = hudContainer.querySelectorAll(".mesh-color-green");
   meshColorGreenBtns.forEach((btn) => {
     btn.addEventListener("click", (e) => {
+      e.stopPropagation();
       const target = e.target as HTMLElement;
       const name = target.getAttribute("data-name");
       if (name) {
+        setUserInteracting(true);
         setPillMeshMaterialColor(name, 0x00ff00);
-        updateHUD();
+        setTimeout(() => {
+          updateHUD();
+          setUserInteracting(false);
+        }, 100);
       }
     });
   });
+
+  // Prevent scroll jumping when scrolling in mesh list area
+  const scrollableArea = hudContainer.querySelector('[style*="overflow-y"]') as HTMLElement;
+  if (scrollableArea) {
+    let scrollTimeout: number | null = null;
+    scrollableArea.addEventListener("scroll", () => {
+      setUserInteracting(true);
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+      scrollTimeout = window.setTimeout(() => {
+        setUserInteracting(false);
+      }, 1000);
+    });
+
+    // Prevent clicks from causing scroll jumps
+    scrollableArea.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+  }
 }
 
 // Auto-refresh HUD periodically
 let refreshInterval: number | null = null;
+let isUserInteracting = false;
 
-export function startHUDRefresh(intervalMs: number = 500): void {
+export function startHUDRefresh(intervalMs: number = 1000): void {
   if (refreshInterval) {
     clearInterval(refreshInterval);
   }
   refreshInterval = window.setInterval(() => {
-    if (isVisible && hudContainer) {
+    if (isVisible && hudContainer && !isUserInteracting) {
       updateHUD();
     }
   }, intervalMs);
+}
+
+export function setUserInteracting(value: boolean): void {
+  isUserInteracting = value;
 }
 
 export function stopHUDRefresh(): void {
