@@ -2,7 +2,7 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
-import { ghosts, pacmanMixer } from "../core/objects";
+import { ghosts, pacmanMixer, pill } from "../core/objects";
 import { clock } from "../core/scene";
 import { slerpToLayDown, applyRotations } from "./util";
 import { isCurrencySymbol, isPacmanPart } from "./util";
@@ -59,7 +59,7 @@ function restoreFloor() {
       floorState.transparent
     );
     lastFloorState = floorState;
-  }
+      }
 }
 
 export function initIntroScrollAnimation() {
@@ -245,7 +245,7 @@ function initializeQuaternions() {
     const obj = ghosts[key as keyof typeof ghosts];
     if (obj && !introInitialRotations[key]) {
       introInitialRotations[key] = obj.quaternion.clone();
-    }
+}
   });
 }
 
@@ -275,7 +275,7 @@ function updateObjectsWalkBy(progress: number) {
     if (!isFinite(camX) || !isFinite(camY) || !isFinite(camZ)) {
       if (!cachedCameraPosition) {
         return;
-      }
+        }
       tempVector.copy(cachedCameraPosition);
     } else {
       if (!cachedCameraPosition) {
@@ -320,7 +320,7 @@ function updateObjectsWalkBy(progress: number) {
   const walkStart = tempVector.x - INTRO_WALK_DISTANCE;
   const walkEnd = tempVector.x + INTRO_WALK_DISTANCE;
 
-  const objectsToAnimate = [
+    const objectsToAnimate = [
     {
       key: "pacman",
       behindOffset: 1.5,
@@ -372,8 +372,8 @@ function updateObjectsWalkBy(progress: number) {
   ];
 
   const normalizedProgress = clamp(progress);
-  const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
-  const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
+    const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
+    const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
   const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
   const pacmanZ = tempVector.z + INTRO_POSITION_OFFSET.z;
 
@@ -389,7 +389,7 @@ function updateObjectsWalkBy(progress: number) {
   const baseGhostOpacity =
     normalizedProgress < INTRO_FADE_IN_DURATION
       ? normalizedProgress / INTRO_FADE_IN_DURATION
-      : 1.0;
+        : 1.0;
 
   objectsToAnimate.forEach(
     ({
@@ -400,15 +400,15 @@ function updateObjectsWalkBy(progress: number) {
       yOffset: staticYOffset,
       zPhase,
     }) => {
-      const object = ghosts[key];
+      const object = key === "pill" ? pill : ghosts[key];
       if (!object) return;
 
       const zBounce =
-        key === "pacman"
+        key === "pacman" || key === "pill"
           ? 0
           : Math.sin(normalizedProgress * Math.PI * 2 * 20 + zPhase) * 0.01;
       const animatedYOffset =
-        key === "pacman" ? 0 : zBounce * 1.5;
+        key === "pacman" || key === "pill" ? 0 : zBounce * 1.5;
       const finalX = pacmanX + behindOffset + xOffset;
       const finalY = pacmanY + staticYOffset - animatedYOffset;
       const finalZ = pacmanZ + zOffset - zBounce;
@@ -425,19 +425,36 @@ function updateObjectsWalkBy(progress: number) {
 
       object.position.set(finalX, finalY, finalZ);
 
-      const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
-      if (targetQuat) {
-        object.quaternion.copy(targetQuat);
+      if (key === "pill") {
+        object.quaternion.copy(ghostQuat || new THREE.Quaternion());
+      } else {
+        const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
+        if (targetQuat) {
+          object.quaternion.copy(targetQuat);
+      }
       }
 
-      setObjectScale(object, key, "intro");
+      if (key !== "pill") {
+        setObjectScale(object, key, "intro");
       object.visible = true;
+      } else {
+        object.scale.set(0.05, 0.05, 0.05);
+        object.visible = false;
+      }
 
       const targetOpacity =
-        key === "pacman" ? OPACITY.FULL : baseGhostOpacity;
+        key === "pacman" || key === "pill" ? OPACITY.FULL : baseGhostOpacity;
 
+      if (key === "pill") {
+        object.traverse((child) => {
+          if ((child as any).isMesh) {
+            const mesh = child as THREE.Mesh;
+            mesh.visible = false;
+          }
+        });
+      } else {
       object.traverse((child) => {
-        if ((child as any).isMesh) {
+          if ((child as any).isMesh) {
           const mesh = child as THREE.Mesh;
           const childName = child.name || "";
 
@@ -451,23 +468,24 @@ function updateObjectsWalkBy(progress: number) {
 
           mesh.visible = true;
 
-          const mat = mesh.material;
-          if (mat) {
-            const materials = Array.isArray(mat) ? mat : [mat];
-            materials.forEach((material: any) => {
-              material.opacity = targetOpacity;
-              if (
-                material.transmission !== undefined &&
-                material.transmission > 0
-              ) {
-                material.transparent = true;
-              } else {
-                material.transparent = targetOpacity < 1.0;
-              }
-            });
+            const mat = mesh.material;
+            if (mat) {
+              const materials = Array.isArray(mat) ? mat : [mat];
+              materials.forEach((material: any) => {
+                material.opacity = targetOpacity;
+                if (
+                  material.transmission !== undefined &&
+                  material.transmission > 0
+                ) {
+                  material.transparent = true;
+          } else {
+                  material.transparent = targetOpacity < 1.0;
+                }
+              });
           }
         }
       });
+      }
     }
   );
 }

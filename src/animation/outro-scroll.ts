@@ -13,28 +13,28 @@ let outroScrollTimeline: gsap.core.Timeline | null = null;
 export function initOutroScrollAnimation() {
   outroScrollTimeline = gsap
     .timeline({
-      scrollTrigger: {
+    scrollTrigger: {
         trigger: SCROLL_SELECTORS.OUTRO,
-        start: "top center",
-        end: "bottom bottom",
+      start: "top center",
+      end: "bottom bottom",
         scrub: SCRUB_DURATION,
         markers: false,
-        onEnter: () => {
-          const scrollDir = getScrollDirection();
-          applyOutroScrollPreset(true, scrollDir);
-        },
-        onEnterBack: () => {
-          const scrollDir = getScrollDirection();
-          applyOutroScrollPreset(true, scrollDir);
-        },
+      onEnter: () => {
+        const scrollDir = getScrollDirection();
+        applyOutroScrollPreset(true, scrollDir);
+      },
+      onEnterBack: () => {
+        const scrollDir = getScrollDirection();
+        applyOutroScrollPreset(true, scrollDir);
+      },
       },
     })
     .addLabel("outro-text-start", 0)
     .fromTo(
       ".sc_b--outro",
       { scale: KEYFRAME_SCALE.START, opacity: OPACITY.HIDDEN },
-      {
-        keyframes: [
+    {
+      keyframes: [
           {
             scale: KEYFRAME_SCALE.START,
             opacity: OPACITY.HIDDEN,
@@ -75,5 +75,5 @@ export function initOutroScrollAnimation() {
         KEYFRAME_DURATION.FADE_IN +
         KEYFRAME_DURATION.HOLD +
         KEYFRAME_DURATION.FADE_OUT
-    );
+  );
 }
