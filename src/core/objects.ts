@@ -153,11 +153,10 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             }
           } else if (
             child.name &&
-            (child.name.toLowerCase().includes("pill") ||
-              child.name.toLowerCase().includes("pille") ||
-              child.name.toLowerCase().includes("pellet") ||
-              child.name.toLowerCase().includes("coin") ||
-              child.name.toLowerCase().includes("dot"))
+            (child.name === "CAM-Pill-Orange" ||
+              (child.name.toLowerCase().includes("pill") &&
+                !child.name.toLowerCase().includes("pacman") &&
+                child.name.toLowerCase().includes("orange")))
           ) {
             console.log("Found pill object:", child.name);
             const pillGroup = new THREE.Group();
@@ -180,6 +179,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             });
             if (pillGroup.children.length > 0) {
               pill.add(pillGroup);
+              pill.visible = true;
             }
           }
 
@@ -229,6 +229,12 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
 
         if (pill.children.length > 0) {
           pill.scale.set(0.05, 0.05, 0.05);
+          pill.visible = true;
+          pill.traverse((child) => {
+            if ((child as any).isMesh) {
+              (child as THREE.Mesh).visible = true;
+            }
+          });
         }
 
         resolve();
