@@ -167,7 +167,12 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                 const clonedMesh = mesh.clone();
                 const subChildName = subChild.name || "";
                 console.log("Pill subChild name:", subChildName);
-                clonedMesh.material = pillMaterialMap.default;
+                const isShell = subChildName.toLowerCase().includes("shell");
+                const material = isShell
+                  ? pillMaterialMap.shell
+                  : pillMaterialMap.default;
+                clonedMesh.material = material;
+                clonedMesh.visible = true;
                 clonedMesh.castShadow = true;
                 clonedMesh.receiveShadow = true;
                 pillGroup.add(clonedMesh);
