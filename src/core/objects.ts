@@ -8,6 +8,7 @@ import {
   ghostMaterial,
   floorMaterial,
   materialMap,
+  pillMaterialMap,
 } from "./materials";
 
 export { clock };
@@ -164,17 +165,13 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               if ((subChild as any).isMesh) {
                 const mesh = subChild as THREE.Mesh;
                 const clonedMesh = mesh.clone();
-                if (mesh.material) {
-                  if (Array.isArray(mesh.material)) {
-                    clonedMesh.material = mesh.material.map((mat) =>
-                      mat.clone()
-                    );
-                  } else {
-                    clonedMesh.material = (
-                      mesh.material as THREE.Material
-                    ).clone();
-                  }
-                }
+                const subChildName = subChild.name || "";
+                console.log("Pill subChild name:", subChildName);
+                const isShell = subChildName.toLowerCase().includes("shell");
+                const material =
+                  pillMaterialMap[isShell ? "shell" : "default"] ||
+                  pillMaterialMap.default;
+                clonedMesh.material = material;
                 clonedMesh.castShadow = true;
                 clonedMesh.receiveShadow = true;
                 pillGroup.add(clonedMesh);

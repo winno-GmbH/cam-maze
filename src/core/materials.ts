@@ -55,6 +55,19 @@ const pacmanMaterials = {
   }),
 };
 
+const pillMaterials = {
+  shell: new THREE.MeshBasicMaterial({
+    color: 0xff0000, // Red
+    transparent: true,
+    opacity: 1,
+  }),
+  default: new THREE.MeshBasicMaterial({
+    color: 0xff8800, // Orange
+    transparent: true,
+    opacity: 1,
+  }),
+};
+
 export const materialMap = {
   CAM_Pacman_Backframe: pacmanMaterials.blue,
   "CAM-Pacman_Bitcoin_1": pacmanMaterials.white,
@@ -71,4 +84,9 @@ export const materialMap = {
   "CAM-Pacman_Bottom_Text": pacmanMaterials.white,
   "CAM-Pacman_Top_Text": pacmanMaterials.white,
   default: pacmanMaterials.blue,
+};
+
+export const pillMaterialMap = {
+  shell: pillMaterials.shell,
+  default: pillMaterials.default,
 };
