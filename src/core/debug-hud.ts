@@ -1,8 +1,24 @@
+import * as THREE from "three";
+import { pill } from "./objects";
+
 // Global variable to store Y rotation in degrees
 let pillYRotationDegrees = 0;
 
 export function getPillYRotationDegrees(): number {
   return pillYRotationDegrees;
+}
+
+function applyPillRotation(): void {
+  if (!pill) return;
+  
+  // Set rotation: X=1.571 (90°), Y from slider, Z=180° (π)
+  const targetEuler = new THREE.Euler(
+    1.571, // X: 90 degrees (π/2)
+    (pillYRotationDegrees * Math.PI) / 180, // Y: from HUD slider
+    (180 * Math.PI) / 180, // Z: 180 degrees (π)
+    "XYZ"
+  );
+  pill.rotation.copy(targetEuler);
 }
 
 let hudContainer: HTMLDivElement | null = null;
@@ -100,6 +116,8 @@ function updateHUD(): void {
       if (valueDisplay) {
         valueDisplay.textContent = `${pillYRotationDegrees}°`;
       }
+      // Apply rotation immediately when slider changes
+      applyPillRotation();
     });
   }
 }
