@@ -31,79 +31,64 @@ export const ghosts: GhostContainer = {
 export const pill = new THREE.Group();
 pill.visible = true;
 
-// Helper function to filter geometry by Y position (keep only top or bottom half)
-function filterGeometryByY(
+// Helper function to split geometry by Y position using toNonIndexed approach
+function splitGeometryByY(
   geometry: THREE.BufferGeometry,
-  splitY: number,
-  keepTop: boolean
-): void {
-  const positionAttribute = geometry.attributes.position;
+  splitY: number
+): { topGeometry: THREE.BufferGeometry; bottomGeometry: THREE.BufferGeometry } {
+  // Convert to non-indexed to make filtering easier
+  const nonIndexedGeometry = geometry.toNonIndexed();
+  const positionAttribute = nonIndexedGeometry.attributes.position;
   const positions = positionAttribute.array as Float32Array;
 
-  if (geometry.index) {
-    // Indexed geometry - filter indices based on triangle centroids
-    const index = geometry.index;
-    const indexArray = Array.from(index.array as Uint16Array | Uint32Array);
-    const filteredIndices: number[] = [];
+  const topPositions: number[] = [];
+  const bottomPositions: number[] = [];
 
-    for (let i = 0; i < indexArray.length; i += 3) {
-      const i0 = indexArray[i] * 3;
-      const i1 = indexArray[i + 1] * 3;
-      const i2 = indexArray[i + 2] * 3;
-      const centroidY =
-        (positions[i0 + 1] + positions[i1 + 1] + positions[i2 + 1]) / 3;
+  // Filter triangles based on centroid Y position
+  for (let i = 0; i < positions.length; i += 9) {
+    // Each triangle has 9 values (3 vertices * 3 components)
+    const y0 = positions[i + 1];
+    const y1 = positions[i + 4];
+    const y2 = positions[i + 7];
+    const centroidY = (y0 + y1 + y2) / 3;
 
-      const shouldKeep = keepTop ? centroidY >= splitY : centroidY < splitY;
-      if (shouldKeep) {
-        filteredIndices.push(
-          indexArray[i],
-          indexArray[i + 1],
-          indexArray[i + 2]
-        );
-      }
+    const trianglePositions = [
+      positions[i],
+      positions[i + 1],
+      positions[i + 2],
+      positions[i + 3],
+      positions[i + 4],
+      positions[i + 5],
+      positions[i + 6],
+      positions[i + 7],
+      positions[i + 8],
+    ];
+
+    if (centroidY >= splitY) {
+      topPositions.push(...trianglePositions);
+    } else {
+      bottomPositions.push(...trianglePositions);
     }
-
-    // Update geometry with filtered indices
-    const newIndex = new THREE.BufferAttribute(
-      new Uint16Array(filteredIndices),
-      1
-    );
-    geometry.setIndex(newIndex);
-  } else {
-    // Non-indexed geometry - need to filter vertices
-    const filteredPositions: number[] = [];
-    for (let i = 0; i < positions.length; i += 9) {
-      // Each triangle has 9 values (3 vertices * 3 components)
-      const y0 = positions[i + 1];
-      const y1 = positions[i + 4];
-      const y2 = positions[i + 7];
-      const centroidY = (y0 + y1 + y2) / 3;
-
-      const shouldKeep = keepTop ? centroidY >= splitY : centroidY < splitY;
-      if (shouldKeep) {
-        filteredPositions.push(
-          positions[i],
-          positions[i + 1],
-          positions[i + 2],
-          positions[i + 3],
-          positions[i + 4],
-          positions[i + 5],
-          positions[i + 6],
-          positions[i + 7],
-          positions[i + 8]
-        );
-      }
-    }
-
-    // Update geometry with filtered positions
-    geometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(new Float32Array(filteredPositions), 3)
-    );
   }
 
-  geometry.computeBoundingBox();
-  geometry.computeBoundingSphere();
+  // Create new geometries
+  const topGeometry = new THREE.BufferGeometry();
+  topGeometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(new Float32Array(topPositions), 3)
+  );
+
+  const bottomGeometry = new THREE.BufferGeometry();
+  bottomGeometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(new Float32Array(bottomPositions), 3)
+  );
+
+  // Compute normals for both geometries
+  topGeometry.computeVertexNormals();
+  bottomGeometry.computeVertexNormals();
+
+  return { topGeometry, bottomGeometry };
 }
 
 const ghostContainers = {
@@ -256,14 +241,17 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                   const geometry = clonedMesh.geometry;
 
                   // Calculate bounding box to find center Y
-                  const bbox = new THREE.Box3().setFromBufferAttribute(
-                    geometry.attributes.position as THREE.BufferAttribute
-                  );
+                  geometry.computeBoundingBox();
+                  const bbox = geometry.boundingBox!;
                   const centerY = (bbox.max.y + bbox.min.y) / 2;
 
+                  // Split geometry into top and bottom halves
+                  const { topGeometry, bottomGeometry } = splitGeometryByY(
+                    geometry,
+                    centerY
+                  );
+
                   // Create top half mesh (orange, nearly intransparent)
-                  const topGeometry = geometry.clone();
-                  filterGeometryByY(topGeometry, centerY, true); // Keep top half
                   const topMesh = new THREE.Mesh(
                     topGeometry,
                     (
@@ -276,8 +264,6 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                   pillGroup.add(topMesh);
 
                   // Create bottom half mesh (transparent white glass)
-                  const bottomGeometry = geometry.clone();
-                  filterGeometryByY(bottomGeometry, centerY, false); // Keep bottom half
                   const bottomMesh = new THREE.Mesh(
                     bottomGeometry,
                     (
