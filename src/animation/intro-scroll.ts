@@ -614,11 +614,11 @@ function updateObjectsWalkBy(progress: number) {
       object.position.set(finalX, finalY, finalZ);
 
       if (key === "pill") {
-        // Set specific rotation: X=1.571 (90°), Y=300° (5.236 rad), Z=keep from ghostQuat
+        // Set specific rotation: X=1.571 (90°), Y=10° (0.175 rad), Z=0
         const targetEuler = new THREE.Euler(
-          1.571, // X: 90 degrees (π/2)
-          (300 * Math.PI) / 180, // Y: 300 degrees (5.236 rad)
-          0, // Z: will be set from ghostQuat if needed
+          1.571,
+          (10 * Math.PI) / 180, // 10 degrees in radians
+          0,
           "XYZ"
         );
         object.rotation.copy(targetEuler);
