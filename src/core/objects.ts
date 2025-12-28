@@ -161,21 +161,29 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
           ) {
             console.log("Found pill object:", child.name);
             const pillGroup = new THREE.Group();
+            console.log("=== PILL ELEMENTS ===");
             child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
                 const mesh = subChild as THREE.Mesh;
+                const subChildName = subChild.name || "";
+                console.log(`Pill element: "${subChildName}"`);
                 const clonedMesh = mesh.clone();
                 // Apply materials: shell = orange glass, bitcoin = orange, inner elements = black
-                const subChildName = subChild.name || "";
-                const isShell = subChildName.toLowerCase().includes("shell");
-                const isBitcoin = subChildName.toLowerCase().includes("bitcoin");
+                const lowerName = subChildName.toLowerCase();
+                const isShell = lowerName.includes("shell");
+                // Check for bitcoin - could be "bitcoin", "inlay" (the center part with the B symbol), or "orange" (pill inlay)
+                const isBitcoin = lowerName.includes("bitcoin") || 
+                                 (lowerName.includes("inlay") && !lowerName.includes("shell"));
                 
                 if (isShell) {
                   clonedMesh.material = pillMaterialMap.shell; // Orange transparent glass
+                  console.log(`  -> Shell material (orange glass)`);
                 } else if (isBitcoin) {
                   clonedMesh.material = pillMaterialMap.bitcoin; // Fully orange
+                  console.log(`  -> Bitcoin material (fully orange)`);
                 } else {
                   clonedMesh.material = pillMaterialMap.default; // Black for inner elements
+                  console.log(`  -> Default material (black)`);
                 }
                 
                 clonedMesh.visible = true;
@@ -184,6 +192,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                 pillGroup.add(clonedMesh);
               }
             });
+            console.log("=== END PILL ELEMENTS ===");
             if (pillGroup.children.length > 0) {
               pill.add(pillGroup);
             }

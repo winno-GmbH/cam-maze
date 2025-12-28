@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { pill } from "./objects";
 
 // Global variable to store Y rotation in degrees
-let pillYRotationDegrees = 0;
+let pillYRotationDegrees = 20;
 
 export function getPillYRotationDegrees(): number {
   return pillYRotationDegrees;
@@ -80,6 +80,8 @@ export function createPillDebugHUD(): void {
   hudContainer.style.display = "none";
 
   updateHUD();
+  // Apply initial rotation
+  applyPillRotation();
 }
 
 function updateHUD(): void {
