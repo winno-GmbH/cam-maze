@@ -583,9 +583,23 @@ function updateObjectsWalkBy(progress: number) {
           : Math.sin(normalizedProgress * Math.PI * 2 * 20 + zPhase) * 0.01;
       const animatedYOffset =
         key === "pacman" || key === "pill" ? 0 : zBounce * 1.5;
-      const finalX = pacmanX + behindOffset + xOffset;
-      const finalY = pacmanY + staticYOffset - animatedYOffset;
-      const finalZ = pacmanZ + zOffset - zBounce;
+
+      // Special handling for pill: position at absolute grid coordinates
+      let finalX: number;
+      let finalY: number;
+      let finalZ: number;
+
+      if (key === "pill") {
+        // Pill should be at grid position X=1.1 (green), Z=1.5 (red), Y=-2.0 (grid height)
+        finalX = 1.1;
+        finalY = INTRO_POSITION_OFFSET.y; // -2.0, same as grid height
+        finalZ = 1.5;
+      } else {
+        // Other objects use relative positioning
+        finalX = pacmanX + behindOffset + xOffset;
+        finalY = pacmanY + staticYOffset - animatedYOffset;
+        finalZ = pacmanZ + zOffset - zBounce;
+      }
 
       if (
         !isFinite(finalX) ||
