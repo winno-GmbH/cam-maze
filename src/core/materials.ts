@@ -55,7 +55,7 @@ const pacmanMaterials = {
   }),
 };
 
-// White/clear glass material for front of pill shell
+// White/clear glass material for bottom half of pill shell
 const pillFrontGlass = new THREE.MeshPhysicalMaterial({
   color: 0xffffff, // Pure white - no tint
   metalness: 0.0,
@@ -68,11 +68,11 @@ const pillFrontGlass = new THREE.MeshPhysicalMaterial({
   clearcoatRoughness: 0.1,
   transparent: true,
   opacity: 1.0,
-  side: THREE.FrontSide, // Only front side
+  side: THREE.DoubleSide,
   envMapIntensity: 1.0,
 });
 
-// Orange, nearly intransparent material for back of pill shell
+// Orange, nearly intransparent material for top half of pill shell
 const pillBackGlass = new THREE.MeshPhysicalMaterial({
   color: 0xff6600, // Pure orange (not too dark)
   metalness: 0.0,
@@ -85,7 +85,7 @@ const pillBackGlass = new THREE.MeshPhysicalMaterial({
   clearcoatRoughness: 0.1,
   transparent: true,
   opacity: 0.98, // Nearly opaque
-  side: THREE.BackSide, // Only back side
+  side: THREE.DoubleSide,
   envMapIntensity: 1.0,
 });
 

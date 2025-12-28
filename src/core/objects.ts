@@ -31,6 +31,81 @@ export const ghosts: GhostContainer = {
 export const pill = new THREE.Group();
 pill.visible = true;
 
+// Helper function to filter geometry by Y position (keep only top or bottom half)
+function filterGeometryByY(
+  geometry: THREE.BufferGeometry,
+  splitY: number,
+  keepTop: boolean
+): void {
+  const positionAttribute = geometry.attributes.position;
+  const positions = positionAttribute.array as Float32Array;
+
+  if (geometry.index) {
+    // Indexed geometry - filter indices based on triangle centroids
+    const index = geometry.index;
+    const indexArray = Array.from(index.array as Uint16Array | Uint32Array);
+    const filteredIndices: number[] = [];
+
+    for (let i = 0; i < indexArray.length; i += 3) {
+      const i0 = indexArray[i] * 3;
+      const i1 = indexArray[i + 1] * 3;
+      const i2 = indexArray[i + 2] * 3;
+      const centroidY =
+        (positions[i0 + 1] + positions[i1 + 1] + positions[i2 + 1]) / 3;
+
+      const shouldKeep = keepTop ? centroidY >= splitY : centroidY < splitY;
+      if (shouldKeep) {
+        filteredIndices.push(
+          indexArray[i],
+          indexArray[i + 1],
+          indexArray[i + 2]
+        );
+      }
+    }
+
+    // Update geometry with filtered indices
+    const newIndex = new THREE.BufferAttribute(
+      new Uint16Array(filteredIndices),
+      1
+    );
+    geometry.setIndex(newIndex);
+  } else {
+    // Non-indexed geometry - need to filter vertices
+    const filteredPositions: number[] = [];
+    for (let i = 0; i < positions.length; i += 9) {
+      // Each triangle has 9 values (3 vertices * 3 components)
+      const y0 = positions[i + 1];
+      const y1 = positions[i + 4];
+      const y2 = positions[i + 7];
+      const centroidY = (y0 + y1 + y2) / 3;
+
+      const shouldKeep = keepTop ? centroidY >= splitY : centroidY < splitY;
+      if (shouldKeep) {
+        filteredPositions.push(
+          positions[i],
+          positions[i + 1],
+          positions[i + 2],
+          positions[i + 3],
+          positions[i + 4],
+          positions[i + 5],
+          positions[i + 6],
+          positions[i + 7],
+          positions[i + 8]
+        );
+      }
+    }
+
+    // Update geometry with filtered positions
+    geometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array(filteredPositions), 3)
+    );
+  }
+
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+}
+
 const ghostContainers = {
   Ghost_EUR: ghosts.ghost1,
   Ghost_CHF: ghosts.ghost2,
@@ -177,30 +252,45 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                   lowerName.includes("btc_logo");
 
                 if (isShell) {
-                  // For shell, create two meshes - one for front (orange) and one for back (white glass)
-                  // Clone the mesh for front (orange, nearly intransparent)
-                  const frontMesh = clonedMesh.clone();
-                  frontMesh.material = pillMaterialMap.shellBack; // Orange material
-                  const frontMat =
-                    frontMesh.material as THREE.MeshPhysicalMaterial;
-                  frontMat.side = THREE.FrontSide;
-                  frontMesh.visible = true;
-                  frontMesh.castShadow = true;
-                  frontMesh.receiveShadow = true;
-                  pillGroup.add(frontMesh);
+                  // For shell, split into two halves: top (orange) and bottom (transparent white)
+                  const geometry = clonedMesh.geometry;
 
-                  // Use original cloned mesh for back (white glass)
-                  clonedMesh.material = pillMaterialMap.shellFront; // White glass material
-                  const backMat =
-                    clonedMesh.material as THREE.MeshPhysicalMaterial;
-                  backMat.side = THREE.BackSide;
-                  clonedMesh.visible = true;
-                  clonedMesh.castShadow = true;
-                  clonedMesh.receiveShadow = true;
-                  pillGroup.add(clonedMesh);
+                  // Calculate bounding box to find center Y
+                  const bbox = new THREE.Box3().setFromBufferAttribute(
+                    geometry.attributes.position as THREE.BufferAttribute
+                  );
+                  const centerY = (bbox.max.y + bbox.min.y) / 2;
+
+                  // Create top half mesh (orange, nearly intransparent)
+                  const topGeometry = geometry.clone();
+                  filterGeometryByY(topGeometry, centerY, true); // Keep top half
+                  const topMesh = new THREE.Mesh(
+                    topGeometry,
+                    (
+                      pillMaterialMap.shellBack as THREE.MeshPhysicalMaterial
+                    ).clone()
+                  );
+                  topMesh.visible = true;
+                  topMesh.castShadow = true;
+                  topMesh.receiveShadow = true;
+                  pillGroup.add(topMesh);
+
+                  // Create bottom half mesh (transparent white glass)
+                  const bottomGeometry = geometry.clone();
+                  filterGeometryByY(bottomGeometry, centerY, false); // Keep bottom half
+                  const bottomMesh = new THREE.Mesh(
+                    bottomGeometry,
+                    (
+                      pillMaterialMap.shellFront as THREE.MeshPhysicalMaterial
+                    ).clone()
+                  );
+                  bottomMesh.visible = true;
+                  bottomMesh.castShadow = true;
+                  bottomMesh.receiveShadow = true;
+                  pillGroup.add(bottomMesh);
 
                   console.log(
-                    `  -> Shell material (front: orange intransparent, back: white glass)`
+                    `  -> Shell material (top: orange intransparent, bottom: white glass)`
                   );
                 } else if (isBitcoin) {
                   clonedMesh.material = pillMaterialMap.bitcoin; // Fully orange (the B symbol)
@@ -210,13 +300,11 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                   // Everything else (inlay, inner elements, etc.) is black
                   clonedMesh.material = pillMaterialMap.default; // Black for inner elements
                   console.log(`  -> Default material (black)`);
+                  clonedMesh.visible = true;
+                  clonedMesh.castShadow = true;
+                  clonedMesh.receiveShadow = true;
                   pillGroup.add(clonedMesh);
                 }
-
-                clonedMesh.visible = true;
-                clonedMesh.castShadow = true;
-                clonedMesh.receiveShadow = true;
-                pillGroup.add(clonedMesh);
               }
             });
             console.log("=== END PILL ELEMENTS ===");
