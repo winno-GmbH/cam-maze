@@ -112,5 +112,6 @@ export const materialMap = {
 
 export const pillMaterialMap = {
   shell: pillMaterials.shell,
+  bitcoin: pillMaterials.bitcoin,
   default: pillMaterials.default,
 };
