@@ -60,7 +60,7 @@ function restoreFloor() {
       floorState.transparent
     );
     lastFloorState = floorState;
-      }
+  }
 }
 
 function createIntroGridGuides() {
@@ -76,11 +76,18 @@ function createIntroGridGuides() {
 
   const gridSize = 20;
   const gridDivisions = 40;
-  const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x888888, 0x444444);
+  // Make grid more visible with brighter colors
+  const gridHelper = new THREE.GridHelper(
+    gridSize,
+    gridDivisions,
+    0xffffff,
+    0x888888
+  );
+  gridHelper.position.y = 0;
   gridGroup.add(gridHelper);
 
-  // Create axes helper at origin
-  const axesHelper = new THREE.AxesHelper(3);
+  // Create axes helper at origin - make it larger
+  const axesHelper = new THREE.AxesHelper(5);
   gridGroup.add(axesHelper);
 
   // Create a semi-transparent plane to show XZ plane at Y=0
@@ -96,13 +103,15 @@ function createIntroGridGuides() {
   plane.position.y = 0;
   gridGroup.add(plane);
 
-  // Create colored lines along axes
+  // Create colored lines along axes - make them thicker and brighter
   // X-axis line (red)
   const xLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(-gridSize / 2, 0, 0),
     new THREE.Vector3(gridSize / 2, 0, 0),
   ]);
-  const xLine = new THREE.Line(xLineGeometry, new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 3 }));
+  const xLineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+  const xLine = new THREE.Line(xLineGeometry, xLineMaterial);
+  xLine.renderOrder = 1000; // Render on top
   gridGroup.add(xLine);
 
   // Y-axis line (green)
@@ -110,7 +119,9 @@ function createIntroGridGuides() {
     new THREE.Vector3(0, -gridSize / 2, 0),
     new THREE.Vector3(0, gridSize / 2, 0),
   ]);
-  const yLine = new THREE.Line(yLineGeometry, new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 3 }));
+  const yLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+  const yLine = new THREE.Line(yLineGeometry, yLineMaterial);
+  yLine.renderOrder = 1000;
   gridGroup.add(yLine);
 
   // Z-axis line (blue)
@@ -118,36 +129,70 @@ function createIntroGridGuides() {
     new THREE.Vector3(0, 0, -gridSize / 2),
     new THREE.Vector3(0, 0, gridSize / 2),
   ]);
-  const zLine = new THREE.Line(zLineGeometry, new THREE.LineBasicMaterial({ color: 0x0000ff, linewidth: 3 }));
+  const zLineMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
+  const zLine = new THREE.Line(zLineGeometry, zLineMaterial);
+  zLine.renderOrder = 1000;
   gridGroup.add(zLine);
 
   // Create marked reference positions
   const markerPositions = [
-    { pos: new THREE.Vector3(0, 0, 0), color: 0xffff00, label: "Origin (0,0,0)" },
-    { pos: new THREE.Vector3(4.3, -2.0, 0), color: 0x00ffff, label: "Maze Center (4.3,-2.0,0)" },
-    { pos: new THREE.Vector3(0.5, 0.5, 0.5), color: 0xff00ff, label: "Pill Target (0.5,0.5,0.5)" },
+    {
+      pos: new THREE.Vector3(0, 0, 0),
+      color: 0xffff00,
+      label: "Origin (0,0,0)",
+    },
+    {
+      pos: new THREE.Vector3(4.3, -2.0, 0),
+      color: 0x00ffff,
+      label: "Maze Center (4.3,-2.0,0)",
+    },
+    {
+      pos: new THREE.Vector3(0.5, 0.5, 0.5),
+      color: 0xff00ff,
+      label: "Pill Target (0.5,0.5,0.5)",
+    },
   ];
 
   markerPositions.forEach(({ pos, color, label }) => {
-    // Create a small sphere at the position
-    const sphereGeometry = new THREE.SphereGeometry(0.15, 8, 8);
-    const sphereMaterial = new THREE.MeshBasicMaterial({ color });
+    // Create a larger sphere at the position for better visibility
+    const sphereGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+    const sphereMaterial = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.9,
+    });
     const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
     sphere.position.copy(pos);
+    sphere.renderOrder = 1001;
     gridGroup.add(sphere);
 
-    // Create a wireframe box above the marker for visibility
-    const boxGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
-    const boxMaterial = new THREE.MeshBasicMaterial({ color, wireframe: true, transparent: true, opacity: 0.7 });
+    // Create a wireframe box above the marker for visibility - make it larger
+    const boxGeometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+    const boxMaterial = new THREE.MeshBasicMaterial({
+      color,
+      wireframe: true,
+      transparent: true,
+      opacity: 1.0,
+    });
     const box = new THREE.Mesh(boxGeometry, boxMaterial);
     box.position.copy(pos);
-    box.position.y += 0.4;
+    box.position.y += 0.6;
+    box.renderOrder = 1001;
     box.userData.labelText = label;
     gridGroup.add(box);
   });
 
+  // Position grid at origin (0, 0, 0) - the grid will show the world coordinates
+  gridGroup.position.set(0, 0, 0);
+
   scene.add(gridGroup);
-  console.log("Intro grid guides created");
+  console.log("Intro grid guides created at position:", gridGroup.position);
+  console.log("Grid size:", gridSize, "Divisions:", gridDivisions);
+  console.log(
+    "Grid added to scene, scene children count:",
+    scene.children.length
+  );
+  console.log("Grid group children count:", gridGroup.children.length);
 }
 
 function removeIntroGridGuides() {
@@ -180,12 +225,14 @@ export function initIntroScrollAnimation() {
           indent: 60,
         },
         onEnter: () => {
+          console.log("Intro scroll onEnter triggered");
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           createIntroGridGuides();
         },
         onEnterBack: () => {
+          console.log("Intro scroll onEnterBack triggered");
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
@@ -345,7 +392,7 @@ function initializeQuaternions() {
     const obj = ghosts[key as keyof typeof ghosts];
     if (obj && !introInitialRotations[key]) {
       introInitialRotations[key] = obj.quaternion.clone();
-}
+    }
   });
 }
 
@@ -375,7 +422,7 @@ function updateObjectsWalkBy(progress: number) {
     if (!isFinite(camX) || !isFinite(camY) || !isFinite(camZ)) {
       if (!cachedCameraPosition) {
         return;
-        }
+      }
       tempVector.copy(cachedCameraPosition);
     } else {
       if (!cachedCameraPosition) {
@@ -420,7 +467,7 @@ function updateObjectsWalkBy(progress: number) {
   const walkStart = tempVector.x - INTRO_WALK_DISTANCE;
   const walkEnd = tempVector.x + INTRO_WALK_DISTANCE;
 
-    const objectsToAnimate = [
+  const objectsToAnimate = [
     {
       key: "pacman",
       behindOffset: 1.5,
@@ -480,8 +527,8 @@ function updateObjectsWalkBy(progress: number) {
   ];
 
   const normalizedProgress = clamp(progress);
-    const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
-    const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
+  const baseX = walkStart + (walkEnd - walkStart) * normalizedProgress;
+  const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
   const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
   const pacmanZ = tempVector.z + INTRO_POSITION_OFFSET.z;
 
@@ -497,7 +544,7 @@ function updateObjectsWalkBy(progress: number) {
   const baseGhostOpacity =
     normalizedProgress < INTRO_FADE_IN_DURATION
       ? normalizedProgress / INTRO_FADE_IN_DURATION
-        : 1.0;
+      : 1.0;
 
   objectsToAnimate.forEach(
     ({
