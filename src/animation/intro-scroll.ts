@@ -614,14 +614,19 @@ function updateObjectsWalkBy(progress: number) {
       object.position.set(finalX, finalY, finalZ);
 
       if (key === "pill") {
-        // Apply ghost rotation and then add 10 degrees rotation around Y-axis
+        // Apply ghost rotation, then add 10 degrees rotation around Y-axis, then add rotation around Z-axis
         if (ghostQuat) {
           const yRotationQuat = new THREE.Quaternion().setFromAxisAngle(
             new THREE.Vector3(0, 1, 0),
             (10 * Math.PI) / 180 // 10 degrees in radians
           );
+          const zRotationQuat = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 0, 1),
+            (15 * Math.PI) / 180 // 15 degrees rotation on Z-axis
+          );
           object.quaternion.copy(ghostQuat);
           object.quaternion.multiply(yRotationQuat);
+          object.quaternion.multiply(zRotationQuat);
         }
         object.scale.set(10, 10, 10);
         // Log rotation in Euler angles for debugging

@@ -72,6 +72,13 @@ const pillOrangeGlass = new THREE.MeshPhysicalMaterial({
   reflectivity: 0.9, // High reflectivity for mirror-like reflections
 });
 
+// Orange material for Bitcoin in center
+const pillBitcoinOrange = new THREE.MeshStandardMaterial({
+  color: 0xff6600, // Orange - same as glass
+  roughness: 0.3,
+  metalness: 0.2,
+});
+
 // Black material for inner elements (will appear orange-tinted through the glass)
 const pillInnerBlack = new THREE.MeshStandardMaterial({
   color: 0x000000, // Black
@@ -81,6 +88,7 @@ const pillInnerBlack = new THREE.MeshStandardMaterial({
 
 const pillMaterials = {
   shell: pillOrangeGlass,
+  bitcoin: pillBitcoinOrange, // Bitcoin is fully orange
   default: pillInnerBlack, // Inner elements are black
 };
 
