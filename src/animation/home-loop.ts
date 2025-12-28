@@ -151,7 +151,6 @@ function stopHomeLoop() {
     updateObjectRotation(key, ghost.quaternion.clone(), true);
   });
 
-  removePillPositionGuides();
   initHomeScrollAnimation();
 }
 
@@ -214,27 +213,6 @@ export function startHomeLoop() {
     }
   });
 
-  // Position and show pill at maze center
-  const pillPos = new THREE.Vector3(0.5, 0.5, 0.5);
-  pill.position.copy(pillPos);
-  pill.scale.set(10, 10, 10); // Very large scale for visibility
-  pill.visible = true;
-
-  console.log("Pill children count:", pill.children.length);
-  pill.traverse((child) => {
-    if ((child as any).isMesh) {
-      (child as THREE.Mesh).visible = true;
-      console.log(
-        "Pill mesh found:",
-        child.name,
-        "visible:",
-        (child as THREE.Mesh).visible
-      );
-    }
-  });
-
-  // Add visual guides to show pill position
-  createPillPositionGuides(pillPos);
 
   if (!homeLoopFrameRegistered) {
     let lastTime = clock.getElapsedTime();

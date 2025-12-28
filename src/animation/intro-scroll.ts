@@ -619,7 +619,7 @@ function updateObjectsWalkBy(progress: number) {
       }
 
       if (key === "pill") {
-        object.scale.set(0.05, 0.05, 0.05);
+        object.scale.set(1, 1, 1);
       } else {
         setObjectScale(object, key, "intro");
       }
