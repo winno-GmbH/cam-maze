@@ -613,12 +613,16 @@ function updateObjectsWalkBy(progress: number) {
 
       object.position.set(finalX, finalY, finalZ);
 
-      const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
-      if (targetQuat) {
-        object.quaternion.copy(targetQuat);
-      }
-
       if (key === "pill") {
+        // Apply ghost rotation and then add 10 degrees rotation around Y-axis
+        if (ghostQuat) {
+          const yRotationQuat = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            (10 * Math.PI) / 180 // 10 degrees in radians
+          );
+          object.quaternion.copy(ghostQuat);
+          object.quaternion.multiply(yRotationQuat);
+        }
         object.scale.set(10, 10, 10);
         // Log rotation in Euler angles for debugging
         const euler = new THREE.Euler().setFromQuaternion(object.quaternion);
@@ -631,6 +635,10 @@ function updateObjectsWalkBy(progress: number) {
             euler.z.toFixed(3)
         );
       } else {
+        const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
+        if (targetQuat) {
+          object.quaternion.copy(targetQuat);
+        }
         setObjectScale(object, key, "intro");
       }
       object.visible = true;
