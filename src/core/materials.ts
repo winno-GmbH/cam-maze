@@ -55,22 +55,55 @@ const pacmanMaterials = {
   }),
 };
 
-// High-quality orange glass material for pill shell with realistic glass properties
-// Based on Three.js glass material best practices
-const pillOrangeGlass = new THREE.MeshPhysicalMaterial({
-  color: 0xff4400, // More saturated orange (darker, more intense)
-  metalness: 0.0, // No metalness for glass
-  roughness: 0.05, // Very low roughness for smooth, glossy glass surface
-  transmission: 0.9, // Slightly lower transmission to make color more visible
-  thickness: 0.5, // Glass thickness affects refraction depth
-  ior: 1.5, // Index of refraction for realistic glass (typical glass value)
-  reflectivity: 0.5, // Reflectivity for glass
-  clearcoat: 1.0, // Clearcoat for extra glossiness
-  clearcoatRoughness: 0.1, // Smooth clearcoat for mirror-like reflections
+// White/clear glass material for front of pill shell
+const pillFrontGlass = new THREE.MeshPhysicalMaterial({
+  color: 0xffffff, // White/clear
+  metalness: 0.0,
+  roughness: 0.05,
+  transmission: 0.95, // High transmission for clear glass
+  thickness: 0.5,
+  ior: 1.5,
+  reflectivity: 0.5,
+  clearcoat: 1.0,
+  clearcoatRoughness: 0.1,
   transparent: true,
-  opacity: 1.0, // Full opacity (transmission handles transparency)
+  opacity: 1.0,
+  side: THREE.FrontSide, // Only front side
+  envMapIntensity: 1.0,
+});
+
+// Orange, nearly intransparent material for back of pill shell
+const pillBackGlass = new THREE.MeshPhysicalMaterial({
+  color: 0xff4400, // Saturated orange
+  metalness: 0.0,
+  roughness: 0.05,
+  transmission: 0.3, // Low transmission - nearly intransparent
+  thickness: 0.5,
+  ior: 1.5,
+  reflectivity: 0.5,
+  clearcoat: 1.0,
+  clearcoatRoughness: 0.1,
+  transparent: true,
+  opacity: 0.95, // Nearly opaque
+  side: THREE.BackSide, // Only back side
+  envMapIntensity: 1.0,
+});
+
+// Legacy orange glass (kept for backwards compatibility, but should use front/back materials)
+const pillOrangeGlass = new THREE.MeshPhysicalMaterial({
+  color: 0xff4400,
+  metalness: 0.0,
+  roughness: 0.05,
+  transmission: 0.9,
+  thickness: 0.5,
+  ior: 1.5,
+  reflectivity: 0.5,
+  clearcoat: 1.0,
+  clearcoatRoughness: 0.1,
+  transparent: true,
+  opacity: 1.0,
   side: THREE.DoubleSide,
-  envMapIntensity: 1.0, // Environment map intensity for reflections
+  envMapIntensity: 1.0,
 });
 
 // Orange material for Bitcoin in center
@@ -89,6 +122,8 @@ const pillInnerBlack = new THREE.MeshStandardMaterial({
 
 const pillMaterials = {
   shell: pillOrangeGlass,
+  shellFront: pillFrontGlass,
+  shellBack: pillBackGlass,
   bitcoin: pillBitcoinOrange, // Bitcoin is fully orange
   default: pillInnerBlack, // Inner elements are black
 };
@@ -113,6 +148,8 @@ export const materialMap = {
 
 export const pillMaterialMap = {
   shell: pillMaterials.shell,
+  shellFront: pillMaterials.shellFront,
+  shellBack: pillMaterials.shellBack,
   bitcoin: pillMaterials.bitcoin,
   default: pillMaterials.default,
 };

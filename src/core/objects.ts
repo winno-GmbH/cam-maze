@@ -168,7 +168,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                 const subChildName = subChild.name || "";
                 console.log(`Pill element: "${subChildName}"`);
                 const clonedMesh = mesh.clone();
-                // Apply materials: shell = orange glass, bitcoin symbol = orange, inner elements = black
+                // Apply materials: shell front = white glass, shell back = orange intransparent, bitcoin symbol = orange, inner elements = black
                 const lowerName = subChildName.toLowerCase();
                 const isShell = lowerName.includes("shell");
                 // Check for bitcoin SYMBOL - "bitcoin" or "btc_logo"
@@ -177,15 +177,40 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                   lowerName.includes("btc_logo");
 
                 if (isShell) {
-                  clonedMesh.material = pillMaterialMap.shell; // Orange transparent glass
-                  console.log(`  -> Shell material (orange glass)`);
+                  // For shell, create two meshes - one for front (white glass) and one for back (orange)
+                  // Clone the mesh for front
+                  const frontMesh = clonedMesh.clone();
+                  frontMesh.material = pillMaterialMap.shellFront;
+                  const frontMat =
+                    frontMesh.material as THREE.MeshPhysicalMaterial;
+                  frontMat.side = THREE.FrontSide;
+                  frontMesh.visible = true;
+                  frontMesh.castShadow = true;
+                  frontMesh.receiveShadow = true;
+                  pillGroup.add(frontMesh);
+
+                  // Use original cloned mesh for back
+                  clonedMesh.material = pillMaterialMap.shellBack;
+                  const backMat =
+                    clonedMesh.material as THREE.MeshPhysicalMaterial;
+                  backMat.side = THREE.BackSide;
+                  clonedMesh.visible = true;
+                  clonedMesh.castShadow = true;
+                  clonedMesh.receiveShadow = true;
+                  pillGroup.add(clonedMesh);
+
+                  console.log(
+                    `  -> Shell material (front: white glass, back: orange intransparent)`
+                  );
                 } else if (isBitcoin) {
                   clonedMesh.material = pillMaterialMap.bitcoin; // Fully orange (the B symbol)
                   console.log(`  -> Bitcoin material (fully orange)`);
+                  pillGroup.add(clonedMesh);
                 } else {
                   // Everything else (inlay, inner elements, etc.) is black
                   clonedMesh.material = pillMaterialMap.default; // Black for inner elements
                   console.log(`  -> Default material (black)`);
+                  pillGroup.add(clonedMesh);
                 }
 
                 clonedMesh.visible = true;
