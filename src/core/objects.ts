@@ -171,9 +171,10 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                 // Apply materials: shell = orange glass, bitcoin symbol = orange, inner elements = black
                 const lowerName = subChildName.toLowerCase();
                 const isShell = lowerName.includes("shell");
-                // Check for bitcoin SYMBOL only - not "inlay" as that's the wrong part
-                // The bitcoin symbol itself should have "bitcoin" in the name
-                const isBitcoin = lowerName.includes("bitcoin");
+                // Check for bitcoin SYMBOL - "bitcoin" or "btc_logo"
+                const isBitcoin =
+                  lowerName.includes("bitcoin") ||
+                  lowerName.includes("btc_logo");
 
                 if (isShell) {
                   clonedMesh.material = pillMaterialMap.shell; // Orange transparent glass
