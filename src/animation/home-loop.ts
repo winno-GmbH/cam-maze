@@ -217,7 +217,7 @@ export function startHomeLoop() {
   // Position and show pill at maze center
   const pillPos = new THREE.Vector3(0.5, 0.5, 0.5);
   pill.position.copy(pillPos);
-  pill.scale.set(0.2, 0.2, 0.2); // Larger scale for visibility
+  pill.scale.set(0.5, 0.5, 0.5); // Much larger scale for visibility
   pill.visible = true;
 
   console.log("Pill children count:", pill.children.length);
