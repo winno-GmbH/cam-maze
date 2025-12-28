@@ -79,49 +79,39 @@ function createIntroGridGuides() {
   const gridSize = 10; // Smaller grid
   const gridDivisions = 20; // More divisions for better visibility
   const gridYPosition = INTRO_POSITION_OFFSET.y; // Position at same Y as objects (-2.0)
+  const gridSpacing = gridSize / gridDivisions; // 0.5 units between lines
 
-  // Create grid helper at the object height
-  const gridHelper = new THREE.GridHelper(
-    gridSize,
-    gridDivisions,
-    0x00ff00, // Bright green for visibility
-    0x00aa00 // Darker green for secondary lines
-  );
-  gridHelper.position.y = gridYPosition;
-  gridGroup.add(gridHelper);
+  // Create grid lines manually so we can color them differently
+  // X-direction lines (green) - lines parallel to X-axis
+  const xLinesMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+  for (let i = -gridSize / 2; i <= gridSize / 2; i += gridSpacing) {
+    const xLineGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-gridSize / 2, gridYPosition, i),
+      new THREE.Vector3(gridSize / 2, gridYPosition, i),
+    ]);
+    const xLine = new THREE.Line(xLineGeometry, xLinesMaterial);
+    xLine.renderOrder = 999;
+    gridGroup.add(xLine);
+  }
 
-  // Create axes helper - smaller and at object height
-  const axesHelper = new THREE.AxesHelper(2);
-  axesHelper.position.y = gridYPosition;
-  gridGroup.add(axesHelper);
+  // Z-direction lines (red) - lines parallel to Z-axis
+  const zLinesMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+  for (let i = -gridSize / 2; i <= gridSize / 2; i += gridSpacing) {
+    const zLineGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(i, gridYPosition, -gridSize / 2),
+      new THREE.Vector3(i, gridYPosition, gridSize / 2),
+    ]);
+    const zLine = new THREE.Line(zLineGeometry, zLinesMaterial);
+    zLine.renderOrder = 999;
+    gridGroup.add(zLine);
+  }
 
-  // Create colored lines along axes at object height
-  // X-axis line (red) - horizontal
-  const xLineGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-gridSize / 2, gridYPosition, 0),
-    new THREE.Vector3(gridSize / 2, gridYPosition, 0),
-  ]);
-  const xLineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
-  const xLine = new THREE.Line(xLineGeometry, xLineMaterial);
-  xLine.renderOrder = 1000;
-  gridGroup.add(xLine);
-
-  // Z-axis line (blue) - depth
-  const zLineGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, gridYPosition, -gridSize / 2),
-    new THREE.Vector3(0, gridYPosition, gridSize / 2),
-  ]);
-  const zLineMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
-  const zLine = new THREE.Line(zLineGeometry, zLineMaterial);
-  zLine.renderOrder = 1000;
-  gridGroup.add(zLine);
-
-  // Y-axis line (green) - vertical, centered at grid
+  // Y-axis line (yellow) - vertical, centered at grid to show height
   const yLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(0, gridYPosition - 1, 0),
     new THREE.Vector3(0, gridYPosition + 1, 0),
   ]);
-  const yLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+  const yLineMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
   const yLine = new THREE.Line(yLineGeometry, yLineMaterial);
   yLine.renderOrder = 1000;
   gridGroup.add(yLine);
