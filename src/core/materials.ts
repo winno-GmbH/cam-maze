@@ -58,13 +58,13 @@ const pacmanMaterials = {
 // High-quality orange glass material for pill shell with reflections and realistic glass properties
 const pillOrangeGlass = new THREE.MeshPhysicalMaterial({
   color: 0xff6600, // Orange
-  opacity: 0.6,
+  opacity: 0.8, // Increased opacity so shell is more visible
   transparent: true,
-  transmission: 1.0, // Full transmission for realistic glass
-  roughness: 0.0, // Perfectly smooth for mirror-like reflections
+  transmission: 0.85, // Slightly reduced for better visibility of glass shell
+  roughness: 0.05, // Slightly higher for more visible glass surface
   metalness: 0.0,
   clearcoat: 1.0, // High clearcoat for glossy finish
-  clearcoatRoughness: 0.0, // Perfectly smooth clearcoat
+  clearcoatRoughness: 0.05, // Slightly higher for visible reflections
   ior: 1.5, // Index of refraction for realistic glass (typical glass value)
   thickness: 0.5, // Thickness for realistic glass refraction
   side: THREE.DoubleSide,

@@ -613,14 +613,16 @@ function updateObjectsWalkBy(progress: number) {
 
       object.position.set(finalX, finalY, finalZ);
 
-      const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
-      if (targetQuat) {
-        object.quaternion.copy(targetQuat);
-      }
-
       if (key === "pill") {
+        // Rotate pill by 7.5 degrees (approximately 0.13 radians) around Y-axis
+        const rotationAngle = (7.5 * Math.PI) / 180;
+        object.rotation.y = rotationAngle;
         object.scale.set(10, 10, 10);
       } else {
+        const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
+        if (targetQuat) {
+          object.quaternion.copy(targetQuat);
+        }
         setObjectScale(object, key, "intro");
       }
       object.visible = true;
