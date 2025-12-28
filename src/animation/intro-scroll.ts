@@ -620,6 +620,16 @@ function updateObjectsWalkBy(progress: number) {
 
       if (key === "pill") {
         object.scale.set(10, 10, 10);
+        // Log rotation in Euler angles for debugging
+        const euler = new THREE.Euler().setFromQuaternion(object.quaternion);
+        console.log(
+          "Pill rotation (Euler): X=" +
+            euler.x.toFixed(3) +
+            ", Y=" +
+            euler.y.toFixed(3) +
+            ", Z=" +
+            euler.z.toFixed(3)
+        );
       } else {
         setObjectScale(object, key, "intro");
       }
