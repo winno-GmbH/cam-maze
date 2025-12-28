@@ -70,17 +70,18 @@ function createIntroGridGuides() {
     introGridGuides = null;
   }
 
-  introGridGuides = new THREE.Group();
-  introGridGuides.name = "introGridGuides";
+  const gridGroup = new THREE.Group();
+  gridGroup.name = "introGridGuides";
+  introGridGuides = gridGroup;
 
   const gridSize = 20;
   const gridDivisions = 40;
   const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x888888, 0x444444);
-  introGridGuides.add(gridHelper);
+  gridGroup.add(gridHelper);
 
   // Create axes helper at origin
   const axesHelper = new THREE.AxesHelper(3);
-  introGridGuides.add(axesHelper);
+  gridGroup.add(axesHelper);
 
   // Create a semi-transparent plane to show XZ plane at Y=0
   const planeGeometry = new THREE.PlaneGeometry(gridSize, gridSize);
@@ -93,7 +94,7 @@ function createIntroGridGuides() {
   const plane = new THREE.Mesh(planeGeometry, planeMaterial);
   plane.rotation.x = -Math.PI / 2;
   plane.position.y = 0;
-  introGridGuides.add(plane);
+  gridGroup.add(plane);
 
   // Create colored lines along axes
   // X-axis line (red)
@@ -102,7 +103,7 @@ function createIntroGridGuides() {
     new THREE.Vector3(gridSize / 2, 0, 0),
   ]);
   const xLine = new THREE.Line(xLineGeometry, new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 3 }));
-  introGridGuides.add(xLine);
+  gridGroup.add(xLine);
 
   // Y-axis line (green)
   const yLineGeometry = new THREE.BufferGeometry().setFromPoints([
@@ -110,7 +111,7 @@ function createIntroGridGuides() {
     new THREE.Vector3(0, gridSize / 2, 0),
   ]);
   const yLine = new THREE.Line(yLineGeometry, new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 3 }));
-  introGridGuides.add(yLine);
+  gridGroup.add(yLine);
 
   // Z-axis line (blue)
   const zLineGeometry = new THREE.BufferGeometry().setFromPoints([
@@ -118,7 +119,7 @@ function createIntroGridGuides() {
     new THREE.Vector3(0, 0, gridSize / 2),
   ]);
   const zLine = new THREE.Line(zLineGeometry, new THREE.LineBasicMaterial({ color: 0x0000ff, linewidth: 3 }));
-  introGridGuides.add(zLine);
+  gridGroup.add(zLine);
 
   // Create marked reference positions
   const markerPositions = [
@@ -133,7 +134,7 @@ function createIntroGridGuides() {
     const sphereMaterial = new THREE.MeshBasicMaterial({ color });
     const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
     sphere.position.copy(pos);
-    introGridGuides.add(sphere);
+    gridGroup.add(sphere);
 
     // Create a wireframe box above the marker for visibility
     const boxGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
@@ -142,10 +143,10 @@ function createIntroGridGuides() {
     box.position.copy(pos);
     box.position.y += 0.4;
     box.userData.labelText = label;
-    introGridGuides.add(box);
+    gridGroup.add(box);
   });
 
-  scene.add(introGridGuides);
+  scene.add(gridGroup);
   console.log("Intro grid guides created");
 }
 
