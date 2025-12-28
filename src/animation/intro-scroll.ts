@@ -614,30 +614,23 @@ function updateObjectsWalkBy(progress: number) {
       object.position.set(finalX, finalY, finalZ);
 
       if (key === "pill") {
-        // Apply ghost rotation, then add 10 degrees rotation around Y-axis, then add rotation around Z-axis
-        if (ghostQuat) {
-          const yRotationQuat = new THREE.Quaternion().setFromAxisAngle(
-            new THREE.Vector3(0, 1, 0),
-            (10 * Math.PI) / 180 // 10 degrees in radians
-          );
-          const zRotationQuat = new THREE.Quaternion().setFromAxisAngle(
-            new THREE.Vector3(0, 0, 1),
-            (15 * Math.PI) / 180 // 15 degrees rotation on Z-axis
-          );
-          object.quaternion.copy(ghostQuat);
-          object.quaternion.multiply(yRotationQuat);
-          object.quaternion.multiply(zRotationQuat);
-        }
+        // Set specific rotation: X=1.571 (90°), Y=300° (5.236 rad), Z=keep from ghostQuat
+        const targetEuler = new THREE.Euler(
+          1.571, // X: 90 degrees (π/2)
+          (300 * Math.PI) / 180, // Y: 300 degrees (5.236 rad)
+          0, // Z: will be set from ghostQuat if needed
+          "XYZ"
+        );
+        object.rotation.copy(targetEuler);
         object.scale.set(10, 10, 10);
         // Log rotation in Euler angles for debugging
-        const euler = new THREE.Euler().setFromQuaternion(object.quaternion);
         console.log(
           "Pill rotation (Euler): X=" +
-            euler.x.toFixed(3) +
+            object.rotation.x.toFixed(3) +
             ", Y=" +
-            euler.y.toFixed(3) +
+            object.rotation.y.toFixed(3) +
             ", Z=" +
-            euler.z.toFixed(3)
+            object.rotation.z.toFixed(3)
         );
       } else {
         const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
