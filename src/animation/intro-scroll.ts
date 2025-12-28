@@ -537,10 +537,10 @@ function updateObjectsWalkBy(progress: number) {
     },
     {
       key: "pill",
-      behindOffset: -0.03,
-      zOffset: 0.5,
-      xOffset: -0.75,
-      yOffset: 0.25,
+      behindOffset: 1.1 - INTRO_POSITION_OFFSET.x, // X position 1.1 on green grid line (absolute world position)
+      zOffset: 1.5, // Z position 1.5 on red grid line (absolute world position)
+      xOffset: 0,
+      yOffset: 0,
       zPhase: Math.PI * 0.5,
     },
   ];
