@@ -168,24 +168,25 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                 const subChildName = subChild.name || "";
                 console.log(`Pill element: "${subChildName}"`);
                 const clonedMesh = mesh.clone();
-                // Apply materials: shell = orange glass, bitcoin = orange, inner elements = black
+                // Apply materials: shell = orange glass, bitcoin symbol = orange, inner elements = black
                 const lowerName = subChildName.toLowerCase();
                 const isShell = lowerName.includes("shell");
-                // Check for bitcoin - could be "bitcoin", "inlay" (the center part with the B symbol), or "orange" (pill inlay)
-                const isBitcoin = lowerName.includes("bitcoin") || 
-                                 (lowerName.includes("inlay") && !lowerName.includes("shell"));
-                
+                // Check for bitcoin SYMBOL only - not "inlay" as that's the wrong part
+                // The bitcoin symbol itself should have "bitcoin" in the name
+                const isBitcoin = lowerName.includes("bitcoin");
+
                 if (isShell) {
                   clonedMesh.material = pillMaterialMap.shell; // Orange transparent glass
                   console.log(`  -> Shell material (orange glass)`);
                 } else if (isBitcoin) {
-                  clonedMesh.material = pillMaterialMap.bitcoin; // Fully orange
+                  clonedMesh.material = pillMaterialMap.bitcoin; // Fully orange (the B symbol)
                   console.log(`  -> Bitcoin material (fully orange)`);
                 } else {
+                  // Everything else (inlay, inner elements, etc.) is black
                   clonedMesh.material = pillMaterialMap.default; // Black for inner elements
                   console.log(`  -> Default material (black)`);
                 }
-                
+
                 clonedMesh.visible = true;
                 clonedMesh.castShadow = true;
                 clonedMesh.receiveShadow = true;
