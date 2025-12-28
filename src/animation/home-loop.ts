@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import { ghosts, pacmanMixer, pill } from "../core/objects";
-import { clock, onFrame } from "../core/scene";
+import { clock, onFrame, scene } from "../core/scene";
 import { getHomePaths, TangentSmoother } from "../paths/paths";
 import { initHomeScrollAnimation } from "./home-scroll";
 import { calculateObjectOrientation, OBJECT_KEYS } from "./util";
@@ -32,6 +32,78 @@ let startRotations: Record<string, THREE.Quaternion> = {};
 let hasBeenPausedBefore = false;
 
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
+let pillGuides: THREE.Group | null = null;
+
+function createPillPositionGuides() {
+  // Remove existing guides if they exist
+  if (pillGuides) {
+    scene.remove(pillGuides);
+    pillGuides = null;
+  }
+
+  pillGuides = new THREE.Group();
+  pillGuides.name = "pillPositionGuides";
+
+  const pillPos = pill.position.clone();
+  const guideSize = 0.3;
+
+  // Create axes helper
+  const axesHelper = new THREE.AxesHelper(guideSize);
+  axesHelper.position.copy(pillPos);
+  pillGuides.add(axesHelper);
+
+  // Create a wireframe box to show the area
+  const boxGeometry = new THREE.BoxGeometry(guideSize, guideSize, guideSize);
+  const boxMaterial = new THREE.LineBasicMaterial({
+    color: 0x00ff00,
+    transparent: true,
+    opacity: 0.5,
+  });
+  const boxEdges = new THREE.EdgesGeometry(boxGeometry);
+  const boxWireframe = new THREE.LineSegments(boxEdges, boxMaterial);
+  boxWireframe.position.copy(pillPos);
+  pillGuides.add(boxWireframe);
+
+  // Create lines from origin to pill position
+  const lineMaterial = new THREE.LineBasicMaterial({
+    color: 0xffff00,
+    transparent: true,
+    opacity: 0.3,
+  });
+
+  // X-axis line
+  const xLineGeometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, pillPos.y, pillPos.z),
+    pillPos,
+  ]);
+  const xLine = new THREE.Line(xLineGeometry, lineMaterial);
+  pillGuides.add(xLine);
+
+  // Y-axis line
+  const yLineGeometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(pillPos.x, 0, pillPos.z),
+    pillPos,
+  ]);
+  const yLine = new THREE.Line(yLineGeometry, lineMaterial);
+  pillGuides.add(yLine);
+
+  // Z-axis line
+  const zLineGeometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(pillPos.x, pillPos.y, 0),
+    pillPos,
+  ]);
+  const zLine = new THREE.Line(zLineGeometry, lineMaterial);
+  pillGuides.add(zLine);
+
+  scene.add(pillGuides);
+}
+
+function removePillPositionGuides() {
+  if (pillGuides) {
+    scene.remove(pillGuides);
+    pillGuides = null;
+  }
+}
 
 function initializeHomeLoopTangentSmoothers() {
   const smoothingFactor = TANGENT_SMOOTHING.HOME_LOOP;
@@ -59,6 +131,7 @@ function stopHomeLoop() {
     updateObjectRotation(key, ghost.quaternion.clone(), true);
   });
 
+  removePillPositionGuides();
   initHomeScrollAnimation();
 }
 
@@ -130,6 +203,9 @@ export function startHomeLoop() {
       (child as THREE.Mesh).visible = true;
     }
   });
+
+  // Add visual guides to show pill position
+  createPillPositionGuides();
 
   if (!homeLoopFrameRegistered) {
     let lastTime = clock.getElapsedTime();
