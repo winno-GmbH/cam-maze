@@ -164,23 +164,11 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
                 const mesh = subChild as THREE.Mesh;
-                const clonedMesh = mesh.clone();
-                const subChildName = subChild.name || "";
-                console.log("Pill subChild name:", subChildName);
-                
-                // Use original material from the 3D file (clone it to avoid sharing)
-                if (mesh.material) {
-                  if (Array.isArray(mesh.material)) {
-                    clonedMesh.material = mesh.material.map((mat) => mat.clone());
-                  } else {
-                    clonedMesh.material = mesh.material.clone();
-                  }
-                }
-                
-                clonedMesh.visible = true;
-                clonedMesh.castShadow = true;
-                clonedMesh.receiveShadow = true;
-                pillGroup.add(clonedMesh);
+                // Use original mesh, don't clone
+                mesh.visible = true;
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                pillGroup.add(mesh);
               }
             });
             if (pillGroup.children.length > 0) {
