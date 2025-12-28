@@ -614,9 +614,9 @@ function updateObjectsWalkBy(progress: number) {
       object.position.set(finalX, finalY, finalZ);
 
       if (key === "pill") {
-        // Rotate pill by 7.5 degrees (approximately 0.13 radians) around Y-axis
+        // Rotate pill by 7.5 degrees around X-axis
         const rotationAngle = (7.5 * Math.PI) / 180;
-        object.rotation.y = rotationAngle;
+        object.rotation.x = rotationAngle;
         object.scale.set(10, 10, 10);
       } else {
         const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
