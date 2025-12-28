@@ -58,10 +58,10 @@ const pacmanMaterials = {
 // High-quality orange glass material for pill shell with realistic glass properties
 // Based on Three.js glass material best practices
 const pillOrangeGlass = new THREE.MeshPhysicalMaterial({
-  color: 0xff6600, // Orange tint
+  color: 0xff4400, // More saturated orange (darker, more intense)
   metalness: 0.0, // No metalness for glass
   roughness: 0.05, // Very low roughness for smooth, glossy glass surface
-  transmission: 0.95, // High transmission (0.95 preserves color better than 1.0 for tinted glass)
+  transmission: 0.9, // Slightly lower transmission to make color more visible
   thickness: 0.5, // Glass thickness affects refraction depth
   ior: 1.5, // Index of refraction for realistic glass (typical glass value)
   reflectivity: 0.5, // Reflectivity for glass
