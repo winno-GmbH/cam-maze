@@ -617,7 +617,7 @@ function updateObjectsWalkBy(progress: number) {
         // Set specific rotation: X=1.571 (90°), Y=200° (3.491 rad), Z=180° (π rad)
         const targetEuler = new THREE.Euler(
           1.571,
-          (10 * Math.PI) / 180,
+          (25 * Math.PI) / 180,
           (180 * Math.PI) / 180, // 180 degrees in radians (π)
           "XYZ"
         );
