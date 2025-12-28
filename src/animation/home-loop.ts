@@ -34,7 +34,7 @@ let hasBeenPausedBefore = false;
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
 let pillGuides: THREE.Group | null = null;
 
-function createPillPositionGuides() {
+function createPillPositionGuides(pillPos: THREE.Vector3) {
   // Remove existing guides if they exist
   if (pillGuides) {
     scene.remove(pillGuides);
@@ -44,58 +44,78 @@ function createPillPositionGuides() {
   pillGuides = new THREE.Group();
   pillGuides.name = "pillPositionGuides";
 
-  const pillPos = pill.position.clone();
-  const guideSize = 0.3;
+  const guideSize = 1.0; // Much larger for visibility
 
-  // Create axes helper
+  // Create axes helper (larger)
   const axesHelper = new THREE.AxesHelper(guideSize);
   axesHelper.position.copy(pillPos);
   pillGuides.add(axesHelper);
 
-  // Create a wireframe box to show the area
+  // Create a large visible sphere at pill position
+  const sphereGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+  const sphereMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff0000,
+    transparent: true,
+    opacity: 0.7,
+    wireframe: true,
+  });
+  const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+  sphere.position.copy(pillPos);
+  pillGuides.add(sphere);
+
+  // Create a wireframe box to show the area (larger)
   const boxGeometry = new THREE.BoxGeometry(guideSize, guideSize, guideSize);
   const boxMaterial = new THREE.LineBasicMaterial({
     color: 0x00ff00,
-    transparent: true,
-    opacity: 0.5,
+    linewidth: 2,
   });
   const boxEdges = new THREE.EdgesGeometry(boxGeometry);
   const boxWireframe = new THREE.LineSegments(boxEdges, boxMaterial);
   boxWireframe.position.copy(pillPos);
   pillGuides.add(boxWireframe);
 
-  // Create lines from origin to pill position
+  // Create bright lines from origin to pill position
   const lineMaterial = new THREE.LineBasicMaterial({
     color: 0xffff00,
-    transparent: true,
-    opacity: 0.3,
+    linewidth: 3,
   });
 
-  // X-axis line
+  // X-axis line (red)
   const xLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(0, pillPos.y, pillPos.z),
     pillPos,
   ]);
-  const xLine = new THREE.Line(xLineGeometry, lineMaterial);
+  const xLine = new THREE.Line(
+    xLineGeometry,
+    new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 2 })
+  );
   pillGuides.add(xLine);
 
-  // Y-axis line
+  // Y-axis line (green)
   const yLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(pillPos.x, 0, pillPos.z),
     pillPos,
   ]);
-  const yLine = new THREE.Line(yLineGeometry, lineMaterial);
+  const yLine = new THREE.Line(
+    yLineGeometry,
+    new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 })
+  );
   pillGuides.add(yLine);
 
-  // Z-axis line
+  // Z-axis line (blue)
   const zLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(pillPos.x, pillPos.y, 0),
     pillPos,
   ]);
-  const zLine = new THREE.Line(zLineGeometry, lineMaterial);
+  const zLine = new THREE.Line(
+    zLineGeometry,
+    new THREE.LineBasicMaterial({ color: 0x0000ff, linewidth: 2 })
+  );
   pillGuides.add(zLine);
 
+  console.log("Pill guides created at position:", pillPos);
   scene.add(pillGuides);
+  console.log("Pill guides added to scene");
 }
 
 function removePillPositionGuides() {
@@ -195,17 +215,26 @@ export function startHomeLoop() {
   });
 
   // Position and show pill at maze center
-  pill.position.set(0.5, 0.5, 0.5);
-  pill.scale.set(0.1, 0.1, 0.1);
+  const pillPos = new THREE.Vector3(0.5, 0.5, 0.5);
+  pill.position.copy(pillPos);
+  pill.scale.set(0.2, 0.2, 0.2); // Larger scale for visibility
   pill.visible = true;
+
+  console.log("Pill children count:", pill.children.length);
   pill.traverse((child) => {
     if ((child as any).isMesh) {
       (child as THREE.Mesh).visible = true;
+      console.log(
+        "Pill mesh found:",
+        child.name,
+        "visible:",
+        (child as THREE.Mesh).visible
+      );
     }
   });
 
   // Add visual guides to show pill position
-  createPillPositionGuides();
+  createPillPositionGuides(pillPos);
 
   if (!homeLoopFrameRegistered) {
     let lastTime = clock.getElapsedTime();
