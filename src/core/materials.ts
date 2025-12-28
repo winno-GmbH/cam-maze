@@ -56,19 +56,21 @@ const pacmanMaterials = {
 };
 
 // High-quality orange glass material for pill shell with realistic glass properties
-// Based on Three.js best practices for colored glass materials
+// Based on Three.js glass material best practices
 const pillOrangeGlass = new THREE.MeshPhysicalMaterial({
-  color: 0xff6600, // Orange tint - stronger color for visibility
-  transmission: 0.85, // High transmission but preserve color (0.85-0.9 range for colored glass)
-  opacity: 1.0, // Full opacity (transmission handles transparency)
-  transparent: true,
-  roughness: 0.05, // Very low roughness for smooth, glossy glass surface
+  color: 0xff6600, // Orange tint
   metalness: 0.0, // No metalness for glass
+  roughness: 0.05, // Very low roughness for smooth, glossy glass surface
+  transmission: 0.95, // High transmission (0.95 preserves color better than 1.0 for tinted glass)
+  thickness: 0.5, // Glass thickness affects refraction depth
   ior: 1.5, // Index of refraction for realistic glass (typical glass value)
-  thickness: 0.1, // Realistic glass thickness (lower value for better appearance)
+  reflectivity: 0.5, // Reflectivity for glass
+  clearcoat: 1.0, // Clearcoat for extra glossiness
+  clearcoatRoughness: 0.1, // Smooth clearcoat for mirror-like reflections
+  transparent: true,
+  opacity: 1.0, // Full opacity (transmission handles transparency)
   side: THREE.DoubleSide,
-  clearcoat: 1.0, // Clearcoat for glossy finish
-  clearcoatRoughness: 0.0, // Perfectly smooth clearcoat for mirror-like reflections
+  envMapIntensity: 1.0, // Environment map intensity for reflections
 });
 
 // Orange material for Bitcoin in center

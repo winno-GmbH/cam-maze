@@ -85,6 +85,23 @@ export function setupLighting(): void {
   directionalLight.castShadow = true;
 }
 
+// Create a simple environment map for realistic glass reflections
+export function createEnvironmentMap(): void {
+  const envScene = new THREE.Scene();
+  const geometry = new THREE.BoxGeometry(100, 100, 100);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0x666666,
+    side: THREE.BackSide,
+  });
+  const skybox = new THREE.Mesh(geometry, material);
+  envScene.add(skybox);
+
+  const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256);
+  const cubeCamera = new THREE.CubeCamera(0.1, 1000, cubeRenderTarget);
+  cubeCamera.update(renderer, envScene);
+  scene.environment = cubeRenderTarget.texture;
+}
+
 export function startRenderLoop(): void {
   const render = () => {
     frameCallbacks.forEach((callback) => callback());

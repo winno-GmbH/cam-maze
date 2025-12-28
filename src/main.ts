@@ -2,6 +2,7 @@ import {
   startRenderLoop,
   initRenderer,
   setupLighting,
+  createEnvironmentMap,
   scene,
 } from "./core/scene";
 import {
@@ -35,6 +36,7 @@ function initSkipButton() {
 async function main() {
   initRenderer();
   setupLighting();
+  createEnvironmentMap();
   setupCamera();
   await loadModel(scene);
 
@@ -49,11 +51,11 @@ async function main() {
   initIntroScrollAnimation();
   initOutroScrollAnimation();
   initSkipButton();
-  
+
   // Debug HUD for pill
   createPillDebugHUD();
   startHUDRefresh(500);
-  
+
   startRenderLoop();
 }
 
