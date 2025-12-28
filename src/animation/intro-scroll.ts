@@ -29,11 +29,13 @@ let introInitialRotations: Record<string, THREE.Quaternion> = {};
 let cachedCameraPosition: THREE.Vector3 | null = null;
 let lastCameraUpdateFrame = -1;
 let introGridGuides: THREE.Group | null = null;
+let pillInitialRotation: THREE.Euler | null = null;
 
 function resetIntroScrollCache() {
   cachedCameraPosition = null;
   lastCameraUpdateFrame = -1;
   lastUpdateProgress = null;
+  // Don't reset pillInitialRotation - keep it once stored
 }
 
 function setIntroScrollLocked(locked: boolean) {
@@ -249,6 +251,10 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           createIntroGridGuides();
+          // Store initial pill rotation
+          if (!pillInitialRotation && pill) {
+            pillInitialRotation = pill.rotation.clone();
+          }
         },
         onEnterBack: () => {
           console.log("Intro scroll onEnterBack triggered");
@@ -256,6 +262,10 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           createIntroGridGuides();
+          // Store initial pill rotation
+          if (!pillInitialRotation && pill) {
+            pillInitialRotation = pill.rotation.clone();
+          }
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -614,9 +624,14 @@ function updateObjectsWalkBy(progress: number) {
       object.position.set(finalX, finalY, finalZ);
 
       if (key === "pill") {
-        // Rotate pill by 7.5 degrees around X-axis
-        const rotationAngle = (7.5 * Math.PI) / 180;
-        object.rotation.x = rotationAngle;
+        // Store initial rotation on first call
+        if (!pillInitialRotation) {
+          pillInitialRotation = object.rotation.clone();
+        }
+        // Combine initial rotation with additional 7.5 degrees around X-axis
+        const additionalRotation = (7.5 * Math.PI) / 180;
+        object.rotation.copy(pillInitialRotation);
+        object.rotation.x += additionalRotation;
         object.scale.set(10, 10, 10);
       } else {
         const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
