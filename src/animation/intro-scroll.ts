@@ -74,124 +74,153 @@ function createIntroGridGuides() {
   gridGroup.name = "introGridGuides";
   introGridGuides = gridGroup;
 
-  const gridSize = 20;
-  const gridDivisions = 40;
-  // Make grid more visible with brighter colors
+  // Use smaller grid size to match the object area
+  // Objects are positioned around INTRO_POSITION_OFFSET.y = -2.0
+  const gridSize = 10; // Smaller grid
+  const gridDivisions = 20; // More divisions for better visibility
+  const gridYPosition = INTRO_POSITION_OFFSET.y; // Position at same Y as objects (-2.0)
+
+  // Create grid helper at the object height
   const gridHelper = new THREE.GridHelper(
     gridSize,
     gridDivisions,
-    0xffffff,
-    0x888888
+    0x00ff00, // Bright green for visibility
+    0x00aa00 // Darker green for secondary lines
   );
-  gridHelper.position.y = 0;
+  gridHelper.position.y = gridYPosition;
   gridGroup.add(gridHelper);
 
-  // Create axes helper at origin - make it larger
-  const axesHelper = new THREE.AxesHelper(5);
+  // Create axes helper - smaller and at object height
+  const axesHelper = new THREE.AxesHelper(2);
+  axesHelper.position.y = gridYPosition;
   gridGroup.add(axesHelper);
 
-  // Create a semi-transparent plane to show XZ plane at Y=0
-  const planeGeometry = new THREE.PlaneGeometry(gridSize, gridSize);
-  const planeMaterial = new THREE.MeshBasicMaterial({
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0.1,
-    side: THREE.DoubleSide,
-  });
-  const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-  plane.rotation.x = -Math.PI / 2;
-  plane.position.y = 0;
-  gridGroup.add(plane);
-
-  // Create colored lines along axes - make them thicker and brighter
-  // X-axis line (red)
+  // Create colored lines along axes at object height
+  // X-axis line (red) - horizontal
   const xLineGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-gridSize / 2, 0, 0),
-    new THREE.Vector3(gridSize / 2, 0, 0),
+    new THREE.Vector3(-gridSize / 2, gridYPosition, 0),
+    new THREE.Vector3(gridSize / 2, gridYPosition, 0),
   ]);
   const xLineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
   const xLine = new THREE.Line(xLineGeometry, xLineMaterial);
-  xLine.renderOrder = 1000; // Render on top
+  xLine.renderOrder = 1000;
   gridGroup.add(xLine);
 
-  // Y-axis line (green)
-  const yLineGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, -gridSize / 2, 0),
-    new THREE.Vector3(0, gridSize / 2, 0),
-  ]);
-  const yLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
-  const yLine = new THREE.Line(yLineGeometry, yLineMaterial);
-  yLine.renderOrder = 1000;
-  gridGroup.add(yLine);
-
-  // Z-axis line (blue)
+  // Z-axis line (blue) - depth
   const zLineGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, 0, -gridSize / 2),
-    new THREE.Vector3(0, 0, gridSize / 2),
+    new THREE.Vector3(0, gridYPosition, -gridSize / 2),
+    new THREE.Vector3(0, gridYPosition, gridSize / 2),
   ]);
   const zLineMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
   const zLine = new THREE.Line(zLineGeometry, zLineMaterial);
   zLine.renderOrder = 1000;
   gridGroup.add(zLine);
 
-  // Create marked reference positions
-  const markerPositions = [
-    {
-      pos: new THREE.Vector3(0, 0, 0),
-      color: 0xffff00,
-      label: "Origin (0,0,0)",
-    },
-    {
-      pos: new THREE.Vector3(4.3, -2.0, 0),
-      color: 0x00ffff,
-      label: "Maze Center (4.3,-2.0,0)",
-    },
-    {
-      pos: new THREE.Vector3(0.5, 0.5, 0.5),
-      color: 0xff00ff,
-      label: "Pill Target (0.5,0.5,0.5)",
-    },
-  ];
+  // Y-axis line (green) - vertical, centered at grid
+  const yLineGeometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, gridYPosition - 1, 0),
+    new THREE.Vector3(0, gridYPosition + 1, 0),
+  ]);
+  const yLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+  const yLine = new THREE.Line(yLineGeometry, yLineMaterial);
+  yLine.renderOrder = 1000;
+  gridGroup.add(yLine);
 
-  markerPositions.forEach(({ pos, color, label }) => {
-    // Create a larger sphere at the position for better visibility
-    const sphereGeometry = new THREE.SphereGeometry(0.3, 16, 16);
-    const sphereMaterial = new THREE.MeshBasicMaterial({
-      color,
-      transparent: true,
-      opacity: 0.9,
-    });
-    const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-    sphere.position.copy(pos);
-    sphere.renderOrder = 1001;
-    gridGroup.add(sphere);
+  // Add labeled grid markers with numbers
+  const labelDistance = 1; // Distance between labels
+  const labelColor = 0xffffff;
+  const labelSize = 0.15;
 
-    // Create a wireframe box above the marker for visibility - make it larger
-    const boxGeometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
-    const boxMaterial = new THREE.MeshBasicMaterial({
-      color,
-      wireframe: true,
-      transparent: true,
-      opacity: 1.0,
-    });
-    const box = new THREE.Mesh(boxGeometry, boxMaterial);
-    box.position.copy(pos);
-    box.position.y += 0.6;
-    box.renderOrder = 1001;
-    box.userData.labelText = label;
-    gridGroup.add(box);
-  });
+  // X-axis labels (along the red line)
+  for (
+    let i = -Math.floor(gridSize / 2);
+    i <= Math.floor(gridSize / 2);
+    i += labelDistance
+  ) {
+    if (i === 0) continue; // Skip origin
 
-  // Position grid at origin (0, 0, 0) - the grid will show the world coordinates
+    // Create small sphere marker
+    const markerGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+    const markerMaterial = new THREE.MeshBasicMaterial({ color: labelColor });
+    const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+    marker.position.set(i, gridYPosition, 0);
+    marker.renderOrder = 1001;
+    gridGroup.add(marker);
+
+    // Create number text using sprites (simple approach)
+    const canvas = document.createElement("canvas");
+    canvas.width = 64;
+    canvas.height = 64;
+    const context = canvas.getContext("2d");
+    if (context) {
+      context.fillStyle = "#ffffff";
+      context.font = "Bold 48px Arial";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(i.toString(), 32, 32);
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(0.3, 0.3, 1);
+      sprite.position.set(i, gridYPosition + 0.3, 0);
+      sprite.renderOrder = 1001;
+      gridGroup.add(sprite);
+    }
+  }
+
+  // Z-axis labels (along the blue line)
+  for (
+    let i = -Math.floor(gridSize / 2);
+    i <= Math.floor(gridSize / 2);
+    i += labelDistance
+  ) {
+    if (i === 0) continue; // Skip origin
+
+    // Create small sphere marker
+    const markerGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+    const markerMaterial = new THREE.MeshBasicMaterial({ color: labelColor });
+    const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+    marker.position.set(0, gridYPosition, i);
+    marker.renderOrder = 1001;
+    gridGroup.add(marker);
+
+    // Create number text
+    const canvas = document.createElement("canvas");
+    canvas.width = 64;
+    canvas.height = 64;
+    const context = canvas.getContext("2d");
+    if (context) {
+      context.fillStyle = "#ffffff";
+      context.font = "Bold 48px Arial";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(i.toString(), 32, 32);
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(0.3, 0.3, 1);
+      sprite.position.set(0, gridYPosition + 0.3, i);
+      sprite.renderOrder = 1001;
+      gridGroup.add(sprite);
+    }
+  }
+
+  // Origin marker
+  const originGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+  const originMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+  const originMarker = new THREE.Mesh(originGeometry, originMaterial);
+  originMarker.position.set(0, gridYPosition, 0);
+  originMarker.renderOrder = 1001;
+  gridGroup.add(originMarker);
+
+  // Position grid at origin (0, 0, 0) - grid elements are positioned relative to this
+  // The grid will be positioned at world Y = -2.0, which matches INTRO_POSITION_OFFSET.y
+  // Since objects move relative to camera, the grid should cover a reasonable area
   gridGroup.position.set(0, 0, 0);
 
   scene.add(gridGroup);
-  console.log("Intro grid guides created at position:", gridGroup.position);
+  console.log("Intro grid guides created at Y position:", gridYPosition);
   console.log("Grid size:", gridSize, "Divisions:", gridDivisions);
-  console.log(
-    "Grid added to scene, scene children count:",
-    scene.children.length
-  );
   console.log("Grid group children count:", gridGroup.children.length);
 }
 
