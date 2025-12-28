@@ -55,7 +55,7 @@ const pacmanMaterials = {
   }),
 };
 
-// Orange transparent glass material for pill (similar to ghostMaterial but orange)
+// Orange transparent glass material for pill shell (similar to ghostMaterial but orange)
 const pillOrangeGlass = new THREE.MeshPhysicalMaterial({
   color: 0xff6600, // Orange
   opacity: 0.7,
@@ -69,9 +69,16 @@ const pillOrangeGlass = new THREE.MeshPhysicalMaterial({
   side: THREE.DoubleSide,
 });
 
+// Black material for inner elements (will appear orange-tinted through the glass)
+const pillInnerBlack = new THREE.MeshStandardMaterial({
+  color: 0x000000, // Black
+  roughness: 0.5,
+  metalness: 0.1,
+});
+
 const pillMaterials = {
   shell: pillOrangeGlass,
-  default: pillOrangeGlass,
+  default: pillInnerBlack, // Inner elements are black
 };
 
 export const materialMap = {

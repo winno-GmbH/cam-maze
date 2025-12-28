@@ -165,12 +165,12 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               if ((subChild as any).isMesh) {
                 const mesh = subChild as THREE.Mesh;
                 const clonedMesh = mesh.clone();
-                // Apply orange transparent glass material
+                // Apply materials: shell = orange glass, inner elements = black
                 const subChildName = subChild.name || "";
                 const isShell = subChildName.toLowerCase().includes("shell");
                 clonedMesh.material = isShell
-                  ? pillMaterialMap.shell
-                  : pillMaterialMap.default;
+                  ? pillMaterialMap.shell  // Orange transparent glass
+                  : pillMaterialMap.default; // Black for inner elements
                 clonedMesh.visible = true;
                 clonedMesh.castShadow = true;
                 clonedMesh.receiveShadow = true;
