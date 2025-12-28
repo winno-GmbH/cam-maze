@@ -177,10 +177,10 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                   lowerName.includes("btc_logo");
 
                 if (isShell) {
-                  // For shell, create two meshes - one for front (white glass) and one for back (orange)
-                  // Clone the mesh for front
+                  // For shell, create two meshes - one for front (orange) and one for back (white glass)
+                  // Clone the mesh for front (orange, nearly intransparent)
                   const frontMesh = clonedMesh.clone();
-                  frontMesh.material = pillMaterialMap.shellFront;
+                  frontMesh.material = pillMaterialMap.shellBack; // Orange material
                   const frontMat =
                     frontMesh.material as THREE.MeshPhysicalMaterial;
                   frontMat.side = THREE.FrontSide;
@@ -189,8 +189,8 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                   frontMesh.receiveShadow = true;
                   pillGroup.add(frontMesh);
 
-                  // Use original cloned mesh for back
-                  clonedMesh.material = pillMaterialMap.shellBack;
+                  // Use original cloned mesh for back (white glass)
+                  clonedMesh.material = pillMaterialMap.shellFront; // White glass material
                   const backMat =
                     clonedMesh.material as THREE.MeshPhysicalMaterial;
                   backMat.side = THREE.BackSide;
@@ -200,7 +200,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                   pillGroup.add(clonedMesh);
 
                   console.log(
-                    `  -> Shell material (front: white glass, back: orange intransparent)`
+                    `  -> Shell material (front: orange intransparent, back: white glass)`
                   );
                 } else if (isBitcoin) {
                   clonedMesh.material = pillMaterialMap.bitcoin; // Fully orange (the B symbol)
