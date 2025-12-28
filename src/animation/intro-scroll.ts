@@ -590,8 +590,8 @@ function updateObjectsWalkBy(progress: number) {
       let finalZ: number;
 
       if (key === "pill") {
-        // Pill should be at grid position X=0.5 (green), Z=1.1 (red), Y=-2.0 (grid height)
-        finalX = 0.5;
+        // Pill should be at grid position X=1.5 (green), Z=1.1 (red), Y=-2.0 (grid height)
+        finalX = 1.5;
         finalY = INTRO_POSITION_OFFSET.y; // -2.0, same as grid height
         finalZ = 1.1;
       } else {

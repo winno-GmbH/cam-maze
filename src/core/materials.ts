@@ -55,18 +55,20 @@ const pacmanMaterials = {
   }),
 };
 
-// Orange transparent glass material for pill shell (similar to ghostMaterial but orange)
+// High-quality orange glass material for pill shell with reflections and realistic glass properties
 const pillOrangeGlass = new THREE.MeshPhysicalMaterial({
   color: 0xff6600, // Orange
-  opacity: 0.7,
+  opacity: 0.6,
   transparent: true,
-  transmission: 0.8, // Glass-like transmission
-  roughness: 0.1,
+  transmission: 1.0, // Full transmission for realistic glass
+  roughness: 0.0, // Perfectly smooth for mirror-like reflections
   metalness: 0.0,
-  clearcoat: 1.0,
-  clearcoatRoughness: 0.1,
-  depthWrite: false,
+  clearcoat: 1.0, // High clearcoat for glossy finish
+  clearcoatRoughness: 0.0, // Perfectly smooth clearcoat
+  ior: 1.5, // Index of refraction for realistic glass (typical glass value)
+  thickness: 0.5, // Thickness for realistic glass refraction
   side: THREE.DoubleSide,
+  envMapIntensity: 2.0, // Higher intensity for stronger reflections if envMap is available
 });
 
 // Black material for inner elements (will appear orange-tinted through the glass)
