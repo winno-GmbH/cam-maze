@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import ScrollTrigger from "gsap/ScrollTrigger";
-import { ghosts, pacmanMixer } from "../core/objects";
+import { ghosts, pacmanMixer, pill } from "../core/objects";
 import { clock, onFrame } from "../core/scene";
 import { getHomePaths, TangentSmoother } from "../paths/paths";
 import { initHomeScrollAnimation } from "./home-scroll";
@@ -118,6 +118,16 @@ export function startHomeLoop() {
           homeLoopTangentSmoothers[key].reset(initialTangent);
         }
       }
+    }
+  });
+
+  // Position and show pill at maze center
+  pill.position.set(0.5, 0.5, 0.5);
+  pill.scale.set(0.1, 0.1, 0.1);
+  pill.visible = true;
+  pill.traverse((child) => {
+    if ((child as any).isMesh) {
+      (child as THREE.Mesh).visible = true;
     }
   });
 
