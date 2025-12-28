@@ -3,7 +3,7 @@ import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts, pacmanMixer, pill } from "../core/objects";
-import { clock } from "../core/scene";
+import { clock, scene } from "../core/scene";
 import { slerpToLayDown, applyRotations } from "./util";
 import { isCurrencySymbol, isPacmanPart } from "./util";
 import {
@@ -28,6 +28,7 @@ let ghostTargetQuaternion: THREE.Quaternion | null = null;
 let introInitialRotations: Record<string, THREE.Quaternion> = {};
 let cachedCameraPosition: THREE.Vector3 | null = null;
 let lastCameraUpdateFrame = -1;
+let introGridGuides: THREE.Group | null = null;
 
 function resetIntroScrollCache() {
   cachedCameraPosition = null;
@@ -62,6 +63,100 @@ function restoreFloor() {
       }
 }
 
+function createIntroGridGuides() {
+  // Remove existing guides if they exist
+  if (introGridGuides) {
+    scene.remove(introGridGuides);
+    introGridGuides = null;
+  }
+
+  introGridGuides = new THREE.Group();
+  introGridGuides.name = "introGridGuides";
+
+  const gridSize = 20;
+  const gridDivisions = 40;
+  const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x888888, 0x444444);
+  introGridGuides.add(gridHelper);
+
+  // Create axes helper at origin
+  const axesHelper = new THREE.AxesHelper(3);
+  introGridGuides.add(axesHelper);
+
+  // Create a semi-transparent plane to show XZ plane at Y=0
+  const planeGeometry = new THREE.PlaneGeometry(gridSize, gridSize);
+  const planeMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.1,
+    side: THREE.DoubleSide,
+  });
+  const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+  plane.rotation.x = -Math.PI / 2;
+  plane.position.y = 0;
+  introGridGuides.add(plane);
+
+  // Create colored lines along axes
+  // X-axis line (red)
+  const xLineGeometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-gridSize / 2, 0, 0),
+    new THREE.Vector3(gridSize / 2, 0, 0),
+  ]);
+  const xLine = new THREE.Line(xLineGeometry, new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 3 }));
+  introGridGuides.add(xLine);
+
+  // Y-axis line (green)
+  const yLineGeometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, -gridSize / 2, 0),
+    new THREE.Vector3(0, gridSize / 2, 0),
+  ]);
+  const yLine = new THREE.Line(yLineGeometry, new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 3 }));
+  introGridGuides.add(yLine);
+
+  // Z-axis line (blue)
+  const zLineGeometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0, -gridSize / 2),
+    new THREE.Vector3(0, 0, gridSize / 2),
+  ]);
+  const zLine = new THREE.Line(zLineGeometry, new THREE.LineBasicMaterial({ color: 0x0000ff, linewidth: 3 }));
+  introGridGuides.add(zLine);
+
+  // Create marked reference positions
+  const markerPositions = [
+    { pos: new THREE.Vector3(0, 0, 0), color: 0xffff00, label: "Origin (0,0,0)" },
+    { pos: new THREE.Vector3(4.3, -2.0, 0), color: 0x00ffff, label: "Maze Center (4.3,-2.0,0)" },
+    { pos: new THREE.Vector3(0.5, 0.5, 0.5), color: 0xff00ff, label: "Pill Target (0.5,0.5,0.5)" },
+  ];
+
+  markerPositions.forEach(({ pos, color, label }) => {
+    // Create a small sphere at the position
+    const sphereGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+    const sphereMaterial = new THREE.MeshBasicMaterial({ color });
+    const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    sphere.position.copy(pos);
+    introGridGuides.add(sphere);
+
+    // Create a wireframe box above the marker for visibility
+    const boxGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+    const boxMaterial = new THREE.MeshBasicMaterial({ color, wireframe: true, transparent: true, opacity: 0.7 });
+    const box = new THREE.Mesh(boxGeometry, boxMaterial);
+    box.position.copy(pos);
+    box.position.y += 0.4;
+    box.userData.labelText = label;
+    introGridGuides.add(box);
+  });
+
+  scene.add(introGridGuides);
+  console.log("Intro grid guides created");
+}
+
+function removeIntroGridGuides() {
+  if (introGridGuides) {
+    scene.remove(introGridGuides);
+    introGridGuides = null;
+    console.log("Intro grid guides removed");
+  }
+}
+
 export function initIntroScrollAnimation() {
   if (introScrollTimeline) {
     introScrollTimeline.kill();
@@ -87,23 +182,27 @@ export function initIntroScrollAnimation() {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
+          createIntroGridGuides();
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
+          createIntroGridGuides();
         },
         onLeave: () => {
           isIntroScrollActive = false;
           resetIntroScrollCache();
           restoreFloor();
           setIntroScrollLocked(false);
+          removeIntroGridGuides();
         },
         onLeaveBack: () => {
           isIntroScrollActive = false;
           resetIntroScrollCache();
           restoreFloor();
           setIntroScrollLocked(false);
+          removeIntroGridGuides();
         },
         onUpdate: (self) => {
           if (typeof self.progress === "number") {
