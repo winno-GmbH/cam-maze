@@ -55,13 +55,23 @@ const pacmanMaterials = {
   }),
 };
 
+// Orange transparent glass material for pill (similar to ghostMaterial but orange)
+const pillOrangeGlass = new THREE.MeshPhysicalMaterial({
+  color: 0xff6600, // Orange
+  opacity: 0.7,
+  transparent: true,
+  transmission: 0.8, // Glass-like transmission
+  roughness: 0.1,
+  metalness: 0.0,
+  clearcoat: 1.0,
+  clearcoatRoughness: 0.1,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+});
+
 const pillMaterials = {
-  shell: new THREE.MeshBasicMaterial({
-    color: 0x00ff00, // Green
-  }),
-  default: new THREE.MeshBasicMaterial({
-    color: 0x00ff00, // Green
-  }),
+  shell: pillOrangeGlass,
+  default: pillOrangeGlass,
 };
 
 export const materialMap = {

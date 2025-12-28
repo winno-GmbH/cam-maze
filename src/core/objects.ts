@@ -165,7 +165,12 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               if ((subChild as any).isMesh) {
                 const mesh = subChild as THREE.Mesh;
                 const clonedMesh = mesh.clone();
-                // Clone mesh but keep original materials (they are automatically cloned with mesh.clone())
+                // Apply orange transparent glass material
+                const subChildName = subChild.name || "";
+                const isShell = subChildName.toLowerCase().includes("shell");
+                clonedMesh.material = isShell
+                  ? pillMaterialMap.shell
+                  : pillMaterialMap.default;
                 clonedMesh.visible = true;
                 clonedMesh.castShadow = true;
                 clonedMesh.receiveShadow = true;
