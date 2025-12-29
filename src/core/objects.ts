@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { ASSETS } from "../config/config";
 import { GhostContainer } from "../types/types";
 import { clock } from "./scene";
@@ -261,28 +262,32 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                 `Found ${shellMeshes.length} shell mesh(es), combining and splitting...`
               );
 
-              // Combine all shell geometries
-              const shellGeometries = shellMeshes.map((m) => m.geometry);
-              const combinedGeometry = new THREE.BufferGeometry();
-
-              // Merge all shell geometries
-              const positions: number[] = [];
-              shellGeometries.forEach((geom) => {
-                const pos = geom.attributes.position;
-                const posArray = pos.array as Float32Array;
-                positions.push(...Array.from(posArray));
+              // Apply mesh transformations to geometries before merging
+              const transformedGeometries = shellMeshes.map((mesh) => {
+                const geometry = mesh.geometry.clone();
+                // Apply mesh transformations to geometry
+                geometry.applyMatrix4(mesh.matrixWorld);
+                return geometry;
               });
 
-              combinedGeometry.setAttribute(
-                "position",
-                new THREE.BufferAttribute(new Float32Array(positions), 3)
-              );
-              combinedGeometry.computeBoundingBox();
-              combinedGeometry.computeVertexNormals();
+              // Use BufferGeometryUtils to properly merge geometries
+              let combinedGeometry: THREE.BufferGeometry;
+              if (transformedGeometries.length === 1) {
+                combinedGeometry = transformedGeometries[0];
+              } else {
+                combinedGeometry = mergeGeometries(transformedGeometries);
+              }
 
               // Calculate center Y for the combined geometry
+              combinedGeometry.computeBoundingBox();
               const bbox = combinedGeometry.boundingBox!;
               const centerY = (bbox.max.y + bbox.min.y) / 2;
+
+              console.log(
+                `Combined shell geometry - Y range: ${bbox.min.y.toFixed(
+                  2
+                )} to ${bbox.max.y.toFixed(2)}, center: ${centerY.toFixed(2)}`
+              );
 
               // Split combined geometry into top and bottom halves
               const { topGeometry, bottomGeometry } = splitGeometryByY(
