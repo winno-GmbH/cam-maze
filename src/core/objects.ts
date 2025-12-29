@@ -222,76 +222,116 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             console.log("Found pill object:", child.name);
             const pillGroup = new THREE.Group();
             console.log("=== PILL ELEMENTS ===");
+
+            // First pass: collect all shell meshes
+            const shellMeshes: THREE.Mesh[] = [];
+            const otherMeshes: Array<{
+              mesh: THREE.Mesh;
+              name: string;
+              isBitcoin: boolean;
+            }> = [];
+
             child.traverse((subChild: THREE.Object3D) => {
               if ((subChild as any).isMesh) {
                 const mesh = subChild as THREE.Mesh;
                 const subChildName = subChild.name || "";
                 console.log(`Pill element: "${subChildName}"`);
                 const clonedMesh = mesh.clone();
-                // Apply materials: shell front = white glass, shell back = orange intransparent, bitcoin symbol = orange, inner elements = black
                 const lowerName = subChildName.toLowerCase();
                 const isShell = lowerName.includes("shell");
-                // Check for bitcoin SYMBOL - "bitcoin" or "btc_logo"
                 const isBitcoin =
                   lowerName.includes("bitcoin") ||
                   lowerName.includes("btc_logo");
 
                 if (isShell) {
-                  // For shell, split into two halves: top (orange) and bottom (transparent white)
-                  const geometry = clonedMesh.geometry;
-
-                  // Calculate bounding box to find center Y
-                  geometry.computeBoundingBox();
-                  const bbox = geometry.boundingBox!;
-                  const centerY = (bbox.max.y + bbox.min.y) / 2;
-
-                  // Split geometry into top and bottom halves
-                  const { topGeometry, bottomGeometry } = splitGeometryByY(
-                    geometry,
-                    centerY
-                  );
-
-                  // Create top half mesh (orange, nearly intransparent)
-                  const topMesh = new THREE.Mesh(
-                    topGeometry,
-                    (
-                      pillMaterialMap.shellBack as THREE.MeshPhysicalMaterial
-                    ).clone()
-                  );
-                  topMesh.visible = true;
-                  topMesh.castShadow = true;
-                  topMesh.receiveShadow = true;
-                  pillGroup.add(topMesh);
-
-                  // Create bottom half mesh (transparent white glass)
-                  const bottomMesh = new THREE.Mesh(
-                    bottomGeometry,
-                    (
-                      pillMaterialMap.shellFront as THREE.MeshPhysicalMaterial
-                    ).clone()
-                  );
-                  bottomMesh.visible = true;
-                  bottomMesh.castShadow = true;
-                  bottomMesh.receiveShadow = true;
-                  pillGroup.add(bottomMesh);
-
-                  console.log(
-                    `  -> Shell material (top: orange intransparent, bottom: white glass)`
-                  );
-                } else if (isBitcoin) {
-                  clonedMesh.material = pillMaterialMap.bitcoin; // Fully orange (the B symbol)
-                  console.log(`  -> Bitcoin material (fully orange)`);
-                  pillGroup.add(clonedMesh);
+                  shellMeshes.push(clonedMesh);
                 } else {
-                  // Everything else (inlay, inner elements, etc.) is black
-                  clonedMesh.material = pillMaterialMap.default; // Black for inner elements
-                  console.log(`  -> Default material (black)`);
-                  clonedMesh.visible = true;
-                  clonedMesh.castShadow = true;
-                  clonedMesh.receiveShadow = true;
-                  pillGroup.add(clonedMesh);
+                  otherMeshes.push({
+                    mesh: clonedMesh,
+                    name: subChildName,
+                    isBitcoin,
+                  });
                 }
               }
+            });
+
+            // Process all shell meshes together - combine them first, then split
+            if (shellMeshes.length > 0) {
+              console.log(
+                `Found ${shellMeshes.length} shell mesh(es), combining and splitting...`
+              );
+
+              // Combine all shell geometries
+              const shellGeometries = shellMeshes.map((m) => m.geometry);
+              const combinedGeometry = new THREE.BufferGeometry();
+
+              // Merge all shell geometries
+              const positions: number[] = [];
+              shellGeometries.forEach((geom) => {
+                const pos = geom.attributes.position;
+                const posArray = pos.array as Float32Array;
+                positions.push(...Array.from(posArray));
+              });
+
+              combinedGeometry.setAttribute(
+                "position",
+                new THREE.BufferAttribute(new Float32Array(positions), 3)
+              );
+              combinedGeometry.computeBoundingBox();
+              combinedGeometry.computeVertexNormals();
+
+              // Calculate center Y for the combined geometry
+              const bbox = combinedGeometry.boundingBox!;
+              const centerY = (bbox.max.y + bbox.min.y) / 2;
+
+              // Split combined geometry into top and bottom halves
+              const { topGeometry, bottomGeometry } = splitGeometryByY(
+                combinedGeometry,
+                centerY
+              );
+
+              // Create top half mesh (orange, nearly intransparent)
+              const topMesh = new THREE.Mesh(
+                topGeometry,
+                (
+                  pillMaterialMap.shellBack as THREE.MeshPhysicalMaterial
+                ).clone()
+              );
+              topMesh.visible = true;
+              topMesh.castShadow = true;
+              topMesh.receiveShadow = true;
+              pillGroup.add(topMesh);
+
+              // Create bottom half mesh (transparent white glass)
+              const bottomMesh = new THREE.Mesh(
+                bottomGeometry,
+                (
+                  pillMaterialMap.shellFront as THREE.MeshPhysicalMaterial
+                ).clone()
+              );
+              bottomMesh.visible = true;
+              bottomMesh.castShadow = true;
+              bottomMesh.receiveShadow = true;
+              pillGroup.add(bottomMesh);
+
+              console.log(
+                `  -> Shell material (top: orange intransparent, bottom: white glass)`
+              );
+            }
+
+            // Process other meshes (bitcoin, inner elements, etc.)
+            otherMeshes.forEach(({ mesh, name, isBitcoin }) => {
+              if (isBitcoin) {
+                mesh.material = pillMaterialMap.bitcoin; // Fully orange (the B symbol)
+                console.log(`  -> Bitcoin material (fully orange): "${name}"`);
+              } else {
+                mesh.material = pillMaterialMap.default; // Black for inner elements
+                console.log(`  -> Default material (black): "${name}"`);
+              }
+              mesh.visible = true;
+              mesh.castShadow = true;
+              mesh.receiveShadow = true;
+              pillGroup.add(mesh);
             });
             console.log("=== END PILL ELEMENTS ===");
             if (pillGroup.children.length > 0) {
