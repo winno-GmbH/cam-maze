@@ -31,6 +31,7 @@ let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
 
 let startPositions: Record<string, THREE.Vector3> = {};
+let allObjects: Array<[string, THREE.Object3D]> = [];
 
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
@@ -134,17 +135,33 @@ export function initHomeScrollAnimation() {
         if (!introScrollTrigger?.isActive) {
           homeScrollTimeline?.resume();
         }
+        // Kill all object animations and reset opacity when leaving home-scroll
+        allObjects.forEach(([key, object]) => {
+          killObjectAnimations(object);
+          setObjectOpacity(object, 1.0, {
+            preserveTransmission: true,
+            skipCurrencySymbols: true,
+          });
+        });
       },
       onLeaveBack: () => {
         const introScrollTrigger = ScrollTrigger.getById("introScroll");
         if (!introScrollTrigger?.isActive) {
           homeScrollTimeline?.resume();
         }
+        // Kill all object animations and reset opacity when leaving home-scroll (scrolling back)
+        allObjects.forEach(([key, object]) => {
+          killObjectAnimations(object);
+          setObjectOpacity(object, 1.0, {
+            preserveTransmission: true,
+            skipCurrencySymbols: true,
+          });
+        });
       },
     },
   });
 
-  const allObjects = Object.entries(ghosts);
+  allObjects = Object.entries(ghosts);
   allObjects.forEach(([key, object]) => {
     startPositions[key] = object.position.clone();
   });
