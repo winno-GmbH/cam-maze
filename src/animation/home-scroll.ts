@@ -223,12 +223,17 @@ export function initHomeScrollAnimation() {
       });
     });
 
-    const baseEndTime = 1;
+    // All animations should have the same duration (1.0) to sync with scroll progress
+    // The stagger effect is achieved by offsetting the start time instead
+    const baseDuration = 1.0;
+    const staggerOffset = STAGGER_AMOUNT;
 
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];
-      const endTime = baseEndTime + index * STAGGER_AMOUNT;
-      const duration = endTime;
+      // Start time offset for stagger effect
+      const startTime = index * staggerOffset;
+      // All animations have the same duration to sync with scroll progress
+      const duration = baseDuration;
 
       const startPathPoint = data.path.getPointAt(0);
       data.object.position.copy(startPathPoint);
@@ -273,7 +278,7 @@ export function initHomeScrollAnimation() {
             });
           },
         },
-        0
+        startTime // Start time offset for stagger
       );
     });
   };
