@@ -183,7 +183,22 @@ export function initHomeScrollAnimation() {
           .normalize();
 
         // Calculate direction from current camera position to maze center
-        const directionToMazeCenter = objectHomeScrollEndPathPoint
+        // Get the end lookAt point from camera path points (this is the target lookAt at the end)
+        const endLookAt =
+          cameraPathPoints[cameraPathPoints.length - 1] &&
+          "lookAt" in cameraPathPoints[cameraPathPoints.length - 1]
+            ? (
+                cameraPathPoints[cameraPathPoints.length - 1] as {
+                  pos: THREE.Vector3;
+                  lookAt: THREE.Vector3;
+                }
+              ).lookAt
+            : null;
+
+        if (!endLookAt) return;
+
+        // Calculate direction from current camera position to end lookAt (maze center)
+        const directionToMazeCenter = endLookAt
           .clone()
           .sub(camera.position)
           .normalize();
