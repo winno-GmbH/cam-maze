@@ -279,9 +279,10 @@ export function initHomeScrollAnimation() {
       });
     });
 
-    // All animations should have the same duration (1.0) to sync with scroll progress
+    // All animations should have the same duration to sync with scroll progress
+    // Increased duration to make objects slower (more time to complete animation)
     // The stagger effect is achieved by offsetting the start time instead
-    const baseDuration = 1.0;
+    const baseDuration = 1.5; // Increased from 1.0 to make objects slower
     const staggerOffset = STAGGER_AMOUNT;
 
     animationData.forEach((data, index) => {
