@@ -145,40 +145,27 @@ export function initHomeScrollAnimation() {
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
 
-          // Extract lookAt points and use Bezier curve, but with adjusted control points to avoid over-rotation
-          const lookAtPoints: THREE.Vector3[] = [];
-          cameraPathPoints.forEach((point) => {
-            if ("lookAt" in point) {
-              lookAtPoints.push(
-                (point as { pos: THREE.Vector3; lookAt: THREE.Vector3 }).lookAt
-              );
-            }
-          });
+          // Simple linear interpolation for lookAt - direct rotation from start to end
+          // This ensures smooth, predictable rotation without over-rotation
+          const startPoint = cameraPathPoints[0];
+          const endPoint = cameraPathPoints[cameraPathPoints.length - 1];
+          const startLookAt =
+            startPoint && "lookAt" in startPoint
+              ? (startPoint as { pos: THREE.Vector3; lookAt: THREE.Vector3 })
+                  .lookAt
+              : null;
+          const endLookAt =
+            endPoint && "lookAt" in endPoint
+              ? (endPoint as { pos: THREE.Vector3; lookAt: THREE.Vector3 })
+                  .lookAt
+              : null;
 
-          if (lookAtPoints.length >= 4) {
-            // Use the original Bezier curve, but adjust control points to be closer to start/end
-            // This reduces over-rotation while maintaining smoothness
-            const startLookAt = lookAtPoints[0];
-            const endLookAt = lookAtPoints[3];
-
-            // Make control points much closer to start/end to minimize curve strength
-            // This prevents the curve from overshooting - using 0.3 means control points are 30% towards original, 70% towards start/end
-            const controlPoint1 = startLookAt
+          if (startLookAt && endLookAt) {
+            // Direct linear interpolation from start to end lookAt
+            // Use linear progress to ensure smooth, direct rotation
+            const lookAtPoint = startLookAt
               .clone()
-              .lerp(lookAtPoints[1], 0.3);
-            const controlPoint2 = startLookAt
-              .clone()
-              .lerp(lookAtPoints[1], 0.6);
-
-            const lookAtCurve = new THREE.CubicBezierCurve3(
-              startLookAt,
-              controlPoint1,
-              controlPoint2,
-              endLookAt
-            );
-            // Use linear progress for lookAt to ensure smooth, direct rotation without over-rotation
-            // The camera position uses eased progress, but lookAt should be linear
-            const lookAtPoint = lookAtCurve.getPointAt(clampedProgress);
+              .lerp(endLookAt, clampedProgress);
             camera.lookAt(lookAtPoint);
           }
           camera.fov = originalFOV;
