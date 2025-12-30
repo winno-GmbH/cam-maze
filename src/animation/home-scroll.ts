@@ -39,8 +39,6 @@ const clonedMaterials: THREE.Material[] = [];
 // Cache for paths to avoid recalculation
 let cachedPaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null = null;
 let cachedPathsKey: string | null = null;
-// Cache Z rotation start value (to ensure Z goes from start to 0)
-let cachedStartRotZ: number | null = null;
 
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
@@ -49,23 +47,6 @@ export function initHomeScrollAnimation() {
   }
 
   const cameraPathPoints = getCameraHomeScrollPathPoints();
-
-  // Cache Z rotation start value (calculated at start position)
-  const startLookAt =
-    cameraPathPoints[0] && "lookAt" in cameraPathPoints[0]
-      ? (cameraPathPoints[0] as { pos: THREE.Vector3; lookAt: THREE.Vector3 })
-          .lookAt
-      : null;
-
-  if (startLookAt && cameraPathPoints[0].pos) {
-    const startCameraPos = cameraPathPoints[0].pos;
-    const tempCamera = new THREE.PerspectiveCamera();
-    tempCamera.position.copy(startCameraPos);
-    tempCamera.lookAt(startLookAt);
-    cachedStartRotZ = new THREE.Euler().setFromQuaternion(
-      tempCamera.quaternion
-    ).z;
-  }
 
   const cameraPath = new THREE.CurvePath<THREE.Vector3>();
   if (cameraPathPoints.length === 4) {
@@ -158,57 +139,9 @@ export function initHomeScrollAnimation() {
         // Update camera position
         camera.position.copy(cameraPath.getPointAt(cameraProgress));
 
-        // Get start lookAt point for initial rotation direction
-        const startLookAt =
-          cameraPathPoints[0] && "lookAt" in cameraPathPoints[0]
-            ? (
-                cameraPathPoints[0] as {
-                  pos: THREE.Vector3;
-                  lookAt: THREE.Vector3;
-                }
-              ).lookAt
-            : null;
-
-        if (!startLookAt) return;
-
-        // Apply easing to rotation progress to stretch it over the entire scroll duration
-        // Use a gentler easing curve so rotation happens more gradually
-        const rotationProgress =
-          clampedProgress * clampedProgress * clampedProgress; // Cubic ease-in
-
-        // Calculate direction from current camera position to start lookAt point
-        const directionToStartLookAt = startLookAt
-          .clone()
-          .sub(camera.position)
-          .normalize();
-
-        // Calculate direction from current camera position to maze center
-        // Use the actual maze center coordinates: (0.45175, 0.5, 0.55675)
+        // Simply look at maze center
         const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
-        const directionToMazeCenter = mazeCenter
-          .clone()
-          .sub(camera.position)
-          .normalize();
-
-        // Interpolate between start direction and maze center direction
-        // This gradually rotates the camera from looking at startLookAt to looking at maze center
-        const finalDirection = directionToStartLookAt
-          .clone()
-          .lerp(directionToMazeCenter, rotationProgress)
-          .normalize();
-
-        // Create lookAt point based on current camera position and interpolated direction
-        const finalLookAt = camera.position
-          .clone()
-          .add(finalDirection.multiplyScalar(10));
-
-        // Set X/Y rotation via lookAt
-        camera.lookAt(finalLookAt);
-
-        // Set Z rotation directly using eased rotation progress (from start to 0)
-        if (cachedStartRotZ !== null) {
-          camera.rotation.z = cachedStartRotZ * (1 - rotationProgress);
-        }
+        camera.lookAt(mazeCenter);
 
         camera.fov = originalFOV;
         camera.updateProjectionMatrix();
