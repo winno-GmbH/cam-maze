@@ -81,81 +81,6 @@ export function initHomeScrollAnimation() {
     });
     // Dispose cloned materials to prevent memory leaks
     disposeClonedMaterials();
-
-    // Stop any camera animations from home-scroll to prevent conflicts
-    gsap.killTweensOf(camera.position);
-  };
-
-  const handleScrollLeaveBack = () => {
-    // This is called when scrolling back up (onLeaveBack)
-    // Start smooth camera transition to home-loop position immediately
-    const introScrollTrigger = ScrollTrigger.getById("introScroll");
-    // Pause timeline to prevent reverse animation when scrolling back
-    if (homeScrollTimeline) {
-      homeScrollTimeline.pause();
-    }
-    // Kill all object animations and reset opacity when leaving home-scroll
-    allObjects.forEach(([key, object]) => {
-      killObjectAnimations(object);
-      setObjectOpacity(object, 1.0, {
-        preserveTransmission: true,
-        skipCurrencySymbols: true,
-      });
-    });
-    // Dispose cloned materials to prevent memory leaks
-    disposeClonedMaterials();
-
-    // Start smooth camera transition to home-loop position immediately
-    // This prevents camera "snap" when scrolling back to top
-    requestAnimationFrame(() => {
-      const {
-        getStartPosition,
-        getLookAtPosition,
-      } = require("../paths/pathpoints");
-      const targetCameraPos = getStartPosition();
-      const currentCameraPos = camera.position.clone();
-      const cameraDistance = currentCameraPos.distanceTo(targetCameraPos);
-
-      if (cameraDistance > 0.05) {
-        // Kill any existing camera animations
-        gsap.killTweensOf(camera.position);
-
-        // Explicitly set starting position to prevent first frame jump
-        camera.position.copy(currentCameraPos);
-
-        // Smooth transition to home-loop start position with longer duration
-        gsap.to(camera.position, {
-          x: targetCameraPos.x,
-          y: targetCameraPos.y,
-          z: targetCameraPos.z,
-          duration: 1.5, // Longer duration for smoother transition
-          ease: "power2.inOut",
-          onUpdate: () => {
-            camera.updateProjectionMatrix();
-          },
-        });
-
-        // Also transition lookAt
-        const targetLookAt = getLookAtPosition();
-        const lookAtProps = { t: 0 };
-        const startLookAt = new THREE.Vector3();
-        camera.getWorldDirection(startLookAt);
-        startLookAt.multiplyScalar(10).add(currentCameraPos);
-
-        gsap.to(lookAtProps, {
-          t: 1,
-          duration: 1.5,
-          ease: "power2.inOut",
-          onUpdate: () => {
-            const currentLookAt = startLookAt
-              .clone()
-              .lerp(targetLookAt, lookAtProps.t);
-            camera.lookAt(currentLookAt);
-            camera.updateProjectionMatrix();
-          },
-        });
-      }
-    });
   };
 
   const handleScrollEnter = () => {
@@ -209,13 +134,7 @@ export function initHomeScrollAnimation() {
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
       onUpdate: (self) => {
-        // Don't update camera if we're transitioning to home-loop
-        const homeLoopTrigger = ScrollTrigger.getById("homeLoop");
-        if (homeLoopTrigger?.isActive) {
-          return;
-        }
-
-        // Don't update if timeline is paused (we're leaving home-scroll)
+        // Don't update camera if timeline is paused
         if (homeScrollTimeline && homeScrollTimeline.paused()) {
           return;
         }
@@ -254,7 +173,7 @@ export function initHomeScrollAnimation() {
         }
       },
       onLeave: handleScrollLeave,
-      onLeaveBack: handleScrollLeaveBack,
+      onLeaveBack: handleScrollLeave,
     },
   });
 

@@ -178,21 +178,60 @@ export function startHomeLoop() {
   rotationTransitionTime = 0;
   startRotations = {};
 
-  // Camera transition is now handled in home-scroll's handleScrollLeave
-  // to start earlier and prevent any snap. Just ensure camera is at target position here.
+  // Smooth camera transition to home loop start position
   const { getStartPosition, getLookAtPosition } = require("../paths/pathpoints");
   const targetCameraPos = getStartPosition();
   const currentCameraPos = camera.position.clone();
   const cameraDistance = currentCameraPos.distanceTo(targetCameraPos);
 
-  // Only set directly if very close (transition should already be running from handleScrollLeave)
-  if (cameraDistance < 0.05) {
+  // Check if we're coming from home-scroll
+  const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
+  const wasInHomeScroll = homeScrollTrigger && homeScrollTrigger.progress > 0;
+
+  // Always transition if distance is significant
+  if (cameraDistance > 0.1) {
+    gsap.killTweensOf(camera.position);
+    
+    // Use longer transition when coming from home-scroll
+    const transitionDuration = wasInHomeScroll ? 1.0 : 0.5;
+    
+    gsap.to(camera.position, {
+      x: targetCameraPos.x,
+      y: targetCameraPos.y,
+      z: targetCameraPos.z,
+      duration: transitionDuration,
+      ease: "power2.out",
+      onUpdate: () => {
+        camera.updateProjectionMatrix();
+      },
+    });
+
+    // Also transition lookAt
+    const targetLookAt = getLookAtPosition();
+    const lookAtProps = { t: 0 };
+    const startLookAt = new THREE.Vector3();
+    camera.getWorldDirection(startLookAt);
+    startLookAt.multiplyScalar(10).add(currentCameraPos);
+
+    gsap.to(lookAtProps, {
+      t: 1,
+      duration: transitionDuration,
+      ease: "power2.out",
+      onUpdate: () => {
+        const currentLookAt = startLookAt
+          .clone()
+          .lerp(targetLookAt, lookAtProps.t);
+        camera.lookAt(currentLookAt);
+        camera.updateProjectionMatrix();
+      },
+    });
+  } else {
+    // If already close, just set directly
     camera.position.copy(targetCameraPos);
     const targetLookAt = getLookAtPosition();
     camera.lookAt(targetLookAt);
     camera.updateProjectionMatrix();
   }
-  // Otherwise, let the transition from handleScrollLeave continue
 
   applyHomeLoopPreset(true);
 
