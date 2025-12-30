@@ -51,6 +51,7 @@ async function main() {
   initOutroScrollAnimation();
   initSkipButton();
 
+
   startRenderLoop();
 }
 

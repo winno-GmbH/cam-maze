@@ -3,11 +3,8 @@ import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts, pacmanMixer } from "../core/objects";
-import { clock } from "../core/scene";
-import {
-  getCameraHomeScrollPathPoints,
-  objectHomeScrollEndPathPoint,
-} from "../paths/pathpoints";
+import { clock, onFrame } from "../core/scene";
+import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import { getHomeScrollPaths } from "../paths/paths";
 import { LAY_DOWN_QUAT_1 } from "./util";
 // Pacman rotation offsets (X=90°, Y=180°, Z=0° for correct end position)
@@ -26,7 +23,12 @@ import {
   setMaterialOpacity,
 } from "../core/material-utils";
 import { killObjectAnimations } from "./scene-utils";
-import { SCROLL_SELECTORS, SCRUB_DURATION, OPACITY } from "./constants";
+import {
+  SCROLL_SELECTORS,
+  SCRUB_DURATION,
+  STAGGER_AMOUNT,
+  OPACITY,
+} from "./constants";
 import { ghostMaterial, materialMap, pillMaterialMap } from "../core/materials";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
@@ -39,23 +41,12 @@ const clonedMaterials: THREE.Material[] = [];
 // Cache for paths to avoid recalculation
 let cachedPaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null = null;
 let cachedPathsKey: string | null = null;
-// Cache start rotation quaternion
-let startRotationQuaternion: THREE.Quaternion | null = null;
-// Cache start Z rotation
-let startRotZ: number | null = null;
-// Cache maze center lookAt rotation (reached at 50% progress)
-let mazeCenterLookAtQuaternion: THREE.Quaternion | null = null;
 
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
     homeScrollTimeline.kill();
     homeScrollTimeline = null;
   }
-
-  // Reset rotation caches
-  startRotationQuaternion = null;
-  startRotZ = null;
-  mazeCenterLookAtQuaternion = null;
 
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
@@ -69,34 +60,6 @@ export function initHomeScrollAnimation() {
     );
     cameraPath.add(cameraCurve);
   }
-
-  // Calculate end rotation for 0-50% interpolation
-  // This is the rotation the camera will have at 50% progress (at that position looking at maze center)
-  const lookAtTarget = new THREE.Vector3(0.55675, 0.2, 0.45175);
-
-  // Calculate camera position at 50% progress (using camera path)
-  const cameraProgressAt50 = 1 - Math.pow(1 - 0.5, 1.5); // Same easing as in onUpdate
-  const cameraPosAt50 = cameraPath.getPointAt(cameraProgressAt50);
-
-  // Calculate rotation at 50% position looking at maze center
-  const tempCamera = new THREE.PerspectiveCamera();
-  tempCamera.position.copy(cameraPosAt50);
-  tempCamera.lookAt(lookAtTarget);
-  mazeCenterLookAtQuaternion = tempCamera.quaternion.clone();
-
-  const mazeCenterEuler = new THREE.Euler().setFromQuaternion(
-    mazeCenterLookAtQuaternion
-  );
-  console.log(
-    "End rotation for 0-50% (at 50% position looking at maze center):",
-    {
-      x: (mazeCenterEuler.x * 180) / Math.PI,
-      y: (mazeCenterEuler.y * 180) / Math.PI,
-      z: (mazeCenterEuler.z * 180) / Math.PI,
-      cameraPosAt50: cameraPosAt50,
-      lookAtTarget: lookAtTarget,
-    }
-  );
 
   const disposeClonedMaterials = () => {
     clonedMaterials.forEach((mat) => {
@@ -125,9 +88,6 @@ export function initHomeScrollAnimation() {
       if (introScrollTrigger?.isActive) {
         return;
       }
-
-      // Store start rotation quaternion
-      startRotationQuaternion = camera.quaternion.clone();
 
       const homeLoopStartPos = getHomeLoopStartPositions();
       const homeLoopStartRot = getHomeLoopStartRotations();
@@ -173,82 +133,38 @@ export function initHomeScrollAnimation() {
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
       onUpdate: (self) => {
-        if (!cameraPath?.curves.length) return;
+        if (cameraPath && cameraPath.curves.length) {
+          const progress = self.progress;
+          const clampedProgress = Math.min(1, Math.max(0, progress));
 
-        const clampedProgress = Math.min(1, Math.max(0, self.progress));
-        const cameraProgress = 1 - Math.pow(1 - clampedProgress, 1.5);
+          // Camera: starts at 0%, ends at 100%
+          // Should start fast, then slow down (ease-out) - but gentler and slower
+          // Use a gentler ease-out curve (exponent 1.5 instead of 2) for slower, smoother acceleration
+          const cameraProgress = 1 - Math.pow(1 - clampedProgress, 1.5); // Gentler ease-out for slower camera movement
 
-        // Set start rotation quaternion and Z rotation if not set yet (at the very beginning)
-        if (!startRotationQuaternion) {
-          startRotationQuaternion = camera.quaternion.clone();
-          startRotZ = camera.rotation.z;
-          const startEuler = new THREE.Euler().setFromQuaternion(
-            startRotationQuaternion
-          );
-          console.log("Start rotation:", {
-            x: (startEuler.x * 180) / Math.PI,
-            y: (startEuler.y * 180) / Math.PI,
-            z: (startRotZ * 180) / Math.PI,
+          const cameraPoint = cameraPath.getPointAt(cameraProgress);
+          camera.position.copy(cameraPoint);
+
+          const lookAtPoints: THREE.Vector3[] = [];
+          cameraPathPoints.forEach((point) => {
+            if ("lookAt" in point && point.lookAt) {
+              lookAtPoints.push(point.lookAt);
+            }
           });
-        }
 
-        // Update camera position
-        camera.position.copy(cameraPath.getPointAt(cameraProgress));
-
-        // Rotation: 0-50% interpolate to end rotation, 50-100% use lookAt maze center
-        const lookAtTarget = new THREE.Vector3(0.55675, 0.2, 0.45175);
-
-        if (startRotationQuaternion && mazeCenterLookAtQuaternion) {
-          if (clampedProgress < 0.5) {
-            // 0-50%: Interpolate from start rotation to end rotation (at 50% position)
-            const rotationProgress = clampedProgress * 2; // Map 0-0.5 to 0-1
-            const easedProgress =
-              rotationProgress * rotationProgress * rotationProgress; // Cubic ease-in
-
-            camera.quaternion
-              .copy(startRotationQuaternion)
-              .slerp(mazeCenterLookAtQuaternion, easedProgress);
-
-            // Z rotation: linear from start to 0 (scaled to 50%)
-            if (startRotZ !== null) {
-              camera.rotation.z = startRotZ * (1 - easedProgress);
-            }
-          } else {
-            // 50-100%: Simply use lookAt maze center based on current position
-            camera.lookAt(lookAtTarget);
-
-            // Z rotation: continue from 50% to 0
-            if (startRotZ !== null) {
-              // At 50% we're at 50% of the way from start to 0
-              // From 50% to 100% we go the remaining 50%
-              const remainingProgress = (clampedProgress - 0.5) * 2; // Map 0.5-1.0 to 0-1
-              const zAt50 = startRotZ * 0.5; // Z rotation at 50%
-              camera.rotation.z = zAt50 * (1 - remainingProgress); // From zAt50 to 0
-            }
-          }
-
-          // Log rotation every 10% progress
-          if (
-            Math.floor(clampedProgress * 10) !==
-            Math.floor((clampedProgress - 0.001) * 10)
-          ) {
-            const currentEuler = new THREE.Euler().setFromQuaternion(
-              camera.quaternion
+          if (lookAtPoints.length >= 4) {
+            const lookAtCurve = new THREE.CubicBezierCurve3(
+              lookAtPoints[0],
+              lookAtPoints[1],
+              lookAtPoints[2],
+              lookAtPoints[3]
             );
-            console.log(`Progress ${(clampedProgress * 100).toFixed(0)}%:`, {
-              x: (currentEuler.x * 180) / Math.PI,
-              y: (currentEuler.y * 180) / Math.PI,
-              z: (camera.rotation.z * 180) / Math.PI,
-              cameraPos: camera.position,
-            });
+            const lookAtPoint = lookAtCurve.getPointAt(cameraProgress);
+            camera.lookAt(lookAtPoint);
           }
-        } else {
-          // Fallback: directly look at target
-          camera.lookAt(lookAtTarget);
+          camera.fov = originalFOV;
+          camera.updateProjectionMatrix();
         }
-
-        camera.fov = originalFOV;
-        camera.updateProjectionMatrix();
       },
       onLeave: handleScrollLeave,
       onLeaveBack: handleScrollLeave,
@@ -339,11 +255,14 @@ export function initHomeScrollAnimation() {
         object.quaternion.clone();
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
 
-      // Calculate end rotation
+      // For Pacman: Use rotation offsets from HUD sliders directly in end rotation
+      // This allows testing the end rotation by adjusting HUD values
       let endEuler: THREE.Euler;
       if (key === "pacman") {
-        // Apply rotation offsets for correct end position
+        // Use fixed rotation offsets for correct end position
         const offsets = PACMAN_ROTATION_OFFSETS;
+
+        // Start with LAY_DOWN_QUAT_1, then apply rotation offsets
         const xRotation = new THREE.Quaternion().setFromAxisAngle(
           new THREE.Vector3(1, 0, 0),
           (offsets.x * Math.PI) / 180
@@ -356,12 +275,15 @@ export function initHomeScrollAnimation() {
           new THREE.Vector3(0, 0, 1),
           (offsets.z * Math.PI) / 180
         );
+
+        // Combine rotations: LAY_DOWN_QUAT_1 * Y * X * Z
         const pacmanLayDown = LAY_DOWN_QUAT_1.clone()
           .multiply(yRotation)
           .multiply(xRotation)
           .multiply(zRotation);
         endEuler = new THREE.Euler().setFromQuaternion(pacmanLayDown);
       } else {
+        // Ghosts use standard lay down rotation
         endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
       }
 
@@ -398,6 +320,9 @@ export function initHomeScrollAnimation() {
       [0.2, 0.9], // Ghost4: start 20%, end 90%
       [0.25, 0.95], // Ghost5: start 25%, end 95%
     ];
+
+    const baseDuration = 1.0;
+    const staggerOffset = STAGGER_AMOUNT;
 
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];
@@ -447,43 +372,80 @@ export function initHomeScrollAnimation() {
             const pathPoint = data.path.getPointAt(easedProgress);
             data.object.position.copy(pathPoint);
 
-            // Rotation uses full scroll progress (0-100%) instead of object animation progress
-            // This stretches the rotation over the entire home-scroll duration
-            const fullScrollProgress = Math.min(
-              1,
-              Math.max(0, homeScrollTrigger.progress)
-            );
-            const rotationProgress =
-              fullScrollProgress * fullScrollProgress * fullScrollProgress; // Cubic ease-in
-
+            // Rotation also uses eased progress for smooth animation
             // Apply same rotation logic for all objects (Pacman and Ghosts)
             let startEuler = data.startEuler;
             let endEuler = data.endEuler;
 
-            // Calculate eased rotation
+            // For Pacman: Recalculate end rotation from HUD values in real-time and overwrite state
             let finalRotX: number;
             let finalRotY: number;
             let finalRotZ: number;
 
             if (data.key === "pacman") {
-              // Update pacmanMixer to keep mouth animation running
+              // Use fixed rotation offsets
+              const offsets = PACMAN_ROTATION_OFFSETS;
+              const xRotation = new THREE.Quaternion().setFromAxisAngle(
+                new THREE.Vector3(1, 0, 0),
+                (offsets.x * Math.PI) / 180
+              );
+              const yRotation = new THREE.Quaternion().setFromAxisAngle(
+                new THREE.Vector3(0, 1, 0),
+                (offsets.y * Math.PI) / 180
+              );
+              const zRotation = new THREE.Quaternion().setFromAxisAngle(
+                new THREE.Vector3(0, 0, 1),
+                (offsets.z * Math.PI) / 180
+              );
+              const pacmanLayDown = LAY_DOWN_QUAT_1.clone()
+                .multiply(yRotation)
+                .multiply(xRotation)
+                .multiply(zRotation);
+              const newEndEuler = new THREE.Euler().setFromQuaternion(
+                pacmanLayDown
+              );
+
+              // Calculate eased rotation using the new endEuler
+              finalRotX =
+                startEuler.x + (newEndEuler.x - startEuler.x) * easedProgress;
+              finalRotY =
+                startEuler.y + (newEndEuler.y - startEuler.y) * easedProgress;
+              finalRotZ =
+                startEuler.z + (newEndEuler.z - startEuler.z) * easedProgress;
+
+              // Update pacmanMixer if this is Pacman (to keep mouth animation running)
               if (pacmanMixer) {
                 pacmanMixer.update(clock.getDelta());
               }
+            } else {
+              // For ghosts: use standard calculation
+              finalRotX =
+                startEuler.x + (endEuler.x - startEuler.x) * easedProgress;
+              finalRotY =
+                startEuler.y + (endEuler.y - startEuler.y) * easedProgress;
+              finalRotZ =
+                startEuler.z + (endEuler.z - startEuler.z) * easedProgress;
             }
 
-            // Calculate eased rotation using full scroll progress (stretched over entire home-scroll)
-            finalRotX =
-              startEuler.x + (endEuler.x - startEuler.x) * rotationProgress;
-            finalRotY =
-              startEuler.y + (endEuler.y - startEuler.y) * rotationProgress;
-            finalRotZ =
-              startEuler.z + (endEuler.z - startEuler.z) * rotationProgress;
-
-            // Set rotation for all objects
+            // Set rotation for all objects - FORCE apply to overwrite any other rotation state
+            // This ensures the rotation is always applied, even if something else tries to override it
             data.object.rotation.set(finalRotX, finalRotY, finalRotZ);
             data.object.quaternion.setFromEuler(data.object.rotation);
             data.object.updateMatrixWorld(false);
+
+            // For Pacman: Set rotation again in next frame to ensure it's not overwritten
+            // This is a workaround to ensure the rotation persists after pacmanMixer.update()
+            if (data.key === "pacman") {
+              requestAnimationFrame(() => {
+                // Only apply if we're still in home-scroll
+                const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
+                if (homeScrollTrigger?.isActive && data.object) {
+                  data.object.rotation.set(finalRotX, finalRotY, finalRotZ);
+                  data.object.quaternion.setFromEuler(data.object.rotation);
+                  data.object.updateMatrixWorld(false);
+                }
+              });
+            }
 
             // Opacity animation: starts fading at 80% of the animation progress
             // From 0% to 80%: opacity stays at 1.0
