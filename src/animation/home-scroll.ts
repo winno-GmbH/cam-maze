@@ -145,40 +145,73 @@ export function initHomeScrollAnimation() {
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
 
-          // Simple linear interpolation for lookAt - direct rotation from start to end
-          // This ensures smooth, predictable rotation without over-rotation
-          const startPoint = cameraPathPoints[0];
-          const endPoint = cameraPathPoints[cameraPathPoints.length - 1];
-          const startLookAt =
-            startPoint && "lookAt" in startPoint
-              ? (startPoint as { pos: THREE.Vector3; lookAt: THREE.Vector3 })
-                  .lookAt
-              : null;
-          const endLookAt =
-            endPoint && "lookAt" in endPoint
-              ? (endPoint as { pos: THREE.Vector3; lookAt: THREE.Vector3 })
-                  .lookAt
-              : null;
+          // Calculate rotations for all camera path points and interpolate between them
+          // This ensures smooth rotation without over-rotation by using actual rotations instead of lookAt points
+          const rotations: THREE.Quaternion[] = [];
+          const positions: THREE.Vector3[] = [];
 
-          if (startLookAt && endLookAt) {
-            // Simple linear interpolation of lookAt points
-            // This should work correctly without over-rotation
-            const lookAtPoint = startLookAt
-              .clone()
-              .lerp(endLookAt, clampedProgress);
-            camera.lookAt(lookAtPoint);
+          cameraPathPoints.forEach((point) => {
+            if ("lookAt" in point) {
+              const lookAt = (
+                point as { pos: THREE.Vector3; lookAt: THREE.Vector3 }
+              ).lookAt;
+              const pos = point.pos;
+              positions.push(pos);
+
+              // Calculate direction from camera position to lookAt point
+              const direction = lookAt.clone().sub(pos).normalize();
+
+              // Create quaternion from direction (camera forward is -Z)
+              const quat = new THREE.Quaternion().setFromUnitVectors(
+                new THREE.Vector3(0, 0, -1),
+                direction
+              );
+              rotations.push(quat);
+            }
+          });
+
+          if (rotations.length >= 2) {
+            // Interpolate between rotations based on camera position progress
+            // Map cameraProgress (0-1) to segment index
+            const numSegments = rotations.length - 1;
+            const segmentSize = 1.0 / numSegments;
+
+            let segmentIndex = Math.floor(cameraProgress / segmentSize);
+            segmentIndex = Math.min(segmentIndex, numSegments - 1);
+
+            // Calculate progress within current segment
+            const segmentStart = segmentIndex * segmentSize;
+            const segmentProgress =
+              (cameraProgress - segmentStart) / segmentSize;
+
+            // Interpolate quaternions
+            const startQuat = rotations[segmentIndex];
+            const endQuat = rotations[segmentIndex + 1];
+            const currentQuat = new THREE.Quaternion().slerpQuaternions(
+              startQuat,
+              endQuat,
+              segmentProgress
+            );
+
+            camera.quaternion.copy(currentQuat);
 
             // Log camera rotation for debugging
             const euler = new THREE.Euler().setFromQuaternion(
               camera.quaternion
             );
             console.log(
-              `Progress: ${clampedProgress.toFixed(3)}, Camera Rotation: X=${(
-                (euler.x * 180) /
-                Math.PI
-              ).toFixed(2)}°, Y=${((euler.y * 180) / Math.PI).toFixed(
+              `Progress: ${clampedProgress.toFixed(
+                3
+              )}, CameraProgress: ${cameraProgress.toFixed(
+                3
+              )}, Segment: ${segmentIndex}, SegmentProgress: ${segmentProgress.toFixed(
+                3
+              )}, Camera Rotation: X=${((euler.x * 180) / Math.PI).toFixed(
                 2
-              )}°, Z=${((euler.z * 180) / Math.PI).toFixed(2)}°`
+              )}°, Y=${((euler.y * 180) / Math.PI).toFixed(2)}°, Z=${(
+                (euler.z * 180) /
+                Math.PI
+              ).toFixed(2)}°`
             );
           }
           camera.fov = originalFOV;
