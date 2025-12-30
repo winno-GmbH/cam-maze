@@ -179,11 +179,19 @@ export function initHomeScrollAnimation() {
               (clampedProgress - segmentStart) / segmentSize;
 
             // Linearly interpolate between the two lookAt points in this segment
-            const startLookAt = lookAtPoints[segmentIndex];
-            const endLookAt = lookAtPoints[segmentIndex + 1];
-            const lookAtPoint = startLookAt
+            const segmentStartLookAt = lookAtPoints[segmentIndex];
+            const segmentEndLookAt = lookAtPoints[segmentIndex + 1];
+            const lookAtPoint = segmentStartLookAt
               .clone()
-              .lerp(endLookAt, segmentProgress);
+              .lerp(segmentEndLookAt, segmentProgress);
+
+            // For Z: always use direct linear interpolation from start to end (Z should go directly to 0)
+            const globalStartLookAt = lookAtPoints[0];
+            const globalEndLookAt = lookAtPoints[lookAtPoints.length - 1];
+            lookAtPoint.z =
+              globalStartLookAt.z +
+              (globalEndLookAt.z - globalStartLookAt.z) * clampedProgress;
+
             camera.lookAt(lookAtPoint);
 
             // Log camera rotation for debugging
