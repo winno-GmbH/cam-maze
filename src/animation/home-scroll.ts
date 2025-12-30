@@ -78,6 +78,14 @@ export function initHomeScrollAnimation() {
   tempCamera.position.copy(endCameraPos);
   tempCamera.lookAt(mazeCenter);
   endRotationQuaternion = tempCamera.quaternion.clone();
+  const endEuler = new THREE.Euler().setFromQuaternion(endRotationQuaternion);
+  console.log("End rotation (calculated at end position):", {
+    x: (endEuler.x * 180) / Math.PI,
+    y: (endEuler.y * 180) / Math.PI,
+    z: (endEuler.z * 180) / Math.PI,
+    endCameraPos: endCameraPos,
+    mazeCenter: mazeCenter,
+  });
 
   const disposeClonedMaterials = () => {
     clonedMaterials.forEach((mat) => {
@@ -163,6 +171,14 @@ export function initHomeScrollAnimation() {
         if (!startRotationQuaternion) {
           startRotationQuaternion = camera.quaternion.clone();
           startRotZ = camera.rotation.z;
+          const startEuler = new THREE.Euler().setFromQuaternion(
+            startRotationQuaternion
+          );
+          console.log("Start rotation:", {
+            x: (startEuler.x * 180) / Math.PI,
+            y: (startEuler.y * 180) / Math.PI,
+            z: (startRotZ * 180) / Math.PI,
+          });
         }
 
         // Update camera position
@@ -182,6 +198,22 @@ export function initHomeScrollAnimation() {
           // Set Z rotation separately (linear from start to 0)
           if (startRotZ !== null) {
             camera.rotation.z = startRotZ * (1 - rotationProgress);
+          }
+
+          // Log rotation every 10% progress
+          if (
+            Math.floor(clampedProgress * 10) !==
+            Math.floor((clampedProgress - 0.001) * 10)
+          ) {
+            const currentEuler = new THREE.Euler().setFromQuaternion(
+              camera.quaternion
+            );
+            console.log(`Progress ${(clampedProgress * 100).toFixed(0)}%:`, {
+              x: (currentEuler.x * 180) / Math.PI,
+              y: (currentEuler.y * 180) / Math.PI,
+              z: (camera.rotation.z * 180) / Math.PI,
+              rotationProgress: rotationProgress.toFixed(3),
+            });
           }
         } else {
           // Fallback: directly look at maze center (X offset to 0.2)
