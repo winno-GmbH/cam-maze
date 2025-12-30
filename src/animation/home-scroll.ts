@@ -377,7 +377,12 @@ export function initHomeScrollAnimation() {
             let endEuler = data.endEuler;
 
             // For Pacman: Recalculate end rotation from HUD values in real-time and overwrite state
+            let finalRotX: number;
+            let finalRotY: number;
+            let finalRotZ: number;
+
             if (data.key === "pacman") {
+              // Get fresh rotation offsets from HUD
               const offsets = getPacmanRotationOffsets();
               const xRotation = new THREE.Quaternion().setFromAxisAngle(
                 new THREE.Vector3(1, 0, 0),
@@ -395,32 +400,35 @@ export function initHomeScrollAnimation() {
                 .multiply(yRotation)
                 .multiply(xRotation)
                 .multiply(zRotation);
-              endEuler = new THREE.Euler().setFromQuaternion(pacmanLayDown);
+              const newEndEuler = new THREE.Euler().setFromQuaternion(
+                pacmanLayDown
+              );
 
-              // Overwrite the stored endEuler in animationData to update GSAP state
-              data.endEuler.copy(endEuler);
+              // Calculate eased rotation using the new endEuler
+              finalRotX =
+                startEuler.x + (newEndEuler.x - startEuler.x) * easedProgress;
+              finalRotY =
+                startEuler.y + (newEndEuler.y - startEuler.y) * easedProgress;
+              finalRotZ =
+                startEuler.z + (newEndEuler.z - startEuler.z) * easedProgress;
 
-              // Also update the GSAP animation properties directly
-              animProps.rotX = endEuler.x;
-              animProps.rotY = endEuler.y;
-              animProps.rotZ = endEuler.z;
+              // Update pacmanMixer if this is Pacman (to keep mouth animation running)
+              if (pacmanMixer) {
+                pacmanMixer.update(clock.getDelta());
+              }
+            } else {
+              // For ghosts: use standard calculation
+              finalRotX =
+                startEuler.x + (endEuler.x - startEuler.x) * easedProgress;
+              finalRotY =
+                startEuler.y + (endEuler.y - startEuler.y) * easedProgress;
+              finalRotZ =
+                startEuler.z + (endEuler.z - startEuler.z) * easedProgress;
             }
 
-            const easedRotX =
-              startEuler.x + (endEuler.x - startEuler.x) * easedProgress;
-            const easedRotY =
-              startEuler.y + (endEuler.y - startEuler.y) * easedProgress;
-            const easedRotZ =
-              startEuler.z + (endEuler.z - startEuler.z) * easedProgress;
-
-            // Update pacmanMixer if this is Pacman (to keep mouth animation running)
-            if (data.key === "pacman" && pacmanMixer) {
-              pacmanMixer.update(clock.getDelta());
-            }
-
-            // Set rotation for all objects the same way (Pacman and Ghosts)
-            // Force apply rotation to overwrite any other rotation state
-            data.object.rotation.set(easedRotX, easedRotY, easedRotZ);
+            // Set rotation for all objects - FORCE apply to overwrite any other rotation state
+            // This ensures the rotation is always applied, even if something else tries to override it
+            data.object.rotation.set(finalRotX, finalRotY, finalRotZ);
             data.object.quaternion.setFromEuler(data.object.rotation);
             data.object.updateMatrixWorld(false);
 

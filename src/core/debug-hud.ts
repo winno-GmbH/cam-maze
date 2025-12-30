@@ -288,10 +288,11 @@ function updatePacmanHUD(): void {
       if (xValueDisplay) {
         xValueDisplay.textContent = `${pacmanRotationX}°`;
       }
-      // Trigger home-scroll animation update by invalidating cache
+      // Force animation update by calling the onUpdate callback
+      // The rotation will be recalculated in onUpdate using the new HUD values
       const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
-      if (homeScrollTrigger) {
-        // Force a small scroll update to trigger animation recalculation
+      if (homeScrollTrigger && homeScrollTrigger.isActive) {
+        // Trigger a refresh to force onUpdate to run
         homeScrollTrigger.refresh();
       }
     });
