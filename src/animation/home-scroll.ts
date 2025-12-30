@@ -134,10 +134,10 @@ export function initHomeScrollAnimation() {
           const progress = self.progress;
           const clampedProgress = Math.min(1, Math.max(0, progress));
 
-          // Camera starts slow like objects but reaches end faster
-          const easedProgress =
-            clampedProgress * clampedProgress * clampedProgress;
-          const cameraProgress = Math.min(1, easedProgress * 1.1); // Faster than objects (0.75)
+          // Camera: starts at 0%, ends at 100%
+          // Should start fast, then slow down (ease-out)
+          // Map progress 0-1 to camera path 0-1 with ease-out curve
+          const cameraProgress = 1 - Math.pow(1 - clampedProgress, 3); // Cubic ease-out (fast start, slow end)
 
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
@@ -276,18 +276,28 @@ export function initHomeScrollAnimation() {
       });
     });
 
-    // All animations should have the same duration (1.0) to sync with scroll progress
-    // Note: duration doesn't affect speed with scrub - speed is controlled by progress multiplier
-    // The stagger effect is achieved by offsetting the start time instead
+    // Define start and end scroll percentages for each object
+    // Format: [start%, end%]
+    const objectTimings = [
+      [0.0, 0.7], // Pacman: start 0%, end 70%
+      [0.05, 0.75], // Ghost1: start 5%, end 75%
+      [0.1, 0.8], // Ghost2: start 10%, end 80%
+      [0.15, 0.85], // Ghost3: start 15%, end 85%
+      [0.2, 0.9], // Ghost4: start 20%, end 90%
+      [0.25, 0.95], // Ghost5: start 25%, end 95%
+    ];
+
     const baseDuration = 1.0;
     const staggerOffset = STAGGER_AMOUNT;
 
     animationData.forEach((data, index) => {
       const animProps = animPropsArray[index];
-      // Start time offset for stagger effect
-      const startTime = index * staggerOffset;
-      // All animations have the same duration to sync with scroll progress
-      const duration = baseDuration;
+      const timing = objectTimings[index] || [0, 1];
+      const [startPercent, endPercent] = timing;
+
+      // Calculate start time and duration based on percentages
+      const startTime = startPercent;
+      const duration = endPercent - startPercent;
 
       const startPathPoint = data.path.getPointAt(0);
       data.object.position.copy(startPathPoint);
@@ -318,11 +328,12 @@ export function initHomeScrollAnimation() {
               return;
             }
 
-            // Apply ease-in to progress: slow at start, faster at end
+            // Map scroll progress to object animation progress
+            // animProps.progress is 0-1 within the object's animation window
+            // We need to map it to the path progress (0-1)
             const rawProgress = animProps.progress;
             const easedProgress = rawProgress * rawProgress * rawProgress; // Cubic ease-in
-            const slowedProgress = easedProgress * 0.75; // Make objects slower
-            const pathPoint = data.path.getPointAt(slowedProgress);
+            const pathPoint = data.path.getPointAt(easedProgress);
             data.object.position.copy(pathPoint);
 
             data.object.rotation.set(
