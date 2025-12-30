@@ -2,7 +2,8 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
-import { ghosts } from "../core/objects";
+import { ghosts, pacmanMixer } from "../core/objects";
+import { clock } from "../core/scene";
 import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import { getHomeScrollPaths } from "../paths/paths";
 import { LAY_DOWN_QUAT_1 } from "./util";
@@ -328,6 +329,11 @@ export function initHomeScrollAnimation() {
               return;
             }
 
+            // Update pacmanMixer if this is Pacman (to keep mouth animation running)
+            if (data.key === "pacman" && pacmanMixer) {
+              pacmanMixer.update(clock.getDelta());
+            }
+
             // Map scroll progress to object animation progress
             // animProps.progress is 0-1 within the object's animation window
             // Apply same easing to both position and rotation
@@ -348,6 +354,8 @@ export function initHomeScrollAnimation() {
             const easedRotZ =
               startEuler.z + (endEuler.z - startEuler.z) * easedProgress;
 
+            // Set rotation using eased progress
+            // IMPORTANT: Set rotation AFTER mixer update for Pacman to ensure it's not overridden
             data.object.rotation.set(easedRotX, easedRotY, easedRotZ);
             data.object.quaternion.setFromEuler(data.object.rotation);
 
