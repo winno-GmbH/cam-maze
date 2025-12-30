@@ -4,7 +4,10 @@ import * as THREE from "three";
 import { camera } from "../core/camera";
 import { ghosts, pacmanMixer } from "../core/objects";
 import { clock, onFrame } from "../core/scene";
-import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
+import {
+  getCameraHomeScrollPathPoints,
+  objectHomeScrollEndPathPoint,
+} from "../paths/pathpoints";
 import { getHomeScrollPaths } from "../paths/paths";
 import { LAY_DOWN_QUAT_1 } from "./util";
 // Pacman rotation offsets (X=90°, Y=180°, Z=0° for correct end position)
@@ -206,6 +209,19 @@ export function initHomeScrollAnimation() {
                 .clone()
                 .lerp(endLookAt, clampedProgress);
             }
+
+            // Adjust lookAt to point towards maze center
+            // Calculate direction from camera to maze center
+            const directionToCenter = objectHomeScrollEndPathPoint
+              .clone()
+              .sub(cameraPoint)
+              .normalize();
+            // Interpolate lookAt Y between original and center Y based on progress
+            // This ensures camera gradually looks towards maze center
+            const centerY = objectHomeScrollEndPathPoint.y;
+            const lookAtY =
+              lookAtPoint.y + (centerY - lookAtPoint.y) * clampedProgress;
+            lookAtPoint.y = lookAtY;
 
             // Use lookAt for X and Y rotation
             camera.lookAt(lookAtPoint);
