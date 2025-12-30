@@ -70,29 +70,33 @@ export function initHomeScrollAnimation() {
     cameraPath.add(cameraCurve);
   }
 
-  // Calculate maze center lookAt rotation (reached at 50% progress)
-  // This will be calculated at the middle camera position
+  // Calculate end rotation for 0-50% interpolation
+  // This is the rotation the camera will have at 50% progress (at that position looking at maze center)
   const lookAtTarget = new THREE.Vector3(0.55675, 0.2, 0.45175);
-  const startCameraPos = cameraPathPoints[0].pos;
-  const endCameraPos = cameraPathPoints[cameraPathPoints.length - 1].pos;
-  const middleCameraPos = startCameraPos.clone().lerp(endCameraPos, 0.5);
 
-  // Calculate rotation at middle position looking at maze center
+  // Calculate camera position at 50% progress (using camera path)
+  const cameraProgressAt50 = 1 - Math.pow(1 - 0.5, 1.5); // Same easing as in onUpdate
+  const cameraPosAt50 = cameraPath.getPointAt(cameraProgressAt50);
+
+  // Calculate rotation at 50% position looking at maze center
   const tempCamera = new THREE.PerspectiveCamera();
-  tempCamera.position.copy(middleCameraPos);
+  tempCamera.position.copy(cameraPosAt50);
   tempCamera.lookAt(lookAtTarget);
   mazeCenterLookAtQuaternion = tempCamera.quaternion.clone();
 
   const mazeCenterEuler = new THREE.Euler().setFromQuaternion(
     mazeCenterLookAtQuaternion
   );
-  console.log("Maze center lookAt rotation (reached at 50%):", {
-    x: (mazeCenterEuler.x * 180) / Math.PI,
-    y: (mazeCenterEuler.y * 180) / Math.PI,
-    z: (mazeCenterEuler.z * 180) / Math.PI,
-    middleCameraPos: middleCameraPos,
-    lookAtTarget: lookAtTarget,
-  });
+  console.log(
+    "End rotation for 0-50% (at 50% position looking at maze center):",
+    {
+      x: (mazeCenterEuler.x * 180) / Math.PI,
+      y: (mazeCenterEuler.y * 180) / Math.PI,
+      z: (mazeCenterEuler.z * 180) / Math.PI,
+      cameraPosAt50: cameraPosAt50,
+      lookAtTarget: lookAtTarget,
+    }
+  );
 
   const disposeClonedMaterials = () => {
     clonedMaterials.forEach((mat) => {
@@ -191,12 +195,12 @@ export function initHomeScrollAnimation() {
         // Update camera position
         camera.position.copy(cameraPath.getPointAt(cameraProgress));
 
-        // Rotation: 0-50% interpolate to maze center lookAt, 50-100% maintain lookAt
+        // Rotation: 0-50% interpolate to end rotation, 50-100% use lookAt maze center
         const lookAtTarget = new THREE.Vector3(0.55675, 0.2, 0.45175);
 
         if (startRotationQuaternion && mazeCenterLookAtQuaternion) {
           if (clampedProgress < 0.5) {
-            // 0-50%: Interpolate from start rotation to maze center lookAt
+            // 0-50%: Interpolate from start rotation to end rotation (at 50% position)
             const rotationProgress = clampedProgress * 2; // Map 0-0.5 to 0-1
             const easedProgress =
               rotationProgress * rotationProgress * rotationProgress; // Cubic ease-in
@@ -210,13 +214,16 @@ export function initHomeScrollAnimation() {
               camera.rotation.z = startRotZ * (1 - easedProgress);
             }
           } else {
-            // 50-100%: Maintain lookAt maze center (direct lookAt)
+            // 50-100%: Simply use lookAt maze center based on current position
             camera.lookAt(lookAtTarget);
 
-            // Z rotation: continue to 0
+            // Z rotation: continue from 50% to 0
             if (startRotZ !== null) {
+              // At 50% we're at 50% of the way from start to 0
+              // From 50% to 100% we go the remaining 50%
               const remainingProgress = (clampedProgress - 0.5) * 2; // Map 0.5-1.0 to 0-1
-              camera.rotation.z = startRotZ * (1 - remainingProgress);
+              const zAt50 = startRotZ * 0.5; // Z rotation at 50%
+              camera.rotation.z = zAt50 * (1 - remainingProgress); // From zAt50 to 0
             }
           }
 
