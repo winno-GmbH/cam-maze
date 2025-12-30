@@ -161,12 +161,12 @@ export function initHomeScrollAnimation() {
             const startLookAt = lookAtPoints[0];
             const endLookAt = lookAtPoints[3];
 
-            // Make control points closer to start/end to reduce curve strength
-            // This prevents the curve from overshooting
+            // Make control points much closer to start/end to minimize curve strength
+            // This prevents the curve from overshooting - using 0.3 means control points are 30% towards original, 70% towards start/end
             const controlPoint1 = startLookAt
               .clone()
-              .lerp(lookAtPoints[1], 0.7);
-            const controlPoint2 = endLookAt.clone().lerp(lookAtPoints[2], 0.7);
+              .lerp(lookAtPoints[1], 0.3);
+            const controlPoint2 = endLookAt.clone().lerp(lookAtPoints[2], 0.3);
 
             const lookAtCurve = new THREE.CubicBezierCurve3(
               startLookAt,
