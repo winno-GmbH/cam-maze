@@ -145,8 +145,7 @@ export function initHomeScrollAnimation() {
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
 
-          // Use segmented linear interpolation for lookAt to avoid over-rotation
-          // Extract all lookAt points from cameraPathPoints and interpolate between them linearly
+          // Extract lookAt points and use Bezier curve, but with adjusted control points to avoid over-rotation
           const lookAtPoints: THREE.Vector3[] = [];
           cameraPathPoints.forEach((point) => {
             if ("lookAt" in point) {
@@ -156,26 +155,26 @@ export function initHomeScrollAnimation() {
             }
           });
 
-          if (lookAtPoints.length >= 2) {
-            // Segment the progress into equal parts based on number of lookAt points
-            const numSegments = lookAtPoints.length - 1;
-            const segmentSize = 1.0 / numSegments;
+          if (lookAtPoints.length >= 4) {
+            // Use the original Bezier curve, but adjust control points to be closer to start/end
+            // This reduces over-rotation while maintaining smoothness
+            const startLookAt = lookAtPoints[0];
+            const endLookAt = lookAtPoints[3];
 
-            // Find which segment we're in
-            let segmentIndex = Math.floor(cameraProgress / segmentSize);
-            segmentIndex = Math.min(segmentIndex, numSegments - 1);
-
-            // Calculate progress within the current segment (0-1)
-            const segmentStart = segmentIndex * segmentSize;
-            const segmentProgress =
-              (cameraProgress - segmentStart) / segmentSize;
-
-            // Linearly interpolate between the two lookAt points in this segment
-            const startLookAt = lookAtPoints[segmentIndex];
-            const endLookAt = lookAtPoints[segmentIndex + 1];
-            const lookAtPoint = startLookAt
+            // Make control points closer to start/end to reduce curve strength
+            // This prevents the curve from overshooting
+            const controlPoint1 = startLookAt
               .clone()
-              .lerp(endLookAt, segmentProgress);
+              .lerp(lookAtPoints[1], 0.7);
+            const controlPoint2 = endLookAt.clone().lerp(lookAtPoints[2], 0.7);
+
+            const lookAtCurve = new THREE.CubicBezierCurve3(
+              startLookAt,
+              controlPoint1,
+              controlPoint2,
+              endLookAt
+            );
+            const lookAtPoint = lookAtCurve.getPointAt(cameraProgress);
             camera.lookAt(lookAtPoint);
           }
           camera.fov = originalFOV;
