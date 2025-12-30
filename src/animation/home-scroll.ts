@@ -67,10 +67,6 @@ export function initHomeScrollAnimation() {
 
   const handleScrollLeave = () => {
     const introScrollTrigger = ScrollTrigger.getById("introScroll");
-    // Pause timeline to prevent reverse animation when scrolling back
-    if (homeScrollTimeline) {
-      homeScrollTimeline.pause();
-    }
     // Kill all object animations and reset opacity when leaving home-scroll
     allObjects.forEach(([key, object]) => {
       killObjectAnimations(object);
@@ -134,11 +130,6 @@ export function initHomeScrollAnimation() {
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
       onUpdate: (self) => {
-        // Don't update camera if timeline is paused
-        if (homeScrollTimeline && homeScrollTimeline.paused()) {
-          return;
-        }
-
         if (cameraPath && cameraPath.curves.length) {
           const progress = self.progress;
           const clampedProgress = Math.min(1, Math.max(0, progress));
