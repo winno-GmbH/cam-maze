@@ -178,72 +178,21 @@ export function startHomeLoop() {
   rotationTransitionTime = 0;
   startRotations = {};
 
-  // Smooth camera transition to home loop start position
-  // Always transition if camera is not at target position (not just when homeScrollTrigger is active)
-  // This prevents camera "snap" when scrolling back to top
+  // Camera transition is now handled in home-scroll's handleScrollLeave
+  // to start earlier and prevent any snap. Just ensure camera is at target position here.
   const { getStartPosition, getLookAtPosition } = require("../paths/pathpoints");
   const targetCameraPos = getStartPosition();
-  
-  // Get current camera position BEFORE any other operations
-  // This ensures we capture the position from home-scroll before it changes
   const currentCameraPos = camera.position.clone();
   const cameraDistance = currentCameraPos.distanceTo(targetCameraPos);
 
-  // Check if we're coming from home-scroll (either active or just left)
-  const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
-  const wasInHomeScroll = homeScrollTrigger && (
-    homeScrollTrigger.isActive || 
-    homeScrollTrigger.progress > 0.1 // Recently left home-scroll
-  );
-
-  // Always transition if distance is significant, but use longer duration if coming from home-scroll
-  if (cameraDistance > 0.05) {
-    // Kill any existing camera animations first
-    gsap.killTweensOf(camera.position);
-    
-    // Explicitly set starting position to prevent first frame jump
-    camera.position.copy(currentCameraPos);
-    
-    // Use longer, smoother transition when coming from home-scroll
-    const transitionDuration = wasInHomeScroll ? 1.2 : 0.5;
-    
-    gsap.to(camera.position, {
-      x: targetCameraPos.x,
-      y: targetCameraPos.y,
-      z: targetCameraPos.z,
-      duration: transitionDuration,
-      ease: "power2.inOut", // Smoother easing
-      onUpdate: () => {
-        camera.updateProjectionMatrix();
-      },
-    });
-
-    // Also transition lookAt
-    const targetLookAt = getLookAtPosition();
-    const lookAtProps = { t: 0 };
-    const startLookAt = new THREE.Vector3();
-    camera.getWorldDirection(startLookAt);
-    startLookAt.multiplyScalar(10).add(currentCameraPos); // Use current position, not camera.position
-
-    gsap.to(lookAtProps, {
-      t: 1,
-      duration: transitionDuration,
-      ease: "power2.inOut", // Smoother easing
-      onUpdate: () => {
-        const currentLookAt = startLookAt
-          .clone()
-          .lerp(targetLookAt, lookAtProps.t);
-        camera.lookAt(currentLookAt);
-        camera.updateProjectionMatrix();
-      },
-    });
-  } else {
-    // If already close, just set directly
+  // Only set directly if very close (transition should already be running from handleScrollLeave)
+  if (cameraDistance < 0.05) {
     camera.position.copy(targetCameraPos);
     const targetLookAt = getLookAtPosition();
     camera.lookAt(targetLookAt);
     camera.updateProjectionMatrix();
   }
+  // Otherwise, let the transition from handleScrollLeave continue
 
   applyHomeLoopPreset(true);
 
