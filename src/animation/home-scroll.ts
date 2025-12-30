@@ -163,58 +163,55 @@ export function initHomeScrollAnimation() {
         // Update camera position
         camera.position.copy(cameraPath.getPointAt(cameraProgress));
 
-        // Extract lookAt points for X/Y rotation calculation
-        const lookAtPoints = cameraPathPoints
-          .filter(
-            (p): p is { pos: THREE.Vector3; lookAt: THREE.Vector3 } =>
-              "lookAt" in p && p.lookAt !== undefined
-          )
-          .map((p) => p.lookAt);
+        // Get start and end lookAt points for X/Y rotation
+        const startLookAt =
+          cameraPathPoints[0] && "lookAt" in cameraPathPoints[0]
+            ? (
+                cameraPathPoints[0] as {
+                  pos: THREE.Vector3;
+                  lookAt: THREE.Vector3;
+                }
+              ).lookAt
+            : null;
+        const endLookAt =
+          cameraPathPoints[cameraPathPoints.length - 1] &&
+          "lookAt" in cameraPathPoints[cameraPathPoints.length - 1]
+            ? (
+                cameraPathPoints[cameraPathPoints.length - 1] as {
+                  pos: THREE.Vector3;
+                  lookAt: THREE.Vector3;
+                }
+              ).lookAt
+            : null;
 
-        if (lookAtPoints.length < 2) return;
+        if (!startLookAt || !endLookAt) return;
 
-        // Calculate X/Y rotation direction from segmented interpolation
-        const numSegments = lookAtPoints.length - 1;
-        const segmentSize = 1.0 / numSegments;
-        const segmentIndex = Math.min(
-          Math.floor(clampedProgress / segmentSize),
-          numSegments - 1
-        );
-        const segmentStart = segmentIndex * segmentSize;
-        const segmentProgress = (clampedProgress - segmentStart) / segmentSize;
-
-        // Interpolate direction from camera to lookAt points (for X/Y rotation)
-        const directionPoint = lookAtPoints[segmentIndex]
+        // Linear interpolation from start to end lookAt (simple, no intermediate points)
+        const lookAtPoint = startLookAt
           .clone()
-          .lerp(lookAtPoints[segmentIndex + 1], segmentProgress);
+          .lerp(endLookAt, clampedProgress);
 
-        // Calculate direction vector from camera to interpolated lookAt point
-        const direction = directionPoint
-          .clone()
-          .sub(camera.position)
-          .normalize();
-
-        // Calculate direction to maze center
+        // Blend towards maze center to ensure we look at the center
         const directionToCenter = objectHomeScrollEndPathPoint
           .clone()
           .sub(camera.position)
           .normalize();
-
-        // Interpolate between segmented direction and center direction for X/Y
-        // This allows intermediate points for X/Y while gradually moving towards center
-        const blendedDirection = direction
+        const directionToLookAt = lookAtPoint
+          .clone()
+          .sub(camera.position)
+          .normalize();
+        const blendedDirection = directionToLookAt
           .clone()
           .lerp(directionToCenter, clampedProgress)
           .normalize();
 
-        // Create lookAt point that combines the blended direction with maze center distance
-        // This ensures we look at the maze center but with X/Y rotation from intermediate points
-        const lookAtPoint = camera.position
+        // Create final lookAt point
+        const finalLookAt = camera.position
           .clone()
           .add(blendedDirection.multiplyScalar(10));
 
         // Set X/Y rotation via lookAt
-        camera.lookAt(lookAtPoint);
+        camera.lookAt(finalLookAt);
 
         // Set Z rotation directly (linear from start to 0)
         if (cachedStartRotZ !== null) {
