@@ -322,11 +322,11 @@ export function initHomeScrollAnimation() {
         object.quaternion.clone();
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
 
-      // For Pacman: Use rotation offsets from HUD sliders
-      // This allows real-time adjustment of rotation axis
+      // For Pacman: Use rotation offsets from HUD sliders directly in end rotation
+      // This allows testing the end rotation by adjusting HUD values
       let endEuler: THREE.Euler;
       if (key === "pacman") {
-        // Get rotation offsets from HUD
+        // Get rotation offsets from HUD and apply them directly
         const offsets = getPacmanRotationOffsets();
 
         // Start with LAY_DOWN_QUAT_1, then apply rotation offsets

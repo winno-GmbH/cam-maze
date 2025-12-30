@@ -288,8 +288,13 @@ function updatePacmanHUD(): void {
       if (xValueDisplay) {
         xValueDisplay.textContent = `${pacmanRotationX}°`;
       }
-      // Force animation update - the frame-based update will handle the rotation
-      // No need to trigger scroll or refresh, as the frame callback runs every frame
+      // Recreate home-scroll animation to apply new end rotation
+      // Only if home-scroll is currently active
+      const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
+      if (homeScrollTrigger?.isActive) {
+        const { initHomeScrollAnimation } = require("../animation/home-scroll");
+        initHomeScrollAnimation();
+      }
     });
   }
   
@@ -300,7 +305,13 @@ function updatePacmanHUD(): void {
       if (yValueDisplay) {
         yValueDisplay.textContent = `${pacmanRotationY}°`;
       }
-      // Frame-based update will handle rotation changes automatically
+      // Recreate home-scroll animation to apply new end rotation
+      // Only if home-scroll is currently active
+      const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
+      if (homeScrollTrigger?.isActive) {
+        const { initHomeScrollAnimation } = require("../animation/home-scroll");
+        initHomeScrollAnimation();
+      }
     });
   }
   
@@ -311,7 +322,13 @@ function updatePacmanHUD(): void {
       if (zValueDisplay) {
         zValueDisplay.textContent = `${pacmanRotationZ}°`;
       }
-      // Frame-based update will handle rotation changes automatically
+      // Recreate home-scroll animation to apply new end rotation
+      // Only if home-scroll is currently active
+      const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
+      if (homeScrollTrigger?.isActive) {
+        const { initHomeScrollAnimation } = require("../animation/home-scroll");
+        initHomeScrollAnimation();
+      }
     });
   }
 }
