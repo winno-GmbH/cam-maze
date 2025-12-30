@@ -41,6 +41,9 @@ const clonedMaterials: THREE.Material[] = [];
 // Cache for paths to avoid recalculation
 let cachedPaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null = null;
 let cachedPathsKey: string | null = null;
+// Cache Z rotation values calculated at start position (to avoid intermediate point influence)
+let cachedStartRotZ: number | null = null;
+let cachedEndRotZ: number | null = null;
 
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
@@ -49,6 +52,41 @@ export function initHomeScrollAnimation() {
   }
 
   const cameraPathPoints = getCameraHomeScrollPathPoints();
+
+  // Calculate and cache Z rotation values at start position (only once, not per frame)
+  // This ensures Z rotation is truly linear from start to end without intermediate influence
+  const startLookAt =
+    cameraPathPoints[0] && "lookAt" in cameraPathPoints[0]
+      ? (cameraPathPoints[0] as { pos: THREE.Vector3; lookAt: THREE.Vector3 })
+          .lookAt
+      : null;
+  const endLookAt =
+    cameraPathPoints[cameraPathPoints.length - 1] &&
+    "lookAt" in cameraPathPoints[cameraPathPoints.length - 1]
+      ? (
+          cameraPathPoints[cameraPathPoints.length - 1] as {
+            pos: THREE.Vector3;
+            lookAt: THREE.Vector3;
+          }
+        ).lookAt
+      : null;
+
+  if (startLookAt && endLookAt && cameraPathPoints[0].pos) {
+    const startCameraPos = cameraPathPoints[0].pos;
+    const tempCameraStart = new THREE.PerspectiveCamera();
+    tempCameraStart.position.copy(startCameraPos);
+    tempCameraStart.lookAt(startLookAt);
+    cachedStartRotZ = new THREE.Euler().setFromQuaternion(
+      tempCameraStart.quaternion
+    ).z;
+
+    const tempCameraEnd = new THREE.PerspectiveCamera();
+    tempCameraEnd.position.copy(startCameraPos);
+    tempCameraEnd.lookAt(endLookAt);
+    cachedEndRotZ = new THREE.Euler().setFromQuaternion(
+      tempCameraEnd.quaternion
+    ).z;
+  }
 
   const cameraPath = new THREE.CurvePath<THREE.Vector3>();
   if (cameraPathPoints.length === 4) {
@@ -209,24 +247,32 @@ export function initHomeScrollAnimation() {
               );
             }
 
-            // For Z: ALWAYS calculate directly from start and end lookAt points only (no intermediate points)
+            // For Z: ALWAYS use cached values calculated at start position (no intermediate points, no per-frame recalculation)
             // This ensures Z rotation goes directly from start to end without any intermediate influence
-            const tempCameraStart = new THREE.PerspectiveCamera();
-            tempCameraStart.position.copy(cameraPoint);
-            tempCameraStart.lookAt(globalStartLookAt);
-            const startRotZ = new THREE.Euler().setFromQuaternion(
-              tempCameraStart.quaternion
-            ).z;
+            let rotationZ: number;
+            if (cachedStartRotZ !== null && cachedEndRotZ !== null) {
+              // Use cached values calculated once at start position
+              rotationZ =
+                cachedStartRotZ +
+                (cachedEndRotZ - cachedStartRotZ) * clampedProgress;
+            } else {
+              // Fallback: calculate if cache not available
+              const tempCameraStart = new THREE.PerspectiveCamera();
+              tempCameraStart.position.copy(cameraPoint);
+              tempCameraStart.lookAt(globalStartLookAt);
+              const startRotZ = new THREE.Euler().setFromQuaternion(
+                tempCameraStart.quaternion
+              ).z;
 
-            const tempCameraEnd = new THREE.PerspectiveCamera();
-            tempCameraEnd.position.copy(cameraPoint);
-            tempCameraEnd.lookAt(globalEndLookAt);
-            const endRotZ = new THREE.Euler().setFromQuaternion(
-              tempCameraEnd.quaternion
-            ).z;
+              const tempCameraEnd = new THREE.PerspectiveCamera();
+              tempCameraEnd.position.copy(cameraPoint);
+              tempCameraEnd.lookAt(globalEndLookAt);
+              const endRotZ = new THREE.Euler().setFromQuaternion(
+                tempCameraEnd.quaternion
+              ).z;
 
-            const rotationZ =
-              startRotZ + (endRotZ - startRotZ) * clampedProgress;
+              rotationZ = startRotZ + (endRotZ - startRotZ) * clampedProgress;
+            }
 
             // Combine X/Y (from segmented interpolation) with Z (from direct linear interpolation)
             const finalRotation = new THREE.Euler(
