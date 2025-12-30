@@ -329,11 +329,6 @@ export function initHomeScrollAnimation() {
               return;
             }
 
-            // Update pacmanMixer if this is Pacman (to keep mouth animation running)
-            if (data.key === "pacman" && pacmanMixer) {
-              pacmanMixer.update(clock.getDelta());
-            }
-
             // Map scroll progress to object animation progress
             // animProps.progress is 0-1 within the object's animation window
             // Apply same easing to both position and rotation
@@ -354,10 +349,19 @@ export function initHomeScrollAnimation() {
             const easedRotZ =
               startEuler.z + (endEuler.z - startEuler.z) * easedProgress;
 
-            // Set rotation using eased progress
-            // IMPORTANT: Set rotation AFTER mixer update for Pacman to ensure it's not overridden
-            data.object.rotation.set(easedRotX, easedRotY, easedRotZ);
-            data.object.quaternion.setFromEuler(data.object.rotation);
+            // For Pacman: Update mixer first, then set rotation to ensure it's not overridden
+            if (data.key === "pacman" && pacmanMixer) {
+              pacmanMixer.update(clock.getDelta());
+              // Set rotation AFTER mixer update to override any rotation changes from animation
+              data.object.rotation.set(easedRotX, easedRotY, easedRotZ);
+              data.object.quaternion.setFromEuler(data.object.rotation);
+              // Force update matrix to ensure rotation is applied
+              data.object.updateMatrixWorld(false);
+            } else {
+              // For other objects, just set rotation normally
+              data.object.rotation.set(easedRotX, easedRotY, easedRotZ);
+              data.object.quaternion.setFromEuler(data.object.rotation);
+            }
 
             setObjectOpacity(data.object, animProps.opacity, {
               preserveTransmission: true,

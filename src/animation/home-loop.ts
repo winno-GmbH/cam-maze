@@ -365,6 +365,10 @@ function updateHomeLoop(delta: number) {
 
   const introScrollTrigger = ScrollTrigger.getById("introScroll");
   if (introScrollTrigger?.isActive) return;
+  
+  // Don't update if home-scroll is active (to prevent rotation conflicts)
+  const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
+  if (homeScrollTrigger?.isActive) return;
 
   const maxDelta = 0.1;
   const clampedDelta = Math.min(delta, maxDelta);
