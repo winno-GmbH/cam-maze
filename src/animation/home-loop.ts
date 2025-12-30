@@ -183,6 +183,9 @@ export function startHomeLoop() {
   // This prevents camera "snap" when scrolling back to top
   const { getStartPosition, getLookAtPosition } = require("../paths/pathpoints");
   const targetCameraPos = getStartPosition();
+  
+  // Get current camera position BEFORE any other operations
+  // This ensures we capture the position from home-scroll before it changes
   const currentCameraPos = camera.position.clone();
   const cameraDistance = currentCameraPos.distanceTo(targetCameraPos);
 
@@ -194,18 +197,22 @@ export function startHomeLoop() {
   );
 
   // Always transition if distance is significant, but use longer duration if coming from home-scroll
-  if (cameraDistance > 0.1) {
+  if (cameraDistance > 0.05) {
+    // Kill any existing camera animations first
     gsap.killTweensOf(camera.position);
     
+    // Explicitly set starting position to prevent first frame jump
+    camera.position.copy(currentCameraPos);
+    
     // Use longer, smoother transition when coming from home-scroll
-    const transitionDuration = wasInHomeScroll ? 0.8 : 0.3;
+    const transitionDuration = wasInHomeScroll ? 1.2 : 0.5;
     
     gsap.to(camera.position, {
       x: targetCameraPos.x,
       y: targetCameraPos.y,
       z: targetCameraPos.z,
       duration: transitionDuration,
-      ease: "power2.out",
+      ease: "power2.inOut", // Smoother easing
       onUpdate: () => {
         camera.updateProjectionMatrix();
       },
@@ -216,12 +223,12 @@ export function startHomeLoop() {
     const lookAtProps = { t: 0 };
     const startLookAt = new THREE.Vector3();
     camera.getWorldDirection(startLookAt);
-    startLookAt.multiplyScalar(10).add(camera.position);
+    startLookAt.multiplyScalar(10).add(currentCameraPos); // Use current position, not camera.position
 
     gsap.to(lookAtProps, {
       t: 1,
       duration: transitionDuration,
-      ease: "power2.out",
+      ease: "power2.inOut", // Smoother easing
       onUpdate: () => {
         const currentLookAt = startLookAt
           .clone()
@@ -230,6 +237,12 @@ export function startHomeLoop() {
         camera.updateProjectionMatrix();
       },
     });
+  } else {
+    // If already close, just set directly
+    camera.position.copy(targetCameraPos);
+    const targetLookAt = getLookAtPosition();
+    camera.lookAt(targetLookAt);
+    camera.updateProjectionMatrix();
   }
 
   applyHomeLoopPreset(true);

@@ -82,15 +82,9 @@ export function initHomeScrollAnimation() {
     // Dispose cloned materials to prevent memory leaks
     disposeClonedMaterials();
 
-    // Smooth camera fade/transition when leaving home-scroll
-    // This helps mask the transition to home-loop
-    requestAnimationFrame(() => {
-      const homeLoopTrigger = ScrollTrigger.getById("homeLoop");
-      if (!homeLoopTrigger || !homeLoopTrigger.isActive) {
-        // Only fade if not immediately going to home-loop
-        // Camera will be handled by startHomeLoop if transitioning there
-      }
-    });
+    // Stop any camera animations from home-scroll to prevent conflicts
+    // The camera position will be handled by startHomeLoop transition
+    gsap.killTweensOf(camera.position);
   };
 
   const handleScrollEnter = () => {
@@ -144,6 +138,12 @@ export function initHomeScrollAnimation() {
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
       onUpdate: (self) => {
+        // Don't update camera if we're transitioning to home-loop
+        const homeLoopTrigger = ScrollTrigger.getById("homeLoop");
+        if (homeLoopTrigger?.isActive) {
+          return;
+        }
+
         if (cameraPath && cameraPath.curves.length) {
           const progress = self.progress;
           const clampedProgress = Math.min(1, Math.max(0, progress));
