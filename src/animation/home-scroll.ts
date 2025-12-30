@@ -26,12 +26,18 @@ import {
   STAGGER_AMOUNT,
   OPACITY,
 } from "./constants";
+import { ghostMaterial, materialMap, pillMaterialMap } from "../core/materials";
 
 let homeScrollTimeline: gsap.core.Timeline | null = null;
 const originalFOV = 50;
 
 let startPositions: Record<string, THREE.Vector3> = {};
 let allObjects: Array<[string, THREE.Object3D]> = [];
+// Track cloned materials for disposal
+const clonedMaterials: THREE.Material[] = [];
+// Cache for paths to avoid recalculation
+let cachedPaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null = null;
+let cachedPathsKey: string | null = null;
 
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
@@ -51,6 +57,30 @@ export function initHomeScrollAnimation() {
     );
     cameraPath.add(cameraCurve);
   }
+
+  const disposeClonedMaterials = () => {
+    clonedMaterials.forEach((mat) => {
+      mat.dispose();
+    });
+    clonedMaterials.length = 0;
+  };
+
+  const handleScrollLeave = () => {
+    const introScrollTrigger = ScrollTrigger.getById("introScroll");
+    if (!introScrollTrigger?.isActive) {
+      homeScrollTimeline?.resume();
+    }
+    // Kill all object animations and reset opacity when leaving home-scroll
+    allObjects.forEach(([key, object]) => {
+      killObjectAnimations(object);
+      setObjectOpacity(object, 1.0, {
+        preserveTransmission: true,
+        skipCurrencySymbols: true,
+      });
+    });
+    // Dispose cloned materials to prevent memory leaks
+    disposeClonedMaterials();
+  };
 
   const handleScrollEnter = () => {
     requestAnimationFrame(() => {
@@ -130,34 +160,8 @@ export function initHomeScrollAnimation() {
           camera.updateProjectionMatrix();
         }
       },
-      onLeave: () => {
-        const introScrollTrigger = ScrollTrigger.getById("introScroll");
-        if (!introScrollTrigger?.isActive) {
-          homeScrollTimeline?.resume();
-        }
-        // Kill all object animations and reset opacity when leaving home-scroll
-        allObjects.forEach(([key, object]) => {
-          killObjectAnimations(object);
-          setObjectOpacity(object, 1.0, {
-            preserveTransmission: true,
-            skipCurrencySymbols: true,
-          });
-        });
-      },
-      onLeaveBack: () => {
-        const introScrollTrigger = ScrollTrigger.getById("introScroll");
-        if (!introScrollTrigger?.isActive) {
-          homeScrollTimeline?.resume();
-        }
-        // Kill all object animations and reset opacity when leaving home-scroll (scrolling back)
-        allObjects.forEach(([key, object]) => {
-          killObjectAnimations(object);
-          setObjectOpacity(object, 1.0, {
-            preserveTransmission: true,
-            skipCurrencySymbols: true,
-          });
-        });
-      },
+      onLeave: handleScrollLeave,
+      onLeaveBack: handleScrollLeave,
     },
   });
 
@@ -175,7 +179,19 @@ export function initHomeScrollAnimation() {
       killObjectAnimations(object);
     });
 
-    const homeScrollPaths = getHomeScrollPaths(startPositions);
+    // Dispose old cloned materials before creating new ones
+    disposeClonedMaterials();
+
+    // Check if paths need to be recalculated
+    const pathsKey = JSON.stringify(startPositions);
+    let homeScrollPaths: Record<string, THREE.CurvePath<THREE.Vector3>>;
+    if (cachedPaths && cachedPathsKey === pathsKey) {
+      homeScrollPaths = cachedPaths;
+    } else {
+      homeScrollPaths = getHomeScrollPaths(startPositions);
+      cachedPaths = homeScrollPaths;
+      cachedPathsKey = pathsKey;
+    }
 
     const animPropsArray: any[] = [];
     const animationData: Array<{
@@ -192,18 +208,35 @@ export function initHomeScrollAnimation() {
       forEachMaterial(
         object,
         (mat: any, mesh: THREE.Mesh) => {
-          const clonedMat = mat.clone();
-          setMaterialOpacity(clonedMat, currentMaterialOpacity, true);
+          // Only clone if material is shared (not already cloned)
+          const isSharedMaterial =
+            mat === ghostMaterial ||
+            Object.values(materialMap).includes(mat) ||
+            Object.values(pillMaterialMap).includes(mat);
 
-          if (Array.isArray(mesh.material)) {
-            const index = mesh.material.indexOf(mat);
-            if (index !== -1) {
-              const clonedMaterials = [...mesh.material];
-              clonedMaterials[index] = clonedMat;
-              mesh.material = clonedMaterials;
+          let clonedMat: THREE.Material;
+          if (
+            isSharedMaterial ||
+            !mesh.material ||
+            Array.isArray(mesh.material)
+          ) {
+            clonedMat = mat.clone();
+            clonedMaterials.push(clonedMat);
+            setMaterialOpacity(clonedMat, currentMaterialOpacity, true);
+
+            if (Array.isArray(mesh.material)) {
+              const index = mesh.material.indexOf(mat);
+              if (index !== -1) {
+                const newMaterials = [...mesh.material];
+                newMaterials[index] = clonedMat;
+                mesh.material = newMaterials;
+              }
+            } else {
+              mesh.material = clonedMat;
             }
           } else {
-            mesh.material = clonedMat;
+            // Material already cloned, just update opacity
+            setMaterialOpacity(mat, currentMaterialOpacity, true);
           }
         },
         { skipCurrencySymbols: false }

@@ -110,15 +110,13 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
       function (gltf) {
         const model = gltf.scene;
 
+        // Combined traversal: collect names and process objects in one pass
         const allObjectNames: string[] = [];
-        model.traverse((node: THREE.Object3D) => {
-          if (node.name) {
-            allObjectNames.push(node.name);
-          }
-        });
-        console.log("All objects in 3D file:", allObjectNames);
-
         model.traverse((child: THREE.Object3D) => {
+          // Collect names for debugging (only in development)
+          if (process.env.NODE_ENV === "development" && child.name) {
+            allObjectNames.push(child.name);
+          }
           if (child.name === "CAM-Pacman") {
             const children: THREE.Object3D[] = [];
             child.traverse((subChild: THREE.Object3D) => {
@@ -220,9 +218,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               (child.name.toLowerCase().includes("pill") &&
                 child.name.toLowerCase().includes("orange")))
           ) {
-            console.log("Found pill object:", child.name);
             const pillGroup = new THREE.Group();
-            console.log("=== PILL ELEMENTS ===");
 
             // First pass: collect all shell meshes
             const shellMeshes: THREE.Mesh[] = [];
@@ -236,7 +232,6 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               if ((subChild as any).isMesh) {
                 const mesh = subChild as THREE.Mesh;
                 const subChildName = subChild.name || "";
-                console.log(`Pill element: "${subChildName}"`);
                 const clonedMesh = mesh.clone();
                 const lowerName = subChildName.toLowerCase();
                 const isShell = lowerName.includes("shell");
@@ -258,10 +253,6 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
 
             // Process all shell meshes together - combine them first, then split
             if (shellMeshes.length > 0) {
-              console.log(
-                `Found ${shellMeshes.length} shell mesh(es), combining and splitting...`
-              );
-
               // Apply mesh transformations to geometries before merging
               const transformedGeometries = shellMeshes.map((mesh) => {
                 const geometry = mesh.geometry.clone();
@@ -283,11 +274,12 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               const bbox = combinedGeometry.boundingBox!;
               const centerY = (bbox.max.y + bbox.min.y) / 2;
 
-              console.log(
-                `Combined shell geometry - Y range: ${bbox.min.y.toFixed(
-                  2
-                )} to ${bbox.max.y.toFixed(2)}, center: ${centerY.toFixed(2)}`
-              );
+              // Dispose original geometries after merging
+              transformedGeometries.forEach((geo) => {
+                if (geo !== combinedGeometry) {
+                  geo.dispose();
+                }
+              });
 
               // Split combined geometry into top and bottom halves
               const { topGeometry, bottomGeometry } = splitGeometryByY(
@@ -318,27 +310,20 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               bottomMesh.castShadow = true;
               bottomMesh.receiveShadow = true;
               pillGroup.add(bottomMesh);
-
-              console.log(
-                `  -> Shell material (top: orange intransparent, bottom: white glass)`
-              );
             }
 
             // Process other meshes (bitcoin, inner elements, etc.)
             otherMeshes.forEach(({ mesh, name, isBitcoin }) => {
               if (isBitcoin) {
                 mesh.material = pillMaterialMap.bitcoin; // Fully orange (the B symbol)
-                console.log(`  -> Bitcoin material (fully orange): "${name}"`);
               } else {
                 mesh.material = pillMaterialMap.default; // Black for inner elements
-                console.log(`  -> Default material (black): "${name}"`);
               }
               mesh.visible = true;
               mesh.castShadow = true;
               mesh.receiveShadow = true;
               pillGroup.add(mesh);
             });
-            console.log("=== END PILL ELEMENTS ===");
             if (pillGroup.children.length > 0) {
               pill.add(pillGroup);
             }
@@ -376,12 +361,11 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               (child as THREE.Mesh).visible = false;
             }
           }
-        });
 
-        model.traverse(function (node: THREE.Object3D) {
-          if ((node as any).isMesh) {
-            node.castShadow = true;
-            node.receiveShadow = true;
+          // Set shadow properties during the same traversal
+          if ((child as any).isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
           }
         });
 

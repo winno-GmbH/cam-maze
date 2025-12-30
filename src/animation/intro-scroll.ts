@@ -210,16 +210,12 @@ function createIntroGridGuides() {
   gridGroup.position.set(0, 0, 0);
 
   scene.add(gridGroup);
-  console.log("Intro grid guides created at Y position:", gridYPosition);
-  console.log("Grid size:", gridSize, "Divisions:", gridDivisions);
-  console.log("Grid group children count:", gridGroup.children.length);
 }
 
 function removeIntroGridGuides() {
   if (introGridGuides) {
     scene.remove(introGridGuides);
     introGridGuides = null;
-    console.log("Intro grid guides removed");
   }
 }
 
@@ -245,14 +241,12 @@ export function initIntroScrollAnimation() {
           indent: 60,
         },
         onEnter: () => {
-          console.log("Intro scroll onEnter triggered");
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           createIntroGridGuides();
         },
         onEnterBack: () => {
-          console.log("Intro scroll onEnterBack triggered");
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
@@ -625,15 +619,6 @@ function updateObjectsWalkBy(progress: number) {
         );
         object.rotation.copy(targetEuler);
         object.scale.set(10, 10, 10);
-        // Log rotation in Euler angles for debugging
-        console.log(
-          "Pill rotation (Euler): X=" +
-            object.rotation.x.toFixed(3) +
-            ", Y=" +
-            object.rotation.y.toFixed(3) +
-            ", Z=" +
-            object.rotation.z.toFixed(3)
-        );
       } else {
         const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
         if (targetQuat) {

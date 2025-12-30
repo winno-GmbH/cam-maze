@@ -33,6 +33,13 @@ let hasBeenPausedBefore = false;
 
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
 let pillGuides: THREE.Group | null = null;
+// Cache Object.entries to avoid recreating array every frame
+const ghostEntries = Object.entries(ghosts);
+// Reusable temp objects to avoid allocations
+const tempObject = new THREE.Object3D();
+const tempQuaternion = new THREE.Quaternion();
+// Track last scale values to avoid unnecessary updates
+const lastScales: Record<string, number> = {};
 
 function createPillPositionGuides(pillPos: THREE.Vector3) {
   // Remove existing guides if they exist
@@ -213,7 +220,6 @@ export function startHomeLoop() {
     }
   });
 
-
   if (!homeLoopFrameRegistered) {
     let lastTime = clock.getElapsedTime();
     onFrame(() => {
@@ -259,7 +265,9 @@ function updateHomeLoop(delta: number) {
   );
   const isTransitioning = hasBeenPausedBefore && transitionProgress < 1;
 
-  Object.entries(ghosts).forEach(([key, ghost]) => {
+  // Use cached entries instead of Object.entries() every frame
+  for (let i = 0; i < ghostEntries.length; i++) {
+    const [key, ghost] = ghostEntries[i];
     const path = homePaths[key];
     if (path) {
       const objectT = t;
@@ -270,9 +278,16 @@ function updateHomeLoop(delta: number) {
         updateObjectPosition(key, position);
       }
 
-      setObjectScale(ghost, key, "home");
+      // Only update scale if it changed
+      const expectedScale =
+        key === "pacman" ? SCALE.PACMAN_HOME : SCALE.GHOST_NORMAL;
+      if (lastScales[key] !== expectedScale) {
+        setObjectScale(ghost, key, "home");
+        lastScales[key] = expectedScale;
+      }
 
-      const targetQuat = new THREE.Quaternion();
+      // Reuse tempQuaternion instead of creating new one
+      tempQuaternion.set(0, 0, 0, 1);
       if (homeLoopTangentSmoothers[key] && objectT > 0) {
         const rawTangent = path.getTangentAt(objectT);
         if (rawTangent && rawTangent.length() > 0) {
@@ -280,9 +295,9 @@ function updateHomeLoop(delta: number) {
             homeLoopTangentSmoothers[key].update(rawTangent);
           const objectType = key === "pacman" ? "pacman" : "ghost";
 
-          const tempObject = new THREE.Object3D();
+          // Reuse tempObject instead of creating new one
           calculateObjectOrientation(tempObject, smoothTangent, objectType);
-          targetQuat.copy(tempObject.quaternion);
+          tempQuaternion.copy(tempObject.quaternion);
         }
       }
 
@@ -291,16 +306,18 @@ function updateHomeLoop(delta: number) {
           transitionProgress *
           transitionProgress *
           (3 - 2 * transitionProgress);
-        ghost.quaternion.copy(
-          startRotations[key].clone().slerp(targetQuat, easedProgress)
-        );
+        // Use tempQuaternion for slerp result instead of cloning
+        const slerpResult = startRotations[key]
+          .clone()
+          .slerp(tempQuaternion, easedProgress);
+        ghost.quaternion.copy(slerpResult);
       } else {
-        ghost.quaternion.copy(targetQuat);
+        ghost.quaternion.copy(tempQuaternion);
       }
 
       updateObjectRotation(key, ghost.quaternion);
     }
-  });
+  }
 }
 
 export function homeLoopHandler() {
