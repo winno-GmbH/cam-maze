@@ -134,17 +134,12 @@ export function initHomeScrollAnimation() {
           const progress = self.progress;
           const clampedProgress = Math.min(1, Math.max(0, progress));
 
-          // Camera should start slow (like objects at 0.7) but accelerate faster towards the end
-          // Use a curve that starts at 0.7 speed but accelerates more than objects
-          const startSlow = clampedProgress * 0.7; // Start slow like objects
-          // Apply stronger ease-in for faster acceleration towards the end
-          const easedProgress = startSlow * startSlow * startSlow; // Cubic ease-in
-          // Accelerate more in the second half to reach end faster
-          const lateAcceleration =
-            clampedProgress > 0.5
-              ? (clampedProgress - 0.5) * 0.5 * 1.4 // Extra acceleration in second half
-              : 0;
-          const cameraProgress = Math.min(1, easedProgress + lateAcceleration);
+          // Camera starts slow like objects (0.75) but accelerates faster
+          const easedProgress =
+            clampedProgress * clampedProgress * clampedProgress;
+          const startSlow = easedProgress * 0.75; // Start like objects
+          const accelerate = easedProgress * clampedProgress * 0.4; // Accelerate more
+          const cameraProgress = Math.min(1, startSlow + accelerate);
 
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
@@ -326,12 +321,9 @@ export function initHomeScrollAnimation() {
             }
 
             // Apply ease-in to progress: slow at start, faster at end
-            // Use cubic ease-in for smooth acceleration
-            // Then slow down the overall progress to make objects move slower
             const rawProgress = animProps.progress;
             const easedProgress = rawProgress * rawProgress * rawProgress; // Cubic ease-in
-            // Slow down by multiplying with a factor < 1 (e.g. 0.7 = 30% slower)
-            const slowedProgress = easedProgress * 0.7; // Make objects 30% slower
+            const slowedProgress = easedProgress * 0.75; // Make objects slower
             const pathPoint = data.path.getPointAt(slowedProgress);
             data.object.position.copy(pathPoint);
 
