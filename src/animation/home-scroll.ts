@@ -183,12 +183,8 @@ export function initHomeScrollAnimation() {
           .normalize();
 
         // Calculate direction from current camera position to maze center
-        // Use X/Z from objectHomeScrollEndPathPoint but adjust Y to be at maze center level
-        const mazeCenter = new THREE.Vector3(
-          objectHomeScrollEndPathPoint.x,
-          0.55, // Y coordinate at maze center level (not at ground level)
-          objectHomeScrollEndPathPoint.z
-        );
+        // Use the actual maze center coordinates: (0.45175, 0.5, 0.55675)
+        const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
         const directionToMazeCenter = mazeCenter
           .clone()
           .sub(camera.position)
