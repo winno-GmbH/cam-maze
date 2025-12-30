@@ -320,7 +320,11 @@ export function initHomeScrollAnimation() {
               return;
             }
 
-            const pathPoint = data.path.getPointAt(animProps.progress);
+            // Apply ease-in to progress: slow at start, faster at end
+            // Use cubic ease-in for smooth acceleration
+            const rawProgress = animProps.progress;
+            const easedProgress = rawProgress * rawProgress * rawProgress; // Cubic ease-in
+            const pathPoint = data.path.getPointAt(easedProgress);
             data.object.position.copy(pathPoint);
 
             data.object.rotation.set(
