@@ -168,8 +168,8 @@ export function initHomeScrollAnimation() {
             const globalStartLookAt = lookAtPoints[0];
             const globalEndLookAt = lookAtPoints[lookAtPoints.length - 1];
 
-            // For X and Y: use segmented interpolation (allows intermediate points)
-            let lookAtPoint: THREE.Vector3;
+            // Calculate X and Y LookAt points with segmented interpolation (allows intermediate points)
+            let lookAtXY: THREE.Vector3;
             if (lookAtPoints.length > 2) {
               // Segment the progress into equal parts based on number of lookAt points
               const numSegments = lookAtPoints.length - 1;
@@ -187,21 +187,28 @@ export function initHomeScrollAnimation() {
               // Linearly interpolate between the two lookAt points in this segment
               const segmentStartLookAt = lookAtPoints[segmentIndex];
               const segmentEndLookAt = lookAtPoints[segmentIndex + 1];
-              lookAtPoint = segmentStartLookAt
+              lookAtXY = segmentStartLookAt
                 .clone()
                 .lerp(segmentEndLookAt, segmentProgress);
             } else {
               // Simple linear interpolation if only 2 points
-              lookAtPoint = globalStartLookAt
+              lookAtXY = globalStartLookAt
                 .clone()
                 .lerp(globalEndLookAt, clampedProgress);
             }
 
             // For Z: ALWAYS use direct linear interpolation from start to end (no intermediate points, no curves)
             // This ensures Z rotation goes directly from start to end without any curves or intermediate points
-            lookAtPoint.z =
+            const lookAtZ =
               globalStartLookAt.z +
               (globalEndLookAt.z - globalStartLookAt.z) * clampedProgress;
+
+            // Combine X/Y (from segmented interpolation) with Z (from direct linear interpolation)
+            const lookAtPoint = new THREE.Vector3(
+              lookAtXY.x,
+              lookAtXY.y,
+              lookAtZ
+            );
 
             camera.lookAt(lookAtPoint);
 
