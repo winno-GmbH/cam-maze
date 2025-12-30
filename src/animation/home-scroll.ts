@@ -161,33 +161,12 @@ export function initHomeScrollAnimation() {
               : null;
 
           if (startLookAt && endLookAt) {
-            // Use quaternion interpolation for smooth rotation without over-rotation
-            // Calculate direction vectors from camera position to lookAt points
-            const startDirection = startLookAt
+            // Simple linear interpolation of lookAt points
+            // This should work correctly without over-rotation
+            const lookAtPoint = startLookAt
               .clone()
-              .sub(cameraPoint)
-              .normalize();
-            const endDirection = endLookAt.clone().sub(cameraPoint).normalize();
-
-            // Create quaternions from direction vectors
-            const startQuat = new THREE.Quaternion().setFromUnitVectors(
-              new THREE.Vector3(0, 0, -1), // Default camera forward
-              startDirection
-            );
-            const endQuat = new THREE.Quaternion().setFromUnitVectors(
-              new THREE.Vector3(0, 0, -1), // Default camera forward
-              endDirection
-            );
-
-            // Interpolate quaternions
-            const currentQuat = new THREE.Quaternion().slerpQuaternions(
-              startQuat,
-              endQuat,
-              clampedProgress
-            );
-
-            // Apply rotation
-            camera.quaternion.copy(currentQuat);
+              .lerp(endLookAt, clampedProgress);
+            camera.lookAt(lookAtPoint);
 
             // Log camera rotation for debugging
             const euler = new THREE.Euler().setFromQuaternion(
