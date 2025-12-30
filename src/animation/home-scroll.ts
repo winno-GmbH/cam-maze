@@ -141,14 +141,19 @@ export function initHomeScrollAnimation() {
         const clampedProgress = Math.min(1, Math.max(0, self.progress));
         const cameraProgress = 1 - Math.pow(1 - clampedProgress, 1.5);
 
+        // Set start rotation quaternion if not set yet (at the very beginning)
+        if (!startRotationQuaternion) {
+          startRotationQuaternion = camera.quaternion.clone();
+        }
+
         // Update camera position
         camera.position.copy(cameraPath.getPointAt(cameraProgress));
 
         // Interpolate rotation from start to maze center
-        if (startRotationQuaternion) {
-          const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
+        const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
 
-          // Calculate end rotation (looking at maze center)
+        if (startRotationQuaternion) {
+          // Calculate end rotation (looking at maze center from current position)
           const tempCamera = new THREE.PerspectiveCamera();
           tempCamera.position.copy(camera.position);
           tempCamera.lookAt(mazeCenter);
@@ -164,7 +169,6 @@ export function initHomeScrollAnimation() {
             .slerp(endRotationQuaternion, rotationProgress);
         } else {
           // Fallback: directly look at maze center
-          const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
           camera.lookAt(mazeCenter);
         }
 
