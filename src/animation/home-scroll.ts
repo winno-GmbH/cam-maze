@@ -176,7 +176,9 @@ export function initHomeScrollAnimation() {
               controlPoint2,
               endLookAt
             );
-            const lookAtPoint = lookAtCurve.getPointAt(cameraProgress);
+            // Use linear progress for lookAt to ensure smooth, direct rotation without over-rotation
+            // The camera position uses eased progress, but lookAt should be linear
+            const lookAtPoint = lookAtCurve.getPointAt(clampedProgress);
             camera.lookAt(lookAtPoint);
           }
           camera.fov = originalFOV;
