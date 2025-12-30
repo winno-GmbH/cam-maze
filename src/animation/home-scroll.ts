@@ -43,8 +43,6 @@ let cachedPathsKey: string | null = null;
 let startRotationQuaternion: THREE.Quaternion | null = null;
 // Cache start Z rotation
 let startRotZ: number | null = null;
-// Cache end rotation quaternion (calculated once at start position looking at maze center)
-let endRotationQuaternion: THREE.Quaternion | null = null;
 
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
@@ -55,7 +53,6 @@ export function initHomeScrollAnimation() {
   // Reset rotation caches
   startRotationQuaternion = null;
   startRotZ = null;
-  endRotationQuaternion = null;
 
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
@@ -70,22 +67,8 @@ export function initHomeScrollAnimation() {
     cameraPath.add(cameraCurve);
   }
 
-  // Calculate end rotation quaternion once (at end camera position looking at target)
   // LookAt target: (0.55675, 0.2, 0.45175) - slightly below the end camera position
-  const lookAtTarget = new THREE.Vector3(0.55675, 0.2, 0.45175);
-  const endCameraPos = cameraPathPoints[cameraPathPoints.length - 1].pos;
-  const tempCamera = new THREE.PerspectiveCamera();
-  tempCamera.position.copy(endCameraPos);
-  tempCamera.lookAt(lookAtTarget);
-  endRotationQuaternion = tempCamera.quaternion.clone();
-  const endEuler = new THREE.Euler().setFromQuaternion(endRotationQuaternion);
-  console.log("End rotation (calculated at end position):", {
-    x: (endEuler.x * 180) / Math.PI,
-    y: (endEuler.y * 180) / Math.PI,
-    z: (endEuler.z * 180) / Math.PI,
-    endCameraPos: endCameraPos,
-    lookAtTarget: lookAtTarget,
-  });
+  // Rotation will be calculated in each frame based on current position
 
   const disposeClonedMaterials = () => {
     clonedMaterials.forEach((mat) => {
@@ -184,16 +167,24 @@ export function initHomeScrollAnimation() {
         // Update camera position
         camera.position.copy(cameraPath.getPointAt(cameraProgress));
 
-        // Interpolate rotation from start to end (pre-calculated end rotation)
-        if (startRotationQuaternion && endRotationQuaternion) {
+        // Calculate rotation in each frame based on current position and end lookAt target
+        const lookAtTarget = new THREE.Vector3(0.55675, 0.2, 0.45175);
+
+        if (startRotationQuaternion) {
+          // Calculate target rotation (looking at end target from current position)
+          const tempCamera = new THREE.PerspectiveCamera();
+          tempCamera.position.copy(camera.position);
+          tempCamera.lookAt(lookAtTarget);
+          const targetRotationQuaternion = tempCamera.quaternion.clone();
+
           // Apply easing to rotation progress
           const rotationProgress =
             clampedProgress * clampedProgress * clampedProgress; // Cubic ease-in
 
-          // Interpolate between start and end rotation (X/Y)
+          // Interpolate between start rotation and target rotation (X/Y)
           camera.quaternion
             .copy(startRotationQuaternion)
-            .slerp(endRotationQuaternion, rotationProgress);
+            .slerp(targetRotationQuaternion, rotationProgress);
 
           // Set Z rotation separately (linear from start to 0)
           if (startRotZ !== null) {
@@ -213,11 +204,11 @@ export function initHomeScrollAnimation() {
               y: (currentEuler.y * 180) / Math.PI,
               z: (camera.rotation.z * 180) / Math.PI,
               rotationProgress: rotationProgress.toFixed(3),
+              cameraPos: camera.position,
             });
           }
         } else {
           // Fallback: directly look at target
-          const lookAtTarget = new THREE.Vector3(0.55675, 0.2, 0.45175);
           camera.lookAt(lookAtTarget);
         }
 
