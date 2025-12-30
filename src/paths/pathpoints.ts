@@ -1111,7 +1111,7 @@ export function createHomeScrollPathPoints(
   Object.entries(pausedPositions).forEach(([key, pausedPos]) => {
     const arcPoint = new THREE.Vector3(
       pausedPos.x * (1 / 4) + objectHomeScrollEndPathPoint.x * (3 / 4),
-      3,
+      2,
       pausedPos.z * (1 / 4) + objectHomeScrollEndPathPoint.z * (3 / 4)
     );
 
