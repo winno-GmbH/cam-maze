@@ -279,10 +279,10 @@ export function initHomeScrollAnimation() {
       });
     });
 
-    // All animations should have the same duration to sync with scroll progress
-    // Increased duration to make objects slower (more time to complete animation)
+    // All animations should have the same duration (1.0) to sync with scroll progress
+    // Note: duration doesn't affect speed with scrub - speed is controlled by progress multiplier
     // The stagger effect is achieved by offsetting the start time instead
-    const baseDuration = 1.5; // Increased from 1.0 to make objects slower
+    const baseDuration = 1.0;
     const staggerOffset = STAGGER_AMOUNT;
 
     animationData.forEach((data, index) => {
@@ -323,9 +323,12 @@ export function initHomeScrollAnimation() {
 
             // Apply ease-in to progress: slow at start, faster at end
             // Use cubic ease-in for smooth acceleration
+            // Then slow down the overall progress to make objects move slower
             const rawProgress = animProps.progress;
             const easedProgress = rawProgress * rawProgress * rawProgress; // Cubic ease-in
-            const pathPoint = data.path.getPointAt(easedProgress);
+            // Slow down by multiplying with a factor < 1 (e.g. 0.7 = 30% slower)
+            const slowedProgress = easedProgress * 0.7; // Make objects 30% slower
+            const pathPoint = data.path.getPointAt(slowedProgress);
             data.object.position.copy(pathPoint);
 
             data.object.rotation.set(
