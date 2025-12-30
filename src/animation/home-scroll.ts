@@ -166,7 +166,9 @@ export function initHomeScrollAnimation() {
             const controlPoint1 = startLookAt
               .clone()
               .lerp(lookAtPoints[1], 0.3);
-            const controlPoint2 = endLookAt.clone().lerp(lookAtPoints[2], -0.3);
+            const controlPoint2 = startLookAt
+              .clone()
+              .lerp(lookAtPoints[1], 0.6);
 
             const lookAtCurve = new THREE.CubicBezierCurve3(
               startLookAt,
