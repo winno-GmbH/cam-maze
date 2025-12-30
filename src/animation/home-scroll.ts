@@ -168,49 +168,60 @@ export function initHomeScrollAnimation() {
             const globalStartLookAt = lookAtPoints[0];
             const globalEndLookAt = lookAtPoints[lookAtPoints.length - 1];
 
-            // Calculate X and Y LookAt points with segmented interpolation (allows intermediate points)
-            let lookAtXY: THREE.Vector3;
-            if (lookAtPoints.length > 2) {
-              // Segment the progress into equal parts based on number of lookAt points
-              const numSegments = lookAtPoints.length - 1;
-              const segmentSize = 1.0 / numSegments;
+            // Calculate rotations (Euler angles) for all lookAt points
+            const rotations: THREE.Euler[] = [];
+            lookAtPoints.forEach((lookAt) => {
+              // Create a temporary camera to calculate rotation from lookAt
+              const tempCamera = new THREE.PerspectiveCamera();
+              tempCamera.position.copy(cameraPoint);
+              tempCamera.lookAt(lookAt);
+              const euler = new THREE.Euler().setFromQuaternion(
+                tempCamera.quaternion
+              );
+              rotations.push(euler);
+            });
 
-              // Find which segment we're in based on linear progress (not eased)
+            // For X and Y: use segmented interpolation (allows intermediate points)
+            let rotationXY: THREE.Euler;
+            if (rotations.length > 2) {
+              const numSegments = rotations.length - 1;
+              const segmentSize = 1.0 / numSegments;
               let segmentIndex = Math.floor(clampedProgress / segmentSize);
               segmentIndex = Math.min(segmentIndex, numSegments - 1);
-
-              // Calculate progress within the current segment (0-1)
               const segmentStart = segmentIndex * segmentSize;
               const segmentProgress =
                 (clampedProgress - segmentStart) / segmentSize;
 
-              // Linearly interpolate between the two lookAt points in this segment
-              const segmentStartLookAt = lookAtPoints[segmentIndex];
-              const segmentEndLookAt = lookAtPoints[segmentIndex + 1];
-              lookAtXY = segmentStartLookAt
-                .clone()
-                .lerp(segmentEndLookAt, segmentProgress);
+              const startRot = rotations[segmentIndex];
+              const endRot = rotations[segmentIndex + 1];
+              rotationXY = new THREE.Euler(
+                startRot.x + (endRot.x - startRot.x) * segmentProgress,
+                startRot.y + (endRot.y - startRot.y) * segmentProgress,
+                0 // Z will be set separately
+              );
             } else {
-              // Simple linear interpolation if only 2 points
-              lookAtXY = globalStartLookAt
-                .clone()
-                .lerp(globalEndLookAt, clampedProgress);
+              const startRot = rotations[0];
+              const endRot = rotations[rotations.length - 1];
+              rotationXY = new THREE.Euler(
+                startRot.x + (endRot.x - startRot.x) * clampedProgress,
+                startRot.y + (endRot.y - startRot.y) * clampedProgress,
+                0 // Z will be set separately
+              );
             }
 
             // For Z: ALWAYS use direct linear interpolation from start to end (no intermediate points, no curves)
-            // This ensures Z rotation goes directly from start to end without any curves or intermediate points
-            const lookAtZ =
-              globalStartLookAt.z +
-              (globalEndLookAt.z - globalStartLookAt.z) * clampedProgress;
+            const startRotZ = rotations[0].z;
+            const endRotZ = rotations[rotations.length - 1].z;
+            const rotationZ =
+              startRotZ + (endRotZ - startRotZ) * clampedProgress;
 
             // Combine X/Y (from segmented interpolation) with Z (from direct linear interpolation)
-            const lookAtPoint = new THREE.Vector3(
-              lookAtXY.x,
-              lookAtXY.y,
-              lookAtZ
+            const finalRotation = new THREE.Euler(
+              rotationXY.x,
+              rotationXY.y,
+              rotationZ
             );
-
-            camera.lookAt(lookAtPoint);
+            camera.rotation.copy(finalRotation);
 
             // Log camera rotation for debugging
             const euler = new THREE.Euler().setFromQuaternion(
