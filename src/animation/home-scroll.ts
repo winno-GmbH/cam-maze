@@ -163,48 +163,43 @@ export function initHomeScrollAnimation() {
 
           // Find first rotation index
           const firstRotationIndex = rotations.findIndex((r) => r !== null);
+          const lookAtPointsForCurve = lookAtPoints.filter(
+            (p) => p !== null
+          ) as THREE.Vector3[];
 
-          if (
-            firstRotationIndex !== -1 &&
-            lookAtPoints.filter((p) => p !== null).length >= 2
-          ) {
-            // We have rotations starting from firstRotationIndex
-            const lookAtPointsForCurve = lookAtPoints.filter(
-              (p) => p !== null
-            ) as THREE.Vector3[];
+          if (firstRotationIndex !== -1 && lookAtPointsForCurve.length >= 2) {
+            // We have both lookAt points (0, 1) and rotations (2, 3)
+            // Interpolate smoothly between them
 
-            if (cameraProgress < 0.66) {
-              // Use lookAt for first 66% (points 0, 1, 2)
-              if (lookAtPointsForCurve.length >= 3) {
-                const lookAtCurve = new THREE.CubicBezierCurve3(
+            // First 50%: Use lookAt curve for points 0 and 1
+            if (cameraProgress < 0.5) {
+              if (lookAtPointsForCurve.length >= 2) {
+                // Linear interpolation between lookAt points 0 and 1
+                const t = cameraProgress / 0.5;
+                const lookAtPoint = new THREE.Vector3().lerpVectors(
                   lookAtPointsForCurve[0],
                   lookAtPointsForCurve[1],
-                  lookAtPointsForCurve[2],
-                  lookAtPointsForCurve[2]
-                );
-                const lookAtPoint = lookAtCurve.getPointAt(
-                  cameraProgress / 0.66
+                  t
                 );
                 camera.lookAt(lookAtPoint);
               }
             } else {
-              // Interpolate between lookAt and rotations for last 34%
-              const rotationProgress = (cameraProgress - 0.66) / 0.34;
+              // Last 50%: Interpolate from lookAt to rotations
+              const transitionProgress = (cameraProgress - 0.5) / 0.5;
 
-              // Get lookAt quaternion at 66%
-              const lookAtPoint =
+              // Get lookAt quaternion at the end of lookAt phase (point 1)
+              const lastLookAtPoint =
                 lookAtPointsForCurve[lookAtPointsForCurve.length - 1];
               const tempCamera = new THREE.PerspectiveCamera();
               tempCamera.position.copy(camera.position);
-              tempCamera.lookAt(lookAtPoint);
+              tempCamera.lookAt(lastLookAtPoint);
               const lookAtQuat = tempCamera.quaternion.clone();
 
-              // Get rotation at thirdPosition (index 2) and end (index 3)
+              // Get rotations at thirdPosition (index 2) and end (index 3)
               const thirdRotation = rotations[2];
               const endRotation = rotations[3] || rotations[2];
 
               if (thirdRotation && endRotation) {
-                // Interpolate between thirdRotation and endRotation
                 const thirdQuat = new THREE.Quaternion().setFromEuler(
                   thirdRotation
                 );
@@ -212,14 +207,14 @@ export function initHomeScrollAnimation() {
                   endRotation
                 );
 
-                // First interpolate from lookAt to thirdRotation, then to endRotation
-                if (rotationProgress < 0.5) {
-                  // 0-50% of rotation phase: lookAt -> thirdRotation
-                  const t = rotationProgress * 2;
+                // Interpolate: lookAt -> thirdRotation -> endRotation
+                if (transitionProgress < 0.5) {
+                  // 0-50% of transition: lookAt -> thirdRotation
+                  const t = transitionProgress * 2;
                   camera.quaternion.slerpQuaternions(lookAtQuat, thirdQuat, t);
                 } else {
-                  // 50-100% of rotation phase: thirdRotation -> endRotation
-                  const t = (rotationProgress - 0.5) * 2;
+                  // 50-100% of transition: thirdRotation -> endRotation
+                  const t = (transitionProgress - 0.5) * 2;
                   camera.quaternion.slerpQuaternions(thirdQuat, endQuat, t);
                 }
               } else if (endRotation) {
@@ -230,7 +225,7 @@ export function initHomeScrollAnimation() {
                 camera.quaternion.slerpQuaternions(
                   lookAtQuat,
                   endQuat,
-                  rotationProgress
+                  transitionProgress
                 );
               }
             }
@@ -246,7 +241,7 @@ export function initHomeScrollAnimation() {
                 Math.PI
               ).toFixed(2)}° Z=${((euler.z * 180) / Math.PI).toFixed(2)}°`
             );
-          } else if (lookAtPoints.filter((p) => p !== null).length >= 4) {
+          } else if (lookAtPointsForCurve.length >= 4) {
             // Fallback to lookAt only
             const lookAtCurve = new THREE.CubicBezierCurve3(
               lookAtPoints[0]!,
