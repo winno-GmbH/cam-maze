@@ -253,13 +253,17 @@ export function initHomeScrollAnimation() {
         object.quaternion.clone();
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
 
-      // For Pacman: Use same rotation as ghosts but with different axis emphasis
-      // Try rotating around Y-axis more prominently (like the ghosts do)
+      // For Pacman: Use same rotation as ghosts but add +90 degrees on Y-axis
+      // This corrects the rotation axis for Pacman
       let endEuler: THREE.Euler;
       if (key === "pacman") {
-        // Use the same LAY_DOWN_QUAT_1 as ghosts, but we'll let it animate the same way
-        // This ensures Pacman rotates on the same axis as ghosts
-        endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
+        // Start with LAY_DOWN_QUAT_1, then add +90° rotation around Y-axis
+        const yAxis90 = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(0, 1, 0),
+          Math.PI / 2 // +90 degrees
+        );
+        const pacmanLayDown = LAY_DOWN_QUAT_1.clone().multiply(yAxis90);
+        endEuler = new THREE.Euler().setFromQuaternion(pacmanLayDown);
       } else {
         // Ghosts use standard lay down rotation
         endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
