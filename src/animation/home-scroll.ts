@@ -174,13 +174,20 @@ export function initHomeScrollAnimation() {
             // First 50%: Use lookAt curve for points 0 and 1
             if (cameraProgress < 0.5) {
               if (lookAtPointsForCurve.length >= 2) {
-                // Linear interpolation between lookAt points 0 and 1
-                const t = cameraProgress / 0.5;
-                const lookAtPoint = new THREE.Vector3().lerpVectors(
+                // Create a Bezier curve between the two lookAt points
+                // Use the first point as start, second as end, and duplicate them as control points for smooth curve
+                const lookAtCurve = new THREE.CubicBezierCurve3(
                   lookAtPointsForCurve[0],
-                  lookAtPointsForCurve[1],
-                  t
+                  lookAtPointsForCurve[0]
+                    .clone()
+                    .lerp(lookAtPointsForCurve[1], 0.33),
+                  lookAtPointsForCurve[0]
+                    .clone()
+                    .lerp(lookAtPointsForCurve[1], 0.66),
+                  lookAtPointsForCurve[1]
                 );
+                const t = cameraProgress / 0.5;
+                const lookAtPoint = lookAtCurve.getPointAt(t);
                 camera.lookAt(lookAtPoint);
               }
             } else {
