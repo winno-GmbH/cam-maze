@@ -39,6 +39,8 @@ const clonedMaterials: THREE.Material[] = [];
 // Cache for paths to avoid recalculation
 let cachedPaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null = null;
 let cachedPathsKey: string | null = null;
+// Cache start rotation quaternion
+let startRotationQuaternion: THREE.Quaternion | null = null;
 
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
@@ -86,6 +88,9 @@ export function initHomeScrollAnimation() {
       if (introScrollTrigger?.isActive) {
         return;
       }
+
+      // Store start rotation quaternion
+      startRotationQuaternion = camera.quaternion.clone();
 
       const homeLoopStartPos = getHomeLoopStartPositions();
       const homeLoopStartRot = getHomeLoopStartRotations();
@@ -139,9 +144,29 @@ export function initHomeScrollAnimation() {
         // Update camera position
         camera.position.copy(cameraPath.getPointAt(cameraProgress));
 
-        // Simply look at maze center
-        const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
-        camera.lookAt(mazeCenter);
+        // Interpolate rotation from start to maze center
+        if (startRotationQuaternion) {
+          const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
+
+          // Calculate end rotation (looking at maze center)
+          const tempCamera = new THREE.PerspectiveCamera();
+          tempCamera.position.copy(camera.position);
+          tempCamera.lookAt(mazeCenter);
+          const endRotationQuaternion = tempCamera.quaternion.clone();
+
+          // Apply easing to rotation progress
+          const rotationProgress =
+            clampedProgress * clampedProgress * clampedProgress; // Cubic ease-in
+
+          // Interpolate between start and end rotation
+          camera.quaternion
+            .copy(startRotationQuaternion)
+            .slerp(endRotationQuaternion, rotationProgress);
+        } else {
+          // Fallback: directly look at maze center
+          const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
+          camera.lookAt(mazeCenter);
+        }
 
         camera.fov = originalFOV;
         camera.updateProjectionMatrix();
