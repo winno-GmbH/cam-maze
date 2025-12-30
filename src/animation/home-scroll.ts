@@ -161,12 +161,46 @@ export function initHomeScrollAnimation() {
               : null;
 
           if (startLookAt && endLookAt) {
-            // Direct linear interpolation from start to end lookAt
-            // Use linear progress to ensure smooth, direct rotation
-            const lookAtPoint = startLookAt
+            // Use quaternion interpolation for smooth rotation without over-rotation
+            // Calculate direction vectors from camera position to lookAt points
+            const startDirection = startLookAt
               .clone()
-              .lerp(endLookAt, clampedProgress);
-            camera.lookAt(lookAtPoint);
+              .sub(cameraPoint)
+              .normalize();
+            const endDirection = endLookAt.clone().sub(cameraPoint).normalize();
+
+            // Create quaternions from direction vectors
+            const startQuat = new THREE.Quaternion().setFromUnitVectors(
+              new THREE.Vector3(0, 0, -1), // Default camera forward
+              startDirection
+            );
+            const endQuat = new THREE.Quaternion().setFromUnitVectors(
+              new THREE.Vector3(0, 0, -1), // Default camera forward
+              endDirection
+            );
+
+            // Interpolate quaternions
+            const currentQuat = new THREE.Quaternion().slerpQuaternions(
+              startQuat,
+              endQuat,
+              clampedProgress
+            );
+
+            // Apply rotation
+            camera.quaternion.copy(currentQuat);
+
+            // Log camera rotation for debugging
+            const euler = new THREE.Euler().setFromQuaternion(
+              camera.quaternion
+            );
+            console.log(
+              `Progress: ${clampedProgress.toFixed(3)}, Camera Rotation: X=${(
+                (euler.x * 180) /
+                Math.PI
+              ).toFixed(2)}°, Y=${((euler.y * 180) / Math.PI).toFixed(
+                2
+              )}°, Z=${((euler.z * 180) / Math.PI).toFixed(2)}°`
+            );
           }
           camera.fov = originalFOV;
           camera.updateProjectionMatrix();
