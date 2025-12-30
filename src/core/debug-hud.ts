@@ -343,3 +343,234 @@ function updatePacmanHUD(): void {
     });
   }
 }
+
+let introPacmanHudContainer: HTMLDivElement | null = null;
+let isIntroPacmanHudVisible = false;
+
+export function createIntroPacmanRotationHUD(): void {
+  if (introPacmanHudContainer) {
+    return; // Already created
+  }
+
+  // Initialize rotation values from current intro-scroll rotation
+  // Get the current pacmanTargetQuaternion and convert to Euler, then add 180° to Y
+  try {
+    const { ghosts } = require("./objects");
+    const pacmanObj = ghosts.pacman;
+    if (pacmanObj) {
+      // Try to get current rotation from intro-scroll
+      try {
+        const introScrollModule = require("../animation/intro-scroll");
+        if (introScrollModule.pacmanTargetQuaternion) {
+          const euler = new THREE.Euler().setFromQuaternion(introScrollModule.pacmanTargetQuaternion);
+          introPacmanRotationX = (euler.x * 180) / Math.PI;
+          introPacmanRotationY = ((euler.y * 180) / Math.PI) + 180; // Add 180° to Y
+          introPacmanRotationZ = (euler.z * 180) / Math.PI;
+        } else {
+          // Fallback: use current rotation
+          const euler = new THREE.Euler().setFromQuaternion(pacmanObj.quaternion);
+          introPacmanRotationX = (euler.x * 180) / Math.PI;
+          introPacmanRotationY = ((euler.y * 180) / Math.PI) + 180; // Add 180° to Y
+          introPacmanRotationZ = (euler.z * 180) / Math.PI;
+        }
+      } catch (e) {
+        // Fallback: use current rotation
+        const euler = new THREE.Euler().setFromQuaternion(pacmanObj.quaternion);
+        introPacmanRotationX = (euler.x * 180) / Math.PI;
+        introPacmanRotationY = ((euler.y * 180) / Math.PI) + 180; // Add 180° to Y
+        introPacmanRotationZ = (euler.z * 180) / Math.PI;
+      }
+    }
+  } catch (e) {
+    // Default values if initialization fails
+    introPacmanRotationX = 0;
+    introPacmanRotationY = 180;
+    introPacmanRotationZ = 0;
+  }
+
+  // Create container
+  introPacmanHudContainer = document.createElement("div");
+  introPacmanHudContainer.id = "intro-pacman-rotation-hud";
+  introPacmanHudContainer.style.cssText = `
+    position: fixed;
+    top: 100px;
+    left: 20px;
+    width: 320px;
+    background: rgba(20, 20, 20, 0.95);
+    color: #e0e0e0;
+    padding: 20px;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    z-index: 10000;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+    border: 2px solid #FF6B6B;
+    max-height: 90vh;
+    overflow-y: auto;
+  `;
+
+  // Toggle button
+  const toggleBtn = document.createElement("button");
+  toggleBtn.textContent = "Show/Hide Intro Pacman Rotation";
+  toggleBtn.style.cssText = `
+    position: fixed;
+    top: 100px;
+    left: 360px;
+    padding: 10px 15px;
+    background: #FF6B6B;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 10001;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  `;
+  toggleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    isIntroPacmanHudVisible = !isIntroPacmanHudVisible;
+    if (introPacmanHudContainer) {
+      introPacmanHudContainer.style.display = isIntroPacmanHudVisible ? "block" : "none";
+    }
+  });
+
+  document.body.appendChild(toggleBtn);
+  document.body.appendChild(introPacmanHudContainer);
+  introPacmanHudContainer.style.display = "none";
+
+  updateIntroPacmanHUD();
+}
+
+function updateIntroPacmanHUD(): void {
+  if (!introPacmanHudContainer) return;
+
+  introPacmanHudContainer.innerHTML = `
+    <h3 style="margin-top: 0; color: #FF6B6B; font-size: 16px; text-shadow: 0 0 5px rgba(255, 107, 107, 0.5);">Pacman Rotation (Intro-Scroll)</h3>
+    
+    <div style="margin-bottom: 15px; color: #e0e0e0;">
+      <label for="intro-pacman-x-rotation-slider" style="display: block; margin-bottom: 10px;">
+        <strong style="color: #ffffff;">X Rotation (degrees):</strong>
+        <span id="intro-pacman-x-rotation-value" style="color: #FF6B6B; margin-left: 10px; font-weight: bold;">${introPacmanRotationX.toFixed(1)}</span>°
+      </label>
+      <input 
+        type="range" 
+        id="intro-pacman-x-rotation-slider" 
+        min="-180" 
+        max="180" 
+        value="${introPacmanRotationX}"
+        step="0.1"
+        style="width: 100%; height: 8px; border-radius: 5px; outline: none; background: #333; cursor: pointer;"
+      />
+    </div>
+    
+    <div style="margin-bottom: 15px; color: #e0e0e0;">
+      <label for="intro-pacman-y-rotation-slider" style="display: block; margin-bottom: 10px;">
+        <strong style="color: #ffffff;">Y Rotation (degrees):</strong>
+        <span id="intro-pacman-y-rotation-value" style="color: #FF6B6B; margin-left: 10px; font-weight: bold;">${introPacmanRotationY.toFixed(1)}</span>°
+      </label>
+      <input 
+        type="range" 
+        id="intro-pacman-y-rotation-slider" 
+        min="-180" 
+        max="180" 
+        value="${introPacmanRotationY}"
+        step="0.1"
+        style="width: 100%; height: 8px; border-radius: 5px; outline: none; background: #333; cursor: pointer;"
+      />
+    </div>
+    
+    <div style="margin-bottom: 15px; color: #e0e0e0;">
+      <label for="intro-pacman-z-rotation-slider" style="display: block; margin-bottom: 10px;">
+        <strong style="color: #ffffff;">Z Rotation (degrees):</strong>
+        <span id="intro-pacman-z-rotation-value" style="color: #FF6B6B; margin-left: 10px; font-weight: bold;">${introPacmanRotationZ.toFixed(1)}</span>°
+      </label>
+      <input 
+        type="range" 
+        id="intro-pacman-z-rotation-slider" 
+        min="-180" 
+        max="180" 
+        value="${introPacmanRotationZ}"
+        step="0.1"
+        style="width: 100%; height: 8px; border-radius: 5px; outline: none; background: #333; cursor: pointer;"
+      />
+    </div>
+    
+    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #444; color: #aaa; font-size: 11px;">
+      <p style="margin: 0;">These values adjust the rotation of Pacman in the intro-scroll animation. Changes are applied instantly.</p>
+    </div>
+  `;
+
+  // Attach event listeners
+  const xSlider = introPacmanHudContainer.querySelector("#intro-pacman-x-rotation-slider") as HTMLInputElement;
+  const ySlider = introPacmanHudContainer.querySelector("#intro-pacman-y-rotation-slider") as HTMLInputElement;
+  const zSlider = introPacmanHudContainer.querySelector("#intro-pacman-z-rotation-slider") as HTMLInputElement;
+  const xValueDisplay = introPacmanHudContainer.querySelector("#intro-pacman-x-rotation-value");
+  const yValueDisplay = introPacmanHudContainer.querySelector("#intro-pacman-y-rotation-value");
+  const zValueDisplay = introPacmanHudContainer.querySelector("#intro-pacman-z-rotation-value");
+  
+  if (xSlider) {
+    xSlider.addEventListener("input", (e) => {
+      const target = e.target as HTMLInputElement;
+      introPacmanRotationX = parseFloat(target.value);
+      if (xValueDisplay) {
+        xValueDisplay.textContent = `${introPacmanRotationX.toFixed(1)}°`;
+      }
+      updateIntroPacmanRotation();
+    });
+  }
+  
+  if (ySlider) {
+    ySlider.addEventListener("input", (e) => {
+      const target = e.target as HTMLInputElement;
+      introPacmanRotationY = parseFloat(target.value);
+      if (yValueDisplay) {
+        yValueDisplay.textContent = `${introPacmanRotationY.toFixed(1)}°`;
+      }
+      updateIntroPacmanRotation();
+    });
+  }
+  
+  if (zSlider) {
+    zSlider.addEventListener("input", (e) => {
+      const target = e.target as HTMLInputElement;
+      introPacmanRotationZ = parseFloat(target.value);
+      if (zValueDisplay) {
+        zValueDisplay.textContent = `${introPacmanRotationZ.toFixed(1)}°`;
+      }
+      updateIntroPacmanRotation();
+    });
+  }
+}
+
+function updateIntroPacmanRotation(): void {
+  try {
+    const { ghosts } = require("./objects");
+    const pacmanObj = ghosts.pacman;
+    if (!pacmanObj) return;
+
+    // Create quaternion from Euler angles
+    const euler = new THREE.Euler(
+      (introPacmanRotationX * Math.PI) / 180,
+      (introPacmanRotationY * Math.PI) / 180,
+      (introPacmanRotationZ * Math.PI) / 180,
+      "XYZ"
+    );
+    const newQuaternion = new THREE.Quaternion().setFromEuler(euler);
+
+    // Update pacmanTargetQuaternion in intro-scroll module
+    const introScrollModule = require("../animation/intro-scroll");
+    if (introScrollModule.pacmanTargetQuaternion) {
+      introScrollModule.pacmanTargetQuaternion.copy(newQuaternion);
+    }
+
+    // If intro-scroll is active, apply rotation immediately
+    const introScrollTrigger = ScrollTrigger.getById("introScroll");
+    if (introScrollTrigger?.isActive && pacmanObj) {
+      pacmanObj.quaternion.copy(newQuaternion);
+    }
+  } catch (e) {
+    console.error("Error updating intro Pacman rotation:", e);
+  }
+}
