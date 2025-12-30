@@ -45,6 +45,8 @@ let startRotationQuaternion: THREE.Quaternion | null = null;
 let startRotZ: number | null = null;
 // Cache end rotation quaternion (calculated once at end position)
 let endRotationQuaternion: THREE.Quaternion | null = null;
+// Cache middle rotation quaternion (for curved rotation path)
+let middleRotationQuaternion: THREE.Quaternion | null = null;
 
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
@@ -69,20 +71,50 @@ export function initHomeScrollAnimation() {
     cameraPath.add(cameraCurve);
   }
 
-  // Calculate end rotation quaternion once (at end camera position looking at target)
+  // Calculate rotation quaternions: start, middle, and end for curved rotation path
   const lookAtTarget = new THREE.Vector3(0.55675, 0.2, 0.45175);
   const endCameraPos = cameraPathPoints[cameraPathPoints.length - 1].pos;
-  const tempCamera = new THREE.PerspectiveCamera();
-  tempCamera.position.copy(endCameraPos);
-  tempCamera.lookAt(lookAtTarget);
-  endRotationQuaternion = tempCamera.quaternion.clone();
+  const startCameraPos = cameraPathPoints[0].pos;
+
+  // Calculate middle camera position (midpoint of path, with +X offset for curved rotation)
+  const middleCameraPos = startCameraPos.clone().lerp(endCameraPos, 0.5);
+  middleCameraPos.x += 0.3; // Add X offset for curved rotation
+
+  // Calculate middle lookAt target (also with +X offset)
+  const middleLookAtTarget = lookAtTarget.clone();
+  middleLookAtTarget.x += 0.3; // Add X offset
+
+  // Calculate end rotation
+  const tempCameraEnd = new THREE.PerspectiveCamera();
+  tempCameraEnd.position.copy(endCameraPos);
+  tempCameraEnd.lookAt(lookAtTarget);
+  endRotationQuaternion = tempCameraEnd.quaternion.clone();
+
+  // Calculate middle rotation
+  const tempCameraMiddle = new THREE.PerspectiveCamera();
+  tempCameraMiddle.position.copy(middleCameraPos);
+  tempCameraMiddle.lookAt(middleLookAtTarget);
+  middleRotationQuaternion = tempCameraMiddle.quaternion.clone();
+
   const endEuler = new THREE.Euler().setFromQuaternion(endRotationQuaternion);
-  console.log("End rotation (calculated at end position):", {
-    x: (endEuler.x * 180) / Math.PI,
-    y: (endEuler.y * 180) / Math.PI,
-    z: (endEuler.z * 180) / Math.PI,
+  const middleEuler = new THREE.Euler().setFromQuaternion(
+    middleRotationQuaternion
+  );
+  console.log("Rotation setup:", {
+    end: {
+      x: (endEuler.x * 180) / Math.PI,
+      y: (endEuler.y * 180) / Math.PI,
+      z: (endEuler.z * 180) / Math.PI,
+    },
+    middle: {
+      x: (middleEuler.x * 180) / Math.PI,
+      y: (middleEuler.y * 180) / Math.PI,
+      z: (middleEuler.z * 180) / Math.PI,
+    },
     endCameraPos: endCameraPos,
+    middleCameraPos: middleCameraPos,
     lookAtTarget: lookAtTarget,
+    middleLookAtTarget: middleLookAtTarget,
   });
 
   const disposeClonedMaterials = () => {
@@ -182,16 +214,30 @@ export function initHomeScrollAnimation() {
         // Update camera position
         camera.position.copy(cameraPath.getPointAt(cameraProgress));
 
-        // Interpolate rotation from start to end (pre-calculated end rotation)
-        if (startRotationQuaternion && endRotationQuaternion) {
+        // Interpolate rotation from start -> middle -> end (segmented for curved path)
+        if (
+          startRotationQuaternion &&
+          middleRotationQuaternion &&
+          endRotationQuaternion
+        ) {
           // Apply easing to rotation progress
           const rotationProgress =
             clampedProgress * clampedProgress * clampedProgress; // Cubic ease-in
 
-          // Interpolate between start rotation and end rotation (X/Y)
-          camera.quaternion
-            .copy(startRotationQuaternion)
-            .slerp(endRotationQuaternion, rotationProgress);
+          // Segmented interpolation: start -> middle (0-0.5) -> end (0.5-1.0)
+          if (rotationProgress < 0.5) {
+            // First half: start to middle
+            const segmentProgress = rotationProgress * 2; // Map 0-0.5 to 0-1
+            camera.quaternion
+              .copy(startRotationQuaternion)
+              .slerp(middleRotationQuaternion, segmentProgress);
+          } else {
+            // Second half: middle to end
+            const segmentProgress = (rotationProgress - 0.5) * 2; // Map 0.5-1.0 to 0-1
+            camera.quaternion
+              .copy(middleRotationQuaternion)
+              .slerp(endRotationQuaternion, segmentProgress);
+          }
 
           // Set Z rotation separately (linear from start to 0)
           if (startRotZ !== null) {
