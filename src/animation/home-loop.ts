@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import { ghosts, pacmanMixer, pill } from "../core/objects";
 import { clock, onFrame, scene } from "../core/scene";
@@ -184,20 +185,76 @@ export function startHomeLoop() {
     const path = homePaths[key];
     if (path) {
       if (hasBeenPausedBefore && savedT !== null) {
-        const position = path.getPointAt(savedT);
-        if (position) {
-          ghost.position.copy(position);
-          updateObjectPosition(key, position);
+        const targetPosition = path.getPointAt(savedT);
+        if (targetPosition) {
+          // Smooth transition from current position to target position
+          const currentPosition = ghost.position.clone();
+          const distance = currentPosition.distanceTo(targetPosition);
+
+          // Only animate if there's a significant distance (avoid unnecessary animations)
+          if (distance > 0.01) {
+            // Kill any existing position animations
+            gsap.killTweensOf(ghost.position);
+
+            // Smooth transition to target position
+            gsap.to(ghost.position, {
+              x: targetPosition.x,
+              y: targetPosition.y,
+              z: targetPosition.z,
+              duration: 0.5, // 500ms transition
+              ease: "power2.out",
+              onUpdate: () => {
+                updateObjectPosition(key, ghost.position);
+              },
+              onComplete: () => {
+                updateObjectPosition(key, targetPosition);
+              },
+            });
+          } else {
+            // If very close, just set directly
+            ghost.position.copy(targetPosition);
+            updateObjectPosition(key, targetPosition);
+          }
         }
       }
 
       const savedRotation = homeLoopStartRot[key];
 
       if (savedRotation) {
-        ghost.quaternion.copy(savedRotation);
-        updateObjectRotation(key, savedRotation);
-        if (hasBeenPausedBefore) {
-          startRotations[key] = savedRotation.clone();
+        // Smooth rotation transition
+        const currentQuat = ghost.quaternion.clone();
+        const angle = currentQuat.angleTo(savedRotation);
+
+        // Only animate if there's a significant rotation difference
+        if (angle > 0.01) {
+          gsap.killTweensOf(ghost.quaternion);
+
+          // Create a temporary object to animate quaternion
+          const quatProps = { t: 0 };
+          gsap.to(quatProps, {
+            t: 1,
+            duration: 0.5,
+            ease: "power2.out",
+            onUpdate: () => {
+              ghost.quaternion
+                .copy(currentQuat)
+                .slerp(savedRotation, quatProps.t);
+              updateObjectRotation(key, ghost.quaternion);
+            },
+            onComplete: () => {
+              ghost.quaternion.copy(savedRotation);
+              updateObjectRotation(key, savedRotation);
+              if (hasBeenPausedBefore) {
+                startRotations[key] = savedRotation.clone();
+              }
+            },
+          });
+        } else {
+          ghost.quaternion.copy(savedRotation);
+          updateObjectRotation(key, savedRotation);
+          if (hasBeenPausedBefore) {
+            startRotations[key] = savedRotation.clone();
+          }
         }
       } else {
         updateObjectRotation(key, ghost.quaternion);
