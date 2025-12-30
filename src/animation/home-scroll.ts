@@ -209,9 +209,9 @@ export function initHomeScrollAnimation() {
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
       onUpdate: (self) => {
-        // Don't update camera if we're transitioning to home-loop or scrolling back up
+        // Don't update camera if we're transitioning to home-loop
         const homeLoopTrigger = ScrollTrigger.getById("homeLoop");
-        if (homeLoopTrigger?.isActive || window.scrollY < 100) {
+        if (homeLoopTrigger?.isActive) {
           return;
         }
 
