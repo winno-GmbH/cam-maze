@@ -216,9 +216,10 @@ export function initHomeScrollAnimation() {
               );
             }
 
-            // For Z: ALWAYS use direct linear interpolation from start to end (no intermediate points)
+            // For Z: ALWAYS use direct linear interpolation from start to 0 (no intermediate points)
+            // End rotation should always be 0, regardless of calculated end rotation
             const startRotZ = cachedRotations[0].z;
-            const endRotZ = cachedRotations[cachedRotations.length - 1].z;
+            const endRotZ = 0; // Always end at 0
             const rotationZ =
               startRotZ + (endRotZ - startRotZ) * clampedProgress;
 
