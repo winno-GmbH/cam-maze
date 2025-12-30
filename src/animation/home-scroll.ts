@@ -137,7 +137,13 @@ export function initHomeScrollAnimation() {
         if (cameraPath && cameraPath.curves.length) {
           const progress = self.progress;
           const clampedProgress = Math.min(1, Math.max(0, progress));
-          const cameraPoint = cameraPath.getPointAt(clampedProgress);
+
+          // Accelerate camera progress so it reaches the end faster
+          // Use ease-out curve: faster at start, slower at end
+          // This makes camera reach end point around 80% of scroll progress
+          const cameraProgress = Math.pow(clampedProgress, 0.7); // Lower exponent = faster
+
+          const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
 
           const lookAtPoints: THREE.Vector3[] = [];
@@ -154,7 +160,7 @@ export function initHomeScrollAnimation() {
               lookAtPoints[2],
               lookAtPoints[3]
             );
-            const lookAtPoint = lookAtCurve.getPoint(clampedProgress);
+            const lookAtPoint = lookAtCurve.getPoint(cameraProgress);
             camera.lookAt(lookAtPoint);
           }
           camera.fov = originalFOV;
