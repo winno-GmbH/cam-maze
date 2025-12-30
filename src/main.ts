@@ -15,6 +15,7 @@ import { setupCamera } from "./core/camera";
 import { initIntroScrollAnimation } from "./animation/intro-scroll";
 import { initOutroScrollAnimation } from "./animation/outro-scroll";
 import { initializeObjectStates } from "./animation/object-state";
+import { createCameraRotationHUD } from "./core/camera-rotation-hud";
 
 function initSkipButton() {
   const skipButton = document.querySelector(".wr_p--skip.wr_p");
@@ -51,6 +52,8 @@ async function main() {
   initOutroScrollAnimation();
   initSkipButton();
 
+  // Create camera rotation HUD
+  createCameraRotationHUD();
 
   startRenderLoop();
 }
