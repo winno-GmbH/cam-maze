@@ -20,7 +20,7 @@ export function getPacmanRotationOffsets(): { x: number; y: number; z: number } 
 }
 
 // Global variables to store Pacman rotation for intro-scroll animation
-// Initialized from current intro-scroll rotation + 180° on Y axis
+// Set to 0,0,0 as default
 let introPacmanRotationX = 0;
 let introPacmanRotationY = 0;
 let introPacmanRotationZ = 0;
@@ -352,41 +352,10 @@ export function createIntroPacmanRotationHUD(): void {
     return; // Already created
   }
 
-  // Initialize rotation values from current intro-scroll rotation
-  // Get the current pacmanTargetQuaternion and convert to Euler, then add 180° to Y
-  try {
-    const { ghosts } = require("./objects");
-    const pacmanObj = ghosts.pacman;
-    if (pacmanObj) {
-      // Try to get current rotation from intro-scroll
-      try {
-        const introScrollModule = require("../animation/intro-scroll");
-        if (introScrollModule.pacmanTargetQuaternion) {
-          const euler = new THREE.Euler().setFromQuaternion(introScrollModule.pacmanTargetQuaternion);
-          introPacmanRotationX = (euler.x * 180) / Math.PI;
-          introPacmanRotationY = ((euler.y * 180) / Math.PI) + 180; // Add 180° to Y
-          introPacmanRotationZ = (euler.z * 180) / Math.PI;
-        } else {
-          // Fallback: use current rotation
-          const euler = new THREE.Euler().setFromQuaternion(pacmanObj.quaternion);
-          introPacmanRotationX = (euler.x * 180) / Math.PI;
-          introPacmanRotationY = ((euler.y * 180) / Math.PI) + 180; // Add 180° to Y
-          introPacmanRotationZ = (euler.z * 180) / Math.PI;
-        }
-      } catch (e) {
-        // Fallback: use current rotation
-        const euler = new THREE.Euler().setFromQuaternion(pacmanObj.quaternion);
-        introPacmanRotationX = (euler.x * 180) / Math.PI;
-        introPacmanRotationY = ((euler.y * 180) / Math.PI) + 180; // Add 180° to Y
-        introPacmanRotationZ = (euler.z * 180) / Math.PI;
-      }
-    }
-  } catch (e) {
-    // Default values if initialization fails
-    introPacmanRotationX = 0;
-    introPacmanRotationY = 180;
-    introPacmanRotationZ = 0;
-  }
+  // Initialize rotation values to 0,0,0
+  introPacmanRotationX = 0;
+  introPacmanRotationY = 0;
+  introPacmanRotationZ = 0;
 
   // Create container
   introPacmanHudContainer = document.createElement("div");

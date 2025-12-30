@@ -367,31 +367,20 @@ export function initIntroScrollAnimation() {
 }
 
 function initializeQuaternions() {
-  if (pacmanTargetQuaternion && ghostTargetQuaternion) return;
+  // Always use HUD values for Pacman rotation (defaults to 0,0,0)
+  const { getIntroPacmanRotation } = require("../core/debug-hud");
+  const rotation = getIntroPacmanRotation();
+  
+  // Create quaternion from HUD values
+  const euler = new THREE.Euler(
+    (rotation.x * Math.PI) / 180,
+    (rotation.y * Math.PI) / 180,
+    (rotation.z * Math.PI) / 180,
+    "XYZ"
+  );
+  pacmanTargetQuaternion = new THREE.Quaternion().setFromEuler(euler);
 
-  const pacmanObj = ghosts.pacman;
-  if (pacmanObj) {
-    if (!introInitialRotations["pacman"]) {
-      introInitialRotations["pacman"] = pacmanObj.quaternion.clone();
-    }
-
-    let quat = introInitialRotations["pacman"].clone();
-    const tempObj = new THREE.Object3D();
-    tempObj.quaternion.copy(quat);
-    slerpToLayDown(tempObj, quat, OPACITY.FULL);
-    quat = tempObj.quaternion.clone();
-
-    quat = applyRotations(quat, [
-      { axis: "x", angle: Math.PI / 2 },
-      { axis: "y", angle: Math.PI },
-      { axis: "y", angle: Math.PI },
-      { axis: "x", angle: Math.PI },
-      { axis: "x", angle: Math.PI },
-      { axis: "y", angle: Math.PI },
-    ]);
-
-    pacmanTargetQuaternion = quat;
-  }
+  if (ghostTargetQuaternion) return;
 
   const ghostObj = ghosts.ghost1;
   if (ghostObj) {
