@@ -181,12 +181,18 @@ export function initHomeScrollAnimation() {
 
         if (!startLookAt || !endLookAt) return;
 
-        // Linear interpolation from start to end lookAt (simple, no intermediate points)
+        // Apply easing to rotation progress to stretch it over the entire scroll duration
+        // Use a gentler easing curve so rotation happens more gradually
+        const rotationProgress =
+          clampedProgress * clampedProgress * clampedProgress; // Cubic ease-in
+
+        // Linear interpolation from start to end lookAt using eased rotation progress
         const lookAtPoint = startLookAt
           .clone()
-          .lerp(endLookAt, clampedProgress);
+          .lerp(endLookAt, rotationProgress);
 
         // Blend towards maze center to ensure we look at the center
+        // Use eased rotation progress for blending as well
         const directionToCenter = objectHomeScrollEndPathPoint
           .clone()
           .sub(camera.position)
@@ -197,7 +203,7 @@ export function initHomeScrollAnimation() {
           .normalize();
         const blendedDirection = directionToLookAt
           .clone()
-          .lerp(directionToCenter, clampedProgress)
+          .lerp(directionToCenter, rotationProgress)
           .normalize();
 
         // Create final lookAt point
@@ -208,9 +214,9 @@ export function initHomeScrollAnimation() {
         // Set X/Y rotation via lookAt
         camera.lookAt(finalLookAt);
 
-        // Set Z rotation directly (linear from start to 0)
+        // Set Z rotation directly using eased rotation progress (from start to 0)
         if (cachedStartRotZ !== null) {
-          camera.rotation.z = cachedStartRotZ * (1 - clampedProgress);
+          camera.rotation.z = cachedStartRotZ * (1 - rotationProgress);
         }
 
         camera.fov = originalFOV;
