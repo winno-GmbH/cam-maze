@@ -43,6 +43,8 @@ let cachedPathsKey: string | null = null;
 let startRotationQuaternion: THREE.Quaternion | null = null;
 // Cache start Z rotation
 let startRotZ: number | null = null;
+// Cache end rotation quaternion (calculated once at end position)
+let endRotationQuaternion: THREE.Quaternion | null = null;
 
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
@@ -67,8 +69,21 @@ export function initHomeScrollAnimation() {
     cameraPath.add(cameraCurve);
   }
 
-  // LookAt target: (0.55675, 0.2, 0.45175) - slightly below the end camera position
-  // Rotation will be calculated in each frame based on current position
+  // Calculate end rotation quaternion once (at end camera position looking at target)
+  const lookAtTarget = new THREE.Vector3(0.55675, 0.2, 0.45175);
+  const endCameraPos = cameraPathPoints[cameraPathPoints.length - 1].pos;
+  const tempCamera = new THREE.PerspectiveCamera();
+  tempCamera.position.copy(endCameraPos);
+  tempCamera.lookAt(lookAtTarget);
+  endRotationQuaternion = tempCamera.quaternion.clone();
+  const endEuler = new THREE.Euler().setFromQuaternion(endRotationQuaternion);
+  console.log("End rotation (calculated at end position):", {
+    x: (endEuler.x * 180) / Math.PI,
+    y: (endEuler.y * 180) / Math.PI,
+    z: (endEuler.z * 180) / Math.PI,
+    endCameraPos: endCameraPos,
+    lookAtTarget: lookAtTarget,
+  });
 
   const disposeClonedMaterials = () => {
     clonedMaterials.forEach((mat) => {
@@ -167,24 +182,16 @@ export function initHomeScrollAnimation() {
         // Update camera position
         camera.position.copy(cameraPath.getPointAt(cameraProgress));
 
-        // Calculate rotation in each frame based on current position and end lookAt target
-        const lookAtTarget = new THREE.Vector3(0.55675, 0.2, 0.45175);
-
-        if (startRotationQuaternion) {
-          // Calculate target rotation (looking at end target from current position)
-          const tempCamera = new THREE.PerspectiveCamera();
-          tempCamera.position.copy(camera.position);
-          tempCamera.lookAt(lookAtTarget);
-          const targetRotationQuaternion = tempCamera.quaternion.clone();
-
+        // Interpolate rotation from start to end (pre-calculated end rotation)
+        if (startRotationQuaternion && endRotationQuaternion) {
           // Apply easing to rotation progress
           const rotationProgress =
             clampedProgress * clampedProgress * clampedProgress; // Cubic ease-in
 
-          // Interpolate between start rotation and target rotation (X/Y)
+          // Interpolate between start rotation and end rotation (X/Y)
           camera.quaternion
             .copy(startRotationQuaternion)
-            .slerp(targetRotationQuaternion, rotationProgress);
+            .slerp(endRotationQuaternion, rotationProgress);
 
           // Set Z rotation separately (linear from start to 0)
           if (startRotZ !== null) {
