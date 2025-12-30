@@ -145,21 +145,27 @@ export function initHomeScrollAnimation() {
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
 
-          const lookAtPoints: THREE.Vector3[] = [];
-          cameraPathPoints.forEach((point) => {
-            if ("lookAt" in point && point.lookAt) {
-              lookAtPoints.push(point.lookAt);
-            }
-          });
+          // Use linear interpolation for lookAt to avoid over-rotation
+          // Get start and end lookAt points from cameraPathPoints
+          const startPoint = cameraPathPoints[0];
+          const endPoint = cameraPathPoints[cameraPathPoints.length - 1];
+          const startLookAt =
+            startPoint && "lookAt" in startPoint
+              ? (startPoint as { pos: THREE.Vector3; lookAt: THREE.Vector3 })
+                  .lookAt
+              : null;
+          const endLookAt =
+            endPoint && "lookAt" in endPoint
+              ? (endPoint as { pos: THREE.Vector3; lookAt: THREE.Vector3 })
+                  .lookAt
+              : null;
 
-          if (lookAtPoints.length >= 4) {
-            const lookAtCurve = new THREE.CubicBezierCurve3(
-              lookAtPoints[0],
-              lookAtPoints[1],
-              lookAtPoints[2],
-              lookAtPoints[3]
-            );
-            const lookAtPoint = lookAtCurve.getPointAt(cameraProgress);
+          if (startLookAt && endLookAt) {
+            // Linear interpolation from start to end lookAt
+            // This ensures smooth, direct rotation without over-rotation
+            const lookAtPoint = startLookAt
+              .clone()
+              .lerp(endLookAt, cameraProgress);
             camera.lookAt(lookAtPoint);
           }
           camera.fov = originalFOV;
