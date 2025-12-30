@@ -145,27 +145,37 @@ export function initHomeScrollAnimation() {
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
 
-          // Use linear interpolation for lookAt to avoid over-rotation
-          // Get start and end lookAt points from cameraPathPoints
-          const startPoint = cameraPathPoints[0];
-          const endPoint = cameraPathPoints[cameraPathPoints.length - 1];
-          const startLookAt =
-            startPoint && "lookAt" in startPoint
-              ? (startPoint as { pos: THREE.Vector3; lookAt: THREE.Vector3 })
-                  .lookAt
-              : null;
-          const endLookAt =
-            endPoint && "lookAt" in endPoint
-              ? (endPoint as { pos: THREE.Vector3; lookAt: THREE.Vector3 })
-                  .lookAt
-              : null;
+          // Use segmented linear interpolation for lookAt to avoid over-rotation
+          // Extract all lookAt points from cameraPathPoints and interpolate between them linearly
+          const lookAtPoints: THREE.Vector3[] = [];
+          cameraPathPoints.forEach((point) => {
+            if ("lookAt" in point) {
+              lookAtPoints.push(
+                (point as { pos: THREE.Vector3; lookAt: THREE.Vector3 }).lookAt
+              );
+            }
+          });
 
-          if (startLookAt && endLookAt) {
-            // Linear interpolation from start to end lookAt
-            // This ensures smooth, direct rotation without over-rotation
+          if (lookAtPoints.length >= 2) {
+            // Segment the progress into equal parts based on number of lookAt points
+            const numSegments = lookAtPoints.length - 1;
+            const segmentSize = 1.0 / numSegments;
+
+            // Find which segment we're in
+            let segmentIndex = Math.floor(cameraProgress / segmentSize);
+            segmentIndex = Math.min(segmentIndex, numSegments - 1);
+
+            // Calculate progress within the current segment (0-1)
+            const segmentStart = segmentIndex * segmentSize;
+            const segmentProgress =
+              (cameraProgress - segmentStart) / segmentSize;
+
+            // Linearly interpolate between the two lookAt points in this segment
+            const startLookAt = lookAtPoints[segmentIndex];
+            const endLookAt = lookAtPoints[segmentIndex + 1];
             const lookAtPoint = startLookAt
               .clone()
-              .lerp(endLookAt, cameraProgress);
+              .lerp(endLookAt, segmentProgress);
             camera.lookAt(lookAtPoint);
           }
           camera.fov = originalFOV;
