@@ -163,7 +163,7 @@ export function initHomeScrollAnimation() {
         // Update camera position
         camera.position.copy(cameraPath.getPointAt(cameraProgress));
 
-        // Extract lookAt points
+        // Extract lookAt points for X/Y rotation calculation
         const lookAtPoints = cameraPathPoints
           .filter(
             (p): p is { pos: THREE.Vector3; lookAt: THREE.Vector3 } =>
@@ -173,7 +173,7 @@ export function initHomeScrollAnimation() {
 
         if (lookAtPoints.length < 2) return;
 
-        // Segmented interpolation for X/Y
+        // Calculate X/Y rotation direction from segmented interpolation
         const numSegments = lookAtPoints.length - 1;
         const segmentSize = 1.0 / numSegments;
         const segmentIndex = Math.min(
@@ -183,13 +183,35 @@ export function initHomeScrollAnimation() {
         const segmentStart = segmentIndex * segmentSize;
         const segmentProgress = (clampedProgress - segmentStart) / segmentSize;
 
-        const lookAtPoint = lookAtPoints[segmentIndex]
+        // Interpolate direction from camera to lookAt points (for X/Y rotation)
+        const directionPoint = lookAtPoints[segmentIndex]
           .clone()
           .lerp(lookAtPoints[segmentIndex + 1], segmentProgress);
 
-        // Adjust Y to point towards maze center
-        lookAtPoint.y +=
-          (objectHomeScrollEndPathPoint.y - lookAtPoint.y) * clampedProgress;
+        // Calculate direction vector from camera to interpolated lookAt point
+        const direction = directionPoint
+          .clone()
+          .sub(camera.position)
+          .normalize();
+
+        // Calculate direction to maze center
+        const directionToCenter = objectHomeScrollEndPathPoint
+          .clone()
+          .sub(camera.position)
+          .normalize();
+
+        // Interpolate between segmented direction and center direction for X/Y
+        // This allows intermediate points for X/Y while gradually moving towards center
+        const blendedDirection = direction
+          .clone()
+          .lerp(directionToCenter, clampedProgress)
+          .normalize();
+
+        // Create lookAt point that combines the blended direction with maze center distance
+        // This ensures we look at the maze center but with X/Y rotation from intermediate points
+        const lookAtPoint = camera.position
+          .clone()
+          .add(blendedDirection.multiplyScalar(10));
 
         // Set X/Y rotation via lookAt
         camera.lookAt(lookAtPoint);
