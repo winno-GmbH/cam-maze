@@ -165,29 +165,40 @@ export function initHomeScrollAnimation() {
           });
 
           if (lookAtPoints.length >= 2) {
-            // Segment the progress into equal parts based on number of lookAt points
-            const numSegments = lookAtPoints.length - 1;
-            const segmentSize = 1.0 / numSegments;
-
-            // Find which segment we're in based on linear progress (not eased)
-            let segmentIndex = Math.floor(clampedProgress / segmentSize);
-            segmentIndex = Math.min(segmentIndex, numSegments - 1);
-
-            // Calculate progress within the current segment (0-1)
-            const segmentStart = segmentIndex * segmentSize;
-            const segmentProgress =
-              (clampedProgress - segmentStart) / segmentSize;
-
-            // Linearly interpolate between the two lookAt points in this segment
-            const segmentStartLookAt = lookAtPoints[segmentIndex];
-            const segmentEndLookAt = lookAtPoints[segmentIndex + 1];
-            const lookAtPoint = segmentStartLookAt
-              .clone()
-              .lerp(segmentEndLookAt, segmentProgress);
-
-            // For Z: always use direct linear interpolation from start to end (Z should go directly to 0)
             const globalStartLookAt = lookAtPoints[0];
             const globalEndLookAt = lookAtPoints[lookAtPoints.length - 1];
+
+            // For X and Y: use segmented interpolation (allows intermediate points)
+            let lookAtPoint: THREE.Vector3;
+            if (lookAtPoints.length > 2) {
+              // Segment the progress into equal parts based on number of lookAt points
+              const numSegments = lookAtPoints.length - 1;
+              const segmentSize = 1.0 / numSegments;
+
+              // Find which segment we're in based on linear progress (not eased)
+              let segmentIndex = Math.floor(clampedProgress / segmentSize);
+              segmentIndex = Math.min(segmentIndex, numSegments - 1);
+
+              // Calculate progress within the current segment (0-1)
+              const segmentStart = segmentIndex * segmentSize;
+              const segmentProgress =
+                (clampedProgress - segmentStart) / segmentSize;
+
+              // Linearly interpolate between the two lookAt points in this segment
+              const segmentStartLookAt = lookAtPoints[segmentIndex];
+              const segmentEndLookAt = lookAtPoints[segmentIndex + 1];
+              lookAtPoint = segmentStartLookAt
+                .clone()
+                .lerp(segmentEndLookAt, segmentProgress);
+            } else {
+              // Simple linear interpolation if only 2 points
+              lookAtPoint = globalStartLookAt
+                .clone()
+                .lerp(globalEndLookAt, clampedProgress);
+            }
+
+            // For Z: ALWAYS use direct linear interpolation from start to end (no intermediate points, no curves)
+            // This ensures Z rotation goes directly from start to end without any curves or intermediate points
             lookAtPoint.z =
               globalStartLookAt.z +
               (globalEndLookAt.z - globalStartLookAt.z) * clampedProgress;
@@ -199,16 +210,12 @@ export function initHomeScrollAnimation() {
               camera.quaternion
             );
             console.log(
-              `Progress: ${clampedProgress.toFixed(
-                3
-              )}, Segment: ${segmentIndex}/${numSegments}, SegmentProgress: ${segmentProgress.toFixed(
-                3
-              )}, Camera Rotation: X=${((euler.x * 180) / Math.PI).toFixed(
-                2
-              )}°, Y=${((euler.y * 180) / Math.PI).toFixed(2)}°, Z=${(
-                (euler.z * 180) /
+              `Progress: ${clampedProgress.toFixed(3)}, Camera Rotation: X=${(
+                (euler.x * 180) /
                 Math.PI
-              ).toFixed(2)}°`
+              ).toFixed(2)}°, Y=${((euler.y * 180) / Math.PI).toFixed(
+                2
+              )}°, Z=${((euler.z * 180) / Math.PI).toFixed(2)}°`
             );
           }
           camera.fov = originalFOV;
