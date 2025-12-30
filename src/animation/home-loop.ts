@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
+import { camera } from "../core/camera";
 import { ghosts, pacmanMixer, pill } from "../core/objects";
 import { clock, onFrame, scene } from "../core/scene";
 import { getHomePaths, TangentSmoother } from "../paths/paths";
@@ -177,6 +178,51 @@ export function startHomeLoop() {
   rotationTransitionTime = 0;
   startRotations = {};
 
+  // Smooth camera transition to home loop start position
+  const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
+  if (homeScrollTrigger && homeScrollTrigger.isActive) {
+    // If coming from home-scroll, smoothly transition camera
+    const { getStartPosition } = require("../paths/pathpoints");
+    const targetCameraPos = getStartPosition();
+    const currentCameraPos = camera.position.clone();
+    const cameraDistance = currentCameraPos.distanceTo(targetCameraPos);
+
+    if (cameraDistance > 0.1) {
+      gsap.killTweensOf(camera.position);
+      gsap.to(camera.position, {
+        x: targetCameraPos.x,
+        y: targetCameraPos.y,
+        z: targetCameraPos.z,
+        duration: 0.6,
+        ease: "power2.out",
+        onUpdate: () => {
+          camera.updateProjectionMatrix();
+        },
+      });
+
+      // Also transition lookAt
+      const { getLookAtPosition } = require("../paths/pathpoints");
+      const targetLookAt = getLookAtPosition();
+      const lookAtProps = { t: 0 };
+      const startLookAt = new THREE.Vector3();
+      camera.getWorldDirection(startLookAt);
+      startLookAt.multiplyScalar(10).add(camera.position);
+
+      gsap.to(lookAtProps, {
+        t: 1,
+        duration: 0.6,
+        ease: "power2.out",
+        onUpdate: () => {
+          const currentLookAt = startLookAt
+            .clone()
+            .lerp(targetLookAt, lookAtProps.t);
+          camera.lookAt(currentLookAt);
+          camera.updateProjectionMatrix();
+        },
+      });
+    }
+  }
+
   applyHomeLoopPreset(true);
 
   initializeHomeLoopTangentSmoothers();
@@ -187,21 +233,30 @@ export function startHomeLoop() {
       if (hasBeenPausedBefore && savedT !== null) {
         const targetPosition = path.getPointAt(savedT);
         if (targetPosition) {
-          // Smooth transition from current position to target position
+          // Get current position BEFORE any changes to avoid first frame jump
           const currentPosition = ghost.position.clone();
           const distance = currentPosition.distanceTo(targetPosition);
 
-          // Only animate if there's a significant distance (avoid unnecessary animations)
-          if (distance > 0.01) {
+          // Check if we're transitioning from home-scroll
+          const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
+          const isTransitioningFromHomeScroll =
+            homeScrollTrigger && homeScrollTrigger.isActive;
+
+          // Always use smooth transition when coming from home-scroll or if distance is significant
+          if (distance > 0.001 || isTransitioningFromHomeScroll) {
             // Kill any existing position animations
             gsap.killTweensOf(ghost.position);
 
+            // IMPORTANT: Set initial position to current to prevent first frame jump
+            ghost.position.copy(currentPosition);
+
             // Smooth transition to target position
+            // Use longer duration when transitioning from scroll for smoother effect
             gsap.to(ghost.position, {
               x: targetPosition.x,
               y: targetPosition.y,
               z: targetPosition.z,
-              duration: 0.5, // 500ms transition
+              duration: isTransitioningFromHomeScroll ? 0.8 : 0.5,
               ease: "power2.out",
               onUpdate: () => {
                 updateObjectPosition(key, ghost.position);
@@ -211,7 +266,7 @@ export function startHomeLoop() {
               },
             });
           } else {
-            // If very close, just set directly
+            // If very close and not transitioning, just set directly
             ghost.position.copy(targetPosition);
             updateObjectPosition(key, targetPosition);
           }

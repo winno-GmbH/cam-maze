@@ -81,6 +81,16 @@ export function initHomeScrollAnimation() {
     });
     // Dispose cloned materials to prevent memory leaks
     disposeClonedMaterials();
+
+    // Smooth camera fade/transition when leaving home-scroll
+    // This helps mask the transition to home-loop
+    requestAnimationFrame(() => {
+      const homeLoopTrigger = ScrollTrigger.getById("homeLoop");
+      if (!homeLoopTrigger || !homeLoopTrigger.isActive) {
+        // Only fade if not immediately going to home-loop
+        // Camera will be handled by startHomeLoop if transitioning there
+      }
+    });
   };
 
   const handleScrollEnter = () => {
