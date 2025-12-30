@@ -155,101 +155,52 @@ export function initHomeScrollAnimation() {
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
       onUpdate: (self) => {
-        if (cameraPath && cameraPath.curves.length) {
-          const progress = self.progress;
-          const clampedProgress = Math.min(1, Math.max(0, progress));
+        if (!cameraPath?.curves.length) return;
 
-          // Camera: starts at 0%, ends at 100%
-          // Should start fast, then slow down (ease-out) - but gentler and slower
-          // Use a gentler ease-out curve (exponent 1.5 instead of 2) for slower, smoother acceleration
-          const cameraProgress = 1 - Math.pow(1 - clampedProgress, 1.5); // Gentler ease-out for slower camera movement
+        const clampedProgress = Math.min(1, Math.max(0, self.progress));
+        const cameraProgress = 1 - Math.pow(1 - clampedProgress, 1.5);
 
-          const cameraPoint = cameraPath.getPointAt(cameraProgress);
-          camera.position.copy(cameraPoint);
+        // Update camera position
+        camera.position.copy(cameraPath.getPointAt(cameraProgress));
 
-          // Extract all lookAt points and use segmented linear interpolation
-          const lookAtPoints: THREE.Vector3[] = [];
-          cameraPathPoints.forEach((point) => {
-            if ("lookAt" in point) {
-              const lookAt = (
-                point as { pos: THREE.Vector3; lookAt: THREE.Vector3 }
-              ).lookAt;
-              if (
-                lookAt &&
-                lookAt.x !== undefined &&
-                lookAt.y !== undefined &&
-                lookAt.z !== undefined
-              ) {
-                lookAtPoints.push(lookAt);
-              }
-            }
-          });
+        // Extract lookAt points
+        const lookAtPoints = cameraPathPoints
+          .filter(
+            (p): p is { pos: THREE.Vector3; lookAt: THREE.Vector3 } =>
+              "lookAt" in p && p.lookAt !== undefined
+          )
+          .map((p) => p.lookAt);
 
-          if (lookAtPoints.length >= 2) {
-            // For X and Y: use segmented interpolation (allows intermediate points)
-            let lookAtPoint: THREE.Vector3;
-            if (lookAtPoints.length > 2) {
-              const numSegments = lookAtPoints.length - 1;
-              const segmentSize = 1.0 / numSegments;
-              let segmentIndex = Math.floor(clampedProgress / segmentSize);
-              segmentIndex = Math.min(segmentIndex, numSegments - 1);
-              const segmentStart = segmentIndex * segmentSize;
-              const segmentProgress =
-                (clampedProgress - segmentStart) / segmentSize;
+        if (lookAtPoints.length < 2) return;
 
-              const segmentStartLookAt = lookAtPoints[segmentIndex];
-              const segmentEndLookAt = lookAtPoints[segmentIndex + 1];
-              lookAtPoint = segmentStartLookAt
-                .clone()
-                .lerp(segmentEndLookAt, segmentProgress);
-            } else {
-              const startLookAt = lookAtPoints[0];
-              const endLookAt = lookAtPoints[lookAtPoints.length - 1];
-              lookAtPoint = startLookAt
-                .clone()
-                .lerp(endLookAt, clampedProgress);
-            }
+        // Segmented interpolation for X/Y
+        const numSegments = lookAtPoints.length - 1;
+        const segmentSize = 1.0 / numSegments;
+        const segmentIndex = Math.min(
+          Math.floor(clampedProgress / segmentSize),
+          numSegments - 1
+        );
+        const segmentStart = segmentIndex * segmentSize;
+        const segmentProgress = (clampedProgress - segmentStart) / segmentSize;
 
-            // Adjust lookAt to point towards maze center
-            // Calculate direction from camera to maze center
-            const directionToCenter = objectHomeScrollEndPathPoint
-              .clone()
-              .sub(cameraPoint)
-              .normalize();
-            // Interpolate lookAt Y between original and center Y based on progress
-            // This ensures camera gradually looks towards maze center
-            const centerY = objectHomeScrollEndPathPoint.y;
-            const lookAtY =
-              lookAtPoint.y + (centerY - lookAtPoint.y) * clampedProgress;
-            lookAtPoint.y = lookAtY;
+        const lookAtPoint = lookAtPoints[segmentIndex]
+          .clone()
+          .lerp(lookAtPoints[segmentIndex + 1], segmentProgress);
 
-            // Use lookAt for X and Y rotation
-            camera.lookAt(lookAtPoint);
+        // Adjust Y to point towards maze center
+        lookAtPoint.y +=
+          (objectHomeScrollEndPathPoint.y - lookAtPoint.y) * clampedProgress;
 
-            // For Z: ALWAYS use direct linear interpolation from start to 0 (no intermediate points)
-            // Override Z rotation separately to ensure it goes from start to 0
-            if (cachedStartRotZ !== null) {
-              const rotationZ =
-                cachedStartRotZ + (0 - cachedStartRotZ) * clampedProgress;
-              camera.rotation.z = rotationZ;
-            }
+        // Set X/Y rotation via lookAt
+        camera.lookAt(lookAtPoint);
 
-            // Log camera rotation for debugging
-            const euler = new THREE.Euler().setFromQuaternion(
-              camera.quaternion
-            );
-            console.log(
-              `Progress: ${clampedProgress.toFixed(3)}, Camera Rotation: X=${(
-                (euler.x * 180) /
-                Math.PI
-              ).toFixed(2)}°, Y=${((euler.y * 180) / Math.PI).toFixed(
-                2
-              )}°, Z=${((euler.z * 180) / Math.PI).toFixed(2)}°`
-            );
-          }
-          camera.fov = originalFOV;
-          camera.updateProjectionMatrix();
+        // Set Z rotation directly (linear from start to 0)
+        if (cachedStartRotZ !== null) {
+          camera.rotation.z = cachedStartRotZ * (1 - clampedProgress);
         }
+
+        camera.fov = originalFOV;
+        camera.updateProjectionMatrix();
       },
       onLeave: handleScrollLeave,
       onLeaveBack: handleScrollLeave,
