@@ -413,7 +413,15 @@ export function initHomeScrollAnimation() {
             const pathPoint = data.path.getPointAt(easedProgress);
             data.object.position.copy(pathPoint);
 
-            // Rotation also uses eased progress for smooth animation
+            // Rotation uses full scroll progress (0-100%) instead of object animation progress
+            // This stretches the rotation over the entire home-scroll duration
+            const fullScrollProgress = Math.min(
+              1,
+              Math.max(0, homeScrollTrigger.progress)
+            );
+            const rotationProgress =
+              fullScrollProgress * fullScrollProgress * fullScrollProgress; // Cubic ease-in
+
             // Apply same rotation logic for all objects (Pacman and Ghosts)
             let startEuler = data.startEuler;
             let endEuler = data.endEuler;
@@ -430,13 +438,13 @@ export function initHomeScrollAnimation() {
               }
             }
 
-            // Calculate eased rotation (same for Pacman and Ghosts, endEuler already set correctly)
+            // Calculate eased rotation using full scroll progress (stretched over entire home-scroll)
             finalRotX =
-              startEuler.x + (endEuler.x - startEuler.x) * easedProgress;
+              startEuler.x + (endEuler.x - startEuler.x) * rotationProgress;
             finalRotY =
-              startEuler.y + (endEuler.y - startEuler.y) * easedProgress;
+              startEuler.y + (endEuler.y - startEuler.y) * rotationProgress;
             finalRotZ =
-              startEuler.z + (endEuler.z - startEuler.z) * easedProgress;
+              startEuler.z + (endEuler.z - startEuler.z) * rotationProgress;
 
             // Set rotation for all objects
             data.object.rotation.set(finalRotX, finalRotY, finalRotZ);
