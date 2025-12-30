@@ -23,7 +23,7 @@ import { setFloorPlane, setObjectScale } from "./scene-utils";
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
 let lastUpdateProgress: number | null = null;
-let pacmanTargetQuaternion: THREE.Quaternion | null = null;
+export let pacmanTargetQuaternion: THREE.Quaternion | null = null;
 let ghostTargetQuaternion: THREE.Quaternion | null = null;
 let introInitialRotations: Record<string, THREE.Quaternion> = {};
 let cachedCameraPosition: THREE.Vector3 | null = null;
@@ -638,7 +638,21 @@ function updateObjectsWalkBy(progress: number) {
         object.rotation.copy(targetEuler);
         object.scale.set(10, 10, 10);
       } else {
-        const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
+        let targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
+        
+        // For Pacman: use HUD values if available
+        if (key === "pacman") {
+          const { getIntroPacmanRotation } = require("../core/debug-hud");
+          const rotation = getIntroPacmanRotation();
+          const euler = new THREE.Euler(
+            (rotation.x * Math.PI) / 180,
+            (rotation.y * Math.PI) / 180,
+            (rotation.z * Math.PI) / 180,
+            "XYZ"
+          );
+          targetQuat = new THREE.Quaternion().setFromEuler(euler);
+        }
+        
         if (targetQuat) {
           object.quaternion.copy(targetQuat);
         }

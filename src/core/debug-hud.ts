@@ -19,6 +19,16 @@ export function getPacmanRotationOffsets(): { x: number; y: number; z: number } 
   return { x: pacmanRotationX, y: pacmanRotationY, z: pacmanRotationZ };
 }
 
+// Global variables to store Pacman rotation for intro-scroll animation
+// Initialized from current intro-scroll rotation + 180° on Y axis
+let introPacmanRotationX = 0;
+let introPacmanRotationY = 0;
+let introPacmanRotationZ = 0;
+
+export function getIntroPacmanRotation(): { x: number; y: number; z: number } {
+  return { x: introPacmanRotationX, y: introPacmanRotationY, z: introPacmanRotationZ };
+}
+
 function applyPillRotation(): void {
   if (!pill) return;
   
