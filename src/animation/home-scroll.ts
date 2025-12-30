@@ -164,24 +164,45 @@ export function initHomeScrollAnimation() {
             camera.lookAt(lookAtPoint);
 
             // Manually adjust Z rotation: interpolate from -17° to 0° based on progress
-            // Start adjusting Z rotation in the last part of the animation (e.g., from 50% onwards)
-            const zRotationStartProgress = 0.5;
-            if (cameraProgress >= zRotationStartProgress) {
+            // Start adjusting Z rotation smoothly from the beginning, but more pronounced in the second half
+            // Use a smooth interpolation that starts early but accelerates in the second half
+            const zRotationStartProgress = 0.3; // Start earlier for smoother transition
+            let targetZRotation = 0;
+
+            if (cameraProgress < zRotationStartProgress) {
+              // Before start: keep natural Z rotation from lookAt
+              targetZRotation =
+                new THREE.Euler().setFromQuaternion(camera.quaternion).z *
+                (180 / Math.PI);
+            } else {
+              // Smooth interpolation from current Z to target Z
               const zRotationProgress =
                 (cameraProgress - zRotationStartProgress) /
                 (1 - zRotationStartProgress);
-              // Interpolate Z rotation from -17° to 0°
-              const targetZRotation = -17 + zRotationProgress * 17; // -17° to 0°
+              // Use ease-in-out for smoother transition
+              const easedProgress =
+                zRotationProgress < 0.5
+                  ? 2 * zRotationProgress * zRotationProgress
+                  : 1 - Math.pow(-2 * zRotationProgress + 2, 2) / 2;
 
-              // Get current rotation
-              const currentEuler = new THREE.Euler().setFromQuaternion(
-                camera.quaternion
-              );
-              // Override Z rotation
-              currentEuler.z = (targetZRotation * Math.PI) / 180;
-              // Apply the modified rotation
-              camera.quaternion.setFromEuler(currentEuler);
+              // Get starting Z rotation (from lookAt at start point)
+              const startZRotation =
+                new THREE.Euler().setFromQuaternion(camera.quaternion).z *
+                (180 / Math.PI);
+              // Interpolate from startZRotation to 0°
+              targetZRotation =
+                startZRotation + easedProgress * (0 - startZRotation);
             }
+
+            // Apply Z rotation adjustment smoothly
+            const currentEuler = new THREE.Euler().setFromQuaternion(
+              camera.quaternion
+            );
+            const currentZ = currentEuler.z * (180 / Math.PI);
+            // Smoothly interpolate current Z towards target Z to avoid abrupt changes
+            const smoothedZ = currentZ + (targetZRotation - currentZ) * 0.3; // Smooth factor
+            currentEuler.z = (smoothedZ * Math.PI) / 180;
+            camera.quaternion.setFromEuler(currentEuler);
 
             const euler = new THREE.Euler().setFromQuaternion(
               camera.quaternion
