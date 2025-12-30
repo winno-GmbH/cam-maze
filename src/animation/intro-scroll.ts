@@ -245,12 +245,20 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           createIntroGridGuides();
+          // Speed up Pacman mouth animation in intro-scroll
+          if (pacmanMixer) {
+            pacmanMixer.timeScale = 1.5; // 50% faster
+          }
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           createIntroGridGuides();
+          // Speed up Pacman mouth animation in intro-scroll
+          if (pacmanMixer) {
+            pacmanMixer.timeScale = 1.5; // 50% faster
+          }
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -258,6 +266,10 @@ export function initIntroScrollAnimation() {
           restoreFloor();
           setIntroScrollLocked(false);
           removeIntroGridGuides();
+          // Reset Pacman animation speed when leaving intro-scroll
+          if (pacmanMixer) {
+            pacmanMixer.timeScale = 1.0;
+          }
         },
         onLeaveBack: () => {
           isIntroScrollActive = false;
@@ -265,6 +277,10 @@ export function initIntroScrollAnimation() {
           restoreFloor();
           setIntroScrollLocked(false);
           removeIntroGridGuides();
+          // Reset Pacman animation speed when leaving intro-scroll
+          if (pacmanMixer) {
+            pacmanMixer.timeScale = 1.0;
+          }
         },
         onUpdate: (self) => {
           if (typeof self.progress === "number") {
