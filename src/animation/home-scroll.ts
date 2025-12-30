@@ -145,116 +145,42 @@ export function initHomeScrollAnimation() {
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
 
-          const lookAtPoints: (THREE.Vector3 | null)[] = [];
-          const rotations: (THREE.Euler | null)[] = [];
-
-          cameraPathPoints.forEach((point, index) => {
+          const lookAtPoints: THREE.Vector3[] = [];
+          cameraPathPoints.forEach((point) => {
             if ("lookAt" in point && point.lookAt) {
               lookAtPoints.push(point.lookAt);
-            } else {
-              lookAtPoints.push(null);
-            }
-            if ("rotation" in point && point.rotation) {
-              rotations[index] = point.rotation;
-            } else {
-              rotations[index] = null;
             }
           });
 
-          // Find first rotation index
-          const firstRotationIndex = rotations.findIndex((r) => r !== null);
-          const lookAtPointsForCurve = lookAtPoints.filter(
-            (p) => p !== null
-          ) as THREE.Vector3[];
+          if (lookAtPoints.length >= 4) {
+            // Use original Bezier curve with all 4 lookAt points
+            const lookAtCurve = new THREE.CubicBezierCurve3(
+              lookAtPoints[0],
+              lookAtPoints[1],
+              lookAtPoints[2],
+              lookAtPoints[3]
+            );
+            const lookAtPoint = lookAtCurve.getPointAt(cameraProgress);
+            camera.lookAt(lookAtPoint);
 
-          if (firstRotationIndex !== -1 && lookAtPointsForCurve.length >= 2) {
-            // We have both lookAt points (0, 1) and rotations (2, 3)
-            // Interpolate smoothly between them
+            // Manually adjust Z rotation: interpolate from -17° to 0° based on progress
+            // Start adjusting Z rotation in the last part of the animation (e.g., from 50% onwards)
+            const zRotationStartProgress = 0.5;
+            if (cameraProgress >= zRotationStartProgress) {
+              const zRotationProgress =
+                (cameraProgress - zRotationStartProgress) /
+                (1 - zRotationStartProgress);
+              // Interpolate Z rotation from -17° to 0°
+              const targetZRotation = -17 + zRotationProgress * 17; // -17° to 0°
 
-            // First 66%: Use lookAt curve over all 3 points (0, 1, and calculate lookAt for point 2)
-            if (cameraProgress < 0.66) {
-              if (lookAtPointsForCurve.length >= 2) {
-                // Calculate a lookAt point for the third position based on the rotation
-                const thirdRotation = rotations[2];
-                let thirdLookAtPoint: THREE.Vector3;
-
-                if (thirdRotation) {
-                  // Calculate lookAt direction from rotation
-                  const direction = new THREE.Vector3(0, 0, -1);
-                  direction.applyEuler(thirdRotation);
-                  thirdLookAtPoint = cameraPathPoints[2].pos
-                    .clone()
-                    .add(direction.multiplyScalar(10));
-                } else {
-                  // Fallback: use the last lookAt point
-                  thirdLookAtPoint =
-                    lookAtPointsForCurve[lookAtPointsForCurve.length - 1];
-                }
-
-                // Create a Bezier curve over all 3 points
-                const lookAtCurve = new THREE.CubicBezierCurve3(
-                  lookAtPointsForCurve[0],
-                  lookAtPointsForCurve[1],
-                  lookAtPointsForCurve[1].clone().lerp(thirdLookAtPoint, 0.5),
-                  thirdLookAtPoint
-                );
-                const t = cameraProgress / 0.66;
-                const lookAtPoint = lookAtCurve.getPointAt(t);
-                camera.lookAt(lookAtPoint);
-              }
-            } else {
-              // Last 34%: Interpolate from lookAt to rotations
-              const transitionProgress = (cameraProgress - 0.66) / 0.34;
-
-              // Get lookAt quaternion at the end of lookAt phase (at 66%, which is point 2)
-              const thirdRotation = rotations[2];
-              let lookAtQuat: THREE.Quaternion;
-
-              if (thirdRotation) {
-                // Use the rotation at point 2 as the starting quaternion
-                lookAtQuat = new THREE.Quaternion().setFromEuler(thirdRotation);
-              } else {
-                // Fallback: calculate from last lookAt point
-                const lastLookAtPoint =
-                  lookAtPointsForCurve[lookAtPointsForCurve.length - 1];
-                const tempCamera = new THREE.PerspectiveCamera();
-                tempCamera.position.copy(camera.position);
-                tempCamera.lookAt(lastLookAtPoint);
-                lookAtQuat = tempCamera.quaternion.clone();
-              }
-
-              // Get rotations at thirdPosition (index 2) and end (index 3)
-              const endRotation = rotations[3] || rotations[2];
-
-              if (thirdRotation && endRotation) {
-                const thirdQuat = new THREE.Quaternion().setFromEuler(
-                  thirdRotation
-                );
-                const endQuat = new THREE.Quaternion().setFromEuler(
-                  endRotation
-                );
-
-                // Interpolate: lookAt -> thirdRotation -> endRotation
-                if (transitionProgress < 0.5) {
-                  // 0-50% of transition: lookAt -> thirdRotation
-                  const t = transitionProgress * 2;
-                  camera.quaternion.slerpQuaternions(lookAtQuat, thirdQuat, t);
-                } else {
-                  // 50-100% of transition: thirdRotation -> endRotation
-                  const t = (transitionProgress - 0.5) * 2;
-                  camera.quaternion.slerpQuaternions(thirdQuat, endQuat, t);
-                }
-              } else if (endRotation) {
-                // Only endRotation available
-                const endQuat = new THREE.Quaternion().setFromEuler(
-                  endRotation
-                );
-                camera.quaternion.slerpQuaternions(
-                  lookAtQuat,
-                  endQuat,
-                  transitionProgress
-                );
-              }
+              // Get current rotation
+              const currentEuler = new THREE.Euler().setFromQuaternion(
+                camera.quaternion
+              );
+              // Override Z rotation
+              currentEuler.z = (targetZRotation * Math.PI) / 180;
+              // Apply the modified rotation
+              camera.quaternion.setFromEuler(currentEuler);
             }
 
             const euler = new THREE.Euler().setFromQuaternion(
@@ -268,7 +194,7 @@ export function initHomeScrollAnimation() {
                 Math.PI
               ).toFixed(2)}° Z=${((euler.z * 180) / Math.PI).toFixed(2)}°`
             );
-          } else if (lookAtPointsForCurve.length >= 4) {
+          } else if (lookAtPoints.length >= 4) {
             // Fallback to lookAt only
             const lookAtCurve = new THREE.CubicBezierCurve3(
               lookAtPoints[0]!,
