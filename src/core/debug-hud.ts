@@ -288,20 +288,8 @@ function updatePacmanHUD(): void {
       if (xValueDisplay) {
         xValueDisplay.textContent = `${pacmanRotationX}°`;
       }
-      // Force animation update - trigger ScrollTrigger refresh to recalculate
-      const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
-      if (homeScrollTrigger) {
-        // Force refresh to trigger onUpdate callback
-        homeScrollTrigger.refresh();
-        // Also manually trigger update by scrolling slightly
-        if (homeScrollTrigger.isActive) {
-          // The onUpdate will be called automatically on next frame
-          // But we can also force it by invalidating the progress
-          const currentProgress = homeScrollTrigger.progress;
-          // Small hack: temporarily change progress to force update
-          homeScrollTrigger.scroll(currentProgress);
-        }
-      }
+      // Force animation update - the frame-based update will handle the rotation
+      // No need to trigger scroll or refresh, as the frame callback runs every frame
     });
   }
   
@@ -312,10 +300,7 @@ function updatePacmanHUD(): void {
       if (yValueDisplay) {
         yValueDisplay.textContent = `${pacmanRotationY}°`;
       }
-      const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
-      if (homeScrollTrigger) {
-        homeScrollTrigger.refresh();
-      }
+      // Frame-based update will handle rotation changes automatically
     });
   }
   
@@ -326,10 +311,7 @@ function updatePacmanHUD(): void {
       if (zValueDisplay) {
         zValueDisplay.textContent = `${pacmanRotationZ}°`;
       }
-      const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
-      if (homeScrollTrigger) {
-        homeScrollTrigger.refresh();
-      }
+      // Frame-based update will handle rotation changes automatically
     });
   }
 }
