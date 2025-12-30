@@ -7,6 +7,7 @@ import { clock } from "../core/scene";
 import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import { getHomeScrollPaths } from "../paths/paths";
 import { LAY_DOWN_QUAT_1 } from "./util";
+import { getPacmanRotationOffsets } from "../core/debug-hud";
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import {
   getCurrentRotations,
@@ -253,16 +254,32 @@ export function initHomeScrollAnimation() {
         object.quaternion.clone();
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
 
-      // For Pacman: Use same rotation as ghosts but add +90 degrees on Y-axis
-      // This corrects the rotation axis for Pacman
+      // For Pacman: Use rotation offsets from HUD sliders
+      // This allows real-time adjustment of rotation axis
       let endEuler: THREE.Euler;
       if (key === "pacman") {
-        // Start with LAY_DOWN_QUAT_1, then add +90° rotation around Y-axis
-        const yAxis90 = new THREE.Quaternion().setFromAxisAngle(
-          new THREE.Vector3(0, 1, 0),
-          Math.PI / 2 // +90 degrees
+        // Get rotation offsets from HUD
+        const offsets = getPacmanRotationOffsets();
+
+        // Start with LAY_DOWN_QUAT_1, then apply rotation offsets
+        const xRotation = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(1, 0, 0),
+          (offsets.x * Math.PI) / 180
         );
-        const pacmanLayDown = LAY_DOWN_QUAT_1.clone().multiply(yAxis90);
+        const yRotation = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(0, 1, 0),
+          (offsets.y * Math.PI) / 180
+        );
+        const zRotation = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(0, 0, 1),
+          (offsets.z * Math.PI) / 180
+        );
+
+        // Combine rotations: LAY_DOWN_QUAT_1 * Y * X * Z
+        const pacmanLayDown = LAY_DOWN_QUAT_1.clone()
+          .multiply(yRotation)
+          .multiply(xRotation)
+          .multiply(zRotation);
         endEuler = new THREE.Euler().setFromQuaternion(pacmanLayDown);
       } else {
         // Ghosts use standard lay down rotation
@@ -356,8 +373,31 @@ export function initHomeScrollAnimation() {
 
             // Rotation also uses eased progress for smooth animation
             // Apply same rotation logic for all objects (Pacman and Ghosts)
-            const startEuler = data.startEuler;
-            const endEuler = data.endEuler;
+            let startEuler = data.startEuler;
+            let endEuler = data.endEuler;
+
+            // For Pacman: Recalculate end rotation from HUD values in real-time
+            if (data.key === "pacman") {
+              const offsets = getPacmanRotationOffsets();
+              const xRotation = new THREE.Quaternion().setFromAxisAngle(
+                new THREE.Vector3(1, 0, 0),
+                (offsets.x * Math.PI) / 180
+              );
+              const yRotation = new THREE.Quaternion().setFromAxisAngle(
+                new THREE.Vector3(0, 1, 0),
+                (offsets.y * Math.PI) / 180
+              );
+              const zRotation = new THREE.Quaternion().setFromAxisAngle(
+                new THREE.Vector3(0, 0, 1),
+                (offsets.z * Math.PI) / 180
+              );
+              const pacmanLayDown = LAY_DOWN_QUAT_1.clone()
+                .multiply(yRotation)
+                .multiply(xRotation)
+                .multiply(zRotation);
+              endEuler = new THREE.Euler().setFromQuaternion(pacmanLayDown);
+            }
+
             const easedRotX =
               startEuler.x + (endEuler.x - startEuler.x) * easedProgress;
             const easedRotY =

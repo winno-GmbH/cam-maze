@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import ScrollTrigger from "gsap/ScrollTrigger";
 import { pill } from "./objects";
 
 // Global variable to store Y rotation in degrees
@@ -6,6 +7,15 @@ let pillYRotationDegrees = 20;
 
 export function getPillYRotationDegrees(): number {
   return pillYRotationDegrees;
+}
+
+// Global variables to store Pacman rotation offsets in degrees (for home-scroll animation)
+let pacmanRotationX = 0;
+let pacmanRotationY = 90; // Default +90 degrees on Y-axis
+let pacmanRotationZ = 0;
+
+export function getPacmanRotationOffsets(): { x: number; y: number; z: number } {
+  return { x: pacmanRotationX, y: pacmanRotationY, z: pacmanRotationZ };
 }
 
 function applyPillRotation(): void {
@@ -23,6 +33,9 @@ function applyPillRotation(): void {
 
 let hudContainer: HTMLDivElement | null = null;
 let isVisible = false;
+
+let pacmanHudContainer: HTMLDivElement | null = null;
+let isPacmanHudVisible = false;
 
 export function createPillDebugHUD(): void {
   if (hudContainer) {
@@ -138,5 +151,177 @@ export function stopHUDRefresh(): void {
   if (refreshInterval) {
     clearInterval(refreshInterval);
     refreshInterval = null;
+  }
+}
+
+export function createPacmanRotationHUD(): void {
+  if (pacmanHudContainer) {
+    return; // Already created
+  }
+
+  // Create container
+  pacmanHudContainer = document.createElement("div");
+  pacmanHudContainer.id = "pacman-rotation-hud";
+  pacmanHudContainer.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: 320px;
+    background: rgba(20, 20, 20, 0.95);
+    color: #e0e0e0;
+    padding: 20px;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    z-index: 10000;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+    border: 2px solid #FFD700;
+    max-height: 90vh;
+    overflow-y: auto;
+  `;
+
+  // Toggle button
+  const toggleBtn = document.createElement("button");
+  toggleBtn.textContent = "Show/Hide Pacman Rotation";
+  toggleBtn.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 360px;
+    padding: 10px 15px;
+    background: #FFD700;
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 10001;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  `;
+  toggleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    isPacmanHudVisible = !isPacmanHudVisible;
+    if (pacmanHudContainer) {
+      pacmanHudContainer.style.display = isPacmanHudVisible ? "block" : "none";
+    }
+  });
+
+  document.body.appendChild(toggleBtn);
+  document.body.appendChild(pacmanHudContainer);
+  pacmanHudContainer.style.display = "none";
+
+  updatePacmanHUD();
+}
+
+function updatePacmanHUD(): void {
+  if (!pacmanHudContainer) return;
+
+  pacmanHudContainer.innerHTML = `
+    <h3 style="margin-top: 0; color: #FFD700; font-size: 16px; text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);">Pacman Rotation (Home-Scroll)</h3>
+    
+    <div style="margin-bottom: 15px; color: #e0e0e0;">
+      <label for="pacman-x-rotation-slider" style="display: block; margin-bottom: 10px;">
+        <strong style="color: #ffffff;">X Rotation (degrees):</strong>
+        <span id="pacman-x-rotation-value" style="color: #FFD700; margin-left: 10px; font-weight: bold;">${pacmanRotationX}</span>°
+      </label>
+      <input 
+        type="range" 
+        id="pacman-x-rotation-slider" 
+        min="-180" 
+        max="180" 
+        value="${pacmanRotationX}"
+        step="1"
+        style="width: 100%; height: 8px; border-radius: 5px; outline: none; background: #333; cursor: pointer;"
+      />
+    </div>
+    
+    <div style="margin-bottom: 15px; color: #e0e0e0;">
+      <label for="pacman-y-rotation-slider" style="display: block; margin-bottom: 10px;">
+        <strong style="color: #ffffff;">Y Rotation (degrees):</strong>
+        <span id="pacman-y-rotation-value" style="color: #FFD700; margin-left: 10px; font-weight: bold;">${pacmanRotationY}</span>°
+      </label>
+      <input 
+        type="range" 
+        id="pacman-y-rotation-slider" 
+        min="-180" 
+        max="180" 
+        value="${pacmanRotationY}"
+        step="1"
+        style="width: 100%; height: 8px; border-radius: 5px; outline: none; background: #333; cursor: pointer;"
+      />
+    </div>
+    
+    <div style="margin-bottom: 15px; color: #e0e0e0;">
+      <label for="pacman-z-rotation-slider" style="display: block; margin-bottom: 10px;">
+        <strong style="color: #ffffff;">Z Rotation (degrees):</strong>
+        <span id="pacman-z-rotation-value" style="color: #FFD700; margin-left: 10px; font-weight: bold;">${pacmanRotationZ}</span>°
+      </label>
+      <input 
+        type="range" 
+        id="pacman-z-rotation-slider" 
+        min="-180" 
+        max="180" 
+        value="${pacmanRotationZ}"
+        step="1"
+        style="width: 100%; height: 8px; border-radius: 5px; outline: none; background: #333; cursor: pointer;"
+      />
+    </div>
+    
+    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #444; color: #aaa; font-size: 11px;">
+      <p style="margin: 0;">These values adjust the end rotation of Pacman in the home-scroll animation. Changes are applied instantly.</p>
+    </div>
+  `;
+
+  // Attach event listeners
+  const xSlider = pacmanHudContainer.querySelector("#pacman-x-rotation-slider") as HTMLInputElement;
+  const ySlider = pacmanHudContainer.querySelector("#pacman-y-rotation-slider") as HTMLInputElement;
+  const zSlider = pacmanHudContainer.querySelector("#pacman-z-rotation-slider") as HTMLInputElement;
+  const xValueDisplay = pacmanHudContainer.querySelector("#pacman-x-rotation-value");
+  const yValueDisplay = pacmanHudContainer.querySelector("#pacman-y-rotation-value");
+  const zValueDisplay = pacmanHudContainer.querySelector("#pacman-z-rotation-value");
+  
+  if (xSlider) {
+    xSlider.addEventListener("input", (e) => {
+      const target = e.target as HTMLInputElement;
+      pacmanRotationX = parseFloat(target.value);
+      if (xValueDisplay) {
+        xValueDisplay.textContent = `${pacmanRotationX}°`;
+      }
+      // Trigger home-scroll animation update by invalidating cache
+      const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
+      if (homeScrollTrigger) {
+        // Force a small scroll update to trigger animation recalculation
+        homeScrollTrigger.refresh();
+      }
+    });
+  }
+  
+  if (ySlider) {
+    ySlider.addEventListener("input", (e) => {
+      const target = e.target as HTMLInputElement;
+      pacmanRotationY = parseFloat(target.value);
+      if (yValueDisplay) {
+        yValueDisplay.textContent = `${pacmanRotationY}°`;
+      }
+      const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
+      if (homeScrollTrigger) {
+        homeScrollTrigger.refresh();
+      }
+    });
+  }
+  
+  if (zSlider) {
+    zSlider.addEventListener("input", (e) => {
+      const target = e.target as HTMLInputElement;
+      pacmanRotationZ = parseFloat(target.value);
+      if (zValueDisplay) {
+        zValueDisplay.textContent = `${pacmanRotationZ}°`;
+      }
+      const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
+      if (homeScrollTrigger) {
+        homeScrollTrigger.refresh();
+      }
+    });
   }
 }

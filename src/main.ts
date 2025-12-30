@@ -15,7 +15,7 @@ import { setupCamera } from "./core/camera";
 import { initIntroScrollAnimation } from "./animation/intro-scroll";
 import { initOutroScrollAnimation } from "./animation/outro-scroll";
 import { initializeObjectStates } from "./animation/object-state";
-import { createPillDebugHUD, startHUDRefresh } from "./core/debug-hud";
+import { createPillDebugHUD, startHUDRefresh, createPacmanRotationHUD } from "./core/debug-hud";
 
 function initSkipButton() {
   const skipButton = document.querySelector(".wr_p--skip.wr_p");
@@ -55,6 +55,9 @@ async function main() {
   // Debug HUD for pill
   createPillDebugHUD();
   startHUDRefresh(500);
+  
+  // Debug HUD for Pacman rotation
+  createPacmanRotationHUD();
 
   startRenderLoop();
 }
