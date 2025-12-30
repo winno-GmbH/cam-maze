@@ -67,8 +67,9 @@ export function initHomeScrollAnimation() {
 
   const handleScrollLeave = () => {
     const introScrollTrigger = ScrollTrigger.getById("introScroll");
-    if (!introScrollTrigger?.isActive) {
-      homeScrollTimeline?.resume();
+    // Pause timeline to prevent reverse animation when scrolling back
+    if (homeScrollTimeline) {
+      homeScrollTimeline.pause();
     }
     // Kill all object animations and reset opacity when leaving home-scroll
     allObjects.forEach(([key, object]) => {
@@ -308,7 +309,9 @@ export function initHomeScrollAnimation() {
           duration: duration,
           onUpdate: function () {
             const introScrollTrigger = ScrollTrigger.getById("introScroll");
-            if (introScrollTrigger?.isActive) {
+            const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
+            // Don't update if intro scroll is active or home scroll is not active
+            if (introScrollTrigger?.isActive || !homeScrollTrigger?.isActive) {
               return;
             }
 
