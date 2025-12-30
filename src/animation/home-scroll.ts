@@ -376,7 +376,7 @@ export function initHomeScrollAnimation() {
             let startEuler = data.startEuler;
             let endEuler = data.endEuler;
 
-            // For Pacman: Recalculate end rotation from HUD values in real-time
+            // For Pacman: Recalculate end rotation from HUD values in real-time and overwrite state
             if (data.key === "pacman") {
               const offsets = getPacmanRotationOffsets();
               const xRotation = new THREE.Quaternion().setFromAxisAngle(
@@ -396,6 +396,14 @@ export function initHomeScrollAnimation() {
                 .multiply(xRotation)
                 .multiply(zRotation);
               endEuler = new THREE.Euler().setFromQuaternion(pacmanLayDown);
+
+              // Overwrite the stored endEuler in animationData to update GSAP state
+              data.endEuler.copy(endEuler);
+
+              // Also update the GSAP animation properties directly
+              animProps.rotX = endEuler.x;
+              animProps.rotY = endEuler.y;
+              animProps.rotZ = endEuler.z;
             }
 
             const easedRotX =
@@ -411,8 +419,10 @@ export function initHomeScrollAnimation() {
             }
 
             // Set rotation for all objects the same way (Pacman and Ghosts)
+            // Force apply rotation to overwrite any other rotation state
             data.object.rotation.set(easedRotX, easedRotY, easedRotZ);
             data.object.quaternion.setFromEuler(data.object.rotation);
+            data.object.updateMatrixWorld(false);
 
             setObjectOpacity(data.object, animProps.opacity, {
               preserveTransmission: true,
