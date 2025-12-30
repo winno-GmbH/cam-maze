@@ -252,7 +252,25 @@ export function initHomeScrollAnimation() {
         getCurrentRotations()[key] ||
         object.quaternion.clone();
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
-      const endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
+
+      // For Pacman: Try a different rotation - rotate around Z-axis more prominently
+      // This creates a different visual rotation path compared to ghosts
+      let endEuler: THREE.Euler;
+      if (key === "pacman") {
+        // Alternative rotation: Rotate around Z-axis (roll) more, then lay down
+        // This creates a spinning/rolling effect as Pacman lays down
+        const alternativeLayDown = new THREE.Quaternion()
+          .setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2) // 90° roll around Z-axis
+          .multiply(
+            new THREE.Quaternion().setFromEuler(
+              new THREE.Euler(Math.PI / 2, Math.PI, 0)
+            )
+          ); // Then lay down with Y rotation
+        endEuler = new THREE.Euler().setFromQuaternion(alternativeLayDown);
+      } else {
+        // Ghosts use standard lay down rotation
+        endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
+      }
 
       const path = homeScrollPaths[key];
       if (!path) {
@@ -340,6 +358,7 @@ export function initHomeScrollAnimation() {
             data.object.position.copy(pathPoint);
 
             // Rotation also uses eased progress for smooth animation
+            // Apply same rotation logic for all objects (Pacman and Ghosts)
             const startEuler = data.startEuler;
             const endEuler = data.endEuler;
             const easedRotX =
@@ -349,19 +368,14 @@ export function initHomeScrollAnimation() {
             const easedRotZ =
               startEuler.z + (endEuler.z - startEuler.z) * easedProgress;
 
-            // For Pacman: Update mixer first, then set rotation to ensure it's not overridden
+            // Update pacmanMixer if this is Pacman (to keep mouth animation running)
             if (data.key === "pacman" && pacmanMixer) {
               pacmanMixer.update(clock.getDelta());
-              // Set rotation AFTER mixer update to override any rotation changes from animation
-              data.object.rotation.set(easedRotX, easedRotY, easedRotZ);
-              data.object.quaternion.setFromEuler(data.object.rotation);
-              // Force update matrix to ensure rotation is applied
-              data.object.updateMatrixWorld(false);
-            } else {
-              // For other objects, just set rotation normally
-              data.object.rotation.set(easedRotX, easedRotY, easedRotZ);
-              data.object.quaternion.setFromEuler(data.object.rotation);
             }
+
+            // Set rotation for all objects the same way (Pacman and Ghosts)
+            data.object.rotation.set(easedRotX, easedRotY, easedRotZ);
+            data.object.quaternion.setFromEuler(data.object.rotation);
 
             setObjectOpacity(data.object, animProps.opacity, {
               preserveTransmission: true,
