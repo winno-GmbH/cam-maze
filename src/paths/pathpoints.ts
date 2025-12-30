@@ -850,7 +850,10 @@ const cameraHomeScrollPathPoints: CameraPathPoint[] = [
   { pos: startPosition, lookAt: lookAtPosition },
   { pos: secondPosition, lookAt: cameraLookAtSecondPosition },
   { pos: thirdPosition, lookAt: cameraHomeScrollEndLookAt },
-  { pos: cameraHomeScrollEndPathPoint, lookAt: cameraHomeScrollEndLookAt },
+  {
+    pos: cameraHomeScrollEndPathPoint,
+    rotation: new THREE.Euler((-88.94 * Math.PI) / 180, 0, 0),
+  },
 ];
 
 const cameraPOVPathPoints: MazePathPoint[] = [
