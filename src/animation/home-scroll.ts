@@ -447,7 +447,22 @@ export function initHomeScrollAnimation() {
               });
             }
 
-            setObjectOpacity(data.object, animProps.opacity, {
+            // Opacity animation: starts fading at 80% of the animation progress
+            // From 0% to 80%: opacity stays at 1.0
+            // From 80% to 100%: opacity fades from 1.0 to 0.0
+            const opacityFadeStart = 0.8;
+            let finalOpacity: number;
+            if (rawProgress < opacityFadeStart) {
+              // Before fade start: full opacity
+              finalOpacity = OPACITY.FULL;
+            } else {
+              // During fade: map progress from [0.8, 1.0] to opacity [1.0, 0.0]
+              const fadeProgress =
+                (rawProgress - opacityFadeStart) / (1.0 - opacityFadeStart);
+              finalOpacity = OPACITY.FULL * (1 - fadeProgress);
+            }
+
+            setObjectOpacity(data.object, finalOpacity, {
               preserveTransmission: true,
               skipCurrencySymbols: true,
             });
