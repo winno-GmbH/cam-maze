@@ -469,6 +469,10 @@ function updateObjectsWalkBy(progress: number) {
   initializeQuaternions();
 
   if (pacmanMixer) {
+    // Ensure timeScale is set during intro-scroll (in case it was reset elsewhere)
+    if (isIntroScrollActive && pacmanMixer.timeScale !== 1.5) {
+      pacmanMixer.timeScale = 1.5;
+    }
     pacmanMixer.update(clock.getDelta());
   }
 

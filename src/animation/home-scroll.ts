@@ -330,17 +330,25 @@ export function initHomeScrollAnimation() {
 
             // Map scroll progress to object animation progress
             // animProps.progress is 0-1 within the object's animation window
-            // We need to map it to the path progress (0-1)
+            // Apply same easing to both position and rotation
             const rawProgress = animProps.progress;
             const easedProgress = rawProgress * rawProgress * rawProgress; // Cubic ease-in
+
+            // Position uses eased progress
             const pathPoint = data.path.getPointAt(easedProgress);
             data.object.position.copy(pathPoint);
 
-            data.object.rotation.set(
-              animProps.rotX,
-              animProps.rotY,
-              animProps.rotZ
-            );
+            // Rotation also uses eased progress for smooth animation
+            const startEuler = data.startEuler;
+            const endEuler = data.endEuler;
+            const easedRotX =
+              startEuler.x + (endEuler.x - startEuler.x) * easedProgress;
+            const easedRotY =
+              startEuler.y + (endEuler.y - startEuler.y) * easedProgress;
+            const easedRotZ =
+              startEuler.z + (endEuler.z - startEuler.z) * easedProgress;
+
+            data.object.rotation.set(easedRotX, easedRotY, easedRotZ);
             data.object.quaternion.setFromEuler(data.object.rotation);
 
             setObjectOpacity(data.object, animProps.opacity, {
