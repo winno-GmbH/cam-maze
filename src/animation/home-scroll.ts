@@ -171,39 +171,59 @@ export function initHomeScrollAnimation() {
             // We have both lookAt points (0, 1) and rotations (2, 3)
             // Interpolate smoothly between them
 
-            // First 50%: Use lookAt curve for points 0 and 1
-            if (cameraProgress < 0.5) {
+            // First 66%: Use lookAt curve over all 3 points (0, 1, and calculate lookAt for point 2)
+            if (cameraProgress < 0.66) {
               if (lookAtPointsForCurve.length >= 2) {
-                // Create a Bezier curve between the two lookAt points
-                // Use the first point as start, second as end, and duplicate them as control points for smooth curve
+                // Calculate a lookAt point for the third position based on the rotation
+                const thirdRotation = rotations[2];
+                let thirdLookAtPoint: THREE.Vector3;
+
+                if (thirdRotation) {
+                  // Calculate lookAt direction from rotation
+                  const direction = new THREE.Vector3(0, 0, -1);
+                  direction.applyEuler(thirdRotation);
+                  thirdLookAtPoint = cameraPathPoints[2].pos
+                    .clone()
+                    .add(direction.multiplyScalar(10));
+                } else {
+                  // Fallback: use the last lookAt point
+                  thirdLookAtPoint =
+                    lookAtPointsForCurve[lookAtPointsForCurve.length - 1];
+                }
+
+                // Create a Bezier curve over all 3 points
                 const lookAtCurve = new THREE.CubicBezierCurve3(
                   lookAtPointsForCurve[0],
-                  lookAtPointsForCurve[0]
-                    .clone()
-                    .lerp(lookAtPointsForCurve[1], 0.33),
-                  lookAtPointsForCurve[0]
-                    .clone()
-                    .lerp(lookAtPointsForCurve[1], 0.66),
-                  lookAtPointsForCurve[1]
+                  lookAtPointsForCurve[1],
+                  lookAtPointsForCurve[1].clone().lerp(thirdLookAtPoint, 0.5),
+                  thirdLookAtPoint
                 );
-                const t = cameraProgress / 0.5;
+                const t = cameraProgress / 0.66;
                 const lookAtPoint = lookAtCurve.getPointAt(t);
                 camera.lookAt(lookAtPoint);
               }
             } else {
-              // Last 50%: Interpolate from lookAt to rotations
-              const transitionProgress = (cameraProgress - 0.5) / 0.5;
+              // Last 34%: Interpolate from lookAt to rotations
+              const transitionProgress = (cameraProgress - 0.66) / 0.34;
 
-              // Get lookAt quaternion at the end of lookAt phase (point 1)
-              const lastLookAtPoint =
-                lookAtPointsForCurve[lookAtPointsForCurve.length - 1];
-              const tempCamera = new THREE.PerspectiveCamera();
-              tempCamera.position.copy(camera.position);
-              tempCamera.lookAt(lastLookAtPoint);
-              const lookAtQuat = tempCamera.quaternion.clone();
+              // Get lookAt quaternion at the end of lookAt phase (at 66%, which is point 2)
+              const thirdRotation = rotations[2];
+              let lookAtQuat: THREE.Quaternion;
+
+              if (thirdRotation) {
+                // Use the rotation at point 2 as the starting quaternion
+                lookAtQuat = new THREE.Quaternion().setFromEuler(thirdRotation);
+              } else {
+                // Fallback: calculate from last lookAt point
+                const lastLookAtPoint =
+                  lookAtPointsForCurve[lookAtPointsForCurve.length - 1];
+                const tempCamera = new THREE.PerspectiveCamera();
+                tempCamera.position.copy(camera.position);
+                tempCamera.lookAt(lastLookAtPoint);
+                lookAtQuat = tempCamera.quaternion.clone();
+              }
 
               // Get rotations at thirdPosition (index 2) and end (index 3)
-              const thirdRotation = rotations[2];
               const endRotation = rotations[3] || rotations[2];
 
               if (thirdRotation && endRotation) {
