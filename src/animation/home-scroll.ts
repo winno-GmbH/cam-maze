@@ -145,9 +145,9 @@ export function initHomeScrollAnimation() {
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
 
-          const lookAtPoints: THREE.Vector3[] = [];
+          const lookAtPoints: (THREE.Vector3 | null)[] = [];
           const rotations: (THREE.Euler | null)[] = [];
-          
+
           cameraPathPoints.forEach((point, index) => {
             if ("lookAt" in point && point.lookAt) {
               lookAtPoints.push(point.lookAt);
@@ -162,12 +162,17 @@ export function initHomeScrollAnimation() {
           });
 
           // Find first rotation index
-          const firstRotationIndex = rotations.findIndex(r => r !== null);
-          
-          if (firstRotationIndex !== -1 && lookAtPoints.filter(p => p !== null).length >= 2) {
+          const firstRotationIndex = rotations.findIndex((r) => r !== null);
+
+          if (
+            firstRotationIndex !== -1 &&
+            lookAtPoints.filter((p) => p !== null).length >= 2
+          ) {
             // We have rotations starting from firstRotationIndex
-            const lookAtPointsForCurve = lookAtPoints.filter(p => p !== null) as THREE.Vector3[];
-            
+            const lookAtPointsForCurve = lookAtPoints.filter(
+              (p) => p !== null
+            ) as THREE.Vector3[];
+
             if (cameraProgress < 0.66) {
               // Use lookAt for first 66% (points 0, 1, 2)
               if (lookAtPointsForCurve.length >= 3) {
@@ -177,29 +182,36 @@ export function initHomeScrollAnimation() {
                   lookAtPointsForCurve[2],
                   lookAtPointsForCurve[2]
                 );
-                const lookAtPoint = lookAtCurve.getPointAt(cameraProgress / 0.66);
+                const lookAtPoint = lookAtCurve.getPointAt(
+                  cameraProgress / 0.66
+                );
                 camera.lookAt(lookAtPoint);
               }
             } else {
               // Interpolate between lookAt and rotations for last 34%
               const rotationProgress = (cameraProgress - 0.66) / 0.34;
-            
+
               // Get lookAt quaternion at 66%
-              const lookAtPoint = lookAtPointsForCurve[lookAtPointsForCurve.length - 1];
+              const lookAtPoint =
+                lookAtPointsForCurve[lookAtPointsForCurve.length - 1];
               const tempCamera = new THREE.PerspectiveCamera();
               tempCamera.position.copy(camera.position);
               tempCamera.lookAt(lookAtPoint);
               const lookAtQuat = tempCamera.quaternion.clone();
-              
+
               // Get rotation at thirdPosition (index 2) and end (index 3)
               const thirdRotation = rotations[2];
               const endRotation = rotations[3] || rotations[2];
-              
+
               if (thirdRotation && endRotation) {
                 // Interpolate between thirdRotation and endRotation
-                const thirdQuat = new THREE.Quaternion().setFromEuler(thirdRotation);
-                const endQuat = new THREE.Quaternion().setFromEuler(endRotation);
-                
+                const thirdQuat = new THREE.Quaternion().setFromEuler(
+                  thirdRotation
+                );
+                const endQuat = new THREE.Quaternion().setFromEuler(
+                  endRotation
+                );
+
                 // First interpolate from lookAt to thirdRotation, then to endRotation
                 if (rotationProgress < 0.5) {
                   // 0-50% of rotation phase: lookAt -> thirdRotation
@@ -212,14 +224,29 @@ export function initHomeScrollAnimation() {
                 }
               } else if (endRotation) {
                 // Only endRotation available
-                const endQuat = new THREE.Quaternion().setFromEuler(endRotation);
-                camera.quaternion.slerpQuaternions(lookAtQuat, endQuat, rotationProgress);
+                const endQuat = new THREE.Quaternion().setFromEuler(
+                  endRotation
+                );
+                camera.quaternion.slerpQuaternions(
+                  lookAtQuat,
+                  endQuat,
+                  rotationProgress
+                );
               }
             }
-            
-            const euler = new THREE.Euler().setFromQuaternion(camera.quaternion);
-            console.log(`Progress: ${(clampedProgress * 100).toFixed(1)}% | Rotation: X=${((euler.x * 180) / Math.PI).toFixed(2)}° Y=${((euler.y * 180) / Math.PI).toFixed(2)}° Z=${((euler.z * 180) / Math.PI).toFixed(2)}°`);
-          } else if (lookAtPoints.filter(p => p !== null).length >= 4) {
+
+            const euler = new THREE.Euler().setFromQuaternion(
+              camera.quaternion
+            );
+            console.log(
+              `Progress: ${(clampedProgress * 100).toFixed(
+                1
+              )}% | Rotation: X=${((euler.x * 180) / Math.PI).toFixed(2)}° Y=${(
+                (euler.y * 180) /
+                Math.PI
+              ).toFixed(2)}° Z=${((euler.z * 180) / Math.PI).toFixed(2)}°`
+            );
+          } else if (lookAtPoints.filter((p) => p !== null).length >= 4) {
             // Fallback to lookAt only
             const lookAtCurve = new THREE.CubicBezierCurve3(
               lookAtPoints[0]!,
@@ -229,9 +256,18 @@ export function initHomeScrollAnimation() {
             );
             const lookAtPoint = lookAtCurve.getPointAt(cameraProgress);
             camera.lookAt(lookAtPoint);
-            
-            const euler = new THREE.Euler().setFromQuaternion(camera.quaternion);
-            console.log(`Progress: ${(clampedProgress * 100).toFixed(1)}% | Rotation: X=${((euler.x * 180) / Math.PI).toFixed(2)}° Y=${((euler.y * 180) / Math.PI).toFixed(2)}° Z=${((euler.z * 180) / Math.PI).toFixed(2)}°`);
+
+            const euler = new THREE.Euler().setFromQuaternion(
+              camera.quaternion
+            );
+            console.log(
+              `Progress: ${(clampedProgress * 100).toFixed(
+                1
+              )}% | Rotation: X=${((euler.x * 180) / Math.PI).toFixed(2)}° Y=${(
+                (euler.y * 180) /
+                Math.PI
+              ).toFixed(2)}° Z=${((euler.z * 180) / Math.PI).toFixed(2)}°`
+            );
           }
           camera.fov = originalFOV;
           camera.updateProjectionMatrix();
