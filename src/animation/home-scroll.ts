@@ -58,11 +58,6 @@ export function initHomeScrollAnimation() {
     cameraPath.add(cameraCurve);
   }
 
-  // Camera animation props for GSAP
-  const cameraAnimProps = {
-    progress: 0,
-  };
-
   const disposeClonedMaterials = () => {
     clonedMaterials.forEach((mat) => {
       mat.dispose();
@@ -133,7 +128,6 @@ export function initHomeScrollAnimation() {
       applyHomeScrollPreset(true, scrollDir, startPositions, rotationsToUse);
 
       createObjectAnimations();
-      createCameraAnimation(); // Recreate camera animation when entering
     });
   };
 
@@ -149,6 +143,40 @@ export function initHomeScrollAnimation() {
       invalidateOnRefresh: false,
       onEnter: handleScrollEnter,
       onEnterBack: handleScrollEnter,
+      onUpdate: (self) => {
+        if (cameraPath && cameraPath.curves.length) {
+          const progress = self.progress;
+          const clampedProgress = Math.min(1, Math.max(0, progress));
+
+          // Accelerate camera progress so it reaches the end faster
+          // Use ease-out curve: faster at start, slower at end
+          // This makes camera reach end point around 80% of scroll progress
+          const cameraProgress = Math.pow(clampedProgress, 0.4); // Lower exponent = faster
+
+          const cameraPoint = cameraPath.getPointAt(cameraProgress);
+          camera.position.copy(cameraPoint);
+
+          const lookAtPoints: THREE.Vector3[] = [];
+          cameraPathPoints.forEach((point) => {
+            if ("lookAt" in point && point.lookAt) {
+              lookAtPoints.push(point.lookAt);
+            }
+          });
+
+          if (lookAtPoints.length >= 4) {
+            const lookAtCurve = new THREE.CubicBezierCurve3(
+              lookAtPoints[0],
+              lookAtPoints[1],
+              lookAtPoints[2],
+              lookAtPoints[3]
+            );
+            const lookAtPoint = lookAtCurve.getPointAt(cameraProgress);
+            camera.lookAt(lookAtPoint);
+          }
+          camera.fov = originalFOV;
+          camera.updateProjectionMatrix();
+        }
+      },
       onLeave: handleScrollLeave,
       onLeaveBack: handleScrollLeave,
     },
@@ -158,81 +186,6 @@ export function initHomeScrollAnimation() {
   allObjects.forEach(([key, object]) => {
     startPositions[key] = object.position.clone();
   });
-
-  // Create camera animation with GSAP for smooth easing
-  const createCameraAnimation = () => {
-    if (!cameraPath || !cameraPath.curves.length || !homeScrollTimeline) return;
-
-    // Kill any existing camera animation tweens
-    gsap.killTweensOf(cameraAnimProps);
-
-    const lookAtPoints: THREE.Vector3[] = [];
-    cameraPathPoints.forEach((point) => {
-      if ("lookAt" in point && point.lookAt) {
-        lookAtPoints.push(point.lookAt);
-      }
-    });
-
-    const lookAtCurve =
-      lookAtPoints.length >= 4
-        ? new THREE.CubicBezierCurve3(
-            lookAtPoints[0],
-            lookAtPoints[1],
-            lookAtPoints[2],
-            lookAtPoints[3]
-          )
-        : null;
-
-    // Start camera at initial position
-    const startCameraPoint = cameraPath.getPointAt(0);
-    camera.position.copy(startCameraPoint);
-    if (lookAtCurve) {
-      const startLookAt = lookAtCurve.getPoint(0);
-      camera.lookAt(startLookAt);
-    }
-    camera.fov = originalFOV;
-    camera.updateProjectionMatrix();
-
-    // Reset camera progress
-    cameraAnimProps.progress = 0;
-
-    // Animate camera progress with GSAP (same easing as objects)
-    homeScrollTimeline.fromTo(
-      cameraAnimProps,
-      {
-        progress: 0,
-      },
-      {
-        progress: 1,
-        ease: "power2.out", // Same easing as objects
-        immediateRender: false,
-        duration: 1.0, // Same duration as objects to sync
-        onUpdate: function () {
-          const introScrollTrigger = ScrollTrigger.getById("introScroll");
-          const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
-          // Don't update if intro scroll is active or home scroll is not active
-          if (introScrollTrigger?.isActive || !homeScrollTrigger?.isActive) {
-            return;
-          }
-
-          // Accelerate camera progress so it reaches the end faster
-          // Apply easing on top of GSAP easing for faster arrival
-          const easedProgress = Math.pow(cameraAnimProps.progress, 0.4);
-
-          const cameraPoint = cameraPath.getPointAt(easedProgress);
-          camera.position.copy(cameraPoint);
-
-          if (lookAtCurve) {
-            const lookAtPoint = lookAtCurve.getPoint(easedProgress);
-            camera.lookAt(lookAtPoint);
-          }
-          camera.fov = originalFOV;
-          camera.updateProjectionMatrix();
-        },
-      },
-      0 // Start at timeline position 0 (same as objects)
-    );
-  };
 
   const createObjectAnimations = () => {
     if (homeScrollTimeline) {
@@ -400,5 +353,4 @@ export function initHomeScrollAnimation() {
   };
 
   createObjectAnimations();
-  createCameraAnimation(); // Create camera animation with GSAP easing
 }

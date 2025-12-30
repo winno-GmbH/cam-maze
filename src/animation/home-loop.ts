@@ -179,48 +179,57 @@ export function startHomeLoop() {
   startRotations = {};
 
   // Smooth camera transition to home loop start position
+  // Always transition if camera is not at target position (not just when homeScrollTrigger is active)
+  // This prevents camera "snap" when scrolling back to top
+  const { getStartPosition, getLookAtPosition } = require("../paths/pathpoints");
+  const targetCameraPos = getStartPosition();
+  const currentCameraPos = camera.position.clone();
+  const cameraDistance = currentCameraPos.distanceTo(targetCameraPos);
+
+  // Check if we're coming from home-scroll (either active or just left)
   const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
-  if (homeScrollTrigger && homeScrollTrigger.isActive) {
-    // If coming from home-scroll, smoothly transition camera
-    const { getStartPosition } = require("../paths/pathpoints");
-    const targetCameraPos = getStartPosition();
-    const currentCameraPos = camera.position.clone();
-    const cameraDistance = currentCameraPos.distanceTo(targetCameraPos);
+  const wasInHomeScroll = homeScrollTrigger && (
+    homeScrollTrigger.isActive || 
+    homeScrollTrigger.progress > 0.1 // Recently left home-scroll
+  );
 
-    if (cameraDistance > 0.1) {
-      gsap.killTweensOf(camera.position);
-      gsap.to(camera.position, {
-        x: targetCameraPos.x,
-        y: targetCameraPos.y,
-        z: targetCameraPos.z,
-        duration: 0.6,
-        ease: "power2.out",
-        onUpdate: () => {
-          camera.updateProjectionMatrix();
-        },
-      });
+  // Always transition if distance is significant, but use longer duration if coming from home-scroll
+  if (cameraDistance > 0.1) {
+    gsap.killTweensOf(camera.position);
+    
+    // Use longer, smoother transition when coming from home-scroll
+    const transitionDuration = wasInHomeScroll ? 0.8 : 0.3;
+    
+    gsap.to(camera.position, {
+      x: targetCameraPos.x,
+      y: targetCameraPos.y,
+      z: targetCameraPos.z,
+      duration: transitionDuration,
+      ease: "power2.out",
+      onUpdate: () => {
+        camera.updateProjectionMatrix();
+      },
+    });
 
-      // Also transition lookAt
-      const { getLookAtPosition } = require("../paths/pathpoints");
-      const targetLookAt = getLookAtPosition();
-      const lookAtProps = { t: 0 };
-      const startLookAt = new THREE.Vector3();
-      camera.getWorldDirection(startLookAt);
-      startLookAt.multiplyScalar(10).add(camera.position);
+    // Also transition lookAt
+    const targetLookAt = getLookAtPosition();
+    const lookAtProps = { t: 0 };
+    const startLookAt = new THREE.Vector3();
+    camera.getWorldDirection(startLookAt);
+    startLookAt.multiplyScalar(10).add(camera.position);
 
-      gsap.to(lookAtProps, {
-        t: 1,
-        duration: 0.6,
-        ease: "power2.out",
-        onUpdate: () => {
-          const currentLookAt = startLookAt
-            .clone()
-            .lerp(targetLookAt, lookAtProps.t);
-          camera.lookAt(currentLookAt);
-          camera.updateProjectionMatrix();
-        },
-      });
-    }
+    gsap.to(lookAtProps, {
+      t: 1,
+      duration: transitionDuration,
+      ease: "power2.out",
+      onUpdate: () => {
+        const currentLookAt = startLookAt
+          .clone()
+          .lerp(targetLookAt, lookAtProps.t);
+        camera.lookAt(currentLookAt);
+        camera.updateProjectionMatrix();
+      },
+    });
   }
 
   applyHomeLoopPreset(true);
