@@ -151,22 +151,34 @@ export function initHomeScrollAnimation() {
           const positions: THREE.Vector3[] = [];
 
           cameraPathPoints.forEach((point) => {
-            if ("lookAt" in point) {
+            if ("lookAt" in point && point.pos) {
               const lookAt = (
                 point as { pos: THREE.Vector3; lookAt: THREE.Vector3 }
               ).lookAt;
               const pos = point.pos;
-              positions.push(pos);
 
-              // Calculate direction from camera position to lookAt point
-              const direction = lookAt.clone().sub(pos).normalize();
+              // Check if both pos and lookAt are valid Vector3 objects
+              if (
+                pos &&
+                lookAt &&
+                pos.x !== undefined &&
+                lookAt.x !== undefined
+              ) {
+                positions.push(pos);
 
-              // Create quaternion from direction (camera forward is -Z)
-              const quat = new THREE.Quaternion().setFromUnitVectors(
-                new THREE.Vector3(0, 0, -1),
-                direction
-              );
-              rotations.push(quat);
+                // Calculate direction from camera position to lookAt point
+                const direction = lookAt.clone().sub(pos).normalize();
+
+                // Check if direction is valid (not zero length)
+                if (direction.length() > 0.001) {
+                  // Create quaternion from direction (camera forward is -Z)
+                  const quat = new THREE.Quaternion().setFromUnitVectors(
+                    new THREE.Vector3(0, 0, -1),
+                    direction
+                  );
+                  rotations.push(quat);
+                }
+              }
             }
           });
 
