@@ -158,7 +158,7 @@ export function initHomeScrollAnimation() {
         // Update camera position
         camera.position.copy(cameraPath.getPointAt(cameraProgress));
 
-        // Get start and end lookAt points for X/Y rotation
+        // Get start lookAt point for initial rotation direction
         const startLookAt =
           cameraPathPoints[0] && "lookAt" in cameraPathPoints[0]
             ? (
@@ -168,48 +168,37 @@ export function initHomeScrollAnimation() {
                 }
               ).lookAt
             : null;
-        const endLookAt =
-          cameraPathPoints[cameraPathPoints.length - 1] &&
-          "lookAt" in cameraPathPoints[cameraPathPoints.length - 1]
-            ? (
-                cameraPathPoints[cameraPathPoints.length - 1] as {
-                  pos: THREE.Vector3;
-                  lookAt: THREE.Vector3;
-                }
-              ).lookAt
-            : null;
 
-        if (!startLookAt || !endLookAt) return;
+        if (!startLookAt) return;
 
         // Apply easing to rotation progress to stretch it over the entire scroll duration
         // Use a gentler easing curve so rotation happens more gradually
         const rotationProgress =
           clampedProgress * clampedProgress * clampedProgress; // Cubic ease-in
 
-        // Linear interpolation from start to end lookAt using eased rotation progress
-        const lookAtPoint = startLookAt
-          .clone()
-          .lerp(endLookAt, rotationProgress);
-
-        // Blend towards maze center to ensure we look at the center
-        // Use eased rotation progress for blending as well
-        const directionToCenter = objectHomeScrollEndPathPoint
+        // Calculate direction from current camera position to start lookAt point
+        const directionToStartLookAt = startLookAt
           .clone()
           .sub(camera.position)
           .normalize();
-        const directionToLookAt = lookAtPoint
+
+        // Calculate direction from current camera position to maze center
+        const directionToMazeCenter = objectHomeScrollEndPathPoint
           .clone()
           .sub(camera.position)
           .normalize();
-        const blendedDirection = directionToLookAt
+
+        // Interpolate between start direction and maze center direction
+        // This gradually rotates the camera from looking at startLookAt to looking at maze center
+        const finalDirection = directionToStartLookAt
           .clone()
-          .lerp(directionToCenter, rotationProgress)
+          .lerp(directionToMazeCenter, rotationProgress)
           .normalize();
 
-        // Create final lookAt point
+        // Create lookAt point based on current camera position and interpolated direction
         const finalLookAt = camera.position
           .clone()
-          .add(blendedDirection.multiplyScalar(10));
+          .add(finalDirection.multiplyScalar(10));
 
         // Set X/Y rotation via lookAt
         camera.lookAt(finalLookAt);
