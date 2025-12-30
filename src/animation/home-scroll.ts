@@ -135,9 +135,9 @@ export function initHomeScrollAnimation() {
           const clampedProgress = Math.min(1, Math.max(0, progress));
 
           // Camera: starts at 0%, ends at 100%
-          // Should start fast, then slow down (ease-out)
-          // Map progress 0-1 to camera path 0-1 with ease-out curve
-          const cameraProgress = 1 - Math.pow(1 - clampedProgress, 3); // Cubic ease-out (fast start, slow end)
+          // Should start fast, then slow down (ease-out) - but gentler
+          // Use quadratic ease-out for smoother, less aggressive acceleration
+          const cameraProgress = 1 - Math.pow(1 - clampedProgress, 2); // Quadratic ease-out (gentler than cubic)
 
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
