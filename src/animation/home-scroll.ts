@@ -145,67 +145,46 @@ export function initHomeScrollAnimation() {
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
 
-          // Calculate rotations for all camera path points and interpolate between them
-          // This ensures smooth rotation without over-rotation by using actual rotations instead of lookAt points
-          const rotations: THREE.Quaternion[] = [];
-          const positions: THREE.Vector3[] = [];
-
+          // Extract all lookAt points and use segmented linear interpolation
+          // This ensures all 4 points are considered, preventing over-rotation
+          const lookAtPoints: THREE.Vector3[] = [];
           cameraPathPoints.forEach((point) => {
-            if ("lookAt" in point && point.pos) {
+            if ("lookAt" in point) {
               const lookAt = (
                 point as { pos: THREE.Vector3; lookAt: THREE.Vector3 }
               ).lookAt;
-              const pos = point.pos;
-
-              // Check if both pos and lookAt are valid Vector3 objects
               if (
-                pos &&
                 lookAt &&
-                pos.x !== undefined &&
-                lookAt.x !== undefined
+                lookAt.x !== undefined &&
+                lookAt.y !== undefined &&
+                lookAt.z !== undefined
               ) {
-                positions.push(pos);
-
-                // Calculate direction from camera position to lookAt point
-                const direction = lookAt.clone().sub(pos).normalize();
-
-                // Check if direction is valid (not zero length)
-                if (direction.length() > 0.001) {
-                  // Create quaternion from direction (camera forward is -Z)
-                  const quat = new THREE.Quaternion().setFromUnitVectors(
-                    new THREE.Vector3(0, 0, -1),
-                    direction
-                  );
-                  rotations.push(quat);
-                }
+                lookAtPoints.push(lookAt);
               }
             }
           });
 
-          if (rotations.length >= 2) {
-            // Interpolate between rotations based on camera position progress
-            // Map cameraProgress (0-1) to segment index
-            const numSegments = rotations.length - 1;
+          if (lookAtPoints.length >= 2) {
+            // Segment the progress into equal parts based on number of lookAt points
+            const numSegments = lookAtPoints.length - 1;
             const segmentSize = 1.0 / numSegments;
 
-            let segmentIndex = Math.floor(cameraProgress / segmentSize);
+            // Find which segment we're in based on linear progress (not eased)
+            let segmentIndex = Math.floor(clampedProgress / segmentSize);
             segmentIndex = Math.min(segmentIndex, numSegments - 1);
 
-            // Calculate progress within current segment
+            // Calculate progress within the current segment (0-1)
             const segmentStart = segmentIndex * segmentSize;
             const segmentProgress =
-              (cameraProgress - segmentStart) / segmentSize;
+              (clampedProgress - segmentStart) / segmentSize;
 
-            // Interpolate quaternions
-            const startQuat = rotations[segmentIndex];
-            const endQuat = rotations[segmentIndex + 1];
-            const currentQuat = new THREE.Quaternion().slerpQuaternions(
-              startQuat,
-              endQuat,
-              segmentProgress
-            );
-
-            camera.quaternion.copy(currentQuat);
+            // Linearly interpolate between the two lookAt points in this segment
+            const startLookAt = lookAtPoints[segmentIndex];
+            const endLookAt = lookAtPoints[segmentIndex + 1];
+            const lookAtPoint = startLookAt
+              .clone()
+              .lerp(endLookAt, segmentProgress);
+            camera.lookAt(lookAtPoint);
 
             // Log camera rotation for debugging
             const euler = new THREE.Euler().setFromQuaternion(
@@ -214,9 +193,7 @@ export function initHomeScrollAnimation() {
             console.log(
               `Progress: ${clampedProgress.toFixed(
                 3
-              )}, CameraProgress: ${cameraProgress.toFixed(
-                3
-              )}, Segment: ${segmentIndex}, SegmentProgress: ${segmentProgress.toFixed(
+              )}, Segment: ${segmentIndex}/${numSegments}, SegmentProgress: ${segmentProgress.toFixed(
                 3
               )}, Camera Rotation: X=${((euler.x * 180) / Math.PI).toFixed(
                 2
