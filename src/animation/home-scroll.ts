@@ -163,25 +163,18 @@ export function initHomeScrollAnimation() {
             const lookAtPoint = lookAtCurve.getPointAt(cameraProgress);
             camera.lookAt(lookAtPoint);
 
-            // Manually adjust Z rotation: interpolate from -17° to 0° based on progress
-            // Start adjusting Z rotation from 50% onwards
-            const zRotationStartProgress = 0.5;
-            if (cameraProgress >= zRotationStartProgress) {
-              const zRotationProgress =
-                (cameraProgress - zRotationStartProgress) /
-                (1 - zRotationStartProgress);
-              // Interpolate Z rotation from -17° to 0°
-              const targetZRotation = -17 + zRotationProgress * 17; // -17° to 0°
+            // Always override Z rotation: interpolate from -17° to 0° based on progress
+            // Interpolate Z rotation from -17° (at 0%) to 0° (at 100%)
+            const targetZRotation = -17 + cameraProgress * 17; // -17° to 0°
 
-              // Get current rotation and override Z
-              const currentEuler = new THREE.Euler().setFromQuaternion(
-                camera.quaternion
-              );
-              // Override Z rotation directly
-              currentEuler.z = (targetZRotation * Math.PI) / 180;
-              // Apply the modified rotation
-              camera.quaternion.setFromEuler(currentEuler);
-            }
+            // Get current rotation and override Z
+            const currentEuler = new THREE.Euler().setFromQuaternion(
+              camera.quaternion
+            );
+            // Override Z rotation directly
+            currentEuler.z = (targetZRotation * Math.PI) / 180;
+            // Apply the modified rotation
+            camera.quaternion.setFromEuler(currentEuler);
 
             const euler = new THREE.Euler().setFromQuaternion(
               camera.quaternion
