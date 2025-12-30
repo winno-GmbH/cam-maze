@@ -10,8 +10,9 @@ export function getPillYRotationDegrees(): number {
 }
 
 // Global variables to store Pacman rotation offsets in degrees (for home-scroll animation)
-let pacmanRotationX = 0;
-let pacmanRotationY = 90; // Default +90 degrees on Y-axis
+// Default values set to correct end position: X=90°, Y=180°, Z=0°
+let pacmanRotationX = 90;
+let pacmanRotationY = 180;
 let pacmanRotationZ = 0;
 
 export function getPacmanRotationOffsets(): { x: number; y: number; z: number } {
