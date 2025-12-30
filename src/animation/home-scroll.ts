@@ -41,6 +41,8 @@ let cachedPaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null = null;
 let cachedPathsKey: string | null = null;
 // Cache start rotation quaternion
 let startRotationQuaternion: THREE.Quaternion | null = null;
+// Cache start Z rotation
+let startRotZ: number | null = null;
 
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
@@ -141,15 +143,16 @@ export function initHomeScrollAnimation() {
         const clampedProgress = Math.min(1, Math.max(0, self.progress));
         const cameraProgress = 1 - Math.pow(1 - clampedProgress, 1.5);
 
-        // Set start rotation quaternion if not set yet (at the very beginning)
+        // Set start rotation quaternion and Z rotation if not set yet (at the very beginning)
         if (!startRotationQuaternion) {
           startRotationQuaternion = camera.quaternion.clone();
+          startRotZ = camera.rotation.z;
         }
 
         // Update camera position
         camera.position.copy(cameraPath.getPointAt(cameraProgress));
 
-        // Interpolate rotation from start to maze center
+        // Interpolate X/Y rotation from start to maze center
         const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
 
         if (startRotationQuaternion) {
@@ -163,10 +166,15 @@ export function initHomeScrollAnimation() {
           const rotationProgress =
             clampedProgress * clampedProgress * clampedProgress; // Cubic ease-in
 
-          // Interpolate between start and end rotation
+          // Interpolate between start and end rotation (X/Y only)
           camera.quaternion
             .copy(startRotationQuaternion)
             .slerp(endRotationQuaternion, rotationProgress);
+
+          // Set Z rotation separately (linear from start to 0)
+          if (startRotZ !== null) {
+            camera.rotation.z = startRotZ * (1 - rotationProgress);
+          }
         } else {
           // Fallback: directly look at maze center
           camera.lookAt(mazeCenter);
