@@ -134,12 +134,10 @@ export function initHomeScrollAnimation() {
           const progress = self.progress;
           const clampedProgress = Math.min(1, Math.max(0, progress));
 
-          // Camera starts slow like objects (0.75) but accelerates faster
+          // Camera starts slow like objects but reaches end faster
           const easedProgress =
             clampedProgress * clampedProgress * clampedProgress;
-          const startSlow = easedProgress * 0.75; // Start like objects
-          const accelerate = easedProgress * clampedProgress * 0.4; // Accelerate more
-          const cameraProgress = Math.min(1, startSlow + accelerate);
+          const cameraProgress = Math.min(1, easedProgress * 1.1); // Faster than objects (0.75)
 
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
