@@ -141,7 +141,7 @@ export function initHomeScrollAnimation() {
           // Accelerate camera progress so it reaches the end faster
           // Use ease-out curve: faster at start, slower at end
           // This makes camera reach end point around 80% of scroll progress
-          const cameraProgress = Math.pow(clampedProgress, 0.5); // Lower exponent = faster
+          const cameraProgress = Math.pow(clampedProgress, 0.4); // Lower exponent = faster
 
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
