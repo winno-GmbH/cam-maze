@@ -209,9 +209,22 @@ export function initHomeScrollAnimation() {
               );
             }
 
-            // For Z: ALWAYS use direct linear interpolation from start to end (no intermediate points, no curves)
-            const startRotZ = rotations[0].z;
-            const endRotZ = rotations[rotations.length - 1].z;
+            // For Z: ALWAYS calculate directly from start and end lookAt points only (no intermediate points)
+            // This ensures Z rotation goes directly from start to end without any intermediate influence
+            const tempCameraStart = new THREE.PerspectiveCamera();
+            tempCameraStart.position.copy(cameraPoint);
+            tempCameraStart.lookAt(globalStartLookAt);
+            const startRotZ = new THREE.Euler().setFromQuaternion(
+              tempCameraStart.quaternion
+            ).z;
+
+            const tempCameraEnd = new THREE.PerspectiveCamera();
+            tempCameraEnd.position.copy(cameraPoint);
+            tempCameraEnd.lookAt(globalEndLookAt);
+            const endRotZ = new THREE.Euler().setFromQuaternion(
+              tempCameraEnd.quaternion
+            ).z;
+
             const rotationZ =
               startRotZ + (endRotZ - startRotZ) * clampedProgress;
 
