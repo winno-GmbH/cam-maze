@@ -43,12 +43,19 @@ let cachedPathsKey: string | null = null;
 let startRotationQuaternion: THREE.Quaternion | null = null;
 // Cache start Z rotation
 let startRotZ: number | null = null;
+// Cache end rotation quaternion (calculated once at start position looking at maze center)
+let endRotationQuaternion: THREE.Quaternion | null = null;
 
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
     homeScrollTimeline.kill();
     homeScrollTimeline = null;
   }
+
+  // Reset rotation caches
+  startRotationQuaternion = null;
+  startRotZ = null;
+  endRotationQuaternion = null;
 
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
@@ -62,6 +69,15 @@ export function initHomeScrollAnimation() {
     );
     cameraPath.add(cameraCurve);
   }
+
+  // Calculate end rotation quaternion once (at end camera position looking at maze center)
+  // Maze center should be slightly lower (Y) than the maze itself so camera looks down
+  const mazeCenter = new THREE.Vector3(0.45175, 0.2, 0.55675); // Y = 0.2 (lower than maze at 0.5)
+  const endCameraPos = cameraPathPoints[cameraPathPoints.length - 1].pos;
+  const tempCamera = new THREE.PerspectiveCamera();
+  tempCamera.position.copy(endCameraPos);
+  tempCamera.lookAt(mazeCenter);
+  endRotationQuaternion = tempCamera.quaternion.clone();
 
   const disposeClonedMaterials = () => {
     clonedMaterials.forEach((mat) => {
@@ -152,21 +168,13 @@ export function initHomeScrollAnimation() {
         // Update camera position
         camera.position.copy(cameraPath.getPointAt(cameraProgress));
 
-        // Interpolate X/Y rotation from start to maze center
-        const mazeCenter = new THREE.Vector3(0.45175, 0.5, 0.55675);
-
-        if (startRotationQuaternion) {
-          // Calculate end rotation (looking at maze center from current position)
-          const tempCamera = new THREE.PerspectiveCamera();
-          tempCamera.position.copy(camera.position);
-          tempCamera.lookAt(mazeCenter);
-          const endRotationQuaternion = tempCamera.quaternion.clone();
-
+        // Interpolate rotation from start to end (pre-calculated end rotation)
+        if (startRotationQuaternion && endRotationQuaternion) {
           // Apply easing to rotation progress
           const rotationProgress =
             clampedProgress * clampedProgress * clampedProgress; // Cubic ease-in
 
-          // Interpolate between start and end rotation (X/Y only)
+          // Interpolate between start and end rotation (X/Y)
           camera.quaternion
             .copy(startRotationQuaternion)
             .slerp(endRotationQuaternion, rotationProgress);
@@ -176,7 +184,8 @@ export function initHomeScrollAnimation() {
             camera.rotation.z = startRotZ * (1 - rotationProgress);
           }
         } else {
-          // Fallback: directly look at maze center
+          // Fallback: directly look at maze center (slightly lower Y)
+          const mazeCenter = new THREE.Vector3(0.45175, 0.2, 0.55675);
           camera.lookAt(mazeCenter);
         }
 
