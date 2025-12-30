@@ -7,7 +7,8 @@ import { clock, onFrame } from "../core/scene";
 import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import { getHomeScrollPaths } from "../paths/paths";
 import { LAY_DOWN_QUAT_1 } from "./util";
-import { getPacmanRotationOffsets } from "../core/debug-hud";
+// Pacman rotation offsets (X=90°, Y=180°, Z=0° for correct end position)
+const PACMAN_ROTATION_OFFSETS = { x: 90, y: 180, z: 0 };
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import {
   getCurrentRotations,
@@ -41,75 +42,7 @@ const clonedMaterials: THREE.Material[] = [];
 let cachedPaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null = null;
 let cachedPathsKey: string | null = null;
 
-// Store Pacman animation data for frame-based rotation updates
-let pacmanAnimationData: {
-  object: THREE.Object3D;
-  startEuler: THREE.Euler;
-  getCurrentProgress: () => number;
-} | null = null;
-
-// Frame-based rotation update for Pacman (runs every frame to override any other rotation)
-let pacmanRotationFrameRegistered = false;
-function updatePacmanRotationFrame() {
-  if (!pacmanAnimationData) return;
-
-  const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
-  if (!homeScrollTrigger?.isActive) return;
-
-  const introScrollTrigger = ScrollTrigger.getById("introScroll");
-  if (introScrollTrigger?.isActive) return;
-
-  // Get current progress from GSAP
-  const rawProgress = pacmanAnimationData.getCurrentProgress();
-  const easedProgress = rawProgress * rawProgress * rawProgress; // Cubic ease-in
-
-  // Get fresh rotation offsets from HUD
-  const offsets = getPacmanRotationOffsets();
-  const xRotation = new THREE.Quaternion().setFromAxisAngle(
-    new THREE.Vector3(1, 0, 0),
-    (offsets.x * Math.PI) / 180
-  );
-  const yRotation = new THREE.Quaternion().setFromAxisAngle(
-    new THREE.Vector3(0, 1, 0),
-    (offsets.y * Math.PI) / 180
-  );
-  const zRotation = new THREE.Quaternion().setFromAxisAngle(
-    new THREE.Vector3(0, 0, 1),
-    (offsets.z * Math.PI) / 180
-  );
-  const pacmanLayDown = LAY_DOWN_QUAT_1.clone()
-    .multiply(yRotation)
-    .multiply(xRotation)
-    .multiply(zRotation);
-  const newEndEuler = new THREE.Euler().setFromQuaternion(pacmanLayDown);
-
-  // Calculate eased rotation
-  const finalRotX =
-    pacmanAnimationData.startEuler.x +
-    (newEndEuler.x - pacmanAnimationData.startEuler.x) * easedProgress;
-  const finalRotY =
-    pacmanAnimationData.startEuler.y +
-    (newEndEuler.y - pacmanAnimationData.startEuler.y) * easedProgress;
-  const finalRotZ =
-    pacmanAnimationData.startEuler.z +
-    (newEndEuler.z - pacmanAnimationData.startEuler.z) * easedProgress;
-
-  // FORCE apply rotation - this runs every frame to ensure it's never overwritten
-  pacmanAnimationData.object.rotation.set(finalRotX, finalRotY, finalRotZ);
-  pacmanAnimationData.object.quaternion.setFromEuler(
-    pacmanAnimationData.object.rotation
-  );
-  pacmanAnimationData.object.updateMatrixWorld(false);
-}
-
 export function initHomeScrollAnimation() {
-  // Register frame-based rotation update for Pacman
-  if (!pacmanRotationFrameRegistered) {
-    onFrame(() => {
-      updatePacmanRotationFrame();
-    });
-    pacmanRotationFrameRegistered = true;
-  }
   if (homeScrollTimeline) {
     homeScrollTimeline.kill();
     homeScrollTimeline = null;
@@ -326,8 +259,8 @@ export function initHomeScrollAnimation() {
       // This allows testing the end rotation by adjusting HUD values
       let endEuler: THREE.Euler;
       if (key === "pacman") {
-        // Get rotation offsets from HUD and apply them directly
-        const offsets = getPacmanRotationOffsets();
+        // Use fixed rotation offsets for correct end position
+        const offsets = PACMAN_ROTATION_OFFSETS;
 
         // Start with LAY_DOWN_QUAT_1, then apply rotation offsets
         const xRotation = new THREE.Quaternion().setFromAxisAngle(
@@ -403,17 +336,6 @@ export function initHomeScrollAnimation() {
       const startPathPoint = data.path.getPointAt(0);
       data.object.position.copy(startPathPoint);
 
-      // Store Pacman animation data for frame-based updates
-      if (data.key === "pacman") {
-        pacmanAnimationData = {
-          object: data.object,
-          startEuler: data.startEuler,
-          getCurrentProgress: () => {
-            return animProps.progress;
-          },
-        };
-      }
-
       homeScrollTimeline!.fromTo(
         animProps,
         {
@@ -461,8 +383,8 @@ export function initHomeScrollAnimation() {
             let finalRotZ: number;
 
             if (data.key === "pacman") {
-              // Get fresh rotation offsets from HUD
-              const offsets = getPacmanRotationOffsets();
+              // Use fixed rotation offsets
+              const offsets = PACMAN_ROTATION_OFFSETS;
               const xRotation = new THREE.Quaternion().setFromAxisAngle(
                 new THREE.Vector3(1, 0, 0),
                 (offsets.x * Math.PI) / 180

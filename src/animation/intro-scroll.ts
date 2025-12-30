@@ -19,7 +19,6 @@ import {
   clamp,
 } from "./constants";
 import { setFloorPlane, setObjectScale } from "./scene-utils";
-import { getPillYRotationDegrees } from "../core/debug-hud";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -629,11 +628,10 @@ function updateObjectsWalkBy(progress: number) {
       object.position.set(finalX, finalY, finalZ);
 
       if (key === "pill") {
-        // Set specific rotation: X=1.571 (90°), Y from HUD slider, Z=180° (π rad)
-        const yRotationDegrees = getPillYRotationDegrees();
+        // Set specific rotation: X=1.571 (90°), Y=20°, Z=180° (π rad)
         const targetEuler = new THREE.Euler(
           1.571, // X: 90 degrees (π/2)
-          (yRotationDegrees * Math.PI) / 180, // Y: from HUD slider
+          (20 * Math.PI) / 180, // Y: 20 degrees
           (180 * Math.PI) / 180, // Z: 180 degrees (π)
           "XYZ"
         );
