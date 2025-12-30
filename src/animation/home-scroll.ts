@@ -182,7 +182,7 @@ export function initHomeScrollAnimation() {
                 
                 const endQuat = new THREE.Quaternion().setFromEuler(endRotation);
                 const rotationProgress = (cameraProgress - rotationStartProgress) / (1 - rotationStartProgress);
-                THREE.Quaternion.slerp(camera.quaternion, lookAtQuat, endQuat, rotationProgress);
+                camera.quaternion.slerpQuaternions(lookAtQuat, endQuat, rotationProgress);
               }
             } else if (lookAtPoints.length >= 4) {
               const lookAtCurve = new THREE.CubicBezierCurve3(
