@@ -43,10 +43,8 @@ let cachedPathsKey: string | null = null;
 let startRotationQuaternion: THREE.Quaternion | null = null;
 // Cache start Z rotation
 let startRotZ: number | null = null;
-// Cache end rotation quaternion (calculated once at end position)
-let endRotationQuaternion: THREE.Quaternion | null = null;
-// Cache middle rotation quaternion (for curved rotation path)
-let middleRotationQuaternion: THREE.Quaternion | null = null;
+// Cache maze center lookAt rotation (reached at 50% progress)
+let mazeCenterLookAtQuaternion: THREE.Quaternion | null = null;
 
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
@@ -57,6 +55,7 @@ export function initHomeScrollAnimation() {
   // Reset rotation caches
   startRotationQuaternion = null;
   startRotZ = null;
+  mazeCenterLookAtQuaternion = null;
 
   const cameraPathPoints = getCameraHomeScrollPathPoints();
 
@@ -71,50 +70,28 @@ export function initHomeScrollAnimation() {
     cameraPath.add(cameraCurve);
   }
 
-  // Calculate rotation quaternions: start, middle, and end for curved rotation path
+  // Calculate maze center lookAt rotation (reached at 50% progress)
+  // This will be calculated at the middle camera position
   const lookAtTarget = new THREE.Vector3(0.55675, 0.2, 0.45175);
-  const endCameraPos = cameraPathPoints[cameraPathPoints.length - 1].pos;
   const startCameraPos = cameraPathPoints[0].pos;
-
-  // Calculate middle camera position (midpoint of path, with +X offset for curved rotation)
+  const endCameraPos = cameraPathPoints[cameraPathPoints.length - 1].pos;
   const middleCameraPos = startCameraPos.clone().lerp(endCameraPos, 0.5);
-  middleCameraPos.x += 0.3; // Add X offset for curved rotation
 
-  // Calculate middle lookAt target (also with +X offset)
-  const middleLookAtTarget = lookAtTarget.clone();
-  middleLookAtTarget.x += 0.3; // Add X offset
+  // Calculate rotation at middle position looking at maze center
+  const tempCamera = new THREE.PerspectiveCamera();
+  tempCamera.position.copy(middleCameraPos);
+  tempCamera.lookAt(lookAtTarget);
+  mazeCenterLookAtQuaternion = tempCamera.quaternion.clone();
 
-  // Calculate end rotation
-  const tempCameraEnd = new THREE.PerspectiveCamera();
-  tempCameraEnd.position.copy(endCameraPos);
-  tempCameraEnd.lookAt(lookAtTarget);
-  endRotationQuaternion = tempCameraEnd.quaternion.clone();
-
-  // Calculate middle rotation
-  const tempCameraMiddle = new THREE.PerspectiveCamera();
-  tempCameraMiddle.position.copy(middleCameraPos);
-  tempCameraMiddle.lookAt(middleLookAtTarget);
-  middleRotationQuaternion = tempCameraMiddle.quaternion.clone();
-
-  const endEuler = new THREE.Euler().setFromQuaternion(endRotationQuaternion);
-  const middleEuler = new THREE.Euler().setFromQuaternion(
-    middleRotationQuaternion
+  const mazeCenterEuler = new THREE.Euler().setFromQuaternion(
+    mazeCenterLookAtQuaternion
   );
-  console.log("Rotation setup:", {
-    end: {
-      x: (endEuler.x * 180) / Math.PI,
-      y: (endEuler.y * 180) / Math.PI,
-      z: (endEuler.z * 180) / Math.PI,
-    },
-    middle: {
-      x: (middleEuler.x * 180) / Math.PI,
-      y: (middleEuler.y * 180) / Math.PI,
-      z: (middleEuler.z * 180) / Math.PI,
-    },
-    endCameraPos: endCameraPos,
+  console.log("Maze center lookAt rotation (reached at 50%):", {
+    x: (mazeCenterEuler.x * 180) / Math.PI,
+    y: (mazeCenterEuler.y * 180) / Math.PI,
+    z: (mazeCenterEuler.z * 180) / Math.PI,
     middleCameraPos: middleCameraPos,
     lookAtTarget: lookAtTarget,
-    middleLookAtTarget: middleLookAtTarget,
   });
 
   const disposeClonedMaterials = () => {
@@ -214,34 +191,33 @@ export function initHomeScrollAnimation() {
         // Update camera position
         camera.position.copy(cameraPath.getPointAt(cameraProgress));
 
-        // Interpolate rotation from start -> middle -> end (segmented for curved path)
-        if (
-          startRotationQuaternion &&
-          middleRotationQuaternion &&
-          endRotationQuaternion
-        ) {
-          // Apply easing to rotation progress
-          const rotationProgress =
-            clampedProgress * clampedProgress * clampedProgress; // Cubic ease-in
+        // Rotation: 0-50% interpolate to maze center lookAt, 50-100% maintain lookAt
+        const lookAtTarget = new THREE.Vector3(0.55675, 0.2, 0.45175);
 
-          // Segmented interpolation: start -> middle (0-0.5) -> end (0.5-1.0)
-          if (rotationProgress < 0.5) {
-            // First half: start to middle
-            const segmentProgress = rotationProgress * 2; // Map 0-0.5 to 0-1
+        if (startRotationQuaternion && mazeCenterLookAtQuaternion) {
+          if (clampedProgress < 0.5) {
+            // 0-50%: Interpolate from start rotation to maze center lookAt
+            const rotationProgress = clampedProgress * 2; // Map 0-0.5 to 0-1
+            const easedProgress =
+              rotationProgress * rotationProgress * rotationProgress; // Cubic ease-in
+
             camera.quaternion
               .copy(startRotationQuaternion)
-              .slerp(middleRotationQuaternion, segmentProgress);
-          } else {
-            // Second half: middle to end
-            const segmentProgress = (rotationProgress - 0.5) * 2; // Map 0.5-1.0 to 0-1
-            camera.quaternion
-              .copy(middleRotationQuaternion)
-              .slerp(endRotationQuaternion, segmentProgress);
-          }
+              .slerp(mazeCenterLookAtQuaternion, easedProgress);
 
-          // Set Z rotation separately (linear from start to 0)
-          if (startRotZ !== null) {
-            camera.rotation.z = startRotZ * (1 - rotationProgress);
+            // Z rotation: linear from start to 0 (scaled to 50%)
+            if (startRotZ !== null) {
+              camera.rotation.z = startRotZ * (1 - easedProgress);
+            }
+          } else {
+            // 50-100%: Maintain lookAt maze center (direct lookAt)
+            camera.lookAt(lookAtTarget);
+
+            // Z rotation: continue to 0
+            if (startRotZ !== null) {
+              const remainingProgress = (clampedProgress - 0.5) * 2; // Map 0.5-1.0 to 0-1
+              camera.rotation.z = startRotZ * (1 - remainingProgress);
+            }
           }
 
           // Log rotation every 10% progress
@@ -256,7 +232,6 @@ export function initHomeScrollAnimation() {
               x: (currentEuler.x * 180) / Math.PI,
               y: (currentEuler.y * 180) / Math.PI,
               z: (camera.rotation.z * 180) / Math.PI,
-              rotationProgress: rotationProgress.toFixed(3),
               cameraPos: camera.position,
             });
           }
