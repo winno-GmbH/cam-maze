@@ -327,10 +327,14 @@ function updateObjectsWalkBy(progress: number) {
   const pacmanQuat = pacmanTargetQuaternion;
   const ghostQuat = ghostTargetQuaternion;
 
-  // Objects move from left to right relative to camera position
-  // The distance determines how far they travel, but they're always relative to camera
-  const walkStart = tempVector.x - INTRO_WALK_DISTANCE;
-  const walkEnd = tempVector.x + INTRO_WALK_DISTANCE;
+  // Objects start just outside left edge of screen and end just outside right edge
+  // Calculate visible range based on camera FOV and distance to objects
+  // Objects are positioned with INTRO_POSITION_OFFSET.z = 0, so they're at camera Z level
+  // For FOV 50° and typical viewing distance, visible width is approximately 8-10 units
+  const visibleWidth = 8.0; // Approximate visible width at object distance
+  const edgeOffset = 1.5; // Distance outside screen edge (knapp außerhalb)
+  const walkStart = tempVector.x - visibleWidth / 2 - edgeOffset; // Start just outside left edge
+  const walkEnd = tempVector.x + visibleWidth / 2 + edgeOffset; // End just outside right edge
 
   const objectsToAnimate = [
     {
