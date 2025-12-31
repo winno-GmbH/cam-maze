@@ -457,7 +457,7 @@ function updateObjectsWalkBy(progress: number) {
       const zBounce =
         key === "pacman" || key === "pill"
           ? 0
-          : Math.sin(normalizedProgress * Math.PI * 2 * 20 + zPhase) * 0.01;
+          : Math.sin(normalizedProgress * Math.PI * 2 * 5 + zPhase) * 0.01; // Reduced frequency from 20 to 5 for slower bounce
       const animatedYOffset =
         key === "pacman" || key === "pill" ? 0 : zBounce * 1.5;
 
@@ -499,7 +499,7 @@ function updateObjectsWalkBy(progress: number) {
           "XYZ"
         );
         object.rotation.copy(targetEuler);
-        object.scale.set(10, 10, 10);
+        object.scale.set(1, 1, 1); // Normal scale for pill
       } else {
         // For Pacman: use pacmanTargetQuaternion which is already set from HUD values
         // For ghosts: use ghostQuat
