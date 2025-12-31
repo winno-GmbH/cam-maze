@@ -332,8 +332,10 @@ function updateObjectsWalkBy(progress: number) {
   const objectDistance = Math.abs(INTRO_POSITION_OFFSET.z + 0.5); // Distance to objects in Z
   const fovRadians = (camera.fov * Math.PI) / 180; // Convert FOV to radians
   const visibleHeight = 2 * objectDistance * Math.tan(fovRadians / 2); // Visible height at object distance
-  const visibleWidth = visibleHeight * camera.aspect; // Visible width = height * aspect ratio
-  const edgeOffset = visibleWidth * 0.15; // 15% of visible width outside screen edge (knapp außerhalb)
+  const visibleWidth = visibleHeight * camera.aspect; // Visible width = height * aspect ratio (adapts to viewport)
+  // Edge offset: combination of percentage and fixed value for consistent positioning across screen sizes
+  // Use larger percentage (25%) plus a fixed minimum (2.0 units) to ensure objects are well outside screen
+  const edgeOffset = Math.max(visibleWidth * 0.25, 2.0); // At least 25% of width or 2.0 units, whichever is larger
 
   // Calculate screen edges in world space
   const leftScreenEdge = tempVector.x - visibleWidth / 2;
