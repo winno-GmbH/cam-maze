@@ -341,29 +341,9 @@ export function initHomeScrollAnimation() {
       // This allows testing the end rotation by adjusting HUD values
       let endEuler: THREE.Euler;
       if (key === "pacman") {
-        // Use fixed rotation offsets for correct end position
-        const offsets = PACMAN_ROTATION_OFFSETS;
-
-        // Start with LAY_DOWN_QUAT_1, then apply rotation offsets
-        const xRotation = new THREE.Quaternion().setFromAxisAngle(
-          new THREE.Vector3(1, 0, 0),
-          (offsets.x * Math.PI) / 180
-        );
-        const yRotation = new THREE.Quaternion().setFromAxisAngle(
-          new THREE.Vector3(0, 1, 0),
-          (offsets.y * Math.PI) / 180
-        );
-        const zRotation = new THREE.Quaternion().setFromAxisAngle(
-          new THREE.Vector3(0, 0, 1),
-          (offsets.z * Math.PI) / 180
-        );
-
-        // Combine rotations: LAY_DOWN_QUAT_1 * Y * X * Z
-        const pacmanLayDown = LAY_DOWN_QUAT_1.clone()
-          .multiply(yRotation)
-          .multiply(xRotation)
-          .multiply(zRotation);
-        endEuler = new THREE.Euler().setFromQuaternion(pacmanLayDown);
+        // Use cached rotation calculation (no object creation)
+        updatePacmanRotationCache(PACMAN_ROTATION_OFFSETS);
+        endEuler = pacmanRotationCache.endEuler.clone();
       } else {
         // Ghosts use standard lay down rotation
         endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
