@@ -26,6 +26,7 @@ let isIntroScrollActive = false;
 let lastUpdateProgress: number | null = null;
 export let pacmanTargetQuaternion: THREE.Quaternion | null = null;
 let ghostTargetQuaternion: THREE.Quaternion | null = null;
+let pillCollected = false; // Track if pill has been collected by Pacman
 let introInitialRotations: Record<string, THREE.Quaternion> = {};
 let cachedCameraPosition: THREE.Vector3 | null = null;
 let lastCameraUpdateFrame = -1;
@@ -95,6 +96,7 @@ export function initIntroScrollAnimation() {
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
+          pillCollected = false; // Reset pill collection state when entering back
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           // Speed up Pacman mouth animation in intro-scroll (much faster for more frequent mouth movements)
@@ -442,6 +444,10 @@ function updateObjectsWalkBy(progress: number) {
       ? normalizedProgress / INTRO_FADE_IN_DURATION
       : 1.0;
 
+  // Track Pacman's and pill's positions for collision detection
+  let pacmanPosition: THREE.Vector3 | null = null;
+  let pillPosition: THREE.Vector3 | null = null;
+
   objectsToAnimate.forEach(
     ({
       key,
@@ -471,11 +477,17 @@ function updateObjectsWalkBy(progress: number) {
         finalX = 1.5;
         finalY = INTRO_POSITION_OFFSET.y; // -2.0, same as grid height
         finalZ = 1.1;
+        // Store pill position for collision detection
+        pillPosition = new THREE.Vector3(finalX, finalY, finalZ);
       } else {
         // Other objects use relative positioning
         finalX = pacmanX + behindOffset + xOffset;
         finalY = pacmanY + staticYOffset - animatedYOffset;
         finalZ = pacmanZ + zOffset - zBounce;
+        // Store Pacman's position for collision detection
+        if (key === "pacman") {
+          pacmanPosition = new THREE.Vector3(finalX, finalY, finalZ);
+        }
       }
 
       if (
@@ -491,6 +503,26 @@ function updateObjectsWalkBy(progress: number) {
       object.position.set(finalX, finalY, finalZ);
 
       if (key === "pill") {
+        // Check collision with Pacman before setting pill properties
+        if (pacmanPosition && pillPosition && !pillCollected) {
+          const distance = pacmanPosition.distanceTo(pillPosition);
+          // Collision threshold: sum of approximate object radii (Pacman ~0.5, Pill ~0.3)
+          // Using 0.8 to account for object sizes and provide a reasonable collision detection
+          const collisionThreshold = 0.8;
+
+          if (distance < collisionThreshold) {
+            pillCollected = true;
+            object.visible = false; // Hide pill immediately on collision
+            return; // Skip rest of pill setup
+          }
+        }
+
+        // Only show pill if it hasn't been collected
+        if (pillCollected) {
+          object.visible = false;
+          return; // Skip rest of pill setup
+        }
+
         // Set specific rotation: X=1.571 (90°), Y=20°, Z=180° (π rad)
         const targetEuler = new THREE.Euler(
           1.571, // X: 90 degrees (π/2)
