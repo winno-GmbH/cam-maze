@@ -19,6 +19,7 @@ import {
   clamp,
 } from "./constants";
 import { setFloorPlane, setObjectScale } from "./scene-utils";
+import { getIntroPacmanRotation } from "../core/debug-hud";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -209,7 +210,6 @@ export function initIntroScrollAnimation() {
 
 function initializeQuaternions() {
   // Always use HUD values for Pacman rotation (defaults to 0,0,0)
-  const { getIntroPacmanRotation } = require("../core/debug-hud");
   const rotation = getIntroPacmanRotation();
   
   // Create quaternion from HUD values
@@ -468,20 +468,9 @@ function updateObjectsWalkBy(progress: number) {
         object.rotation.copy(targetEuler);
         object.scale.set(10, 10, 10);
       } else {
-        let targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
-        
-        // For Pacman: use HUD values if available
-        if (key === "pacman") {
-          const { getIntroPacmanRotation } = require("../core/debug-hud");
-          const rotation = getIntroPacmanRotation();
-          const euler = new THREE.Euler(
-            (rotation.x * Math.PI) / 180,
-            (rotation.y * Math.PI) / 180,
-            (rotation.z * Math.PI) / 180,
-            "XYZ"
-          );
-          targetQuat = new THREE.Quaternion().setFromEuler(euler);
-        }
+        // For Pacman: use pacmanTargetQuaternion which is already set from HUD values
+        // For ghosts: use ghostQuat
+        const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
         
         if (targetQuat) {
           object.quaternion.copy(targetQuat);

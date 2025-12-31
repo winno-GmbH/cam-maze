@@ -175,18 +175,6 @@ export function initHomeScrollAnimation() {
             currentEuler.z = (targetZRotation * Math.PI) / 180;
             // Apply the modified rotation
             camera.quaternion.setFromEuler(currentEuler);
-
-            const euler = new THREE.Euler().setFromQuaternion(
-              camera.quaternion
-            );
-            console.log(
-              `Progress: ${(clampedProgress * 100).toFixed(
-                1
-              )}% | Rotation: X=${((euler.x * 180) / Math.PI).toFixed(2)}° Y=${(
-                (euler.y * 180) /
-                Math.PI
-              ).toFixed(2)}° Z=${((euler.z * 180) / Math.PI).toFixed(2)}°`
-            );
           } else if (lookAtPoints.length >= 4) {
             // Fallback to lookAt only
             const lookAtCurve = new THREE.CubicBezierCurve3(
@@ -197,18 +185,6 @@ export function initHomeScrollAnimation() {
             );
             const lookAtPoint = lookAtCurve.getPointAt(cameraProgress);
             camera.lookAt(lookAtPoint);
-
-            const euler = new THREE.Euler().setFromQuaternion(
-              camera.quaternion
-            );
-            console.log(
-              `Progress: ${(clampedProgress * 100).toFixed(
-                1
-              )}% | Rotation: X=${((euler.x * 180) / Math.PI).toFixed(2)}° Y=${(
-                (euler.y * 180) /
-                Math.PI
-              ).toFixed(2)}° Z=${((euler.z * 180) / Math.PI).toFixed(2)}°`
-            );
           }
           camera.fov = originalFOV;
           camera.updateProjectionMatrix();

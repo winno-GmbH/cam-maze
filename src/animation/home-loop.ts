@@ -24,6 +24,7 @@ import {
   getHomeLoopStartT,
 } from "./object-state";
 import { isCurrencySymbol } from "./util";
+import { getStartPosition, getLookAtPosition } from "../paths/pathpoints";
 
 const LOOP_DURATION = 50;
 let isHomeLoopActive = true;
@@ -122,9 +123,7 @@ function createPillPositionGuides(pillPos: THREE.Vector3) {
   );
   pillGuides.add(zLine);
 
-  console.log("Pill guides created at position:", pillPos);
   scene.add(pillGuides);
-  console.log("Pill guides added to scene");
 }
 
 function removePillPositionGuides() {
@@ -179,7 +178,6 @@ export function startHomeLoop() {
   startRotations = {};
 
   // Smooth camera transition to home loop start position
-  const { getStartPosition, getLookAtPosition } = require("../paths/pathpoints");
   const targetCameraPos = getStartPosition();
   const currentCameraPos = camera.position.clone();
   const cameraDistance = currentCameraPos.distanceTo(targetCameraPos);
