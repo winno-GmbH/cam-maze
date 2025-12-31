@@ -28,7 +28,6 @@ let ghostTargetQuaternion: THREE.Quaternion | null = null;
 let introInitialRotations: Record<string, THREE.Quaternion> = {};
 let cachedCameraPosition: THREE.Vector3 | null = null;
 let lastCameraUpdateFrame = -1;
-let introGridGuides: THREE.Group | null = null;
 
 function resetIntroScrollCache() {
   cachedCameraPosition = null;
@@ -63,160 +62,6 @@ function restoreFloor() {
   }
 }
 
-function createIntroGridGuides() {
-  // Remove existing guides if they exist
-  if (introGridGuides) {
-    scene.remove(introGridGuides);
-    introGridGuides = null;
-  }
-
-  const gridGroup = new THREE.Group();
-  gridGroup.name = "introGridGuides";
-  introGridGuides = gridGroup;
-
-  // Use smaller grid size to match the object area
-  // Objects are positioned around INTRO_POSITION_OFFSET.y = -2.0
-  const gridSize = 10; // Smaller grid
-  const gridDivisions = 20; // More divisions for better visibility
-  const gridYPosition = INTRO_POSITION_OFFSET.y; // Position at same Y as objects (-2.0)
-  const gridSpacing = gridSize / gridDivisions; // 0.5 units between lines
-
-  // Create grid lines manually so we can color them differently
-  // X-direction lines (green) - lines parallel to X-axis
-  const xLinesMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
-  for (let i = -gridSize / 2; i <= gridSize / 2; i += gridSpacing) {
-    const xLineGeometry = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(-gridSize / 2, gridYPosition, i),
-      new THREE.Vector3(gridSize / 2, gridYPosition, i),
-    ]);
-    const xLine = new THREE.Line(xLineGeometry, xLinesMaterial);
-    xLine.renderOrder = 999;
-    gridGroup.add(xLine);
-  }
-
-  // Z-direction lines (red) - lines parallel to Z-axis
-  const zLinesMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
-  for (let i = -gridSize / 2; i <= gridSize / 2; i += gridSpacing) {
-    const zLineGeometry = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(i, gridYPosition, -gridSize / 2),
-      new THREE.Vector3(i, gridYPosition, gridSize / 2),
-    ]);
-    const zLine = new THREE.Line(zLineGeometry, zLinesMaterial);
-    zLine.renderOrder = 999;
-    gridGroup.add(zLine);
-  }
-
-  // Y-axis line (yellow) - vertical, centered at grid to show height
-  const yLineGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, gridYPosition - 1, 0),
-    new THREE.Vector3(0, gridYPosition + 1, 0),
-  ]);
-  const yLineMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
-  const yLine = new THREE.Line(yLineGeometry, yLineMaterial);
-  yLine.renderOrder = 1000;
-  gridGroup.add(yLine);
-
-  // Add labeled grid markers with numbers
-  const labelDistance = 1; // Distance between labels
-  const labelColor = 0xffffff;
-  const labelSize = 0.15;
-
-  // X-axis labels (along the red line)
-  for (
-    let i = -Math.floor(gridSize / 2);
-    i <= Math.floor(gridSize / 2);
-    i += labelDistance
-  ) {
-    if (i === 0) continue; // Skip origin
-
-    // Create small sphere marker
-    const markerGeometry = new THREE.SphereGeometry(0.05, 8, 8);
-    const markerMaterial = new THREE.MeshBasicMaterial({ color: labelColor });
-    const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-    marker.position.set(i, gridYPosition, 0);
-    marker.renderOrder = 1001;
-    gridGroup.add(marker);
-
-    // Create number text using sprites (simple approach)
-    const canvas = document.createElement("canvas");
-    canvas.width = 64;
-    canvas.height = 64;
-    const context = canvas.getContext("2d");
-    if (context) {
-      context.fillStyle = "#ffffff";
-      context.font = "Bold 48px Arial";
-      context.textAlign = "center";
-      context.textBaseline = "middle";
-      context.fillText(i.toString(), 32, 32);
-      const texture = new THREE.CanvasTexture(canvas);
-      const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-      const sprite = new THREE.Sprite(spriteMaterial);
-      sprite.scale.set(0.3, 0.3, 1);
-      sprite.position.set(i, gridYPosition + 0.3, 0);
-      sprite.renderOrder = 1001;
-      gridGroup.add(sprite);
-    }
-  }
-
-  // Z-axis labels (along the blue line)
-  for (
-    let i = -Math.floor(gridSize / 2);
-    i <= Math.floor(gridSize / 2);
-    i += labelDistance
-  ) {
-    if (i === 0) continue; // Skip origin
-
-    // Create small sphere marker
-    const markerGeometry = new THREE.SphereGeometry(0.05, 8, 8);
-    const markerMaterial = new THREE.MeshBasicMaterial({ color: labelColor });
-    const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-    marker.position.set(0, gridYPosition, i);
-    marker.renderOrder = 1001;
-    gridGroup.add(marker);
-
-    // Create number text
-    const canvas = document.createElement("canvas");
-    canvas.width = 64;
-    canvas.height = 64;
-    const context = canvas.getContext("2d");
-    if (context) {
-      context.fillStyle = "#ffffff";
-      context.font = "Bold 48px Arial";
-      context.textAlign = "center";
-      context.textBaseline = "middle";
-      context.fillText(i.toString(), 32, 32);
-      const texture = new THREE.CanvasTexture(canvas);
-      const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-      const sprite = new THREE.Sprite(spriteMaterial);
-      sprite.scale.set(0.3, 0.3, 1);
-      sprite.position.set(0, gridYPosition + 0.3, i);
-      sprite.renderOrder = 1001;
-      gridGroup.add(sprite);
-    }
-  }
-
-  // Origin marker
-  const originGeometry = new THREE.SphereGeometry(0.1, 16, 16);
-  const originMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-  const originMarker = new THREE.Mesh(originGeometry, originMaterial);
-  originMarker.position.set(0, gridYPosition, 0);
-  originMarker.renderOrder = 1001;
-  gridGroup.add(originMarker);
-
-  // Position grid at origin (0, 0, 0) - grid elements are positioned relative to this
-  // The grid will be positioned at world Y = -2.0, which matches INTRO_POSITION_OFFSET.y
-  // Since objects move relative to camera, the grid should cover a reasonable area
-  gridGroup.position.set(0, 0, 0);
-
-  scene.add(gridGroup);
-}
-
-function removeIntroGridGuides() {
-  if (introGridGuides) {
-    scene.remove(introGridGuides);
-    introGridGuides = null;
-  }
-}
 
 export function initIntroScrollAnimation() {
   if (introScrollTimeline) {
@@ -243,7 +88,6 @@ export function initIntroScrollAnimation() {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
-          createIntroGridGuides();
           // Speed up Pacman mouth animation in intro-scroll
           if (pacmanMixer) {
             pacmanMixer.timeScale = 1.5; // 50% faster
@@ -253,7 +97,6 @@ export function initIntroScrollAnimation() {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
-          createIntroGridGuides();
           // Speed up Pacman mouth animation in intro-scroll
           if (pacmanMixer) {
             pacmanMixer.timeScale = 1.5; // 50% faster
@@ -264,7 +107,6 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           restoreFloor();
           setIntroScrollLocked(false);
-          removeIntroGridGuides();
           // Reset Pacman animation speed when leaving intro-scroll
           if (pacmanMixer) {
             pacmanMixer.timeScale = 1.0;
@@ -275,7 +117,6 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           restoreFloor();
           setIntroScrollLocked(false);
-          removeIntroGridGuides();
           // Reset Pacman animation speed when leaving intro-scroll
           if (pacmanMixer) {
             pacmanMixer.timeScale = 1.0;
