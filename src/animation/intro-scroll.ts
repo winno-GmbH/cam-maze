@@ -444,9 +444,8 @@ function updateObjectsWalkBy(progress: number) {
       ? normalizedProgress / INTRO_FADE_IN_DURATION
       : 1.0;
 
-  // Track Pacman's and pill's positions for collision detection
-  let pacmanPosition: THREE.Vector3 | null = null;
-  let pillPosition: THREE.Vector3 | null = null;
+  // First pass: Calculate all positions and store them for collision detection
+  const objectPositions: Record<string, THREE.Vector3> = {};
 
   objectsToAnimate.forEach(
     ({
@@ -457,9 +456,6 @@ function updateObjectsWalkBy(progress: number) {
       yOffset: staticYOffset,
       zPhase,
     }) => {
-      const object = key === "pill" ? pill : ghosts[key];
-      if (!object) return;
-
       const zBounce =
         key === "pacman" || key === "pill"
           ? 0
@@ -477,17 +473,11 @@ function updateObjectsWalkBy(progress: number) {
         finalX = 1.5;
         finalY = INTRO_POSITION_OFFSET.y; // -2.0, same as grid height
         finalZ = 1.1;
-        // Store pill position for collision detection
-        pillPosition = new THREE.Vector3(finalX, finalY, finalZ);
       } else {
         // Other objects use relative positioning
         finalX = pacmanX + behindOffset + xOffset;
         finalY = pacmanY + staticYOffset - animatedYOffset;
         finalZ = pacmanZ + zOffset - zBounce;
-        // Store Pacman's position for collision detection
-        if (key === "pacman") {
-          pacmanPosition = new THREE.Vector3(finalX, finalY, finalZ);
-        }
       }
 
       if (
@@ -500,23 +490,45 @@ function updateObjectsWalkBy(progress: number) {
         return;
       }
 
-      object.position.set(finalX, finalY, finalZ);
+      // Store position for collision detection
+      objectPositions[key] = new THREE.Vector3(finalX, finalY, finalZ);
+    }
+  );
+
+  // Check collision between Pacman and pill after all positions are calculated
+  if (!pillCollected && objectPositions["pacman"] && objectPositions["pill"]) {
+    const distance = objectPositions["pacman"].distanceTo(
+      objectPositions["pill"]
+    );
+    // Collision threshold: smaller value for more precise collision detection
+    // Objects are scaled, so we need a threshold that accounts for their actual size
+    // Using 0.4 for tighter collision detection (objects are relatively small)
+    const collisionThreshold = 0.4;
+
+    if (distance < collisionThreshold) {
+      pillCollected = true;
+    }
+  }
+
+  // Second pass: Apply positions and handle rendering
+  objectsToAnimate.forEach(
+    ({
+      key,
+      behindOffset,
+      zOffset,
+      xOffset,
+      yOffset: staticYOffset,
+      zPhase,
+    }) => {
+      const object = key === "pill" ? pill : ghosts[key];
+      if (!object) return;
+
+      const position = objectPositions[key];
+      if (!position) return;
+
+      object.position.set(position.x, position.y, position.z);
 
       if (key === "pill") {
-        // Check collision with Pacman before setting pill properties
-        if (pacmanPosition && pillPosition && !pillCollected) {
-          const distance = pacmanPosition.distanceTo(pillPosition);
-          // Collision threshold: sum of approximate object radii (Pacman ~0.5, Pill ~0.3)
-          // Using 0.8 to account for object sizes and provide a reasonable collision detection
-          const collisionThreshold = 0.8;
-
-          if (distance < collisionThreshold) {
-            pillCollected = true;
-            object.visible = false; // Hide pill immediately on collision
-            return; // Skip rest of pill setup
-          }
-        }
-
         // Only show pill if it hasn't been collected
         if (pillCollected) {
           object.visible = false;
