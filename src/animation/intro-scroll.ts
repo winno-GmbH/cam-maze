@@ -298,11 +298,32 @@ function updateObjectsWalkBy(progress: number) {
   initializeQuaternions();
 
   if (pacmanMixer) {
-    // Ensure timeScale is set during intro-scroll (in case it was reset elsewhere)
-    if (isIntroScrollActive && pacmanMixer.timeScale !== 4.0) {
-      pacmanMixer.timeScale = 4.0; // 4x faster for more frequent mouth movements
+    // Control animation time based on scroll progress to stretch it over entire intro-scroll
+    // Get all animation actions from the mixer
+    const actions = (pacmanMixer as any)._actions as THREE.AnimationAction[];
+    if (actions && actions.length > 0) {
+      // Get the first animation clip duration (assuming all clips have similar duration)
+      const clip = actions[0].getClip();
+      const clipDuration = clip.duration;
+      
+      // Map scroll progress (0-1) to animation time (0 to clipDuration)
+      // Multiply by a factor to make the animation repeat multiple times over the scroll
+      const animationTime = (progress * clipDuration * 3) % clipDuration; // Repeat 3 times over scroll
+      
+      // Set time for all actions to sync them
+      actions.forEach((action) => {
+        action.time = animationTime;
+      });
+      
+      // Update mixer with 0 delta since we're controlling time directly
+      pacmanMixer.update(0);
+    } else {
+      // Fallback: use timeScale if actions aren't available
+      if (isIntroScrollActive && pacmanMixer.timeScale !== 4.0) {
+        pacmanMixer.timeScale = 4.0; // 4x faster for more frequent mouth movements
+      }
+      pacmanMixer.update(clock.getDelta());
     }
-    pacmanMixer.update(clock.getDelta());
   }
 
   const floorState = {
