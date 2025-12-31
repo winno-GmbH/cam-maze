@@ -63,7 +63,6 @@ function restoreFloor() {
   }
 }
 
-
 export function initIntroScrollAnimation() {
   if (introScrollTimeline) {
     introScrollTimeline.kill();
@@ -211,7 +210,7 @@ export function initIntroScrollAnimation() {
 function initializeQuaternions() {
   // Always use HUD values for Pacman rotation (defaults to 0,0,0)
   const rotation = getIntroPacmanRotation();
-  
+
   // Create quaternion from HUD values
   const euler = new THREE.Euler(
     (rotation.x * Math.PI) / 180,
@@ -335,14 +334,25 @@ function updateObjectsWalkBy(progress: number) {
   const visibleHeight = 2 * objectDistance * Math.tan(fovRadians / 2); // Visible height at object distance
   const visibleWidth = visibleHeight * camera.aspect; // Visible width = height * aspect ratio
   const edgeOffset = visibleWidth * 0.15; // 15% of visible width outside screen edge (knapp außerhalb)
-  
-  // Objects start just outside left edge and end just outside right edge
-  // Note: baseX will be added to INTRO_POSITION_OFFSET.x later, so we need to account for that
-  // We want objects to start at left edge of screen, so baseX should be: leftEdge - INTRO_POSITION_OFFSET.x
+
+  // Calculate screen edges in world space
   const leftScreenEdge = tempVector.x - visibleWidth / 2;
   const rightScreenEdge = tempVector.x + visibleWidth / 2;
-  const walkStart = leftScreenEdge - edgeOffset - INTRO_POSITION_OFFSET.x; // Start just outside left edge
-  const walkEnd = rightScreenEdge + edgeOffset - INTRO_POSITION_OFFSET.x; // End just outside right edge
+
+  // Position calculation chain:
+  // baseX -> pacmanX = baseX + INTRO_POSITION_OFFSET.x -> finalX = pacmanX + behindOffset + xOffset
+  // For Pacman: behindOffset = 1.5, xOffset = 0
+  // So: finalX = baseX + 4.3 + 1.5 = baseX + 5.8
+  // We want finalX to start at: leftScreenEdge - edgeOffset
+  // Therefore: baseX = leftScreenEdge - edgeOffset - 5.8
+  const pacmanBehindOffset = 1.5; // Pacman's behindOffset
+  const pacmanXOffset = 0; // Pacman's xOffset
+  const totalPacmanOffset =
+    INTRO_POSITION_OFFSET.x + pacmanBehindOffset + pacmanXOffset; // 4.3 + 1.5 + 0 = 5.8
+
+  // Calculate walkStart and walkEnd so that finalX starts/ends just outside screen edges
+  const walkStart = leftScreenEdge - edgeOffset - totalPacmanOffset; // Start just outside left edge
+  const walkEnd = rightScreenEdge + edgeOffset - totalPacmanOffset; // End just outside right edge
 
   const objectsToAnimate = [
     {
@@ -407,9 +417,10 @@ function updateObjectsWalkBy(progress: number) {
   // Stretch animation over entire intro-scroll by using a gentler easing curve
   // Use a quadratic ease-in-out for smooth, gradual movement that's visible throughout
   // This makes the animation slower overall while keeping it visible from start to finish
-  const positionProgress = normalizedProgress < 0.5
-    ? 2 * normalizedProgress * normalizedProgress // Ease-in for first half
-    : 1 - 2 * (1 - normalizedProgress) * (1 - normalizedProgress); // Ease-out for second half
+  const positionProgress =
+    normalizedProgress < 0.5
+      ? 2 * normalizedProgress * normalizedProgress // Ease-in for first half
+      : 1 - 2 * (1 - normalizedProgress) * (1 - normalizedProgress); // Ease-out for second half
   const baseX = walkStart + (walkEnd - walkStart) * positionProgress;
   const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
   const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
@@ -491,7 +502,7 @@ function updateObjectsWalkBy(progress: number) {
         // For Pacman: use pacmanTargetQuaternion which is already set from HUD values
         // For ghosts: use ghostQuat
         const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
-        
+
         if (targetQuat) {
           object.quaternion.copy(targetQuat);
         }
