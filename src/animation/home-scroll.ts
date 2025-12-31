@@ -48,6 +48,64 @@ let cachedLookAtCurve: THREE.CubicBezierCurve3 | null = null;
 const tempEuler = new THREE.Euler();
 const DEG_TO_RAD = Math.PI / 180;
 
+// Cache for Pacman rotation calculation to avoid recreating objects every frame
+const pacmanRotationCache = {
+  xAxis: new THREE.Vector3(1, 0, 0),
+  yAxis: new THREE.Vector3(0, 1, 0),
+  zAxis: new THREE.Vector3(0, 0, 1),
+  xRotation: new THREE.Quaternion(),
+  yRotation: new THREE.Quaternion(),
+  zRotation: new THREE.Quaternion(),
+  pacmanLayDown: new THREE.Quaternion(),
+  tempEuler: new THREE.Euler(),
+  endEuler: new THREE.Euler(),
+  offsets: { x: 0, y: 0, z: 0 }, // Track last offsets to detect changes
+};
+
+function updatePacmanRotationCache(offsets: {
+  x: number;
+  y: number;
+  z: number;
+}) {
+  // Only recalculate if offsets changed
+  if (
+    pacmanRotationCache.offsets.x === offsets.x &&
+    pacmanRotationCache.offsets.y === offsets.y &&
+    pacmanRotationCache.offsets.z === offsets.z
+  ) {
+    return; // Already cached
+  }
+
+  // Update cache
+  pacmanRotationCache.offsets = { ...offsets };
+
+  // Reuse cached quaternions instead of creating new ones
+  pacmanRotationCache.xRotation.setFromAxisAngle(
+    pacmanRotationCache.xAxis,
+    offsets.x * DEG_TO_RAD
+  );
+  pacmanRotationCache.yRotation.setFromAxisAngle(
+    pacmanRotationCache.yAxis,
+    offsets.y * DEG_TO_RAD
+  );
+  pacmanRotationCache.zRotation.setFromAxisAngle(
+    pacmanRotationCache.zAxis,
+    offsets.z * DEG_TO_RAD
+  );
+
+  // Calculate combined rotation
+  pacmanRotationCache.pacmanLayDown
+    .copy(LAY_DOWN_QUAT_1)
+    .multiply(pacmanRotationCache.yRotation)
+    .multiply(pacmanRotationCache.xRotation)
+    .multiply(pacmanRotationCache.zRotation);
+
+  // Cache the end Euler
+  pacmanRotationCache.endEuler.setFromQuaternion(
+    pacmanRotationCache.pacmanLayDown
+  );
+}
+
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
     homeScrollTimeline.kill();
@@ -407,35 +465,20 @@ export function initHomeScrollAnimation() {
             let finalRotZ: number;
 
             if (data.key === "pacman") {
-              // Use fixed rotation offsets
-              const offsets = PACMAN_ROTATION_OFFSETS;
-              const xRotation = new THREE.Quaternion().setFromAxisAngle(
-                new THREE.Vector3(1, 0, 0),
-                (offsets.x * Math.PI) / 180
-              );
-              const yRotation = new THREE.Quaternion().setFromAxisAngle(
-                new THREE.Vector3(0, 1, 0),
-                (offsets.y * Math.PI) / 180
-              );
-              const zRotation = new THREE.Quaternion().setFromAxisAngle(
-                new THREE.Vector3(0, 0, 1),
-                (offsets.z * Math.PI) / 180
-              );
-              const pacmanLayDown = LAY_DOWN_QUAT_1.clone()
-                .multiply(yRotation)
-                .multiply(xRotation)
-                .multiply(zRotation);
-              const newEndEuler = new THREE.Euler().setFromQuaternion(
-                pacmanLayDown
-              );
+              // Use cached rotation calculation (no object creation)
+              updatePacmanRotationCache(PACMAN_ROTATION_OFFSETS);
+              const cachedEndEuler = pacmanRotationCache.endEuler;
 
-              // Calculate eased rotation using the new endEuler
+              // Calculate eased rotation using the cached endEuler
               finalRotX =
-                startEuler.x + (newEndEuler.x - startEuler.x) * easedProgress;
+                startEuler.x +
+                (cachedEndEuler.x - startEuler.x) * easedProgress;
               finalRotY =
-                startEuler.y + (newEndEuler.y - startEuler.y) * easedProgress;
+                startEuler.y +
+                (cachedEndEuler.y - startEuler.y) * easedProgress;
               finalRotZ =
-                startEuler.z + (newEndEuler.z - startEuler.z) * easedProgress;
+                startEuler.z +
+                (cachedEndEuler.z - startEuler.z) * easedProgress;
 
               // Update pacmanMixer if this is Pacman (to keep mouth animation running)
               if (pacmanMixer) {
