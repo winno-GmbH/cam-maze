@@ -42,6 +42,12 @@ const clonedMaterials: THREE.Material[] = [];
 let cachedPaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null = null;
 let cachedPathsKey: string | null = null;
 
+// Cache for camera animation to avoid recreating objects every frame
+let cachedLookAtPoints: THREE.Vector3[] | null = null;
+let cachedLookAtCurve: THREE.CubicBezierCurve3 | null = null;
+const tempEuler = new THREE.Euler();
+const DEG_TO_RAD = Math.PI / 180;
+
 export function initHomeScrollAnimation() {
   if (homeScrollTimeline) {
     homeScrollTimeline.kill();
@@ -80,6 +86,9 @@ export function initHomeScrollAnimation() {
     });
     // Dispose cloned materials to prevent memory leaks
     disposeClonedMaterials();
+    // Clear cached lookAt data when leaving
+    cachedLookAtPoints = null;
+    cachedLookAtCurve = null;
   };
 
   const handleScrollEnter = () => {
@@ -145,46 +154,37 @@ export function initHomeScrollAnimation() {
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
 
-          const lookAtPoints: THREE.Vector3[] = [];
-          cameraPathPoints.forEach((point) => {
-            if ("lookAt" in point && point.lookAt) {
-              lookAtPoints.push(point.lookAt);
-            }
-          });
+          // Cache lookAt points and curve to avoid recreating every frame
+          if (!cachedLookAtPoints) {
+            cachedLookAtPoints = [];
+            cameraPathPoints.forEach((point) => {
+              if ("lookAt" in point && point.lookAt) {
+                cachedLookAtPoints!.push(point.lookAt);
+              }
+            });
 
-          if (lookAtPoints.length >= 4) {
-            // Use original Bezier curve with all 4 lookAt points
-            const lookAtCurve = new THREE.CubicBezierCurve3(
-              lookAtPoints[0],
-              lookAtPoints[1],
-              lookAtPoints[2],
-              lookAtPoints[3]
-            );
-            const lookAtPoint = lookAtCurve.getPointAt(cameraProgress);
+            // Create curve once if we have 4 points
+            if (cachedLookAtPoints.length >= 4) {
+              cachedLookAtCurve = new THREE.CubicBezierCurve3(
+                cachedLookAtPoints[0],
+                cachedLookAtPoints[1],
+                cachedLookAtPoints[2],
+                cachedLookAtPoints[3]
+              );
+            }
+          }
+
+          if (cachedLookAtCurve) {
+            const lookAtPoint = cachedLookAtCurve.getPointAt(cameraProgress);
             camera.lookAt(lookAtPoint);
 
             // Always override Z rotation: interpolate from -17° to 0° based on progress
-            // Interpolate Z rotation from -17° (at 0%) to 0° (at 100%)
             const targetZRotation = -17 + cameraProgress * 17; // -17° to 0°
 
-            // Get current rotation and override Z
-            const currentEuler = new THREE.Euler().setFromQuaternion(
-              camera.quaternion
-            );
-            // Override Z rotation directly
-            currentEuler.z = (targetZRotation * Math.PI) / 180;
-            // Apply the modified rotation
-            camera.quaternion.setFromEuler(currentEuler);
-          } else if (lookAtPoints.length >= 4) {
-            // Fallback to lookAt only
-            const lookAtCurve = new THREE.CubicBezierCurve3(
-              lookAtPoints[0]!,
-              lookAtPoints[1]!,
-              lookAtPoints[2]!,
-              lookAtPoints[3]!
-            );
-            const lookAtPoint = lookAtCurve.getPointAt(cameraProgress);
-            camera.lookAt(lookAtPoint);
+            // Reuse tempEuler instead of creating new one every frame
+            tempEuler.setFromQuaternion(camera.quaternion);
+            tempEuler.z = targetZRotation * DEG_TO_RAD;
+            camera.quaternion.setFromEuler(tempEuler);
           }
           camera.fov = originalFOV;
           camera.updateProjectionMatrix();
