@@ -147,6 +147,10 @@ export function initHomeScrollAnimation() {
     // Clear cached lookAt data when leaving
     cachedLookAtPoints = null;
     cachedLookAtCurve = null;
+    // Reset Pacman animation speed when leaving home-scroll
+    if (pacmanMixer) {
+      pacmanMixer.timeScale = 1.0;
+    }
   };
 
   const handleScrollEnter = () => {
@@ -154,6 +158,11 @@ export function initHomeScrollAnimation() {
       const introScrollTrigger = ScrollTrigger.getById("introScroll");
       if (introScrollTrigger?.isActive) {
         return;
+      }
+
+      // Speed up Pacman mouth animation in home-scroll (2x faster)
+      if (pacmanMixer) {
+        pacmanMixer.timeScale = 2.0;
       }
 
       const homeLoopStartPos = getHomeLoopStartPositions();
