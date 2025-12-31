@@ -327,14 +327,22 @@ function updateObjectsWalkBy(progress: number) {
   const pacmanQuat = pacmanTargetQuaternion;
   const ghostQuat = ghostTargetQuaternion;
 
-  // Objects start just outside left edge of screen and end just outside right edge
-  // Calculate visible range based on camera FOV and distance to objects
-  // Objects are positioned with INTRO_POSITION_OFFSET.z = 0, so they're at camera Z level
-  // For FOV 50° and typical viewing distance, visible width is approximately 8-10 units
-  const visibleWidth = 8.0; // Approximate visible width at object distance
-  const edgeOffset = 1.5; // Distance outside screen edge (knapp außerhalb)
-  const walkStart = tempVector.x - visibleWidth / 2 - edgeOffset; // Start just outside left edge
-  const walkEnd = tempVector.x + visibleWidth / 2 + edgeOffset; // End just outside right edge
+  // Calculate visible width based on camera FOV, aspect ratio, and object distance
+  // Objects are positioned at: camera.z + INTRO_POSITION_OFFSET.z + zOffset
+  // Most objects have zOffset = 0.5, so distance from camera is approximately 0.5 units
+  const objectDistance = Math.abs(INTRO_POSITION_OFFSET.z + 0.5); // Distance to objects in Z
+  const fovRadians = (camera.fov * Math.PI) / 180; // Convert FOV to radians
+  const visibleHeight = 2 * objectDistance * Math.tan(fovRadians / 2); // Visible height at object distance
+  const visibleWidth = visibleHeight * camera.aspect; // Visible width = height * aspect ratio
+  const edgeOffset = visibleWidth * 0.15; // 15% of visible width outside screen edge (knapp außerhalb)
+  
+  // Objects start just outside left edge and end just outside right edge
+  // Note: baseX will be added to INTRO_POSITION_OFFSET.x later, so we need to account for that
+  // We want objects to start at left edge of screen, so baseX should be: leftEdge - INTRO_POSITION_OFFSET.x
+  const leftScreenEdge = tempVector.x - visibleWidth / 2;
+  const rightScreenEdge = tempVector.x + visibleWidth / 2;
+  const walkStart = leftScreenEdge - edgeOffset - INTRO_POSITION_OFFSET.x; // Start just outside left edge
+  const walkEnd = rightScreenEdge + edgeOffset - INTRO_POSITION_OFFSET.x; // End just outside right edge
 
   const objectsToAnimate = [
     {
