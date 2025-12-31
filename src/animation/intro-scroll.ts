@@ -89,18 +89,18 @@ export function initIntroScrollAnimation() {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
-          // Speed up Pacman mouth animation in intro-scroll
+          // Speed up Pacman mouth animation in intro-scroll (much faster for more frequent mouth movements)
           if (pacmanMixer) {
-            pacmanMixer.timeScale = 1.5; // 50% faster
+            pacmanMixer.timeScale = 4.0; // 4x faster for more frequent mouth movements
           }
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
-          // Speed up Pacman mouth animation in intro-scroll
+          // Speed up Pacman mouth animation in intro-scroll (much faster for more frequent mouth movements)
           if (pacmanMixer) {
-            pacmanMixer.timeScale = 1.5; // 50% faster
+            pacmanMixer.timeScale = 4.0; // 4x faster for more frequent mouth movements
           }
         },
         onLeave: () => {
@@ -299,8 +299,8 @@ function updateObjectsWalkBy(progress: number) {
 
   if (pacmanMixer) {
     // Ensure timeScale is set during intro-scroll (in case it was reset elsewhere)
-    if (isIntroScrollActive && pacmanMixer.timeScale !== 1.5) {
-      pacmanMixer.timeScale = 1.5;
+    if (isIntroScrollActive && pacmanMixer.timeScale !== 4.0) {
+      pacmanMixer.timeScale = 4.0; // 4x faster for more frequent mouth movements
     }
     pacmanMixer.update(clock.getDelta());
   }
