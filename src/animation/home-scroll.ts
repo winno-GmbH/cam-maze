@@ -7,7 +7,7 @@ import { clock, onFrame } from "../core/scene";
 import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import { getHomeScrollPaths } from "../paths/paths";
 import { LAY_DOWN_QUAT_1 } from "./util";
-// Pacman rotation offsets (X=90°, Y=180°, Z=0° for correct end position)
+
 const PACMAN_ROTATION_OFFSETS = { x: 90, y: 180, z: 0 };
 import { applyHomeScrollPreset, getScrollDirection } from "./scene-presets";
 import {
@@ -36,19 +36,19 @@ const originalFOV = 50;
 
 let startPositions: Record<string, THREE.Vector3> = {};
 let allObjects: Array<[string, THREE.Object3D]> = [];
-// Track cloned materials for disposal
+
 const clonedMaterials: THREE.Material[] = [];
-// Cache for paths to avoid recalculation
+
 let cachedPaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null = null;
 let cachedPathsKey: string | null = null;
 
-// Cache for camera animation to avoid recreating objects every frame
+
 let cachedLookAtPoints: THREE.Vector3[] | null = null;
 let cachedLookAtCurve: THREE.CubicBezierCurve3 | null = null;
 const tempEuler = new THREE.Euler();
 const DEG_TO_RAD = Math.PI / 180;
 
-// Cache for Pacman rotation calculation to avoid recreating objects every frame
+
 const pacmanRotationCache = {
   xAxis: new THREE.Vector3(1, 0, 0),
   yAxis: new THREE.Vector3(0, 1, 0),
@@ -59,7 +59,7 @@ const pacmanRotationCache = {
   pacmanLayDown: new THREE.Quaternion(),
   tempEuler: new THREE.Euler(),
   endEuler: new THREE.Euler(),
-  offsets: { x: 0, y: 0, z: 0 }, // Track last offsets to detect changes
+  offsets: { x: 0, y: 0, z: 0 },
 };
 
 function updatePacmanRotationCache(offsets: {
@@ -67,19 +67,19 @@ function updatePacmanRotationCache(offsets: {
   y: number;
   z: number;
 }) {
-  // Only recalculate if offsets changed
+
   if (
     pacmanRotationCache.offsets.x === offsets.x &&
     pacmanRotationCache.offsets.y === offsets.y &&
     pacmanRotationCache.offsets.z === offsets.z
   ) {
-    return; // Already cached
+    return;
   }
 
-  // Update cache
+
   pacmanRotationCache.offsets = { ...offsets };
 
-  // Reuse cached quaternions instead of creating new ones
+
   pacmanRotationCache.xRotation.setFromAxisAngle(
     pacmanRotationCache.xAxis,
     offsets.x * DEG_TO_RAD
@@ -93,14 +93,14 @@ function updatePacmanRotationCache(offsets: {
     offsets.z * DEG_TO_RAD
   );
 
-  // Calculate combined rotation
+
   pacmanRotationCache.pacmanLayDown
     .copy(LAY_DOWN_QUAT_1)
     .multiply(pacmanRotationCache.yRotation)
     .multiply(pacmanRotationCache.xRotation)
     .multiply(pacmanRotationCache.zRotation);
 
-  // Cache the end Euler
+
   pacmanRotationCache.endEuler.setFromQuaternion(
     pacmanRotationCache.pacmanLayDown
   );
@@ -134,7 +134,7 @@ export function initHomeScrollAnimation() {
 
   const handleScrollLeave = () => {
     const introScrollTrigger = ScrollTrigger.getById("introScroll");
-    // Kill all object animations and reset opacity when leaving home-scroll
+
     allObjects.forEach(([key, object]) => {
       killObjectAnimations(object);
       setObjectOpacity(object, 1.0, {
@@ -142,12 +142,12 @@ export function initHomeScrollAnimation() {
         skipCurrencySymbols: true,
       });
     });
-    // Dispose cloned materials to prevent memory leaks
+
     disposeClonedMaterials();
-    // Clear cached lookAt data when leaving
+
     cachedLookAtPoints = null;
     cachedLookAtCurve = null;
-    // Reset Pacman animation speed when leaving home-scroll
+
     if (pacmanMixer) {
       pacmanMixer.timeScale = 1.0;
     }
@@ -160,7 +160,7 @@ export function initHomeScrollAnimation() {
         return;
       }
 
-      // Speed up Pacman mouth animation in home-scroll (2x faster)
+
       if (pacmanMixer) {
         pacmanMixer.timeScale = 2.0;
       }
@@ -213,15 +213,15 @@ export function initHomeScrollAnimation() {
           const progress = self.progress;
           const clampedProgress = Math.min(1, Math.max(0, progress));
 
-          // Camera: starts at 0%, ends at 100%
-          // Should start fast, then slow down (ease-out) - but gentler and slower
-          // Use a gentler ease-out curve (exponent 1.5 instead of 2) for slower, smoother acceleration
-          const cameraProgress = 1 - Math.pow(1 - clampedProgress, 1.5); // Gentler ease-out for slower camera movement
+
+
+
+          const cameraProgress = 1 - Math.pow(1 - clampedProgress, 1.5);
 
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
 
-          // Cache lookAt points and curve to avoid recreating every frame
+
           if (!cachedLookAtPoints) {
             cachedLookAtPoints = [];
             cameraPathPoints.forEach((point) => {
@@ -230,7 +230,7 @@ export function initHomeScrollAnimation() {
               }
             });
 
-            // Create curve once if we have 4 points
+
             if (cachedLookAtPoints.length >= 4) {
               cachedLookAtCurve = new THREE.CubicBezierCurve3(
                 cachedLookAtPoints[0],
@@ -245,10 +245,10 @@ export function initHomeScrollAnimation() {
             const lookAtPoint = cachedLookAtCurve.getPointAt(cameraProgress);
             camera.lookAt(lookAtPoint);
 
-            // Always override Z rotation: interpolate from -17° to 0° based on progress
-            const targetZRotation = -17 + cameraProgress * 17; // -17° to 0°
 
-            // Reuse tempEuler instead of creating new one every frame
+            const targetZRotation = -17 + cameraProgress * 17;
+
+
             tempEuler.setFromQuaternion(camera.quaternion);
             tempEuler.z = targetZRotation * DEG_TO_RAD;
             camera.quaternion.setFromEuler(tempEuler);
@@ -276,10 +276,10 @@ export function initHomeScrollAnimation() {
       killObjectAnimations(object);
     });
 
-    // Dispose old cloned materials before creating new ones
+
     disposeClonedMaterials();
 
-    // Check if paths need to be recalculated
+
     const pathsKey = JSON.stringify(startPositions);
     let homeScrollPaths: Record<string, THREE.CurvePath<THREE.Vector3>>;
     if (cachedPaths && cachedPathsKey === pathsKey) {
@@ -305,7 +305,7 @@ export function initHomeScrollAnimation() {
       forEachMaterial(
         object,
         (mat: any, mesh: THREE.Mesh) => {
-          // Only clone if material is shared (not already cloned)
+
           const isSharedMaterial =
             mat === ghostMaterial ||
             Object.values(materialMap).includes(mat) ||
@@ -332,7 +332,7 @@ export function initHomeScrollAnimation() {
               mesh.material = clonedMat;
             }
           } else {
-            // Material already cloned, just update opacity
+
             setMaterialOpacity(mat, currentMaterialOpacity, true);
           }
         },
@@ -346,15 +346,15 @@ export function initHomeScrollAnimation() {
         object.quaternion.clone();
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
 
-      // For Pacman: Use rotation offsets from HUD sliders directly in end rotation
-      // This allows testing the end rotation by adjusting HUD values
+
+
       let endEuler: THREE.Euler;
       if (key === "pacman") {
-        // Use cached rotation calculation (no object creation)
+
         updatePacmanRotationCache(PACMAN_ROTATION_OFFSETS);
         endEuler = pacmanRotationCache.endEuler.clone();
       } else {
-        // Ghosts use standard lay down rotation
+
         endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
       }
 
@@ -381,15 +381,15 @@ export function initHomeScrollAnimation() {
       });
     });
 
-    // Define start and end scroll percentages for each object
-    // Format: [start%, end%]
+
+
     const objectTimings = [
-      [0.0, 0.7], // Pacman: start 0%, end 70%
-      [0.05, 0.75], // Ghost1: start 5%, end 75%
-      [0.1, 0.8], // Ghost2: start 10%, end 80%
-      [0.15, 0.85], // Ghost3: start 15%, end 85%
-      [0.2, 0.9], // Ghost4: start 20%, end 90%
-      [0.25, 0.95], // Ghost5: start 25%, end 95%
+      [0.0, 0.7],
+      [0.05, 0.75],
+      [0.1, 0.8],
+      [0.15, 0.85],
+      [0.2, 0.9],
+      [0.25, 0.95],
     ];
 
     const baseDuration = 1.0;
@@ -400,7 +400,7 @@ export function initHomeScrollAnimation() {
       const timing = objectTimings[index] || [0, 1];
       const [startPercent, endPercent] = timing;
 
-      // Calculate start time and duration based on percentages
+
       const startTime = startPercent;
       const duration = endPercent - startPercent;
 
@@ -428,37 +428,37 @@ export function initHomeScrollAnimation() {
           onUpdate: function () {
             const introScrollTrigger = ScrollTrigger.getById("introScroll");
             const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
-            // Don't update if intro scroll is active or home scroll is not active
+
             if (introScrollTrigger?.isActive || !homeScrollTrigger?.isActive) {
               return;
             }
 
-            // Map scroll progress to object animation progress
-            // animProps.progress is 0-1 within the object's animation window
-            // Apply same easing to both position and rotation
-            const rawProgress = animProps.progress;
-            const easedProgress = rawProgress * rawProgress * rawProgress; // Cubic ease-in
 
-            // Position uses eased progress
+
+
+            const rawProgress = animProps.progress;
+            const easedProgress = rawProgress * rawProgress * rawProgress;
+
+
             const pathPoint = data.path.getPointAt(easedProgress);
             data.object.position.copy(pathPoint);
 
-            // Rotation also uses eased progress for smooth animation
-            // Apply same rotation logic for all objects (Pacman and Ghosts)
+
+
             let startEuler = data.startEuler;
             let endEuler = data.endEuler;
 
-            // For Pacman: Recalculate end rotation from HUD values in real-time and overwrite state
+
             let finalRotX: number;
             let finalRotY: number;
             let finalRotZ: number;
 
             if (data.key === "pacman") {
-              // Use cached rotation calculation (no object creation)
+
               updatePacmanRotationCache(PACMAN_ROTATION_OFFSETS);
               const cachedEndEuler = pacmanRotationCache.endEuler;
 
-              // Calculate eased rotation using the cached endEuler
+
               finalRotX =
                 startEuler.x +
                 (cachedEndEuler.x - startEuler.x) * easedProgress;
@@ -469,12 +469,12 @@ export function initHomeScrollAnimation() {
                 startEuler.z +
                 (cachedEndEuler.z - startEuler.z) * easedProgress;
 
-              // Update pacmanMixer if this is Pacman (to keep mouth animation running)
+
               if (pacmanMixer) {
                 pacmanMixer.update(clock.getDelta());
               }
             } else {
-              // For ghosts: use standard calculation
+
               finalRotX =
                 startEuler.x + (endEuler.x - startEuler.x) * easedProgress;
               finalRotY =
@@ -483,17 +483,17 @@ export function initHomeScrollAnimation() {
                 startEuler.z + (endEuler.z - startEuler.z) * easedProgress;
             }
 
-            // Set rotation for all objects - FORCE apply to overwrite any other rotation state
-            // This ensures the rotation is always applied, even if something else tries to override it
+
+
             data.object.rotation.set(finalRotX, finalRotY, finalRotZ);
             data.object.quaternion.setFromEuler(data.object.rotation);
             data.object.updateMatrixWorld(false);
 
-            // For Pacman: Set rotation again in next frame to ensure it's not overwritten
-            // This is a workaround to ensure the rotation persists after pacmanMixer.update()
+
+
             if (data.key === "pacman") {
               requestAnimationFrame(() => {
-                // Only apply if we're still in home-scroll
+
                 const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
                 if (homeScrollTrigger?.isActive && data.object) {
                   data.object.rotation.set(finalRotX, finalRotY, finalRotZ);
@@ -503,16 +503,16 @@ export function initHomeScrollAnimation() {
               });
             }
 
-            // Opacity animation: starts fading at 80% of the animation progress
-            // From 0% to 80%: opacity stays at 1.0
-            // From 80% to 100%: opacity fades from 1.0 to 0.0
+
+
+
             const opacityFadeStart = 0.8;
             let finalOpacity: number;
             if (rawProgress < opacityFadeStart) {
-              // Before fade start: full opacity
+
               finalOpacity = OPACITY.FULL;
             } else {
-              // During fade: map progress from [0.8, 1.0] to opacity [1.0, 0.0]
+
               const fadeProgress =
                 (rawProgress - opacityFadeStart) / (1.0 - opacityFadeStart);
               finalOpacity = OPACITY.FULL * (1 - fadeProgress);
@@ -524,7 +524,7 @@ export function initHomeScrollAnimation() {
             });
           },
         },
-        startTime // Start time offset for stagger
+        startTime
       );
     });
   };

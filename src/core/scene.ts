@@ -85,7 +85,7 @@ export function setupLighting(): void {
   directionalLight.castShadow = true;
 }
 
-// Create a simple environment map for realistic glass reflections
+
 export function createEnvironmentMap(): void {
   const envScene = new THREE.Scene();
   const geometry = new THREE.BoxGeometry(100, 100, 100);

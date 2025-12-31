@@ -14,7 +14,7 @@ export interface PillDebugInfo {
 export function getPillDebugInfo(): PillDebugInfo {
   const meshes: PillDebugInfo["meshes"] = [];
 
-  // Check pill group visibility
+
   const pillVisible = pill.visible;
 
   pill.traverse((child) => {
@@ -38,7 +38,7 @@ export function getPillDebugInfo(): PillDebugInfo {
         }
       }
 
-      // Check if parent groups are visible
+
       let parentVisible = true;
       let parent = child.parent;
       while (parent && parent !== pill) {
@@ -82,7 +82,7 @@ export function setPillMeshVisibility(namePattern: string, visible: boolean): vo
       if (childName.toLowerCase().includes(namePattern.toLowerCase())) {
         const mesh = child as THREE.Mesh;
         mesh.visible = visible;
-        // Also ensure parent groups are visible
+
         let parent = child.parent;
         while (parent && parent !== pill) {
           parent.visible = visible;
@@ -141,7 +141,7 @@ export function setPillMeshMaterialColor(namePattern: string, color: number): vo
 }
 
 export function resetPillMaterials(): void {
-  // This will need to import pillMaterialMap, but for now just set all to green
+
   const greenColor = 0x00ff00;
   pill.traverse((child) => {
     if ((child as any).isMesh) {

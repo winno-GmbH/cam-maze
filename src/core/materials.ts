@@ -55,12 +55,12 @@ const pacmanMaterials = {
   }),
 };
 
-// White/clear glass material for bottom half of pill shell
+
 const pillFrontGlass = new THREE.MeshPhysicalMaterial({
-  color: 0xffffff, // Pure white - no tint
+  color: 0xffffff,
   metalness: 0.0,
   roughness: 0.05,
-  transmission: 1.0, // Full transmission for completely clear glass
+  transmission: 1.0,
   thickness: 0.5,
   ior: 1.5,
   reflectivity: 0.5,
@@ -72,24 +72,24 @@ const pillFrontGlass = new THREE.MeshPhysicalMaterial({
   envMapIntensity: 1.0,
 });
 
-// Orange, nearly intransparent material for top half of pill shell
+
 const pillBackGlass = new THREE.MeshPhysicalMaterial({
-  color: 0xff6600, // Pure orange (not too dark)
+  color: 0xff6600,
   metalness: 0.0,
   roughness: 0.05,
-  transmission: 0.2, // Very low transmission - nearly intransparent
+  transmission: 0.2,
   thickness: 0.5,
   ior: 1.5,
   reflectivity: 0.5,
   clearcoat: 1.0,
   clearcoatRoughness: 0.1,
   transparent: true,
-  opacity: 0.98, // Nearly opaque
+  opacity: 0.98,
   side: THREE.DoubleSide,
   envMapIntensity: 1.0,
 });
 
-// Legacy orange glass (kept for backwards compatibility, but should use front/back materials)
+
 const pillOrangeGlass = new THREE.MeshPhysicalMaterial({
   color: 0xff4400,
   metalness: 0.0,
@@ -106,16 +106,16 @@ const pillOrangeGlass = new THREE.MeshPhysicalMaterial({
   envMapIntensity: 1.0,
 });
 
-// Orange material for Bitcoin in center
+
 const pillBitcoinOrange = new THREE.MeshStandardMaterial({
-  color: 0xff6600, // Orange - same as glass
+  color: 0xff6600,
   roughness: 0.3,
   metalness: 0.2,
 });
 
-// Black material for inner elements (will appear orange-tinted through the glass)
+
 const pillInnerBlack = new THREE.MeshStandardMaterial({
-  color: 0x000000, // Black
+  color: 0x000000,
   roughness: 0.5,
   metalness: 0.1,
 });
@@ -124,8 +124,8 @@ const pillMaterials = {
   shell: pillOrangeGlass,
   shellFront: pillFrontGlass,
   shellBack: pillBackGlass,
-  bitcoin: pillBitcoinOrange, // Bitcoin is fully orange
-  default: pillInnerBlack, // Inner elements are black
+  bitcoin: pillBitcoinOrange,
+  default: pillInnerBlack,
 };
 
 export const materialMap = {

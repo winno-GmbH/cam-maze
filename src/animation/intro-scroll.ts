@@ -26,7 +26,7 @@ let isIntroScrollActive = false;
 let lastUpdateProgress: number | null = null;
 export let pacmanTargetQuaternion: THREE.Quaternion | null = null;
 let ghostTargetQuaternion: THREE.Quaternion | null = null;
-let pillCollected = false; // Track if pill has been collected by Pacman
+let pillCollected = false;
 let introInitialRotations: Record<string, THREE.Quaternion> = {};
 let cachedCameraPosition: THREE.Vector3 | null = null;
 let lastCameraUpdateFrame = -1;
@@ -89,19 +89,19 @@ export function initIntroScrollAnimation() {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
-          // Speed up Pacman mouth animation in intro-scroll (much faster for more frequent mouth movements)
+
           if (pacmanMixer) {
-            pacmanMixer.timeScale = 4.0; // 4x faster for more frequent mouth movements
+            pacmanMixer.timeScale = 4.0;
           }
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
-          pillCollected = false; // Reset pill collection state when entering back
+          pillCollected = false;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
-          // Speed up Pacman mouth animation in intro-scroll (much faster for more frequent mouth movements)
+
           if (pacmanMixer) {
-            pacmanMixer.timeScale = 4.0; // 4x faster for more frequent mouth movements
+            pacmanMixer.timeScale = 4.0;
           }
         },
         onLeave: () => {
@@ -109,7 +109,7 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           restoreFloor();
           setIntroScrollLocked(false);
-          // Reset Pacman animation speed when leaving intro-scroll
+
           if (pacmanMixer) {
             pacmanMixer.timeScale = 1.0;
           }
@@ -119,7 +119,7 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           restoreFloor();
           setIntroScrollLocked(false);
-          // Reset Pacman animation speed when leaving intro-scroll
+
           if (pacmanMixer) {
             pacmanMixer.timeScale = 1.0;
           }
@@ -210,10 +210,8 @@ export function initIntroScrollAnimation() {
 }
 
 function initializeQuaternions() {
-  // Always use HUD values for Pacman rotation (defaults to 0,0,0)
   const rotation = getIntroPacmanRotation();
 
-  // Create quaternion from HUD values
   const euler = new THREE.Euler(
     (rotation.x * Math.PI) / 180,
     (rotation.y * Math.PI) / 180,
@@ -299,9 +297,8 @@ function updateObjectsWalkBy(progress: number) {
   initializeQuaternions();
 
   if (pacmanMixer) {
-    // Ensure timeScale is set during intro-scroll (in case it was reset elsewhere)
     if (isIntroScrollActive && pacmanMixer.timeScale !== 4.0) {
-      pacmanMixer.timeScale = 4.0; // 4x faster for more frequent mouth movements
+      pacmanMixer.timeScale = 4.0;
     }
     pacmanMixer.update(clock.getDelta());
   }
@@ -328,35 +325,23 @@ function updateObjectsWalkBy(progress: number) {
   const pacmanQuat = pacmanTargetQuaternion;
   const ghostQuat = ghostTargetQuaternion;
 
-  // Calculate visible width based on camera FOV, aspect ratio, and object distance
-  // Objects are positioned at: camera.z + INTRO_POSITION_OFFSET.z + zOffset
-  // Most objects have zOffset = 0.5, so distance from camera is approximately 0.5 units
-  const objectDistance = Math.abs(INTRO_POSITION_OFFSET.z + 0.5); // Distance to objects in Z
-  const fovRadians = (camera.fov * Math.PI) / 180; // Convert FOV to radians
-  const visibleHeight = 2 * objectDistance * Math.tan(fovRadians / 2); // Visible height at object distance
-  const visibleWidth = visibleHeight * camera.aspect; // Visible width = height * aspect ratio (adapts to viewport)
-  // Edge offset: combination of percentage and fixed value for consistent positioning across screen sizes
-  // Use larger percentage (25%) plus a fixed minimum (2.0 units) to ensure objects are well outside screen
-  const edgeOffset = Math.max(visibleWidth * 0.25, 2.0); // At least 25% of width or 2.0 units, whichever is larger
+  const objectDistance = Math.abs(INTRO_POSITION_OFFSET.z + 0.5);
+  const fovRadians = (camera.fov * Math.PI) / 180;
+  const visibleHeight = 2 * objectDistance * Math.tan(fovRadians / 2);
+  const visibleWidth = visibleHeight * camera.aspect;
 
-  // Calculate screen edges in world space
+  const edgeOffset = Math.max(visibleWidth * 0.25, 2.0);
+
   const leftScreenEdge = tempVector.x - visibleWidth / 2;
   const rightScreenEdge = tempVector.x + visibleWidth / 2;
 
-  // Position calculation chain:
-  // baseX -> pacmanX = baseX + INTRO_POSITION_OFFSET.x -> finalX = pacmanX + behindOffset + xOffset
-  // For Pacman: behindOffset = 1.5, xOffset = 0
-  // So: finalX = baseX + 4.3 + 1.5 = baseX + 5.8
-  // We want finalX to start at: leftScreenEdge - edgeOffset
-  // Therefore: baseX = leftScreenEdge - edgeOffset - 5.8
-  const pacmanBehindOffset = 1.5; // Pacman's behindOffset
-  const pacmanXOffset = 0; // Pacman's xOffset
+  const pacmanBehindOffset = 1.5;
+  const pacmanXOffset = 0;
   const totalPacmanOffset =
-    INTRO_POSITION_OFFSET.x + pacmanBehindOffset + pacmanXOffset; // 4.3 + 1.5 + 0 = 5.8
+    INTRO_POSITION_OFFSET.x + pacmanBehindOffset + pacmanXOffset;
 
-  // Calculate walkStart and walkEnd so that finalX starts/ends just outside screen edges
-  const walkStart = leftScreenEdge - edgeOffset - totalPacmanOffset; // Start just outside left edge
-  const walkEnd = rightScreenEdge + edgeOffset - totalPacmanOffset; // End just outside right edge
+  const walkStart = leftScreenEdge - edgeOffset - totalPacmanOffset;
+  const walkEnd = rightScreenEdge + edgeOffset - totalPacmanOffset;
 
   const objectsToAnimate = [
     {
@@ -409,8 +394,8 @@ function updateObjectsWalkBy(progress: number) {
     },
     {
       key: "pill",
-      behindOffset: 1.1 - INTRO_POSITION_OFFSET.x, // X position 1.1 on green grid line (absolute world position)
-      zOffset: 1.5, // Z position 1.5 on red grid line (absolute world position)
+      behindOffset: 1.1 - INTRO_POSITION_OFFSET.x,
+      zOffset: 1.5,
       xOffset: 0,
       yOffset: 0,
       zPhase: Math.PI * 0.5,
@@ -418,13 +403,11 @@ function updateObjectsWalkBy(progress: number) {
   ];
 
   const normalizedProgress = clamp(progress);
-  // Stretch animation over entire intro-scroll by using a gentler easing curve
-  // Use a quadratic ease-in-out for smooth, gradual movement that's visible throughout
-  // This makes the animation slower overall while keeping it visible from start to finish
+
   const positionProgress =
     normalizedProgress < 0.5
-      ? 2 * normalizedProgress * normalizedProgress // Ease-in for first half
-      : 1 - 2 * (1 - normalizedProgress) * (1 - normalizedProgress); // Ease-out for second half
+      ? 2 * normalizedProgress * normalizedProgress
+      : 1 - 2 * (1 - normalizedProgress) * (1 - normalizedProgress);
   const baseX = walkStart + (walkEnd - walkStart) * positionProgress;
   const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
   const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
@@ -444,7 +427,6 @@ function updateObjectsWalkBy(progress: number) {
       ? normalizedProgress / INTRO_FADE_IN_DURATION
       : 1.0;
 
-  // First pass: Calculate all positions and store them for collision detection
   const objectPositions: Record<string, THREE.Vector3> = {};
 
   objectsToAnimate.forEach(
@@ -459,22 +441,19 @@ function updateObjectsWalkBy(progress: number) {
       const zBounce =
         key === "pacman" || key === "pill"
           ? 0
-          : Math.sin(normalizedProgress * Math.PI * 2 * 5 + zPhase) * 0.01; // Reduced frequency from 20 to 5 for slower bounce
+          : Math.sin(normalizedProgress * Math.PI * 2 * 5 + zPhase) * 0.01;
       const animatedYOffset =
         key === "pacman" || key === "pill" ? 0 : zBounce * 1.5;
 
-      // Special handling for pill: position at absolute grid coordinates
       let finalX: number;
       let finalY: number;
       let finalZ: number;
 
       if (key === "pill") {
-        // Pill should be at grid position X=1.5 (green), Z=1.1 (red), Y=-2.0 (grid height)
         finalX = 1.5;
-        finalY = INTRO_POSITION_OFFSET.y; // -2.0, same as grid height
+        finalY = INTRO_POSITION_OFFSET.y;
         finalZ = 1.1;
       } else {
-        // Other objects use relative positioning
         finalX = pacmanX + behindOffset + xOffset;
         finalY = pacmanY + staticYOffset - animatedYOffset;
         finalZ = pacmanZ + zOffset - zBounce;
@@ -490,19 +469,15 @@ function updateObjectsWalkBy(progress: number) {
         return;
       }
 
-      // Store position for collision detection
       objectPositions[key] = new THREE.Vector3(finalX, finalY, finalZ);
     }
   );
 
-  // Check collision between Pacman and pill after all positions are calculated
   if (!pillCollected && objectPositions["pacman"] && objectPositions["pill"]) {
     const distance = objectPositions["pacman"].distanceTo(
       objectPositions["pill"]
     );
-    // Collision threshold: smaller value for more precise collision detection
-    // Objects are scaled, so we need a threshold that accounts for their actual size
-    // Using 0.4 for tighter collision detection (objects are relatively small)
+
     const collisionThreshold = 0.4;
 
     if (distance < collisionThreshold) {
@@ -510,7 +485,6 @@ function updateObjectsWalkBy(progress: number) {
     }
   }
 
-  // Second pass: Apply positions and handle rendering
   objectsToAnimate.forEach(
     ({
       key,
@@ -529,24 +503,20 @@ function updateObjectsWalkBy(progress: number) {
       object.position.set(position.x, position.y, position.z);
 
       if (key === "pill") {
-        // Only show pill if it hasn't been collected
         if (pillCollected) {
           object.visible = false;
-          return; // Skip rest of pill setup
+          return;
         }
 
-        // Set specific rotation: X=1.571 (90°), Y=20°, Z=180° (π rad)
         const targetEuler = new THREE.Euler(
-          1.571, // X: 90 degrees (π/2)
-          (20 * Math.PI) / 180, // Y: 20 degrees
-          (180 * Math.PI) / 180, // Z: 180 degrees (π)
+          1.571,
+          (20 * Math.PI) / 180,
+          (180 * Math.PI) / 180,
           "XYZ"
         );
         object.rotation.copy(targetEuler);
-        object.scale.set(1, 1, 1); // Normal scale for pill
+        object.scale.set(1, 1, 1);
       } else {
-        // For Pacman: use pacmanTargetQuaternion which is already set from HUD values
-        // For ghosts: use ghostQuat
         const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
 
         if (targetQuat) {
@@ -559,7 +529,6 @@ function updateObjectsWalkBy(progress: number) {
       const targetOpacity =
         key === "pacman" || key === "pill" ? OPACITY.FULL : baseGhostOpacity;
 
-      // For pill, don't manipulate materials - keep original materials from 3D file
       if (key !== "pill") {
         object.traverse((child) => {
           if ((child as any).isMesh) {
@@ -594,7 +563,6 @@ function updateObjectsWalkBy(progress: number) {
           }
         });
       } else {
-        // For pill: just ensure visibility, but keep original materials untouched
         object.traverse((child) => {
           if ((child as any).isMesh) {
             const mesh = child as THREE.Mesh;

@@ -32,12 +32,12 @@ export const ghosts: GhostContainer = {
 export const pill = new THREE.Group();
 pill.visible = true;
 
-// Helper function to split geometry by Y position using toNonIndexed approach
+
 function splitGeometryByY(
   geometry: THREE.BufferGeometry,
   splitY: number
 ): { topGeometry: THREE.BufferGeometry; bottomGeometry: THREE.BufferGeometry } {
-  // Convert to non-indexed to make filtering easier
+
   const nonIndexedGeometry = geometry.toNonIndexed();
   const positionAttribute = nonIndexedGeometry.attributes.position;
   const positions = positionAttribute.array as Float32Array;
@@ -45,9 +45,9 @@ function splitGeometryByY(
   const topPositions: number[] = [];
   const bottomPositions: number[] = [];
 
-  // Filter triangles based on centroid Y position
+
   for (let i = 0; i < positions.length; i += 9) {
-    // Each triangle has 9 values (3 vertices * 3 components)
+
     const y0 = positions[i + 1];
     const y1 = positions[i + 4];
     const y2 = positions[i + 7];
@@ -72,7 +72,7 @@ function splitGeometryByY(
     }
   }
 
-  // Create new geometries
+
   const topGeometry = new THREE.BufferGeometry();
   topGeometry.setAttribute(
     "position",
@@ -85,7 +85,7 @@ function splitGeometryByY(
     new THREE.BufferAttribute(new Float32Array(bottomPositions), 3)
   );
 
-  // Compute normals for both geometries
+
   topGeometry.computeVertexNormals();
   bottomGeometry.computeVertexNormals();
 
@@ -110,10 +110,10 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
       function (gltf) {
         const model = gltf.scene;
 
-        // Combined traversal: collect names and process objects in one pass
+
         const allObjectNames: string[] = [];
         model.traverse((child: THREE.Object3D) => {
-          // Collect names for debugging (only in development)
+
           if (process.env.NODE_ENV === "development" && child.name) {
             allObjectNames.push(child.name);
           }
@@ -220,7 +220,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
           ) {
             const pillGroup = new THREE.Group();
 
-            // First pass: collect all shell meshes
+
             const shellMeshes: THREE.Mesh[] = [];
             const otherMeshes: Array<{
               mesh: THREE.Mesh;
@@ -251,17 +251,17 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               }
             });
 
-            // Process all shell meshes together - combine them first, then split
+
             if (shellMeshes.length > 0) {
-              // Apply mesh transformations to geometries before merging
+
               const transformedGeometries = shellMeshes.map((mesh) => {
                 const geometry = mesh.geometry.clone();
-                // Apply mesh transformations to geometry
+
                 geometry.applyMatrix4(mesh.matrixWorld);
                 return geometry;
               });
 
-              // Use BufferGeometryUtils to properly merge geometries
+
               let combinedGeometry: THREE.BufferGeometry;
               if (transformedGeometries.length === 1) {
                 combinedGeometry = transformedGeometries[0];
@@ -269,25 +269,25 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
                 combinedGeometry = mergeGeometries(transformedGeometries);
               }
 
-              // Calculate center Y for the combined geometry
+
               combinedGeometry.computeBoundingBox();
               const bbox = combinedGeometry.boundingBox!;
               const centerY = (bbox.max.y + bbox.min.y) / 2;
 
-              // Dispose original geometries after merging
+
               transformedGeometries.forEach((geo) => {
                 if (geo !== combinedGeometry) {
                   geo.dispose();
                 }
               });
 
-              // Split combined geometry into top and bottom halves
+
               const { topGeometry, bottomGeometry } = splitGeometryByY(
                 combinedGeometry,
                 centerY
               );
 
-              // Create top half mesh (orange, nearly intransparent)
+
               const topMesh = new THREE.Mesh(
                 topGeometry,
                 (
@@ -299,7 +299,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               topMesh.receiveShadow = true;
               pillGroup.add(topMesh);
 
-              // Create bottom half mesh (transparent white glass)
+
               const bottomMesh = new THREE.Mesh(
                 bottomGeometry,
                 (
@@ -312,12 +312,12 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
               pillGroup.add(bottomMesh);
             }
 
-            // Process other meshes (bitcoin, inner elements, etc.)
+
             otherMeshes.forEach(({ mesh, name, isBitcoin }) => {
               if (isBitcoin) {
-                mesh.material = pillMaterialMap.bitcoin; // Fully orange (the B symbol)
+                mesh.material = pillMaterialMap.bitcoin;
               } else {
-                mesh.material = pillMaterialMap.default; // Black for inner elements
+                mesh.material = pillMaterialMap.default;
               }
               mesh.visible = true;
               mesh.castShadow = true;
@@ -362,7 +362,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             }
           }
 
-          // Set shadow properties during the same traversal
+
           if ((child as any).isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;

@@ -36,16 +36,16 @@ let hasBeenPausedBefore = false;
 
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
 let pillGuides: THREE.Group | null = null;
-// Cache Object.entries to avoid recreating array every frame
+
 const ghostEntries = Object.entries(ghosts);
-// Reusable temp objects to avoid allocations
+
 const tempObject = new THREE.Object3D();
 const tempQuaternion = new THREE.Quaternion();
-// Track last scale values to avoid unnecessary updates
+
 const lastScales: Record<string, number> = {};
 
 function createPillPositionGuides(pillPos: THREE.Vector3) {
-  // Remove existing guides if they exist
+
   if (pillGuides) {
     scene.remove(pillGuides);
     pillGuides = null;
@@ -54,14 +54,14 @@ function createPillPositionGuides(pillPos: THREE.Vector3) {
   pillGuides = new THREE.Group();
   pillGuides.name = "pillPositionGuides";
 
-  const guideSize = 1.0; // Much larger for visibility
+  const guideSize = 1.0;
 
-  // Create axes helper (larger)
+
   const axesHelper = new THREE.AxesHelper(guideSize);
   axesHelper.position.copy(pillPos);
   pillGuides.add(axesHelper);
 
-  // Create a large visible sphere at pill position
+
   const sphereGeometry = new THREE.SphereGeometry(0.2, 16, 16);
   const sphereMaterial = new THREE.MeshBasicMaterial({
     color: 0xff0000,
@@ -73,7 +73,7 @@ function createPillPositionGuides(pillPos: THREE.Vector3) {
   sphere.position.copy(pillPos);
   pillGuides.add(sphere);
 
-  // Create a wireframe box to show the area (larger)
+
   const boxGeometry = new THREE.BoxGeometry(guideSize, guideSize, guideSize);
   const boxMaterial = new THREE.LineBasicMaterial({
     color: 0x00ff00,
@@ -84,13 +84,13 @@ function createPillPositionGuides(pillPos: THREE.Vector3) {
   boxWireframe.position.copy(pillPos);
   pillGuides.add(boxWireframe);
 
-  // Create bright lines from origin to pill position
+
   const lineMaterial = new THREE.LineBasicMaterial({
     color: 0xffff00,
     linewidth: 3,
   });
 
-  // X-axis line (red)
+
   const xLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(0, pillPos.y, pillPos.z),
     pillPos,
@@ -101,7 +101,7 @@ function createPillPositionGuides(pillPos: THREE.Vector3) {
   );
   pillGuides.add(xLine);
 
-  // Y-axis line (green)
+
   const yLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(pillPos.x, 0, pillPos.z),
     pillPos,
@@ -112,7 +112,7 @@ function createPillPositionGuides(pillPos: THREE.Vector3) {
   );
   pillGuides.add(yLine);
 
-  // Z-axis line (blue)
+
   const zLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(pillPos.x, pillPos.y, 0),
     pillPos,
@@ -177,22 +177,22 @@ export function startHomeLoop() {
   rotationTransitionTime = 0;
   startRotations = {};
 
-  // Smooth camera transition to home loop start position
+
   const targetCameraPos = getStartPosition();
   const currentCameraPos = camera.position.clone();
   const cameraDistance = currentCameraPos.distanceTo(targetCameraPos);
 
-  // Check if we're coming from home-scroll
+
   const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
   const wasInHomeScroll = homeScrollTrigger && homeScrollTrigger.progress > 0;
 
-  // Always transition if distance is significant
+
   if (cameraDistance > 0.1) {
     gsap.killTweensOf(camera.position);
-    
-    // Use longer transition when coming from home-scroll
+
+
     const transitionDuration = wasInHomeScroll ? 1.0 : 0.5;
-    
+
     gsap.to(camera.position, {
       x: targetCameraPos.x,
       y: targetCameraPos.y,
@@ -204,7 +204,7 @@ export function startHomeLoop() {
       },
     });
 
-    // Also transition lookAt
+
     const targetLookAt = getLookAtPosition();
     const lookAtProps = { t: 0 };
     const startLookAt = new THREE.Vector3();
@@ -224,7 +224,7 @@ export function startHomeLoop() {
       },
     });
   } else {
-    // If already close, just set directly
+
     camera.position.copy(targetCameraPos);
     const targetLookAt = getLookAtPosition();
     camera.lookAt(targetLookAt);
@@ -241,25 +241,25 @@ export function startHomeLoop() {
       if (hasBeenPausedBefore && savedT !== null) {
         const targetPosition = path.getPointAt(savedT);
         if (targetPosition) {
-          // Get current position BEFORE any changes to avoid first frame jump
+
           const currentPosition = ghost.position.clone();
           const distance = currentPosition.distanceTo(targetPosition);
 
-          // Check if we're transitioning from home-scroll
+
           const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
           const isTransitioningFromHomeScroll =
             homeScrollTrigger && homeScrollTrigger.isActive;
 
-          // Always use smooth transition when coming from home-scroll or if distance is significant
+
           if (distance > 0.001 || isTransitioningFromHomeScroll) {
-            // Kill any existing position animations
+
             gsap.killTweensOf(ghost.position);
 
-            // IMPORTANT: Set initial position to current to prevent first frame jump
+
             ghost.position.copy(currentPosition);
 
-            // Smooth transition to target position
-            // Use longer duration when transitioning from scroll for smoother effect
+
+
             gsap.to(ghost.position, {
               x: targetPosition.x,
               y: targetPosition.y,
@@ -274,7 +274,7 @@ export function startHomeLoop() {
               },
             });
           } else {
-            // If very close and not transitioning, just set directly
+
             ghost.position.copy(targetPosition);
             updateObjectPosition(key, targetPosition);
           }
@@ -284,15 +284,15 @@ export function startHomeLoop() {
       const savedRotation = homeLoopStartRot[key];
 
       if (savedRotation) {
-        // Smooth rotation transition
+
         const currentQuat = ghost.quaternion.clone();
         const angle = currentQuat.angleTo(savedRotation);
 
-        // Only animate if there's a significant rotation difference
+
         if (angle > 0.01) {
           gsap.killTweensOf(ghost.quaternion);
 
-          // Create a temporary object to animate quaternion
+
           const quatProps = { t: 0 };
           gsap.to(quatProps, {
             t: 1,
@@ -363,8 +363,8 @@ function updateHomeLoop(delta: number) {
 
   const introScrollTrigger = ScrollTrigger.getById("introScroll");
   if (introScrollTrigger?.isActive) return;
-  
-  // Don't update if home-scroll is active (to prevent rotation conflicts)
+
+
   const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
   if (homeScrollTrigger?.isActive) return;
 
@@ -389,7 +389,7 @@ function updateHomeLoop(delta: number) {
   );
   const isTransitioning = hasBeenPausedBefore && transitionProgress < 1;
 
-  // Use cached entries instead of Object.entries() every frame
+
   for (let i = 0; i < ghostEntries.length; i++) {
     const [key, ghost] = ghostEntries[i];
     const path = homePaths[key];
@@ -402,7 +402,7 @@ function updateHomeLoop(delta: number) {
         updateObjectPosition(key, position);
       }
 
-      // Only update scale if it changed
+
       const expectedScale =
         key === "pacman" ? SCALE.PACMAN_HOME : SCALE.GHOST_NORMAL;
       if (lastScales[key] !== expectedScale) {
@@ -410,7 +410,7 @@ function updateHomeLoop(delta: number) {
         lastScales[key] = expectedScale;
       }
 
-      // Reuse tempQuaternion instead of creating new one
+
       tempQuaternion.set(0, 0, 0, 1);
       if (homeLoopTangentSmoothers[key] && objectT > 0) {
         const rawTangent = path.getTangentAt(objectT);
@@ -419,7 +419,7 @@ function updateHomeLoop(delta: number) {
             homeLoopTangentSmoothers[key].update(rawTangent);
           const objectType = key === "pacman" ? "pacman" : "ghost";
 
-          // Reuse tempObject instead of creating new one
+
           calculateObjectOrientation(tempObject, smoothTangent, objectType);
           tempQuaternion.copy(tempObject.quaternion);
         }
@@ -430,7 +430,7 @@ function updateHomeLoop(delta: number) {
           transitionProgress *
           transitionProgress *
           (3 - 2 * transitionProgress);
-        // Use tempQuaternion for slerp result instead of cloning
+
         const slerpResult = startRotations[key]
           .clone()
           .slerp(tempQuaternion, easedProgress);
