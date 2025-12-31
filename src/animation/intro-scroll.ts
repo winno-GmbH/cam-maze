@@ -327,10 +327,10 @@ function updateObjectsWalkBy(progress: number) {
   const pacmanQuat = pacmanTargetQuaternion;
   const ghostQuat = ghostTargetQuaternion;
 
-  // Adjust start/end positions so objects are visible earlier and animation stretches over entire scroll
-  // Start closer to camera so objects are visible from the beginning
-  const walkStart = tempVector.x - INTRO_WALK_DISTANCE * 0.3; // Start closer (30% of distance)
-  const walkEnd = tempVector.x + INTRO_WALK_DISTANCE; // End at full distance
+  // Objects move from left to right relative to camera position
+  // The distance determines how far they travel, but they're always relative to camera
+  const walkStart = tempVector.x - INTRO_WALK_DISTANCE;
+  const walkEnd = tempVector.x + INTRO_WALK_DISTANCE;
 
   const objectsToAnimate = [
     {
@@ -392,9 +392,12 @@ function updateObjectsWalkBy(progress: number) {
   ];
 
   const normalizedProgress = clamp(progress);
-  // Slow down position animation to stretch over entire intro-scroll
-  // Use a slower easing curve to make the movement more gradual
-  const positionProgress = normalizedProgress * normalizedProgress * normalizedProgress; // Cubic ease-in for slower start
+  // Stretch animation over entire intro-scroll by using a gentler easing curve
+  // Use a quadratic ease-in-out for smooth, gradual movement that's visible throughout
+  // This makes the animation slower overall while keeping it visible from start to finish
+  const positionProgress = normalizedProgress < 0.5
+    ? 2 * normalizedProgress * normalizedProgress // Ease-in for first half
+    : 1 - 2 * (1 - normalizedProgress) * (1 - normalizedProgress); // Ease-out for second half
   const baseX = walkStart + (walkEnd - walkStart) * positionProgress;
   const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
   const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
