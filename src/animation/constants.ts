@@ -27,7 +27,7 @@ export const PARAMETER_SMOOTHING_FACTOR = 0.1;
 export const GHOST_FADE_THRESHOLD = 0.9;
 export const GHOST_FADE_OUT_DURATION = 0.1;
 
-export const INTRO_WALK_DISTANCE = 10.0;
+export const INTRO_WALK_DISTANCE = 25.0; // Increased to make animation longer and stretch over entire intro-scroll
 export const INTRO_FADE_IN_DURATION = 0.2;
 export const INTRO_POSITION_OFFSET = {
   x: 4.3,

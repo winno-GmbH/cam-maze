@@ -327,8 +327,10 @@ function updateObjectsWalkBy(progress: number) {
   const pacmanQuat = pacmanTargetQuaternion;
   const ghostQuat = ghostTargetQuaternion;
 
-  const walkStart = tempVector.x - INTRO_WALK_DISTANCE;
-  const walkEnd = tempVector.x + INTRO_WALK_DISTANCE;
+  // Adjust start/end positions so objects are visible earlier and animation stretches over entire scroll
+  // Start closer to camera so objects are visible from the beginning
+  const walkStart = tempVector.x - INTRO_WALK_DISTANCE * 0.3; // Start closer (30% of distance)
+  const walkEnd = tempVector.x + INTRO_WALK_DISTANCE; // End at full distance
 
   const objectsToAnimate = [
     {
