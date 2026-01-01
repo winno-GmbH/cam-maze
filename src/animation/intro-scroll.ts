@@ -602,18 +602,6 @@ function updateObjectsWalkBy(progress: number) {
               return;
             }
 
-            if (key === "pacman" && pacmanTransformed) {
-              const name = mesh.name || "";
-              if (
-                name.includes("CAM-Pacman") &&
-                !name.includes("Bitcoin") &&
-                !name.includes("Shell")
-              ) {
-                mesh.visible = false;
-                return;
-              }
-            }
-
             mesh.visible = true;
 
             const mat = mesh.material;
