@@ -405,7 +405,6 @@ function updateObjectsWalkBy(progress: number) {
       : 1.0;
 
   const objectPositions: Record<string, THREE.Vector3> = {};
-  let shouldCollectPill = false;
 
   objectsToAnimate.forEach(
     ({
@@ -457,12 +456,58 @@ function updateObjectsWalkBy(progress: number) {
   );
 
   const pacmanPos = objectPositions["pacman"];
-  const pillPos = objectPositions["pill"];
-  if (pacmanPos && pillPos && !pillCollected) {
-    const distance = pacmanPos.distanceTo(pillPos);
-    const collisionDistance = 0.03;
-    if (distance < collisionDistance) {
-      shouldCollectPill = true;
+  const pillPosition = INTRO_OBJECT_POSITIONS.PILL;
+
+  if (pacmanPos && !pillCollected) {
+    const positionThreshold = 0.1;
+    const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
+    const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
+    const distanceZ = Math.abs(pacmanPos.z - pillPosition.z);
+
+    if (
+      distanceX < positionThreshold &&
+      distanceY < positionThreshold &&
+      distanceZ < positionThreshold
+    ) {
+      pillCollected = true;
+      if (ghosts.pacman && !pacmanTransformed) {
+        pacmanTransformed = true;
+        ghosts.pacman.traverse((child) => {
+          if ((child as any).isMesh) {
+            const mesh = child as THREE.Mesh;
+            const name = mesh.name || "";
+            if (name.includes("Bitcoin_1") || name.includes("Bitcoin_2")) {
+              mesh.visible = true;
+            } else if (
+              name.includes("CAM-Pacman") &&
+              !name.includes("Bitcoin") &&
+              !name.includes("Shell")
+            ) {
+              mesh.visible = false;
+            }
+          }
+        });
+
+        if (pacmanActions && Object.keys(pacmanActions).length > 0) {
+          const animationNames = Object.keys(pacmanActions);
+          const transformationAnimation = animationNames.find(
+            (name) =>
+              name.toLowerCase().includes("transform") ||
+              name.toLowerCase().includes("bitcoin") ||
+              name.toLowerCase().includes("change")
+          );
+
+          if (
+            transformationAnimation &&
+            pacmanActions[transformationAnimation]
+          ) {
+            const action = pacmanActions[transformationAnimation];
+            action.reset();
+            action.setEffectiveWeight(1);
+            action.play();
+          }
+        }
+      }
     }
   }
 
@@ -473,8 +518,13 @@ function updateObjectsWalkBy(progress: number) {
     const collisionDistance = 0.03;
     const minMouthSpeed = PACMAN_MOUTH_SPEED.INTRO * 2.0;
 
-    if (pacmanPos && pillPos && !pillCollected) {
-      const distanceToPill = pacmanPos.distanceTo(pillPos);
+    if (pacmanPos && !pillCollected) {
+      const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
+      const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
+      const distanceZ = Math.abs(pacmanPos.z - pillPosition.z);
+      const distanceToPill = Math.sqrt(
+        distanceX * distanceX + distanceY * distanceY + distanceZ * distanceZ
+      );
 
       if (distanceToPill < collisionDistance) {
         targetMouthPhase = 0.0;
@@ -603,11 +653,7 @@ function updateObjectsWalkBy(progress: number) {
         setObjectScale(object, key, "intro");
       }
       if (key === "pill") {
-        if (pillCollected || shouldCollectPill) {
-          object.visible = false;
-        } else {
-          object.visible = true;
-        }
+        object.visible = !pillCollected;
       } else {
         object.visible = true;
       }
@@ -671,45 +717,8 @@ function updateObjectsWalkBy(progress: number) {
     }
   );
 
-  if (shouldCollectPill && !pillCollected) {
-    pillCollected = true;
+  if (pillCollected && mouthPhaseAtCollection === 0) {
     mouthPhaseAtCollection = lastPacmanAnimationTime;
     lastProgressForMouth = progress;
-
-    if (ghosts.pacman && !pacmanTransformed) {
-      pacmanTransformed = true;
-      ghosts.pacman.traverse((child) => {
-        if ((child as any).isMesh) {
-          const mesh = child as THREE.Mesh;
-          const name = mesh.name || "";
-          if (name.includes("Bitcoin_1") || name.includes("Bitcoin_2")) {
-            mesh.visible = true;
-          } else if (
-            name.includes("CAM-Pacman") &&
-            !name.includes("Bitcoin") &&
-            !name.includes("Shell")
-          ) {
-            mesh.visible = false;
-          }
-        }
-      });
-
-      if (pacmanActions && Object.keys(pacmanActions).length > 0) {
-        const animationNames = Object.keys(pacmanActions);
-        const transformationAnimation = animationNames.find(
-          (name) =>
-            name.toLowerCase().includes("transform") ||
-            name.toLowerCase().includes("bitcoin") ||
-            name.toLowerCase().includes("change")
-        );
-
-        if (transformationAnimation && pacmanActions[transformationAnimation]) {
-          const action = pacmanActions[transformationAnimation];
-          action.reset();
-          action.setEffectiveWeight(1);
-          action.play();
-        }
-      }
-    }
   }
 }
