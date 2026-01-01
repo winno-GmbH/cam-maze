@@ -480,45 +480,46 @@ function updateObjectsWalkBy(progress: number) {
     if (isAtPill && pillProgressAtReach === 0) {
       pillProgressAtReach = progress;
       mouthFrequency = minCycles / Math.max(progress, 0.01);
-    } else if (mouthFrequency === 0) {
-      return;
     }
 
-    const targetMouthPhase = (progress * mouthFrequency) % animationCycleLength;
+    if (mouthFrequency > 0) {
+      const targetMouthPhase =
+        (progress * mouthFrequency) % animationCycleLength;
 
-    const smoothingFactor = 0.3;
-    let deltaToTarget = targetMouthPhase - smoothedMouthPhase;
+      const smoothingFactor = 0.3;
+      let deltaToTarget = targetMouthPhase - smoothedMouthPhase;
 
-    if (Math.abs(deltaToTarget) > 0.5) {
-      if (deltaToTarget > 0) {
-        deltaToTarget = deltaToTarget - 1.0;
-      } else {
-        deltaToTarget = deltaToTarget + 1.0;
+      if (Math.abs(deltaToTarget) > 0.5) {
+        if (deltaToTarget > 0) {
+          deltaToTarget = deltaToTarget - 1.0;
+        } else {
+          deltaToTarget = deltaToTarget + 1.0;
+        }
       }
-    }
 
-    smoothedMouthPhase = smoothedMouthPhase + deltaToTarget * smoothingFactor;
+      smoothedMouthPhase = smoothedMouthPhase + deltaToTarget * smoothingFactor;
 
-    if (smoothedMouthPhase < 0) {
-      smoothedMouthPhase = smoothedMouthPhase + 1.0;
-    } else if (smoothedMouthPhase >= 1.0) {
-      smoothedMouthPhase = smoothedMouthPhase - 1.0;
-    }
-
-    let delta = smoothedMouthPhase - lastPacmanAnimationTime;
-
-    if (Math.abs(delta) > 0.5) {
-      if (delta > 0) {
-        delta = delta - 1.0;
-      } else {
-        delta = delta + 1.0;
+      if (smoothedMouthPhase < 0) {
+        smoothedMouthPhase = smoothedMouthPhase + 1.0;
+      } else if (smoothedMouthPhase >= 1.0) {
+        smoothedMouthPhase = smoothedMouthPhase - 1.0;
       }
-    }
 
-    lastPacmanAnimationTime = smoothedMouthPhase;
+      let delta = smoothedMouthPhase - lastPacmanAnimationTime;
 
-    if (Math.abs(delta) > 0.0001) {
-      pacmanMixer.update(Math.abs(delta));
+      if (Math.abs(delta) > 0.5) {
+        if (delta > 0) {
+          delta = delta - 1.0;
+        } else {
+          delta = delta + 1.0;
+        }
+      }
+
+      lastPacmanAnimationTime = smoothedMouthPhase;
+
+      if (Math.abs(delta) > 0.0001) {
+        pacmanMixer.update(Math.abs(delta));
+      }
     }
   }
 
