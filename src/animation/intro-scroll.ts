@@ -94,6 +94,8 @@ export function initIntroScrollAnimation() {
           pacmanTransformed = false;
           mouthPhaseAtCollection = 0;
           lastProgressForMouth = 0;
+          calculatedMouthSpeed = 0;
+          pillProgress = 0;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -104,6 +106,8 @@ export function initIntroScrollAnimation() {
           pacmanTransformed = false;
           mouthPhaseAtCollection = 0;
           lastProgressForMouth = 0;
+          calculatedMouthSpeed = 0;
+          pillProgress = 0;
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -277,6 +281,8 @@ let pillCollected: boolean = false;
 let pacmanTransformed: boolean = false;
 let mouthPhaseAtCollection: number = 0;
 let lastProgressForMouth: number = 0;
+let calculatedMouthSpeed: number = 0;
+let pillProgress: number = 0;
 
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive) return;
@@ -459,48 +465,62 @@ function updateObjectsWalkBy(progress: number) {
 
   if (pacmanMixer) {
     let targetMouthPhase = 0;
-    const mouthSpeedMultiplier = 3.0;
     const animationCycleLength = 1.0;
+    const maxDistance = 1.5;
+    const collisionDistance = 0.03;
 
-    if (shouldCollectPill && !pillCollected) {
-      targetMouthPhase = 0.0;
-      if (mouthPhaseAtCollection === 0) {
-        mouthPhaseAtCollection = lastPacmanAnimationTime;
-      }
-    } else if (pacmanPos && pillPos && !pillCollected) {
+    if (pacmanPos && pillPos && !pillCollected) {
       const distanceToPill = pacmanPos.distanceTo(pillPos);
-      const collisionDistance = 0.03;
 
       if (distanceToPill < collisionDistance) {
         targetMouthPhase = 0.0;
-      } else {
+        if (pillProgress === 0 && progress > 0) {
+          pillProgress = progress;
+          calculatedMouthSpeed = animationCycleLength / progress;
+        }
+      } else if (distanceToPill <= maxDistance + collisionDistance) {
         const distanceFromCollision = distanceToPill - collisionDistance;
-        const maxDistance = 1.5;
         const normalizedDistance = Math.min(
           1.0,
           distanceFromCollision / maxDistance
         );
-        const basePhase = (1.0 - normalizedDistance) * animationCycleLength;
+        const targetPhase = (1.0 - normalizedDistance) * animationCycleLength;
+
+        if (calculatedMouthSpeed === 0 && progress > 0) {
+          calculatedMouthSpeed = targetPhase / progress;
+        }
+
+        if (calculatedMouthSpeed > 0) {
+          targetMouthPhase = progress * calculatedMouthSpeed;
+          if (targetMouthPhase > targetPhase) {
+            targetMouthPhase = targetPhase;
+          }
+        } else {
+          targetMouthPhase = targetPhase;
+        }
+      } else {
+        if (calculatedMouthSpeed === 0) {
+          calculatedMouthSpeed = PACMAN_MOUTH_SPEED.INTRO * 3.0;
+        }
         targetMouthPhase =
-          (basePhase * mouthSpeedMultiplier) % animationCycleLength;
+          (progress * calculatedMouthSpeed) % animationCycleLength;
       }
     } else if (pillCollected) {
-      if (mouthPhaseAtCollection > 0 && lastProgressForMouth > 0) {
-        const progressDelta =
-          Math.max(0, progress - lastProgressForMouth) *
-          PACMAN_MOUTH_SPEED.INTRO *
-          mouthSpeedMultiplier;
+      if (calculatedMouthSpeed > 0) {
         targetMouthPhase =
-          (lastPacmanAnimationTime + progressDelta) % animationCycleLength;
-        lastProgressForMouth = progress;
+          (progress * calculatedMouthSpeed) % animationCycleLength;
       } else {
-        const baseProgress =
-          progress * PACMAN_MOUTH_SPEED.INTRO * mouthSpeedMultiplier;
-        targetMouthPhase = baseProgress % animationCycleLength;
+        targetMouthPhase =
+          (progress * PACMAN_MOUTH_SPEED.INTRO * 3.0) % animationCycleLength;
       }
     } else {
-      targetMouthPhase =
-        (progress * PACMAN_MOUTH_SPEED.INTRO * mouthSpeedMultiplier) % 1.0;
+      if (calculatedMouthSpeed > 0) {
+        targetMouthPhase =
+          (progress * calculatedMouthSpeed) % animationCycleLength;
+      } else {
+        targetMouthPhase =
+          (progress * PACMAN_MOUTH_SPEED.INTRO * 3.0) % animationCycleLength;
+      }
     }
 
     let delta = targetMouthPhase - lastPacmanAnimationTime;
@@ -582,6 +602,18 @@ function updateObjectsWalkBy(progress: number) {
               return;
             }
 
+            if (key === "pacman" && pacmanTransformed) {
+              const name = mesh.name || "";
+              if (
+                name.includes("CAM-Pacman") &&
+                !name.includes("Bitcoin") &&
+                !name.includes("Shell")
+              ) {
+                mesh.visible = false;
+                return;
+              }
+            }
+
             mesh.visible = true;
 
             const mat = mesh.material;
@@ -616,9 +648,6 @@ function updateObjectsWalkBy(progress: number) {
     pillCollected = true;
     mouthPhaseAtCollection = lastPacmanAnimationTime;
     lastProgressForMouth = progress;
-    if (pill) {
-      pill.visible = false;
-    }
 
     if (ghosts.pacman && !pacmanTransformed) {
       pacmanTransformed = true;
