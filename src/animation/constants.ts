@@ -61,7 +61,7 @@ export const KEYFRAME_DURATION = {
 } as const;
 
 export const PACMAN_MOUTH_SPEED = {
-  INTRO: 8.0,
+  INTRO: 12.0,
   NORMAL: 1.0,
 } as const;
 
