@@ -2,7 +2,7 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
-import { ghosts, pacmanMixer, pill, pacmanActions } from "../core/objects";
+import { ghosts, pacmanMixer, pill } from "../core/objects";
 import { clock, scene } from "../core/scene";
 import { slerpToLayDown, applyRotations } from "./util";
 import { isCurrencySymbol, isPacmanPart } from "./util";
@@ -91,7 +91,6 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
           pillCollected = false;
-          pacmanTransformed = false;
           mouthPhaseAtCollection = 0;
           lastProgressForMouth = 0;
           calculatedMouthSpeed = 0;
@@ -104,7 +103,6 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
           pillCollected = false;
-          pacmanTransformed = false;
           mouthPhaseAtCollection = 0;
           lastProgressForMouth = 0;
           calculatedMouthSpeed = 0;
@@ -280,7 +278,6 @@ let lastFloorState: {
 
 let lastPacmanAnimationTime: number = 0;
 let pillCollected: boolean = false;
-let pacmanTransformed: boolean = false;
 let mouthPhaseAtCollection: number = 0;
 let lastProgressForMouth: number = 0;
 let calculatedMouthSpeed: number = 0;
@@ -470,44 +467,6 @@ function updateObjectsWalkBy(progress: number) {
       distanceZ < positionThreshold
     ) {
       pillCollected = true;
-      if (ghosts.pacman && !pacmanTransformed) {
-        pacmanTransformed = true;
-        ghosts.pacman.traverse((child) => {
-          if ((child as any).isMesh) {
-            const mesh = child as THREE.Mesh;
-            const name = mesh.name || "";
-            if (name.includes("Bitcoin_1") || name.includes("Bitcoin_2")) {
-              mesh.visible = true;
-            } else if (
-              name.includes("CAM-Pacman") &&
-              !name.includes("Bitcoin") &&
-              !name.includes("Shell")
-            ) {
-              mesh.visible = false;
-            }
-          }
-        });
-
-        if (pacmanActions && Object.keys(pacmanActions).length > 0) {
-          const animationNames = Object.keys(pacmanActions);
-          const transformationAnimation = animationNames.find(
-            (name) =>
-              name.toLowerCase().includes("transform") ||
-              name.toLowerCase().includes("bitcoin") ||
-              name.toLowerCase().includes("change")
-          );
-
-          if (
-            transformationAnimation &&
-            pacmanActions[transformationAnimation]
-          ) {
-            const action = pacmanActions[transformationAnimation];
-            action.reset();
-            action.setEffectiveWeight(1);
-            action.play();
-          }
-        }
-      }
     }
   }
 
@@ -672,30 +631,15 @@ function updateObjectsWalkBy(progress: number) {
               return;
             }
 
-            let shouldBeVisible = true;
-
-            if (key === "pacman") {
-              const name = mesh.name || "";
-              if (pacmanTransformed) {
-                if (
-                  name.includes("Bitcoin_1") ||
-                  name.includes("Bitcoin_2") ||
-                  name.includes("Shell")
-                ) {
-                  shouldBeVisible = true;
-                } else if (name.includes("CAM-Pacman")) {
-                  shouldBeVisible = false;
-                } else {
-                  shouldBeVisible = true;
-                }
-              } else {
-                if (isPacmanPart(childName)) {
-                  shouldBeVisible = false;
-                }
-              }
+            if (
+              isCurrencySymbol(childName) ||
+              (key === "pacman" && isPacmanPart(childName))
+            ) {
+              mesh.visible = false;
+              return;
             }
 
-            mesh.visible = shouldBeVisible;
+            mesh.visible = true;
 
             const mat = mesh.material;
             if (mat) {
