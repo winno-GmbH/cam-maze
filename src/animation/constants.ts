@@ -84,7 +84,7 @@ export const INTRO_OBJECT_OFFSETS = {
 } as const;
 
 export const INTRO_PILL = {
-  POSITION: { x: 1, y: -1.5, z: 1 },
+  POSITION: { x: 1, y: -1.5, z: 1.1 },
   ROTATION: { x: 90, y: 20, z: 180 },
 } as const;
 
