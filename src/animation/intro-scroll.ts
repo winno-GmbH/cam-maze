@@ -282,6 +282,48 @@ let smoothedMouthPhase: number = 0;
 let mouthFrequency: number = 0;
 let pillProgressAtReach: number = 0;
 
+function calculatePillProgress(): number {
+  const camX = camera.position.x;
+  const camY = camera.position.y;
+  const camZ = camera.position.z;
+  const pillPosition = INTRO_OBJECT_POSITIONS.PILL;
+
+  const objectDistance = Math.abs(
+    INTRO_POSITION_OFFSET.z + INTRO_OBJECT_ANIMATION_OFFSETS.PACMAN.zOffset
+  );
+  const fovRadians = (camera.fov * Math.PI) / 180;
+  const visibleHeight = 2 * objectDistance * Math.tan(fovRadians / 2);
+  const visibleWidth = visibleHeight * camera.aspect;
+  const edgeOffset = Math.max(
+    visibleWidth * INTRO_EDGE_OFFSET.PERCENTAGE,
+    INTRO_EDGE_OFFSET.MIN
+  );
+  const leftScreenEdge = camX - visibleWidth / 2;
+  const rightScreenEdge = camX + visibleWidth / 2;
+  const totalPacmanOffset =
+    INTRO_POSITION_OFFSET.x +
+    INTRO_OBJECT_ANIMATION_OFFSETS.PACMAN.behindOffset;
+  const walkStart = leftScreenEdge - edgeOffset - totalPacmanOffset;
+  const walkEnd = rightScreenEdge + edgeOffset - totalPacmanOffset;
+
+  const pacmanFinalX = pillPosition.x;
+  const pacmanX =
+    pacmanFinalX -
+    INTRO_OBJECT_ANIMATION_OFFSETS.PACMAN.behindOffset -
+    INTRO_OBJECT_ANIMATION_OFFSETS.PACMAN.xOffset;
+  const baseX = pacmanX - INTRO_POSITION_OFFSET.x;
+  const positionProgress = (baseX - walkStart) / (walkEnd - walkStart);
+
+  let normalizedProgress = positionProgress;
+  if (positionProgress < 0.5) {
+    normalizedProgress = Math.sqrt(positionProgress / 2);
+  } else {
+    normalizedProgress = 1 - Math.sqrt((1 - positionProgress) / 2);
+  }
+
+  return Math.max(0, Math.min(1, normalizedProgress));
+}
+
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive) return;
 
@@ -488,8 +530,8 @@ function updateObjectsWalkBy(progress: number) {
       if (pillProgressAtReach > 0) {
         mouthFrequency = minCycles / Math.max(pillProgressAtReach, 0.01);
       } else {
-        const estimatedPillProgress = progress < 0.5 ? 0.5 : progress * 1.2;
-        mouthFrequency = minCycles / Math.max(estimatedPillProgress, 0.01);
+        const calculatedPillProgress = calculatePillProgress();
+        mouthFrequency = minCycles / Math.max(calculatedPillProgress, 0.01);
       }
     }
 
