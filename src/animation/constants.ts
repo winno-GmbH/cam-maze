@@ -71,7 +71,7 @@ export const INTRO_EDGE_OFFSET = {
 } as const;
 
 export const INTRO_OBJECT_POSITIONS = {
-  PILL: { x: 1, y: -1.5, z: 1 },
+  PILL: { x: 1, y: -1.5, z: 0.9 },
 } as const;
 
 export const INTRO_OBJECT_ROTATIONS = {
