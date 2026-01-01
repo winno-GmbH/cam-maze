@@ -93,6 +93,7 @@ export function initIntroScrollAnimation() {
           pillCollected = false;
           pacmanTransformed = false;
           mouthPhaseAtCollection = 0;
+          lastProgressForMouth = 0;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -102,6 +103,7 @@ export function initIntroScrollAnimation() {
           pillCollected = false;
           pacmanTransformed = false;
           mouthPhaseAtCollection = 0;
+          lastProgressForMouth = 0;
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -274,6 +276,7 @@ let lastPacmanAnimationTime: number = 0;
 let pillCollected: boolean = false;
 let pacmanTransformed: boolean = false;
 let mouthPhaseAtCollection: number = 0;
+let lastProgressForMouth: number = 0;
 
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive) return;
@@ -483,9 +486,8 @@ function updateObjectsWalkBy(progress: number) {
       }
     } else if (pillCollected) {
       if (mouthPhaseAtCollection > 0) {
-        const lastProgress = lastUpdateProgress || 0;
         const progressDelta =
-          Math.max(0, progress - lastProgress) *
+          Math.max(0, progress - lastProgressForMouth) *
           PACMAN_MOUTH_SPEED.INTRO *
           mouthSpeedMultiplier;
         targetMouthPhase =
@@ -495,6 +497,7 @@ function updateObjectsWalkBy(progress: number) {
           progress * PACMAN_MOUTH_SPEED.INTRO * mouthSpeedMultiplier;
         targetMouthPhase = baseProgress % animationCycleLength;
       }
+      lastProgressForMouth = progress;
     } else {
       targetMouthPhase =
         (progress * PACMAN_MOUTH_SPEED.INTRO * mouthSpeedMultiplier) % 1.0;
@@ -573,6 +576,20 @@ function updateObjectsWalkBy(progress: number) {
             ) {
               mesh.visible = false;
               return;
+            }
+
+            if (key === "pacman" && pacmanTransformed) {
+              const name = mesh.name || "";
+              if (name.includes("Bitcoin_1") || name.includes("Bitcoin_2")) {
+                mesh.visible = true;
+              } else if (
+                name.includes("CAM-Pacman") &&
+                !name.includes("Bitcoin") &&
+                !name.includes("Shell")
+              ) {
+                mesh.visible = false;
+                return;
+              }
             }
 
             mesh.visible = true;
