@@ -204,6 +204,17 @@ export function initIntroScrollAnimation() {
         KEYFRAME_DURATION.HOLD +
         KEYFRAME_DURATION.FADE_OUT
     );
+
+  ScrollTrigger.addEventListener("refresh", () => {
+    const trigger = ScrollTrigger.getById("introScroll");
+    if (
+      trigger &&
+      typeof trigger.progress === "number" &&
+      trigger.progress > 0
+    ) {
+      updateObjectsWalkBy(trigger.progress);
+    }
+  });
 }
 
 function initializeQuaternions() {
@@ -496,7 +507,7 @@ function updateObjectsWalkBy(progress: number) {
           const pillPos = objectPositions["pill"];
           if (pacmanPos && pillPos) {
             const distance = pacmanPos.distanceTo(pillPos);
-            const collisionDistance = 0.2;
+            const collisionDistance = 0.1;
             if (distance < collisionDistance) {
               pillCollected = true;
               object.visible = false;
