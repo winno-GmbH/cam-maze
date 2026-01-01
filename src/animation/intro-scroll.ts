@@ -480,6 +480,9 @@ function updateObjectsWalkBy(progress: number) {
     if (isAtPill && pillProgressAtReach === 0) {
       pillProgressAtReach = progress;
       mouthFrequency = minCycles / Math.max(progress, 0.01);
+    } else if (mouthFrequency === 0) {
+      const estimatedPillProgress = progress < 0.5 ? 0.5 : progress * 1.2;
+      mouthFrequency = minCycles / Math.max(estimatedPillProgress, 0.01);
     }
 
     if (mouthFrequency > 0) {
