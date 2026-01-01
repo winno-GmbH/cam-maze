@@ -92,8 +92,6 @@ export function initIntroScrollAnimation() {
           lastPacmanAnimationTime = 0;
           pillCollected = false;
           smoothedMouthPhase = 0;
-          mouthStartPhase = 0;
-          mouthFrequency = 0;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -101,6 +99,12 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
           pillCollected = false;
+          if (mouthFrequency === 0) {
+            const calculatedPillProgress = calculatePillProgress();
+            mouthFrequency = 10;
+            mouthStartPhase =
+              (1.0 - ((calculatedPillProgress * mouthFrequency) % 1.0)) % 1.0;
+          }
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -323,6 +327,14 @@ function updateObjectsWalkBy(progress: number) {
   if (lastUpdateProgress === progress) return;
   lastUpdateProgress = progress;
 
+  if (mouthFrequency === 0) {
+    const calculatedPillProgress = calculatePillProgress();
+    const minCycles = 10;
+    mouthFrequency = minCycles;
+    mouthStartPhase =
+      (1.0 - ((calculatedPillProgress * mouthFrequency) % 1.0)) % 1.0;
+  }
+
   const camX = camera.position.x;
   const camY = camera.position.y;
   const camZ = camera.position.z;
@@ -513,17 +525,7 @@ function updateObjectsWalkBy(progress: number) {
       distanceY < positionThreshold &&
       distanceZ < positionThreshold;
 
-    const minCycles = 10;
     const animationCycleLength = 1.0;
-
-    if (mouthFrequency === 0) {
-      const calculatedPillProgress = calculatePillProgress();
-      mouthFrequency = minCycles;
-      mouthStartPhase =
-        (1.0 -
-          ((calculatedPillProgress * mouthFrequency) % animationCycleLength)) %
-        animationCycleLength;
-    }
 
     if (mouthFrequency > 0) {
       const targetMouthPhase =
