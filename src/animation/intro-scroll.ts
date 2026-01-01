@@ -90,20 +90,12 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
-
-          if (pacmanMixer) {
-            pacmanMixer.timeScale = 0;
-          }
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
-
-          if (pacmanMixer) {
-            pacmanMixer.timeScale = 0;
-          }
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -280,13 +272,13 @@ function updateObjectsWalkBy(progress: number) {
   initializeQuaternions();
 
   if (pacmanMixer) {
-    pacmanMixer.timeScale = 0;
-
     const targetAnimationTime = progress * PACMAN_MOUTH_SPEED.INTRO;
     const delta = targetAnimationTime - lastPacmanAnimationTime;
     lastPacmanAnimationTime = targetAnimationTime;
 
-    pacmanMixer.update(delta);
+    if (Math.abs(delta) > 0.0001) {
+      pacmanMixer.update(delta);
+    }
   }
 
   const floorState = {
