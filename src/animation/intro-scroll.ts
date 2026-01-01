@@ -90,10 +90,7 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           pillCollected = false;
-          const pillProgress = calculatePillProgress();
-          const mouthFrequency = 10;
-          mouthStartPhase =
-            (1.0 - ((pillProgress * mouthFrequency) % 1.0)) % 1.0;
+          lastMouthProgress = 0;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -269,7 +266,7 @@ let lastFloorState: {
 } | null = null;
 
 let pillCollected: boolean = false;
-let mouthStartPhase: number = 0;
+let lastMouthProgress: number = 0;
 
 function calculatePillProgress(): number {
   const camX = camera.position.x;
@@ -499,16 +496,21 @@ function updateObjectsWalkBy(progress: number) {
     }
   }
 
-  if (pacmanMixer && pacmanActions) {
+  if (pacmanMixer) {
+    const pillProgress = calculatePillProgress();
     const mouthFrequency = 10;
-    const targetMouthPhase =
-      (progress * mouthFrequency + mouthStartPhase) % 1.0;
-    const firstActionKey = Object.keys(pacmanActions)[0];
-    if (firstActionKey) {
-      const action = pacmanActions[firstActionKey];
-      const clipDuration = action.getClip().duration;
-      action.time = targetMouthPhase * clipDuration;
-      pacmanMixer.update(0);
+    const targetMouthProgress = (progress * mouthFrequency) % 1.0;
+    const pillMouthProgress = (pillProgress * mouthFrequency) % 1.0;
+    const offset = (1.0 - pillMouthProgress) % 1.0;
+    const finalMouthProgress = (targetMouthProgress + offset) % 1.0;
+
+    const delta = finalMouthProgress - lastMouthProgress;
+    const normalizedDelta =
+      delta < -0.5 ? delta + 1.0 : delta > 0.5 ? delta - 1.0 : delta;
+
+    if (Math.abs(normalizedDelta) > 0.0001) {
+      pacmanMixer.update(normalizedDelta);
+      lastMouthProgress = finalMouthProgress;
     }
   }
 
