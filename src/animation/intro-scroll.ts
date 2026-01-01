@@ -468,6 +468,7 @@ function updateObjectsWalkBy(progress: number) {
     const animationCycleLength = 1.0;
     const maxDistance = 1.5;
     const collisionDistance = 0.03;
+    const minMouthSpeed = PACMAN_MOUTH_SPEED.INTRO * 3.0;
 
     if (pacmanPos && pillPos && !pillCollected) {
       const distanceToPill = pacmanPos.distanceTo(pillPos);
@@ -476,7 +477,8 @@ function updateObjectsWalkBy(progress: number) {
         targetMouthPhase = 0.0;
         if (pillProgress === 0 && progress > 0) {
           pillProgress = progress;
-          calculatedMouthSpeed = animationCycleLength / progress;
+          const calculatedSpeed = animationCycleLength / progress;
+          calculatedMouthSpeed = Math.max(calculatedSpeed, minMouthSpeed);
         }
       } else if (distanceToPill <= maxDistance + collisionDistance) {
         const distanceFromCollision = distanceToPill - collisionDistance;
@@ -487,11 +489,13 @@ function updateObjectsWalkBy(progress: number) {
         const targetPhase = (1.0 - normalizedDistance) * animationCycleLength;
 
         if (calculatedMouthSpeed === 0 && progress > 0) {
-          calculatedMouthSpeed = targetPhase / progress;
+          const calculatedSpeed = targetPhase / progress;
+          calculatedMouthSpeed = Math.max(calculatedSpeed, minMouthSpeed);
         }
 
         if (calculatedMouthSpeed > 0) {
-          targetMouthPhase = progress * calculatedMouthSpeed;
+          targetMouthPhase =
+            (progress * calculatedMouthSpeed) % animationCycleLength;
           if (targetMouthPhase > targetPhase) {
             targetMouthPhase = targetPhase;
           }
@@ -500,7 +504,7 @@ function updateObjectsWalkBy(progress: number) {
         }
       } else {
         if (calculatedMouthSpeed === 0) {
-          calculatedMouthSpeed = PACMAN_MOUTH_SPEED.INTRO * 3.0;
+          calculatedMouthSpeed = minMouthSpeed;
         }
         targetMouthPhase =
           (progress * calculatedMouthSpeed) % animationCycleLength;
@@ -510,16 +514,14 @@ function updateObjectsWalkBy(progress: number) {
         targetMouthPhase =
           (progress * calculatedMouthSpeed) % animationCycleLength;
       } else {
-        targetMouthPhase =
-          (progress * PACMAN_MOUTH_SPEED.INTRO * 3.0) % animationCycleLength;
+        targetMouthPhase = (progress * minMouthSpeed) % animationCycleLength;
       }
     } else {
       if (calculatedMouthSpeed > 0) {
         targetMouthPhase =
           (progress * calculatedMouthSpeed) % animationCycleLength;
       } else {
-        targetMouthPhase =
-          (progress * PACMAN_MOUTH_SPEED.INTRO * 3.0) % animationCycleLength;
+        targetMouthPhase = (progress * minMouthSpeed) % animationCycleLength;
       }
     }
 
