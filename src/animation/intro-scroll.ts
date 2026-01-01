@@ -27,12 +27,8 @@ let lastUpdateProgress: number | null = null;
 export let pacmanTargetQuaternion: THREE.Quaternion | null = null;
 let ghostTargetQuaternion: THREE.Quaternion | null = null;
 let introInitialRotations: Record<string, THREE.Quaternion> = {};
-let cachedCameraPosition: THREE.Vector3 | null = null;
-let lastCameraUpdateFrame = -1;
 
 function resetIntroScrollCache() {
-  cachedCameraPosition = null;
-  lastCameraUpdateFrame = -1;
   lastUpdateProgress = null;
 }
 
@@ -258,38 +254,18 @@ let lastFloorState: {
   transparent: boolean;
 } | null = null;
 
-const tempVector = new THREE.Vector3();
-
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive) return;
 
   if (lastUpdateProgress === progress) return;
   lastUpdateProgress = progress;
 
-  const currentFrame = performance.now();
-  const shouldUpdateCache =
-    !cachedCameraPosition || currentFrame - lastCameraUpdateFrame > 16;
+  const camX = camera.position.x;
+  const camY = camera.position.y;
+  const camZ = camera.position.z;
 
-  if (shouldUpdateCache) {
-    const camX = camera.position.x;
-    const camY = camera.position.y;
-    const camZ = camera.position.z;
-
-    if (!isFinite(camX) || !isFinite(camY) || !isFinite(camZ)) {
-      if (!cachedCameraPosition) {
-        return;
-      }
-      tempVector.copy(cachedCameraPosition);
-    } else {
-      if (!cachedCameraPosition) {
-        cachedCameraPosition = new THREE.Vector3();
-      }
-      cachedCameraPosition.set(camX, camY, camZ);
-      lastCameraUpdateFrame = currentFrame;
-      tempVector.copy(cachedCameraPosition);
-    }
-  } else {
-    tempVector.copy(cachedCameraPosition!);
+  if (!isFinite(camX) || !isFinite(camY) || !isFinite(camZ)) {
+    return;
   }
 
   initializeQuaternions();
@@ -330,8 +306,8 @@ function updateObjectsWalkBy(progress: number) {
 
   const edgeOffset = Math.max(visibleWidth * 0.25, 2.0);
 
-  const leftScreenEdge = tempVector.x - visibleWidth / 2;
-  const rightScreenEdge = tempVector.x + visibleWidth / 2;
+  const leftScreenEdge = camX - visibleWidth / 2;
+  const rightScreenEdge = camX + visibleWidth / 2;
 
   const pacmanBehindOffset = 1.5;
   const pacmanXOffset = 0;
@@ -408,8 +384,8 @@ function updateObjectsWalkBy(progress: number) {
       : 1 - 2 * (1 - normalizedProgress) * (1 - normalizedProgress);
   const baseX = walkStart + (walkEnd - walkStart) * positionProgress;
   const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
-  const pacmanY = tempVector.y + INTRO_POSITION_OFFSET.y;
-  const pacmanZ = tempVector.z + INTRO_POSITION_OFFSET.z;
+  const pacmanY = camY + INTRO_POSITION_OFFSET.y;
+  const pacmanZ = camZ + INTRO_POSITION_OFFSET.z;
 
   if (
     !isFinite(baseX) ||
