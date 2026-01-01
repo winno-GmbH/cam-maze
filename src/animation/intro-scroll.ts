@@ -92,8 +92,8 @@ export function initIntroScrollAnimation() {
           lastPacmanAnimationTime = 0;
           pillCollected = false;
           smoothedMouthPhase = 0;
+          mouthStartPhase = 0;
           mouthFrequency = 0;
-          pillProgressAtReach = 0;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -101,12 +101,6 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
           pillCollected = false;
-          if (pillProgressAtReach > 0) {
-            const minCycles = 10;
-            mouthFrequency = minCycles / Math.max(pillProgressAtReach, 0.01);
-          } else {
-            mouthFrequency = 0;
-          }
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -278,8 +272,8 @@ let lastFloorState: {
 let lastPacmanAnimationTime: number = 0;
 let pillCollected: boolean = false;
 let smoothedMouthPhase: number = 0;
+let mouthStartPhase: number = 0;
 let mouthFrequency: number = 0;
-let pillProgressAtReach: number = 0;
 
 function calculatePillProgress(): number {
   const camX = camera.position.x;
@@ -522,21 +516,18 @@ function updateObjectsWalkBy(progress: number) {
     const minCycles = 10;
     const animationCycleLength = 1.0;
 
-    if (isAtPill && pillProgressAtReach === 0) {
-      pillProgressAtReach = progress;
-      mouthFrequency = minCycles / Math.max(progress, 0.01);
-    } else if (mouthFrequency === 0) {
-      if (pillProgressAtReach > 0) {
-        mouthFrequency = minCycles / Math.max(pillProgressAtReach, 0.01);
-      } else {
-        const calculatedPillProgress = calculatePillProgress();
-        mouthFrequency = minCycles / Math.max(calculatedPillProgress, 0.01);
-      }
+    if (mouthFrequency === 0) {
+      const calculatedPillProgress = calculatePillProgress();
+      mouthFrequency = minCycles;
+      mouthStartPhase =
+        (1.0 -
+          ((calculatedPillProgress * mouthFrequency) % animationCycleLength)) %
+        animationCycleLength;
     }
 
     if (mouthFrequency > 0) {
       const targetMouthPhase =
-        (progress * mouthFrequency) % animationCycleLength;
+        (progress * mouthFrequency + mouthStartPhase) % animationCycleLength;
 
       if (lastPacmanAnimationTime === 0) {
         smoothedMouthPhase = targetMouthPhase;
