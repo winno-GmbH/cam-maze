@@ -454,9 +454,9 @@ function updateObjectsWalkBy(progress: number) {
 
   const pacmanPos = objectPositions["pacman"];
   const pillPosition = INTRO_OBJECT_POSITIONS.PILL;
+  const positionThreshold = 0.1;
 
   if (pacmanPos && !pillCollected) {
-    const positionThreshold = 0.1;
     const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
     const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
     const distanceZ = Math.abs(pacmanPos.z - pillPosition.z);
@@ -474,7 +474,6 @@ function updateObjectsWalkBy(progress: number) {
     let targetMouthPhase = 0;
     const animationCycleLength = 1.0;
     const maxDistance = 1.5;
-    const collisionDistance = 0.03;
     const minMouthSpeed = PACMAN_MOUTH_SPEED.INTRO * 2.0;
 
     if (pacmanPos && !pillCollected) {
@@ -485,15 +484,19 @@ function updateObjectsWalkBy(progress: number) {
         distanceX * distanceX + distanceY * distanceY + distanceZ * distanceZ
       );
 
-      if (distanceToPill < collisionDistance) {
+      if (
+        distanceX < positionThreshold &&
+        distanceY < positionThreshold &&
+        distanceZ < positionThreshold
+      ) {
         targetMouthPhase = 0.0;
         if (pillProgress === 0 && progress > 0) {
           pillProgress = progress;
           const calculatedSpeed = animationCycleLength / progress;
           calculatedMouthSpeed = Math.max(calculatedSpeed, minMouthSpeed);
         }
-      } else if (distanceToPill <= maxDistance + collisionDistance) {
-        const distanceFromCollision = distanceToPill - collisionDistance;
+      } else if (distanceToPill <= maxDistance + positionThreshold) {
+        const distanceFromCollision = distanceToPill - positionThreshold;
         const normalizedDistance = Math.min(
           1.0,
           distanceFromCollision / maxDistance
@@ -511,7 +514,11 @@ function updateObjectsWalkBy(progress: number) {
           const phaseFromDistance = targetPhase;
           targetMouthPhase = Math.min(phaseFromProgress, phaseFromDistance);
 
-          if (distanceToPill <= collisionDistance * 1.2) {
+          if (
+            distanceX < positionThreshold * 1.2 &&
+            distanceY < positionThreshold * 1.2 &&
+            distanceZ < positionThreshold * 1.2
+          ) {
             targetMouthPhase = 0.0;
           }
         } else {
