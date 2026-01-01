@@ -444,14 +444,27 @@ function updateObjectsWalkBy(progress: number) {
     }
   );
 
+  const pacmanPos = objectPositions["pacman"];
+  const pillPos = objectPositions["pill"];
+  if (pacmanPos && pillPos && !pillCollected) {
+    const distance = pacmanPos.distanceTo(pillPos);
+    const collisionDistance = 0.03;
+    if (distance < collisionDistance) {
+      shouldCollectPill = true;
+    }
+  }
+
   if (pacmanMixer) {
-    const pacmanPos = objectPositions["pacman"];
-    const pillPos = objectPositions["pill"];
     let targetMouthPhase = 0;
     const mouthSpeedMultiplier = 3.0;
     const animationCycleLength = 1.0;
 
-    if (pacmanPos && pillPos && !pillCollected) {
+    if (shouldCollectPill && !pillCollected) {
+      targetMouthPhase = 0.0;
+      if (mouthPhaseAtCollection === 0) {
+        mouthPhaseAtCollection = lastPacmanAnimationTime;
+      }
+    } else if (pacmanPos && pillPos && !pillCollected) {
       const distanceToPill = pacmanPos.distanceTo(pillPos);
       const collisionDistance = 0.03;
 
@@ -540,20 +553,7 @@ function updateObjectsWalkBy(progress: number) {
         setObjectScale(object, key, "intro");
       }
       if (key === "pill") {
-        if (pillCollected || shouldCollectPill) {
-          object.visible = false;
-        } else {
-          object.visible = true;
-          const pacmanPos = objectPositions["pacman"];
-          const pillPos = objectPositions["pill"];
-          if (pacmanPos && pillPos) {
-            const distance = pacmanPos.distanceTo(pillPos);
-            const collisionDistance = 0.03;
-            if (distance < collisionDistance && !pillCollected) {
-              shouldCollectPill = true;
-            }
-          }
-        }
+        object.visible = !pillCollected && !shouldCollectPill;
       } else {
         object.visible = true;
       }
