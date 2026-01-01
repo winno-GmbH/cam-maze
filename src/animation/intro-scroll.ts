@@ -451,7 +451,7 @@ function updateObjectsWalkBy(progress: number) {
 
       if (key === "pill") {
         finalX = 1;
-        finalY = -2;
+        finalY = -1.5;
         finalZ = 1;
       } else {
         finalX = pacmanX + behindOffset + xOffset;
