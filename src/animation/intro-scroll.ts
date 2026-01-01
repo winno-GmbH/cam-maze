@@ -91,7 +91,6 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
           pacmanAnimationOffset = 0;
-          currentMouthPhase = 0;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -99,7 +98,6 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
           pacmanAnimationOffset = 0;
-          currentMouthPhase = 0;
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -259,7 +257,6 @@ let lastFloorState: {
 
 let lastPacmanAnimationTime: number = 0;
 let pacmanAnimationOffset: number = 0;
-let currentMouthPhase: number = 0;
 
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive) return;
@@ -372,7 +369,7 @@ function updateObjectsWalkBy(progress: number) {
       const animationCycleLength = 1.0;
       const currentAnimationPhase =
         (progress * PACMAN_MOUTH_SPEED.INTRO) % animationCycleLength;
-      const targetPhase = animationCycleLength * 1.0;
+      const targetPhase = animationCycleLength * 0.5;
       pacmanAnimationOffset = targetPhase - currentAnimationPhase;
     }
   }
@@ -386,9 +383,6 @@ function updateObjectsWalkBy(progress: number) {
     if (Math.abs(delta) > 0.0001) {
       pacmanMixer.update(delta);
     }
-
-    const animationCycleLength = 1.0;
-    currentMouthPhase = targetAnimationTime % animationCycleLength;
   }
 
   if (
@@ -493,41 +487,10 @@ function updateObjectsWalkBy(progress: number) {
       }
       object.visible = true;
 
-      let targetOpacity: number;
-      if (key === "pill") {
-        const pacmanPos = objectPositions["pacman"];
-        const pillPos = objectPositions["pill"];
-        if (pacmanPos && pillPos) {
-          const distance = pacmanPos.distanceTo(pillPos);
-          const normalizedPhase = currentMouthPhase % 1.0;
-          const isMouthClosed = normalizedPhase < 0.2 || normalizedPhase > 0.8;
-          const isPacmanNearPill = distance < 0.4;
-          targetOpacity =
-            isPacmanNearPill && isMouthClosed ? OPACITY.HIDDEN : OPACITY.FULL;
-        } else {
-          targetOpacity = OPACITY.FULL;
-        }
-      } else if (key === "pacman") {
-        targetOpacity = OPACITY.FULL;
-      } else {
-        targetOpacity = baseGhostOpacity;
-      }
+      const targetOpacity =
+        key === "pacman" || key === "pill" ? OPACITY.FULL : baseGhostOpacity;
 
-      if (key === "pill") {
-        object.traverse((child) => {
-          if ((child as any).isMesh) {
-            const mesh = child as THREE.Mesh;
-            const mat = mesh.material;
-            if (mat) {
-              const materials = Array.isArray(mat) ? mat : [mat];
-              materials.forEach((material: any) => {
-                material.opacity = targetOpacity;
-                material.transparent = targetOpacity < 1.0;
-              });
-            }
-          }
-        });
-      } else if (key !== "pill") {
+      if (key !== "pill") {
         object.traverse((child) => {
           if ((child as any).isMesh) {
             const mesh = child as THREE.Mesh;
