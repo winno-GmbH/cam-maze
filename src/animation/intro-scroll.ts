@@ -444,6 +444,7 @@ function updateObjectsWalkBy(progress: number) {
     const pacmanPos = objectPositions["pacman"];
     const pillPos = objectPositions["pill"];
     let targetMouthPhase = 0;
+    const mouthSpeedMultiplier = 3.0;
 
     if (pacmanPos && pillPos && !pillCollected) {
       const distanceToPill = pacmanPos.distanceTo(pillPos);
@@ -459,10 +460,13 @@ function updateObjectsWalkBy(progress: number) {
           1.0,
           distanceFromCollision / maxDistance
         );
-        targetMouthPhase = (1.0 - normalizedDistance) * animationCycleLength;
+        const basePhase = (1.0 - normalizedDistance) * animationCycleLength;
+        targetMouthPhase =
+          (basePhase * mouthSpeedMultiplier) % animationCycleLength;
       }
     } else {
-      targetMouthPhase = (progress * PACMAN_MOUTH_SPEED.INTRO) % 1.0;
+      targetMouthPhase =
+        (progress * PACMAN_MOUTH_SPEED.INTRO * mouthSpeedMultiplier) % 1.0;
     }
 
     const delta = targetMouthPhase - lastPacmanAnimationTime;
