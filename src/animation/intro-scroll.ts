@@ -91,6 +91,7 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
           pacmanAnimationOffset = 0;
+          pillCollected = false;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -98,6 +99,7 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
           pacmanAnimationOffset = 0;
+          pillCollected = false;
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -257,6 +259,7 @@ let lastFloorState: {
 
 let lastPacmanAnimationTime: number = 0;
 let pacmanAnimationOffset: number = 0;
+let pillCollected: boolean = false;
 
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive) return;
@@ -486,14 +489,23 @@ function updateObjectsWalkBy(progress: number) {
         setObjectScale(object, key, "intro");
       }
       if (key === "pill") {
-        const pacmanPos = objectPositions["pacman"];
-        const pillPos = objectPositions["pill"];
-        if (pacmanPos && pillPos) {
-          const distance = pacmanPos.distanceTo(pillPos);
-          const collisionDistance = 0.3;
-          object.visible = distance >= collisionDistance;
+        if (pillCollected) {
+          object.visible = false;
         } else {
-          object.visible = true;
+          const pacmanPos = objectPositions["pacman"];
+          const pillPos = objectPositions["pill"];
+          if (pacmanPos && pillPos) {
+            const distance = pacmanPos.distanceTo(pillPos);
+            const collisionDistance = 0.2;
+            if (distance < collisionDistance) {
+              pillCollected = true;
+              object.visible = false;
+            } else {
+              object.visible = true;
+            }
+          } else {
+            object.visible = true;
+          }
         }
       } else {
         object.visible = true;
