@@ -60,14 +60,6 @@ export const KEYFRAME_DURATION = {
   FADE_OUT: 0.3,
 } as const;
 
-export const INTRO_GHOST_OFFSETS = {
-  GHOST1: 0.0,
-  GHOST2: -0.005,
-  GHOST3: -0.01,
-  GHOST4: -0.015,
-  GHOST5: -0.02,
-} as const;
-
 export const PACMAN_MOUTH_SPEED = {
   INTRO: 4.0,
   NORMAL: 1.0,
@@ -78,14 +70,64 @@ export const INTRO_EDGE_OFFSET = {
   MIN: 2.0,
 } as const;
 
-export const INTRO_OBJECT_OFFSETS = {
-  Z: 0.5,
-  PACMAN_BEHIND: 1.5,
+export const INTRO_OBJECT_POSITIONS = {
+  PILL: { x: 1, y: -1.5, z: 1.1 },
 } as const;
 
-export const INTRO_PILL = {
-  POSITION: { x: 1, y: -1.5, z: 1.1 },
-  ROTATION: { x: 90, y: 20, z: 180 },
+export const INTRO_OBJECT_ROTATIONS = {
+  PILL: { x: 90, y: 20, z: 180 },
+} as const;
+
+export const INTRO_OBJECT_ANIMATION_OFFSETS = {
+  PACMAN: {
+    behindOffset: 1.5,
+    zOffset: 0.5,
+    xOffset: 0,
+    yOffset: 0,
+    zPhase: 0,
+  },
+  GHOST1: {
+    behindOffset: 0.0,
+    zOffset: 0.5,
+    xOffset: 0.5,
+    yOffset: -0.5,
+    zPhase: Math.PI * 1.0,
+  },
+  GHOST2: {
+    behindOffset: -0.005,
+    zOffset: 0.5,
+    xOffset: 0,
+    yOffset: -1,
+    zPhase: Math.PI * 1.5,
+  },
+  GHOST3: {
+    behindOffset: -0.01,
+    zOffset: 0.5,
+    xOffset: 0.5,
+    yOffset: 0.5,
+    zPhase: Math.PI * 1.0,
+  },
+  GHOST4: {
+    behindOffset: -0.015,
+    zOffset: 0.5,
+    xOffset: 0.75,
+    yOffset: 0.25,
+    zPhase: Math.PI * 1.0,
+  },
+  GHOST5: {
+    behindOffset: -0.02,
+    zOffset: 0.5,
+    xOffset: 0,
+    yOffset: -0.5,
+    zPhase: Math.PI * 1.0,
+  },
+  PILL: {
+    behindOffset: 1.1,
+    zOffset: 1.5,
+    xOffset: 0,
+    yOffset: 0,
+    zPhase: Math.PI * 0.5,
+  },
 } as const;
 
 export const INTRO_GHOST_BOUNCE = {

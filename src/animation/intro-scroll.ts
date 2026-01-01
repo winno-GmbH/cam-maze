@@ -15,11 +15,11 @@ import {
   SCRUB_DURATION,
   KEYFRAME_SCALE,
   KEYFRAME_DURATION,
-  INTRO_GHOST_OFFSETS,
   PACMAN_MOUTH_SPEED,
   INTRO_EDGE_OFFSET,
-  INTRO_OBJECT_OFFSETS,
-  INTRO_PILL,
+  INTRO_OBJECT_POSITIONS,
+  INTRO_OBJECT_ROTATIONS,
+  INTRO_OBJECT_ANIMATION_OFFSETS,
   INTRO_GHOST_BOUNCE,
   clamp,
 } from "./constants";
@@ -305,7 +305,7 @@ function updateObjectsWalkBy(progress: number) {
   }
 
   const objectDistance = Math.abs(
-    INTRO_POSITION_OFFSET.z + INTRO_OBJECT_OFFSETS.Z
+    INTRO_POSITION_OFFSET.z + INTRO_OBJECT_ANIMATION_OFFSETS.PACMAN.zOffset
   );
   const fovRadians = (camera.fov * Math.PI) / 180;
   const visibleHeight = 2 * objectDistance * Math.tan(fovRadians / 2);
@@ -320,7 +320,7 @@ function updateObjectsWalkBy(progress: number) {
   const rightScreenEdge = camX + visibleWidth / 2;
 
   const totalPacmanOffset =
-    INTRO_POSITION_OFFSET.x + INTRO_OBJECT_OFFSETS.PACMAN_BEHIND;
+    INTRO_POSITION_OFFSET.x + INTRO_OBJECT_ANIMATION_OFFSETS.PACMAN.behindOffset;
 
   const walkStart = leftScreenEdge - edgeOffset - totalPacmanOffset;
   const walkEnd = rightScreenEdge + edgeOffset - totalPacmanOffset;
@@ -328,59 +328,35 @@ function updateObjectsWalkBy(progress: number) {
   const objectsToAnimate = [
     {
       key: "pacman",
-      behindOffset: INTRO_OBJECT_OFFSETS.PACMAN_BEHIND,
-      zOffset: INTRO_OBJECT_OFFSETS.Z,
-      xOffset: 0,
-      yOffset: 0,
-      zPhase: 0,
+      ...INTRO_OBJECT_ANIMATION_OFFSETS.PACMAN,
     },
     {
       key: "ghost1",
-      behindOffset: INTRO_GHOST_OFFSETS.GHOST1,
-      zOffset: INTRO_OBJECT_OFFSETS.Z,
-      xOffset: 0.5,
-      yOffset: -0.5,
-      zPhase: Math.PI * 1.0,
+      ...INTRO_OBJECT_ANIMATION_OFFSETS.GHOST1,
     },
     {
       key: "ghost2",
-      behindOffset: INTRO_GHOST_OFFSETS.GHOST2,
-      zOffset: INTRO_OBJECT_OFFSETS.Z,
-      xOffset: 0,
-      yOffset: -1,
-      zPhase: Math.PI * 1.5,
+      ...INTRO_OBJECT_ANIMATION_OFFSETS.GHOST2,
     },
     {
       key: "ghost3",
-      behindOffset: INTRO_GHOST_OFFSETS.GHOST3,
-      zOffset: INTRO_OBJECT_OFFSETS.Z,
-      xOffset: 0.5,
-      yOffset: 0.5,
-      zPhase: Math.PI * 1.0,
+      ...INTRO_OBJECT_ANIMATION_OFFSETS.GHOST3,
     },
     {
       key: "ghost4",
-      behindOffset: INTRO_GHOST_OFFSETS.GHOST4,
-      zOffset: INTRO_OBJECT_OFFSETS.Z,
-      xOffset: 0.75,
-      yOffset: 0.25,
-      zPhase: Math.PI * 1.0,
+      ...INTRO_OBJECT_ANIMATION_OFFSETS.GHOST4,
     },
     {
       key: "ghost5",
-      behindOffset: INTRO_GHOST_OFFSETS.GHOST5,
-      zOffset: INTRO_OBJECT_OFFSETS.Z,
-      xOffset: 0,
-      yOffset: -0.5,
-      zPhase: Math.PI * 1.0,
+      ...INTRO_OBJECT_ANIMATION_OFFSETS.GHOST5,
     },
     {
       key: "pill",
-      behindOffset: 1.1 - INTRO_POSITION_OFFSET.x,
-      zOffset: 1.5,
-      xOffset: 0,
-      yOffset: 0,
-      zPhase: Math.PI * 0.5,
+      behindOffset: INTRO_OBJECT_ANIMATION_OFFSETS.PILL.behindOffset - INTRO_POSITION_OFFSET.x,
+      zOffset: INTRO_OBJECT_ANIMATION_OFFSETS.PILL.zOffset,
+      xOffset: INTRO_OBJECT_ANIMATION_OFFSETS.PILL.xOffset,
+      yOffset: INTRO_OBJECT_ANIMATION_OFFSETS.PILL.yOffset,
+      zPhase: INTRO_OBJECT_ANIMATION_OFFSETS.PILL.zPhase,
     },
   ];
 
@@ -437,9 +413,9 @@ function updateObjectsWalkBy(progress: number) {
       let finalZ: number;
 
       if (key === "pill") {
-        finalX = INTRO_PILL.POSITION.x;
-        finalY = INTRO_PILL.POSITION.y;
-        finalZ = INTRO_PILL.POSITION.z;
+        finalX = INTRO_OBJECT_POSITIONS.PILL.x;
+        finalY = INTRO_OBJECT_POSITIONS.PILL.y;
+        finalZ = INTRO_OBJECT_POSITIONS.PILL.z;
       } else {
         finalX = pacmanX + behindOffset + xOffset;
         finalY = pacmanY + staticYOffset - animatedYOffset;
@@ -479,9 +455,9 @@ function updateObjectsWalkBy(progress: number) {
 
       if (key === "pill") {
         const targetEuler = new THREE.Euler(
-          (INTRO_PILL.ROTATION.x * Math.PI) / 180,
-          (INTRO_PILL.ROTATION.y * Math.PI) / 180,
-          (INTRO_PILL.ROTATION.z * Math.PI) / 180,
+          (INTRO_OBJECT_ROTATIONS.PILL.x * Math.PI) / 180,
+          (INTRO_OBJECT_ROTATIONS.PILL.y * Math.PI) / 180,
+          (INTRO_OBJECT_ROTATIONS.PILL.z * Math.PI) / 180,
           "XYZ"
         );
         object.rotation.copy(targetEuler);
