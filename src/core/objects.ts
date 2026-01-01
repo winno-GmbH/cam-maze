@@ -17,6 +17,7 @@ export { clock };
 const loader = new THREE.GLTFLoader();
 
 export let pacmanMixer: THREE.AnimationMixer;
+export let pacmanActions: { [key: string]: THREE.AnimationAction } = {};
 
 export const pacman = new THREE.Group();
 
@@ -147,7 +148,7 @@ export async function loadModel(scene: THREE.Scene): Promise<void> {
             ghosts.pacman.rotation.set(Math.PI / 2, Math.PI / 2, Math.PI / 4);
 
             pacmanMixer = new THREE.AnimationMixer(ghosts.pacman);
-            const pacmanActions: { [key: string]: THREE.AnimationAction } = {};
+            pacmanActions = {};
 
             gltf.animations.forEach((clip: THREE.AnimationClip) => {
               const action = pacmanMixer.clipAction(clip);
