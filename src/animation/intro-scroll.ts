@@ -480,19 +480,17 @@ function updateObjectsWalkBy(progress: number) {
     if (isAtPill && pillProgressWhenReached === 0) {
       pillProgressWhenReached = progress;
       mouthFrequency = minCycles / progress;
-    }
-
-    if (mouthFrequency === 0) {
-      const estimatedProgress = progress > 0.01 ? progress : 0.5;
-      mouthFrequency = minCycles / estimatedProgress;
+    } else if (mouthFrequency === 0 && progress > 0) {
+      mouthFrequency = minCycles / Math.max(progress, 0.1);
     }
 
     let targetMouthPhase = 0;
 
-    if (isAtPill && pillProgressWhenReached > 0) {
-      targetMouthPhase = 0.0;
-    } else {
+    if (mouthFrequency > 0) {
       targetMouthPhase = (progress * mouthFrequency) % animationCycleLength;
+      if (isAtPill) {
+        targetMouthPhase = 0.0;
+      }
     }
 
     const smoothingFactor = 0.3;
