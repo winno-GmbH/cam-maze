@@ -26,7 +26,6 @@ let isIntroScrollActive = false;
 let lastUpdateProgress: number | null = null;
 export let pacmanTargetQuaternion: THREE.Quaternion | null = null;
 let ghostTargetQuaternion: THREE.Quaternion | null = null;
-let pillCollected = false;
 let introInitialRotations: Record<string, THREE.Quaternion> = {};
 let cachedCameraPosition: THREE.Vector3 | null = null;
 let lastCameraUpdateFrame = -1;
@@ -96,7 +95,6 @@ export function initIntroScrollAnimation() {
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
-          pillCollected = false;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
 
@@ -473,18 +471,6 @@ function updateObjectsWalkBy(progress: number) {
     }
   );
 
-  if (!pillCollected && objectPositions["pacman"] && objectPositions["pill"]) {
-    const distance = objectPositions["pacman"].distanceTo(
-      objectPositions["pill"]
-    );
-
-    const collisionThreshold = 0.4;
-
-    if (distance < collisionThreshold) {
-      pillCollected = true;
-    }
-  }
-
   objectsToAnimate.forEach(
     ({
       key,
@@ -503,11 +489,6 @@ function updateObjectsWalkBy(progress: number) {
       object.position.set(position.x, position.y, position.z);
 
       if (key === "pill") {
-        if (pillCollected) {
-          object.visible = false;
-          return;
-        }
-
         const targetEuler = new THREE.Euler(
           1.571,
           (20 * Math.PI) / 180,
