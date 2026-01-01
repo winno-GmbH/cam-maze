@@ -2,7 +2,7 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
-import { ghosts, pacmanMixer, pill } from "../core/objects";
+import { ghosts, pacmanMixer, pacmanActions, pill } from "../core/objects";
 import { clock, scene } from "../core/scene";
 import { slerpToLayDown, applyRotations } from "./util";
 import { isCurrencySymbol, isPacmanPart } from "./util";
@@ -89,20 +89,16 @@ export function initIntroScrollAnimation() {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
-          lastPacmanAnimationTime = 0;
           pillCollected = false;
-          if (mouthStartPhase === null) {
-            const calculatedPillProgress = calculatePillProgress();
-            const mouthFrequency = 10;
-            mouthStartPhase =
-              (1.0 - ((calculatedPillProgress * mouthFrequency) % 1.0)) % 1.0;
-          }
+          const pillProgress = calculatePillProgress();
+          const mouthFrequency = 10;
+          mouthStartPhase =
+            (1.0 - ((pillProgress * mouthFrequency) % 1.0)) % 1.0;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
-          lastPacmanAnimationTime = 0;
           pillCollected = false;
         },
         onLeave: () => {
@@ -272,9 +268,8 @@ let lastFloorState: {
   transparent: boolean;
 } | null = null;
 
-let lastPacmanAnimationTime: number = 0;
 let pillCollected: boolean = false;
-let mouthStartPhase: number | null = null;
+let mouthStartPhase: number = 0;
 
 function calculatePillProgress(): number {
   const camX = camera.position.x;
@@ -504,36 +499,16 @@ function updateObjectsWalkBy(progress: number) {
     }
   }
 
-  if (pacmanMixer && pacmanPos) {
-    const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
-    const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
-    const distanceZ = Math.abs(pacmanPos.z - pillPosition.z);
-
-    if (mouthStartPhase !== null && pacmanMixer) {
-      const mouthFrequency = 10;
-      const animationCycleLength = 1.0;
-      const targetMouthPhase =
-        (progress * mouthFrequency + mouthStartPhase) % animationCycleLength;
-
-      if (lastPacmanAnimationTime === 0) {
-        lastPacmanAnimationTime = targetMouthPhase;
-      }
-
-      let delta = targetMouthPhase - lastPacmanAnimationTime;
-
-      if (Math.abs(delta) > 0.5) {
-        if (delta > 0) {
-          delta = delta - 1.0;
-        } else {
-          delta = delta + 1.0;
-        }
-      }
-
-      lastPacmanAnimationTime = targetMouthPhase;
-
-      if (Math.abs(delta) > 0.0001) {
-        pacmanMixer.update(Math.abs(delta));
-      }
+  if (pacmanMixer && pacmanActions) {
+    const mouthFrequency = 10;
+    const targetMouthPhase =
+      (progress * mouthFrequency + mouthStartPhase) % 1.0;
+    const firstActionKey = Object.keys(pacmanActions)[0];
+    if (firstActionKey) {
+      const action = pacmanActions[firstActionKey];
+      const clipDuration = action.getClip().duration;
+      action.time = targetMouthPhase * clipDuration;
+      pacmanMixer.update(0);
     }
   }
 
