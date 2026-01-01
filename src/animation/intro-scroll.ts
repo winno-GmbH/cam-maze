@@ -101,7 +101,6 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
           pillCollected = false;
-          smoothedMouthPhase = 0;
           if (pillProgressAtReach > 0) {
             const minCycles = 10;
             mouthFrequency = minCycles / Math.max(pillProgressAtReach, 0.01);
@@ -538,6 +537,10 @@ function updateObjectsWalkBy(progress: number) {
     if (mouthFrequency > 0) {
       const targetMouthPhase =
         (progress * mouthFrequency) % animationCycleLength;
+
+      if (lastPacmanAnimationTime === 0) {
+        smoothedMouthPhase = targetMouthPhase;
+      }
 
       const smoothingFactor = 0.3;
       let deltaToTarget = targetMouthPhase - smoothedMouthPhase;
