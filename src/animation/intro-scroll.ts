@@ -90,12 +90,14 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
+          pacmanAnimationOffset = 0;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
+          pacmanAnimationOffset = 0;
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -254,6 +256,7 @@ let lastFloorState: {
 } | null = null;
 
 let lastPacmanAnimationTime: number = 0;
+let pacmanAnimationOffset: number = 0;
 
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive) return;
@@ -270,16 +273,6 @@ function updateObjectsWalkBy(progress: number) {
   }
 
   initializeQuaternions();
-
-  if (pacmanMixer) {
-    const targetAnimationTime = progress * PACMAN_MOUTH_SPEED.INTRO;
-    const delta = targetAnimationTime - lastPacmanAnimationTime;
-    lastPacmanAnimationTime = targetAnimationTime;
-
-    if (Math.abs(delta) > 0.0001) {
-      pacmanMixer.update(delta);
-    }
-  }
 
   const floorState = {
     visible: true,
@@ -367,6 +360,30 @@ function updateObjectsWalkBy(progress: number) {
   const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
   const pacmanY = camY + INTRO_POSITION_OFFSET.y;
   const pacmanZ = camZ + INTRO_POSITION_OFFSET.z;
+
+  if (pacmanMixer && pacmanAnimationOffset === 0) {
+    const pillX = INTRO_OBJECT_POSITIONS.PILL.x;
+    const distanceToPill = Math.abs(pacmanX - pillX);
+
+    if (distanceToPill < 0.3) {
+      const animationCycleLength = 1.0;
+      const currentAnimationPhase =
+        (progress * PACMAN_MOUTH_SPEED.INTRO) % animationCycleLength;
+      const targetPhase = animationCycleLength * 0.5;
+      pacmanAnimationOffset = targetPhase - currentAnimationPhase;
+    }
+  }
+
+  if (pacmanMixer) {
+    const targetAnimationTime =
+      progress * PACMAN_MOUTH_SPEED.INTRO + pacmanAnimationOffset;
+    const delta = targetAnimationTime - lastPacmanAnimationTime;
+    lastPacmanAnimationTime = targetAnimationTime;
+
+    if (Math.abs(delta) > 0.0001) {
+      pacmanMixer.update(delta);
+    }
+  }
 
   if (
     !isFinite(baseX) ||
