@@ -99,12 +99,6 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
           pillCollected = false;
-          if (mouthFrequency === 0) {
-            const calculatedPillProgress = calculatePillProgress();
-            mouthFrequency = 10;
-            mouthStartPhase =
-              (1.0 - ((calculatedPillProgress * mouthFrequency) % 1.0)) % 1.0;
-          }
         },
         onLeave: () => {
           isIntroScrollActive = false;
