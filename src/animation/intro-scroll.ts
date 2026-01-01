@@ -485,19 +485,19 @@ function updateObjectsWalkBy(progress: number) {
           (basePhase * mouthSpeedMultiplier) % animationCycleLength;
       }
     } else if (pillCollected) {
-      if (mouthPhaseAtCollection > 0) {
+      if (mouthPhaseAtCollection > 0 && lastProgressForMouth > 0) {
         const progressDelta =
           Math.max(0, progress - lastProgressForMouth) *
           PACMAN_MOUTH_SPEED.INTRO *
           mouthSpeedMultiplier;
         targetMouthPhase =
           (lastPacmanAnimationTime + progressDelta) % animationCycleLength;
+        lastProgressForMouth = progress;
       } else {
         const baseProgress =
           progress * PACMAN_MOUTH_SPEED.INTRO * mouthSpeedMultiplier;
         targetMouthPhase = baseProgress % animationCycleLength;
       }
-      lastProgressForMouth = progress;
     } else {
       targetMouthPhase =
         (progress * PACMAN_MOUTH_SPEED.INTRO * mouthSpeedMultiplier) % 1.0;
@@ -556,7 +556,11 @@ function updateObjectsWalkBy(progress: number) {
         setObjectScale(object, key, "intro");
       }
       if (key === "pill") {
-        object.visible = !pillCollected && !shouldCollectPill;
+        if (pillCollected || shouldCollectPill) {
+          object.visible = false;
+        } else {
+          object.visible = true;
+        }
       } else {
         object.visible = true;
       }
@@ -611,6 +615,7 @@ function updateObjectsWalkBy(progress: number) {
   if (shouldCollectPill && !pillCollected) {
     pillCollected = true;
     mouthPhaseAtCollection = lastPacmanAnimationTime;
+    lastProgressForMouth = progress;
     if (pill) {
       pill.visible = false;
     }
