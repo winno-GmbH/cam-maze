@@ -495,9 +495,18 @@ function updateObjectsWalkBy(progress: number) {
 
       let targetOpacity: number;
       if (key === "pill") {
-        const normalizedPhase = currentMouthPhase % 1.0;
-        const isMouthClosed = normalizedPhase < 0.15 || normalizedPhase > 0.85;
-        targetOpacity = isMouthClosed ? OPACITY.HIDDEN : OPACITY.FULL;
+        const pacmanPos = objectPositions["pacman"];
+        const pillPos = objectPositions["pill"];
+        if (pacmanPos && pillPos) {
+          const distance = pacmanPos.distanceTo(pillPos);
+          const normalizedPhase = currentMouthPhase % 1.0;
+          const isMouthClosed = normalizedPhase < 0.2 || normalizedPhase > 0.8;
+          const isPacmanNearPill = distance < 0.4;
+          targetOpacity =
+            isPacmanNearPill && isMouthClosed ? OPACITY.HIDDEN : OPACITY.FULL;
+        } else {
+          targetOpacity = OPACITY.FULL;
+        }
       } else if (key === "pacman") {
         targetOpacity = OPACITY.FULL;
       } else {
