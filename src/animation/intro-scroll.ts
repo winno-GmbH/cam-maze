@@ -91,7 +91,6 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           pillCollected = false;
-          lastMouthTime = 0;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -267,7 +266,6 @@ let lastFloorState: {
 } | null = null;
 
 let pillCollected: boolean = false;
-let lastMouthTime: number = 0;
 
 function calculatePillProgress(): number {
   const camX = camera.position.x;
@@ -497,19 +495,18 @@ function updateObjectsWalkBy(progress: number) {
     }
   }
 
-  if (pacmanMixer) {
+  if (pacmanMixer && pacmanActions) {
     const mouthSpeed = 10.0;
-    const targetMouthTime = (progress * mouthSpeed + INTRO_MOUTH_PHASE) % 1.0;
+    const normalizedProgress =
+      (progress * mouthSpeed + INTRO_MOUTH_PHASE) % 1.0;
 
-    let delta = targetMouthTime - lastMouthTime;
-    if (Math.abs(delta) > 0.5) {
-      delta = delta < 0 ? delta + 1.0 : delta - 1.0;
-    }
+    Object.values(pacmanActions).forEach((action) => {
+      const clipDuration = action.getClip().duration;
+      action.time = normalizedProgress * clipDuration;
+      action.paused = false;
+    });
 
-    if (Math.abs(delta) > 0.0001) {
-      pacmanMixer.update(Math.abs(delta));
-      lastMouthTime = targetMouthTime;
-    }
+    pacmanMixer.update(0);
   }
 
   objectsToAnimate.forEach(
