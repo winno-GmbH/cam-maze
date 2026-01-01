@@ -470,81 +470,43 @@ function updateObjectsWalkBy(progress: number) {
     }
   }
 
-  if (pacmanMixer) {
-    let targetMouthPhase = 0;
+  if (pacmanMixer && pacmanPos) {
+    const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
+    const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
+    const distanceZ = Math.abs(pacmanPos.z - pillPosition.z);
+    const distanceToPill = Math.sqrt(
+      distanceX * distanceX + distanceY * distanceY + distanceZ * distanceZ
+    );
+
     const animationCycleLength = 1.0;
     const maxDistance = 1.5;
     const minMouthSpeed = PACMAN_MOUTH_SPEED.INTRO * 2.0;
 
-    if (pacmanPos && !pillCollected) {
-      const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
-      const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
-      const distanceZ = Math.abs(pacmanPos.z - pillPosition.z);
-      const distanceToPill = Math.sqrt(
-        distanceX * distanceX + distanceY * distanceY + distanceZ * distanceZ
+    const isAtPill =
+      distanceX < positionThreshold &&
+      distanceY < positionThreshold &&
+      distanceZ < positionThreshold;
+
+    let targetMouthPhase = 0;
+
+    if (isAtPill) {
+      targetMouthPhase = 0.0;
+    } else if (distanceToPill <= maxDistance + positionThreshold) {
+      const distanceFromCollision = Math.max(
+        0,
+        distanceToPill - positionThreshold
       );
-
-      if (
-        distanceX < positionThreshold &&
-        distanceY < positionThreshold &&
-        distanceZ < positionThreshold
-      ) {
-        targetMouthPhase = 0.0;
-        if (pillProgress === 0 && progress > 0) {
-          pillProgress = progress;
-          const calculatedSpeed = animationCycleLength / progress;
-          calculatedMouthSpeed = Math.max(calculatedSpeed, minMouthSpeed);
-        }
-      } else if (distanceToPill <= maxDistance + positionThreshold) {
-        const distanceFromCollision = distanceToPill - positionThreshold;
-        const normalizedDistance = Math.min(
-          1.0,
-          distanceFromCollision / maxDistance
-        );
-        const targetPhase = (1.0 - normalizedDistance) * animationCycleLength;
-
-        if (calculatedMouthSpeed === 0 && progress > 0) {
-          const calculatedSpeed = targetPhase / progress;
-          calculatedMouthSpeed = Math.max(calculatedSpeed, minMouthSpeed);
-        }
-
-        if (calculatedMouthSpeed > 0) {
-          const phaseFromProgress =
-            (progress * calculatedMouthSpeed) % animationCycleLength;
-          const phaseFromDistance = targetPhase;
-          targetMouthPhase = Math.min(phaseFromProgress, phaseFromDistance);
-
-          if (
-            distanceX < positionThreshold * 1.2 &&
-            distanceY < positionThreshold * 1.2 &&
-            distanceZ < positionThreshold * 1.2
-          ) {
-            targetMouthPhase = 0.0;
-          }
-        } else {
-          targetMouthPhase = targetPhase;
-        }
-      } else {
-        if (calculatedMouthSpeed === 0) {
-          calculatedMouthSpeed = minMouthSpeed;
-        }
-        targetMouthPhase =
-          (progress * calculatedMouthSpeed) % animationCycleLength;
-      }
-    } else if (pillCollected) {
-      if (calculatedMouthSpeed > 0) {
-        targetMouthPhase =
-          (progress * calculatedMouthSpeed) % animationCycleLength;
-      } else {
-        targetMouthPhase = (progress * minMouthSpeed) % animationCycleLength;
-      }
+      const normalizedDistance = Math.min(
+        1.0,
+        distanceFromCollision / maxDistance
+      );
+      targetMouthPhase = (1.0 - normalizedDistance) * animationCycleLength;
     } else {
-      if (calculatedMouthSpeed > 0) {
-        targetMouthPhase =
-          (progress * calculatedMouthSpeed) % animationCycleLength;
-      } else {
-        targetMouthPhase = (progress * minMouthSpeed) % animationCycleLength;
+      if (calculatedMouthSpeed === 0) {
+        calculatedMouthSpeed = minMouthSpeed;
       }
+      targetMouthPhase =
+        (progress * calculatedMouthSpeed) % animationCycleLength;
     }
 
     const smoothingFactor = 0.3;
