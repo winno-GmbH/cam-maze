@@ -479,7 +479,7 @@ function updateObjectsWalkBy(progress: number) {
 
   const pacmanPos = objectPositions["pacman"];
   const pillPosition = INTRO_OBJECT_POSITIONS.PILL;
-  const positionThreshold = 0.05;
+  const positionThreshold = 0;
   const pillProgress = calculatePillProgress();
 
   if (progress < pillProgress - 0.01) {
@@ -499,7 +499,7 @@ function updateObjectsWalkBy(progress: number) {
   }
 
   if (pacmanMixer && pacmanActions) {
-    const mouthSpeed = 20.0;
+    const mouthSpeed = 17.5;
     const normalizedProgress =
       (progress * mouthSpeed + INTRO_MOUTH_PHASE) % 1.0;
 
