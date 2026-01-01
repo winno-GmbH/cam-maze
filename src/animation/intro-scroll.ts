@@ -17,6 +17,7 @@ import {
   KEYFRAME_DURATION,
   PACMAN_MOUTH_SPEED,
   INTRO_EDGE_OFFSET,
+  INTRO_OBJECT_POSITIONS,
   INTRO_OBJECT_ROTATIONS,
   INTRO_OBJECT_ANIMATION_OFFSETS,
   INTRO_GHOST_BOUNCE,
@@ -352,7 +353,11 @@ function updateObjectsWalkBy(progress: number) {
     },
     {
       key: "pill",
-      ...INTRO_OBJECT_ANIMATION_OFFSETS.PILL,
+      behindOffset: 0,
+      zOffset: 0,
+      xOffset: 0,
+      yOffset: 0,
+      zPhase: 0,
     },
   ];
 
@@ -408,9 +413,15 @@ function updateObjectsWalkBy(progress: number) {
       let finalY: number;
       let finalZ: number;
 
-      finalX = pacmanX + behindOffset + xOffset;
-      finalY = pacmanY + staticYOffset - animatedYOffset;
-      finalZ = pacmanZ + zOffset - zBounce;
+      if (key === "pill") {
+        finalX = INTRO_OBJECT_POSITIONS.PILL.x;
+        finalY = INTRO_OBJECT_POSITIONS.PILL.y;
+        finalZ = INTRO_OBJECT_POSITIONS.PILL.z;
+      } else {
+        finalX = pacmanX + behindOffset + xOffset;
+        finalY = pacmanY + staticYOffset - animatedYOffset;
+        finalZ = pacmanZ + zOffset - zBounce;
+      }
 
       if (
         !isFinite(finalX) ||
