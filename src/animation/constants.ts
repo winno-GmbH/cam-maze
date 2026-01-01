@@ -70,10 +70,6 @@ export const INTRO_EDGE_OFFSET = {
   MIN: 2.0,
 } as const;
 
-export const INTRO_OBJECT_POSITIONS = {
-  PILL: { x: 1, y: -1.5, z: 1.1 },
-} as const;
-
 export const INTRO_OBJECT_ROTATIONS = {
   PILL: { x: 90, y: 20, z: 180 },
 } as const;
@@ -122,11 +118,11 @@ export const INTRO_OBJECT_ANIMATION_OFFSETS = {
     zPhase: Math.PI * 1.0,
   },
   PILL: {
-    behindOffset: 1.1,
-    zOffset: 1.5,
+    behindOffset: 1 - INTRO_POSITION_OFFSET.x,
+    zOffset: 1.1 - INTRO_POSITION_OFFSET.z,
     xOffset: 0,
-    yOffset: 0,
-    zPhase: Math.PI * 0.5,
+    yOffset: -1.5 - INTRO_POSITION_OFFSET.y,
+    zPhase: 0,
   },
 } as const;
 

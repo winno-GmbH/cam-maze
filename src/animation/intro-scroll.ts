@@ -17,7 +17,6 @@ import {
   KEYFRAME_DURATION,
   PACMAN_MOUTH_SPEED,
   INTRO_EDGE_OFFSET,
-  INTRO_OBJECT_POSITIONS,
   INTRO_OBJECT_ROTATIONS,
   INTRO_OBJECT_ANIMATION_OFFSETS,
   INTRO_GHOST_BOUNCE,
@@ -320,7 +319,8 @@ function updateObjectsWalkBy(progress: number) {
   const rightScreenEdge = camX + visibleWidth / 2;
 
   const totalPacmanOffset =
-    INTRO_POSITION_OFFSET.x + INTRO_OBJECT_ANIMATION_OFFSETS.PACMAN.behindOffset;
+    INTRO_POSITION_OFFSET.x +
+    INTRO_OBJECT_ANIMATION_OFFSETS.PACMAN.behindOffset;
 
   const walkStart = leftScreenEdge - edgeOffset - totalPacmanOffset;
   const walkEnd = rightScreenEdge + edgeOffset - totalPacmanOffset;
@@ -352,11 +352,7 @@ function updateObjectsWalkBy(progress: number) {
     },
     {
       key: "pill",
-      behindOffset: INTRO_OBJECT_ANIMATION_OFFSETS.PILL.behindOffset - INTRO_POSITION_OFFSET.x,
-      zOffset: INTRO_OBJECT_ANIMATION_OFFSETS.PILL.zOffset,
-      xOffset: INTRO_OBJECT_ANIMATION_OFFSETS.PILL.xOffset,
-      yOffset: INTRO_OBJECT_ANIMATION_OFFSETS.PILL.yOffset,
-      zPhase: INTRO_OBJECT_ANIMATION_OFFSETS.PILL.zPhase,
+      ...INTRO_OBJECT_ANIMATION_OFFSETS.PILL,
     },
   ];
 
@@ -412,15 +408,9 @@ function updateObjectsWalkBy(progress: number) {
       let finalY: number;
       let finalZ: number;
 
-      if (key === "pill") {
-        finalX = INTRO_OBJECT_POSITIONS.PILL.x;
-        finalY = INTRO_OBJECT_POSITIONS.PILL.y;
-        finalZ = INTRO_OBJECT_POSITIONS.PILL.z;
-      } else {
-        finalX = pacmanX + behindOffset + xOffset;
-        finalY = pacmanY + staticYOffset - animatedYOffset;
-        finalZ = pacmanZ + zOffset - zBounce;
-      }
+      finalX = pacmanX + behindOffset + xOffset;
+      finalY = pacmanY + staticYOffset - animatedYOffset;
+      finalZ = pacmanZ + zOffset - zBounce;
 
       if (
         !isFinite(finalX) ||
