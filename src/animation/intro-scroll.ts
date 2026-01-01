@@ -450,7 +450,7 @@ function updateObjectsWalkBy(progress: number) {
       let finalZ: number;
 
       if (key === "pill") {
-        finalX = 1.5;
+        finalX = 1;
         finalY = -1;
         finalZ = 0.5;
       } else {
