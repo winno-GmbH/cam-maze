@@ -487,10 +487,56 @@ function updateObjectsWalkBy(progress: number) {
       }
       object.visible = true;
 
-      const targetOpacity =
-        key === "pacman" || key === "pill" ? OPACITY.FULL : baseGhostOpacity;
+      let targetOpacity: number;
+      if (key === "pill") {
+        const pacmanPos = objectPositions["pacman"];
+        const pillPos = objectPositions["pill"];
+        if (pacmanPos && pillPos) {
+          const distance = pacmanPos.distanceTo(pillPos);
+          const fadeStartDistance = 0.6;
+          const fadeEndDistance = 0.2;
+          if (distance < fadeEndDistance) {
+            targetOpacity = OPACITY.HIDDEN;
+          } else if (distance < fadeStartDistance) {
+            const fadeProgress =
+              (distance - fadeEndDistance) /
+              (fadeStartDistance - fadeEndDistance);
+            targetOpacity =
+              OPACITY.HIDDEN + (OPACITY.FULL - OPACITY.HIDDEN) * fadeProgress;
+          } else {
+            targetOpacity = OPACITY.FULL;
+          }
+        } else {
+          targetOpacity = OPACITY.FULL;
+        }
+      } else if (key === "pacman") {
+        targetOpacity = OPACITY.FULL;
+      } else {
+        targetOpacity = baseGhostOpacity;
+      }
 
-      if (key !== "pill") {
+      if (key === "pill") {
+        object.traverse((child) => {
+          if ((child as any).isMesh) {
+            const mesh = child as THREE.Mesh;
+            const mat = mesh.material;
+            if (mat) {
+              const materials = Array.isArray(mat) ? mat : [mat];
+              materials.forEach((material: any) => {
+                material.opacity = targetOpacity;
+                if (
+                  material.transmission !== undefined &&
+                  material.transmission > 0
+                ) {
+                  material.transparent = true;
+                } else {
+                  material.transparent = targetOpacity < 1.0;
+                }
+              });
+            }
+          }
+        });
+      } else if (key !== "pill") {
         object.traverse((child) => {
           if ((child as any).isMesh) {
             const mesh = child as THREE.Mesh;
