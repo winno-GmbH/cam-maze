@@ -96,6 +96,7 @@ export function initIntroScrollAnimation() {
           lastProgressForMouth = 0;
           calculatedMouthSpeed = 0;
           pillProgress = 0;
+          smoothedMouthPhase = 0;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -108,6 +109,7 @@ export function initIntroScrollAnimation() {
           lastProgressForMouth = 0;
           calculatedMouthSpeed = 0;
           pillProgress = 0;
+          smoothedMouthPhase = 0;
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -283,6 +285,7 @@ let mouthPhaseAtCollection: number = 0;
 let lastProgressForMouth: number = 0;
 let calculatedMouthSpeed: number = 0;
 let pillProgress: number = 0;
+let smoothedMouthPhase: number = 0;
 
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive) return;
@@ -528,7 +531,26 @@ function updateObjectsWalkBy(progress: number) {
       }
     }
 
-    let delta = targetMouthPhase - lastPacmanAnimationTime;
+    const smoothingFactor = 0.3;
+    let deltaToTarget = targetMouthPhase - smoothedMouthPhase;
+
+    if (Math.abs(deltaToTarget) > 0.5) {
+      if (deltaToTarget > 0) {
+        deltaToTarget = deltaToTarget - 1.0;
+      } else {
+        deltaToTarget = deltaToTarget + 1.0;
+      }
+    }
+
+    smoothedMouthPhase = smoothedMouthPhase + deltaToTarget * smoothingFactor;
+
+    if (smoothedMouthPhase < 0) {
+      smoothedMouthPhase = smoothedMouthPhase + 1.0;
+    } else if (smoothedMouthPhase >= 1.0) {
+      smoothedMouthPhase = smoothedMouthPhase - 1.0;
+    }
+
+    let delta = smoothedMouthPhase - lastPacmanAnimationTime;
 
     if (Math.abs(delta) > 0.5) {
       if (delta > 0) {
@@ -538,7 +560,7 @@ function updateObjectsWalkBy(progress: number) {
       }
     }
 
-    lastPacmanAnimationTime = targetMouthPhase;
+    lastPacmanAnimationTime = smoothedMouthPhase;
 
     if (Math.abs(delta) > 0.0001) {
       pacmanMixer.update(Math.abs(delta));
