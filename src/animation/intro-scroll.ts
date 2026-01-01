@@ -480,23 +480,17 @@ function updateObjectsWalkBy(progress: number) {
     if (isAtPill && pillProgressWhenReached === 0) {
       pillProgressWhenReached = progress;
       mouthFrequency = minCycles / progress;
-    } else if (pillProgressWhenReached === 0) {
-      if (progress > 0.01) {
-        mouthFrequency = minCycles / progress;
-      } else {
-        mouthFrequency = minCycles / 1.0;
-      }
+    }
+
+    if (mouthFrequency === 0) {
+      const estimatedProgress = progress > 0.01 ? progress : 0.5;
+      mouthFrequency = minCycles / estimatedProgress;
     }
 
     let targetMouthPhase = 0;
 
-    if (isAtPill) {
+    if (isAtPill && pillProgressWhenReached > 0) {
       targetMouthPhase = 0.0;
-    } else if (pillProgressWhenReached > 0) {
-      targetMouthPhase = (progress * mouthFrequency) % animationCycleLength;
-      if (Math.abs(progress - pillProgressWhenReached) < 0.001) {
-        targetMouthPhase = 0.0;
-      }
     } else {
       targetMouthPhase = (progress * mouthFrequency) % animationCycleLength;
     }
