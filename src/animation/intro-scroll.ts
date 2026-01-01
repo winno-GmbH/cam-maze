@@ -499,7 +499,7 @@ function updateObjectsWalkBy(progress: number) {
   }
 
   if (pacmanMixer && pacmanActions) {
-    const mouthSpeed = 10.0;
+    const mouthSpeed = 15.0;
     const normalizedProgress =
       (progress * mouthSpeed + INTRO_MOUTH_PHASE) % 1.0;
 
