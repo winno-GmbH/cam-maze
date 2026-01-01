@@ -2,7 +2,7 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
-import { ghosts, pacmanMixer, pill } from "../core/objects";
+import { ghosts, pacmanMixer, pill, pacmanActions } from "../core/objects";
 import { clock, scene } from "../core/scene";
 import { slerpToLayDown, applyRotations } from "./util";
 import { isCurrencySymbol, isPacmanPart } from "./util";
@@ -92,6 +92,7 @@ export function initIntroScrollAnimation() {
           lastPacmanAnimationTime = 0;
           pacmanAnimationOffset = 0;
           pillCollected = false;
+          pacmanTransformed = false;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -100,6 +101,7 @@ export function initIntroScrollAnimation() {
           lastPacmanAnimationTime = 0;
           pacmanAnimationOffset = 0;
           pillCollected = false;
+          pacmanTransformed = false;
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -271,6 +273,7 @@ let lastFloorState: {
 let lastPacmanAnimationTime: number = 0;
 let pacmanAnimationOffset: number = 0;
 let pillCollected: boolean = false;
+let pacmanTransformed: boolean = false;
 
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive) return;
@@ -507,11 +510,53 @@ function updateObjectsWalkBy(progress: number) {
           const pillPos = objectPositions["pill"];
           if (pacmanPos && pillPos) {
             const distance = pacmanPos.distanceTo(pillPos);
-            const collisionDistance = 0.1;
-            if (distance < collisionDistance) {
+            const collisionDistance = 0.03;
+            if (distance < collisionDistance && !pillCollected) {
               pillCollected = true;
               object.visible = false;
-            } else {
+
+              if (ghosts.pacman && !pacmanTransformed) {
+                pacmanTransformed = true;
+                ghosts.pacman.traverse((child) => {
+                  if ((child as any).isMesh) {
+                    const mesh = child as THREE.Mesh;
+                    const name = mesh.name || "";
+                    if (
+                      name.includes("Bitcoin_1") ||
+                      name.includes("Bitcoin_2")
+                    ) {
+                      mesh.visible = true;
+                    } else if (
+                      name.includes("CAM-Pacman") &&
+                      !name.includes("Bitcoin") &&
+                      !name.includes("Shell")
+                    ) {
+                      mesh.visible = false;
+                    }
+                  }
+                });
+
+                if (pacmanActions && Object.keys(pacmanActions).length > 0) {
+                  const animationNames = Object.keys(pacmanActions);
+                  const transformationAnimation = animationNames.find(
+                    (name) =>
+                      name.toLowerCase().includes("transform") ||
+                      name.toLowerCase().includes("bitcoin") ||
+                      name.toLowerCase().includes("change")
+                  );
+
+                  if (
+                    transformationAnimation &&
+                    pacmanActions[transformationAnimation]
+                  ) {
+                    const action = pacmanActions[transformationAnimation];
+                    action.reset();
+                    action.setEffectiveWeight(1);
+                    action.play();
+                  }
+                }
+              }
+            } else if (!pillCollected) {
               object.visible = true;
             }
           } else {
