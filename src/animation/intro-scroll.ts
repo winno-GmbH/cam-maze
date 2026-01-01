@@ -16,6 +16,11 @@ import {
   KEYFRAME_SCALE,
   KEYFRAME_DURATION,
   INTRO_GHOST_OFFSETS,
+  PACMAN_MOUTH_SPEED,
+  INTRO_EDGE_OFFSET,
+  INTRO_OBJECT_OFFSETS,
+  INTRO_PILL,
+  INTRO_GHOST_BOUNCE,
   clamp,
 } from "./constants";
 import { setFloorPlane, setObjectScale } from "./scene-utils";
@@ -86,7 +91,7 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
 
           if (pacmanMixer) {
-            pacmanMixer.timeScale = 4.0;
+            pacmanMixer.timeScale = PACMAN_MOUTH_SPEED.INTRO;
           }
         },
         onEnterBack: () => {
@@ -95,7 +100,7 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
 
           if (pacmanMixer) {
-            pacmanMixer.timeScale = 4.0;
+            pacmanMixer.timeScale = PACMAN_MOUTH_SPEED.INTRO;
           }
         },
         onLeave: () => {
@@ -105,7 +110,7 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(false);
 
           if (pacmanMixer) {
-            pacmanMixer.timeScale = 1.0;
+            pacmanMixer.timeScale = PACMAN_MOUTH_SPEED.NORMAL;
           }
         },
         onLeaveBack: () => {
@@ -115,7 +120,7 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(false);
 
           if (pacmanMixer) {
-            pacmanMixer.timeScale = 1.0;
+            pacmanMixer.timeScale = PACMAN_MOUTH_SPEED.NORMAL;
           }
         },
         onUpdate: (self) => {
@@ -271,8 +276,11 @@ function updateObjectsWalkBy(progress: number) {
   initializeQuaternions();
 
   if (pacmanMixer) {
-    if (isIntroScrollActive && pacmanMixer.timeScale !== 4.0) {
-      pacmanMixer.timeScale = 4.0;
+    if (
+      isIntroScrollActive &&
+      pacmanMixer.timeScale !== PACMAN_MOUTH_SPEED.INTRO
+    ) {
+      pacmanMixer.timeScale = PACMAN_MOUTH_SPEED.INTRO;
     }
     pacmanMixer.update(clock.getDelta());
   }
@@ -296,23 +304,23 @@ function updateObjectsWalkBy(progress: number) {
     lastFloorState = floorState;
   }
 
-  const pacmanQuat = pacmanTargetQuaternion;
-  const ghostQuat = ghostTargetQuaternion;
-
-  const objectDistance = Math.abs(INTRO_POSITION_OFFSET.z + 0.5);
+  const objectDistance = Math.abs(
+    INTRO_POSITION_OFFSET.z + INTRO_OBJECT_OFFSETS.Z
+  );
   const fovRadians = (camera.fov * Math.PI) / 180;
   const visibleHeight = 2 * objectDistance * Math.tan(fovRadians / 2);
   const visibleWidth = visibleHeight * camera.aspect;
 
-  const edgeOffset = Math.max(visibleWidth * 0.25, 2.0);
+  const edgeOffset = Math.max(
+    visibleWidth * INTRO_EDGE_OFFSET.PERCENTAGE,
+    INTRO_EDGE_OFFSET.MIN
+  );
 
   const leftScreenEdge = camX - visibleWidth / 2;
   const rightScreenEdge = camX + visibleWidth / 2;
 
-  const pacmanBehindOffset = 1.5;
-  const pacmanXOffset = 0;
   const totalPacmanOffset =
-    INTRO_POSITION_OFFSET.x + pacmanBehindOffset + pacmanXOffset;
+    INTRO_POSITION_OFFSET.x + INTRO_OBJECT_OFFSETS.PACMAN_BEHIND;
 
   const walkStart = leftScreenEdge - edgeOffset - totalPacmanOffset;
   const walkEnd = rightScreenEdge + edgeOffset - totalPacmanOffset;
@@ -320,8 +328,8 @@ function updateObjectsWalkBy(progress: number) {
   const objectsToAnimate = [
     {
       key: "pacman",
-      behindOffset: 1.5,
-      zOffset: 0.5,
+      behindOffset: INTRO_OBJECT_OFFSETS.PACMAN_BEHIND,
+      zOffset: INTRO_OBJECT_OFFSETS.Z,
       xOffset: 0,
       yOffset: 0,
       zPhase: 0,
@@ -329,7 +337,7 @@ function updateObjectsWalkBy(progress: number) {
     {
       key: "ghost1",
       behindOffset: INTRO_GHOST_OFFSETS.GHOST1,
-      zOffset: 0.5,
+      zOffset: INTRO_OBJECT_OFFSETS.Z,
       xOffset: 0.5,
       yOffset: -0.5,
       zPhase: Math.PI * 1.0,
@@ -337,7 +345,7 @@ function updateObjectsWalkBy(progress: number) {
     {
       key: "ghost2",
       behindOffset: INTRO_GHOST_OFFSETS.GHOST2,
-      zOffset: 0.5,
+      zOffset: INTRO_OBJECT_OFFSETS.Z,
       xOffset: 0,
       yOffset: -1,
       zPhase: Math.PI * 1.5,
@@ -345,7 +353,7 @@ function updateObjectsWalkBy(progress: number) {
     {
       key: "ghost3",
       behindOffset: INTRO_GHOST_OFFSETS.GHOST3,
-      zOffset: 0.5,
+      zOffset: INTRO_OBJECT_OFFSETS.Z,
       xOffset: 0.5,
       yOffset: 0.5,
       zPhase: Math.PI * 1.0,
@@ -353,7 +361,7 @@ function updateObjectsWalkBy(progress: number) {
     {
       key: "ghost4",
       behindOffset: INTRO_GHOST_OFFSETS.GHOST4,
-      zOffset: 0.5,
+      zOffset: INTRO_OBJECT_OFFSETS.Z,
       xOffset: 0.75,
       yOffset: 0.25,
       zPhase: Math.PI * 1.0,
@@ -361,7 +369,7 @@ function updateObjectsWalkBy(progress: number) {
     {
       key: "ghost5",
       behindOffset: INTRO_GHOST_OFFSETS.GHOST5,
-      zOffset: 0.5,
+      zOffset: INTRO_OBJECT_OFFSETS.Z,
       xOffset: 0,
       yOffset: -0.5,
       zPhase: Math.PI * 1.0,
@@ -415,18 +423,23 @@ function updateObjectsWalkBy(progress: number) {
       const zBounce =
         key === "pacman" || key === "pill"
           ? 0
-          : Math.sin(normalizedProgress * Math.PI * 2 * 5 + zPhase) * 0.01;
+          : Math.sin(
+              normalizedProgress * Math.PI * 2 * INTRO_GHOST_BOUNCE.FREQUENCY +
+                zPhase
+            ) * INTRO_GHOST_BOUNCE.AMPLITUDE;
       const animatedYOffset =
-        key === "pacman" || key === "pill" ? 0 : zBounce * 1.5;
+        key === "pacman" || key === "pill"
+          ? 0
+          : zBounce * INTRO_GHOST_BOUNCE.Y_MULTIPLIER;
 
       let finalX: number;
       let finalY: number;
       let finalZ: number;
 
       if (key === "pill") {
-        finalX = 1;
-        finalY = -1.5;
-        finalZ = 1;
+        finalX = INTRO_PILL.POSITION.x;
+        finalY = INTRO_PILL.POSITION.y;
+        finalZ = INTRO_PILL.POSITION.z;
       } else {
         finalX = pacmanX + behindOffset + xOffset;
         finalY = pacmanY + staticYOffset - animatedYOffset;
@@ -466,15 +479,16 @@ function updateObjectsWalkBy(progress: number) {
 
       if (key === "pill") {
         const targetEuler = new THREE.Euler(
-          1.571,
-          (20 * Math.PI) / 180,
-          (180 * Math.PI) / 180,
+          (INTRO_PILL.ROTATION.x * Math.PI) / 180,
+          (INTRO_PILL.ROTATION.y * Math.PI) / 180,
+          (INTRO_PILL.ROTATION.z * Math.PI) / 180,
           "XYZ"
         );
         object.rotation.copy(targetEuler);
         object.scale.set(1, 1, 1);
       } else {
-        const targetQuat = key === "pacman" ? pacmanQuat : ghostQuat;
+        const targetQuat =
+          key === "pacman" ? pacmanTargetQuaternion : ghostTargetQuaternion;
 
         if (targetQuat) {
           object.quaternion.copy(targetQuat);

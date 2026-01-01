@@ -68,6 +68,32 @@ export const INTRO_GHOST_OFFSETS = {
   GHOST5: -0.02,
 } as const;
 
+export const PACMAN_MOUTH_SPEED = {
+  INTRO: 4.0,
+  NORMAL: 1.0,
+} as const;
+
+export const INTRO_EDGE_OFFSET = {
+  PERCENTAGE: 0.25,
+  MIN: 2.0,
+} as const;
+
+export const INTRO_OBJECT_OFFSETS = {
+  Z: 0.5,
+  PACMAN_BEHIND: 1.5,
+} as const;
+
+export const INTRO_PILL = {
+  POSITION: { x: 1, y: -1.5, z: 1 },
+  ROTATION: { x: 90, y: 20, z: 180 },
+} as const;
+
+export const INTRO_GHOST_BOUNCE = {
+  FREQUENCY: 5,
+  AMPLITUDE: 0.01,
+  Y_MULTIPLIER: 1.5,
+} as const;
+
 export function clamp(value: number, min: number = 0, max: number = 1): number {
   return Math.max(min, Math.min(max, value));
 }
