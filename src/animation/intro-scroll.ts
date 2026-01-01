@@ -91,7 +91,12 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
           pillCollected = false;
-          smoothedMouthPhase = 0;
+          if (mouthStartPhase === null) {
+            const calculatedPillProgress = calculatePillProgress();
+            const mouthFrequency = 10;
+            mouthStartPhase =
+              (1.0 - ((calculatedPillProgress * mouthFrequency) % 1.0)) % 1.0;
+          }
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -269,9 +274,7 @@ let lastFloorState: {
 
 let lastPacmanAnimationTime: number = 0;
 let pillCollected: boolean = false;
-let smoothedMouthPhase: number = 0;
-let mouthStartPhase: number = 0;
-let mouthFrequency: number = 0;
+let mouthStartPhase: number | null = null;
 
 function calculatePillProgress(): number {
   const camX = camera.position.x;
@@ -320,14 +323,6 @@ function updateObjectsWalkBy(progress: number) {
 
   if (lastUpdateProgress === progress) return;
   lastUpdateProgress = progress;
-
-  if (mouthFrequency === 0) {
-    const calculatedPillProgress = calculatePillProgress();
-    const minCycles = 10;
-    mouthFrequency = minCycles;
-    mouthStartPhase =
-      (1.0 - ((calculatedPillProgress * mouthFrequency) % 1.0)) % 1.0;
-  }
 
   const camX = camera.position.x;
   const camY = camera.position.y;
@@ -514,41 +509,17 @@ function updateObjectsWalkBy(progress: number) {
     const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
     const distanceZ = Math.abs(pacmanPos.z - pillPosition.z);
 
-    const isAtPill =
-      distanceX < positionThreshold &&
-      distanceY < positionThreshold &&
-      distanceZ < positionThreshold;
-
-    const animationCycleLength = 1.0;
-
-    if (mouthFrequency > 0) {
+    if (mouthStartPhase !== null && pacmanMixer) {
+      const mouthFrequency = 10;
+      const animationCycleLength = 1.0;
       const targetMouthPhase =
         (progress * mouthFrequency + mouthStartPhase) % animationCycleLength;
 
       if (lastPacmanAnimationTime === 0) {
-        smoothedMouthPhase = targetMouthPhase;
+        lastPacmanAnimationTime = targetMouthPhase;
       }
 
-      const smoothingFactor = 0.3;
-      let deltaToTarget = targetMouthPhase - smoothedMouthPhase;
-
-      if (Math.abs(deltaToTarget) > 0.5) {
-        if (deltaToTarget > 0) {
-          deltaToTarget = deltaToTarget - 1.0;
-        } else {
-          deltaToTarget = deltaToTarget + 1.0;
-        }
-      }
-
-      smoothedMouthPhase = smoothedMouthPhase + deltaToTarget * smoothingFactor;
-
-      if (smoothedMouthPhase < 0) {
-        smoothedMouthPhase = smoothedMouthPhase + 1.0;
-      } else if (smoothedMouthPhase >= 1.0) {
-        smoothedMouthPhase = smoothedMouthPhase - 1.0;
-      }
-
-      let delta = smoothedMouthPhase - lastPacmanAnimationTime;
+      let delta = targetMouthPhase - lastPacmanAnimationTime;
 
       if (Math.abs(delta) > 0.5) {
         if (delta > 0) {
@@ -558,7 +529,7 @@ function updateObjectsWalkBy(progress: number) {
         }
       }
 
-      lastPacmanAnimationTime = smoothedMouthPhase;
+      lastPacmanAnimationTime = targetMouthPhase;
 
       if (Math.abs(delta) > 0.0001) {
         pacmanMixer.update(Math.abs(delta));
