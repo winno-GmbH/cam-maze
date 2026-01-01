@@ -89,18 +89,20 @@ export function initIntroScrollAnimation() {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
+          lastPacmanAnimationTime = 0;
 
           if (pacmanMixer) {
-            pacmanMixer.timeScale = PACMAN_MOUTH_SPEED.INTRO;
+            pacmanMixer.timeScale = 0;
           }
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
+          lastPacmanAnimationTime = 0;
 
           if (pacmanMixer) {
-            pacmanMixer.timeScale = PACMAN_MOUTH_SPEED.INTRO;
+            pacmanMixer.timeScale = 0;
           }
         },
         onLeave: () => {
@@ -259,13 +261,12 @@ let lastFloorState: {
   transparent: boolean;
 } | null = null;
 
+let lastPacmanAnimationTime: number = 0;
+
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive) return;
 
   if (lastUpdateProgress === progress) return;
-
-  const progressDelta =
-    lastUpdateProgress !== null ? Math.abs(progress - lastUpdateProgress) : 0;
   lastUpdateProgress = progress;
 
   const camX = camera.position.x;
@@ -279,15 +280,13 @@ function updateObjectsWalkBy(progress: number) {
   initializeQuaternions();
 
   if (pacmanMixer) {
-    if (
-      isIntroScrollActive &&
-      pacmanMixer.timeScale !== PACMAN_MOUTH_SPEED.INTRO
-    ) {
-      pacmanMixer.timeScale = PACMAN_MOUTH_SPEED.INTRO;
-    }
+    pacmanMixer.timeScale = 0;
 
-    const scrollBasedDelta = progressDelta * PACMAN_MOUTH_SPEED.INTRO;
-    pacmanMixer.update(scrollBasedDelta);
+    const targetAnimationTime = progress * PACMAN_MOUTH_SPEED.INTRO;
+    const delta = targetAnimationTime - lastPacmanAnimationTime;
+    lastPacmanAnimationTime = targetAnimationTime;
+
+    pacmanMixer.update(delta);
   }
 
   const floorState = {
