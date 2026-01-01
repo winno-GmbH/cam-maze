@@ -572,47 +572,28 @@ function updateObjectsWalkBy(progress: number) {
 
             if (
               isCurrencySymbol(childName) ||
-              (key === "pacman" &&
-                isPacmanPart(childName) &&
-                !pacmanTransformed)
+              (key === "pacman" && isPacmanPart(childName))
             ) {
               mesh.visible = false;
               return;
             }
 
-            let shouldBeVisible = true;
+            mesh.visible = true;
 
-            if (key === "pacman" && pacmanTransformed) {
-              const name = mesh.name || "";
-              if (name.includes("Bitcoin_1") || name.includes("Bitcoin_2")) {
-                shouldBeVisible = true;
-              } else if (
-                name.includes("CAM-Pacman") &&
-                !name.includes("Bitcoin") &&
-                !name.includes("Shell")
-              ) {
-                shouldBeVisible = false;
-              }
-            }
-
-            mesh.visible = shouldBeVisible;
-
-            if (shouldBeVisible) {
-              const mat = mesh.material;
-              if (mat) {
-                const materials = Array.isArray(mat) ? mat : [mat];
-                materials.forEach((material: any) => {
-                  material.opacity = targetOpacity;
-                  if (
-                    material.transmission !== undefined &&
-                    material.transmission > 0
-                  ) {
-                    material.transparent = true;
-                  } else {
-                    material.transparent = targetOpacity < 1.0;
-                  }
-                });
-              }
+            const mat = mesh.material;
+            if (mat) {
+              const materials = Array.isArray(mat) ? mat : [mat];
+              materials.forEach((material: any) => {
+                material.opacity = targetOpacity;
+                if (
+                  material.transmission !== undefined &&
+                  material.transmission > 0
+                ) {
+                  material.transparent = true;
+                } else {
+                  material.transparent = targetOpacity < 1.0;
+                }
+              });
             }
           }
         });
