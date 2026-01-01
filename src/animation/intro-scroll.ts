@@ -263,6 +263,9 @@ function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive) return;
 
   if (lastUpdateProgress === progress) return;
+
+  const progressDelta =
+    lastUpdateProgress !== null ? Math.abs(progress - lastUpdateProgress) : 0;
   lastUpdateProgress = progress;
 
   const camX = camera.position.x;
@@ -282,7 +285,9 @@ function updateObjectsWalkBy(progress: number) {
     ) {
       pacmanMixer.timeScale = PACMAN_MOUTH_SPEED.INTRO;
     }
-    pacmanMixer.update(clock.getDelta());
+
+    const scrollBasedDelta = progressDelta * PACMAN_MOUTH_SPEED.INTRO;
+    pacmanMixer.update(scrollBasedDelta);
   }
 
   const floorState = {
