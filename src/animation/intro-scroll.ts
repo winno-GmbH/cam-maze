@@ -92,6 +92,7 @@ export function initIntroScrollAnimation() {
           lastPacmanAnimationTime = 0;
           pillCollected = false;
           pacmanTransformed = false;
+          mouthPhaseAtCollection = 0;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -100,6 +101,7 @@ export function initIntroScrollAnimation() {
           lastPacmanAnimationTime = 0;
           pillCollected = false;
           pacmanTransformed = false;
+          mouthPhaseAtCollection = 0;
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -271,6 +273,7 @@ let lastFloorState: {
 let lastPacmanAnimationTime: number = 0;
 let pillCollected: boolean = false;
 let pacmanTransformed: boolean = false;
+let mouthPhaseAtCollection: number = 0;
 
 function updateObjectsWalkBy(progress: number) {
   if (!isIntroScrollActive) return;
@@ -466,9 +469,19 @@ function updateObjectsWalkBy(progress: number) {
           (basePhase * mouthSpeedMultiplier) % animationCycleLength;
       }
     } else if (pillCollected) {
-      const baseProgress =
-        progress * PACMAN_MOUTH_SPEED.INTRO * mouthSpeedMultiplier;
-      targetMouthPhase = baseProgress % animationCycleLength;
+      if (mouthPhaseAtCollection > 0) {
+        const lastProgress = lastUpdateProgress || 0;
+        const progressDelta =
+          Math.max(0, progress - lastProgress) *
+          PACMAN_MOUTH_SPEED.INTRO *
+          mouthSpeedMultiplier;
+        targetMouthPhase =
+          (lastPacmanAnimationTime + progressDelta) % animationCycleLength;
+      } else {
+        const baseProgress =
+          progress * PACMAN_MOUTH_SPEED.INTRO * mouthSpeedMultiplier;
+        targetMouthPhase = baseProgress % animationCycleLength;
+      }
     } else {
       targetMouthPhase =
         (progress * PACMAN_MOUTH_SPEED.INTRO * mouthSpeedMultiplier) % 1.0;
@@ -527,9 +540,10 @@ function updateObjectsWalkBy(progress: number) {
         setObjectScale(object, key, "intro");
       }
       if (key === "pill") {
-        if (pillCollected) {
+        if (pillCollected || shouldCollectPill) {
           object.visible = false;
         } else {
+          object.visible = true;
           const pacmanPos = objectPositions["pacman"];
           const pillPos = objectPositions["pill"];
           if (pacmanPos && pillPos) {
@@ -537,11 +551,7 @@ function updateObjectsWalkBy(progress: number) {
             const collisionDistance = 0.03;
             if (distance < collisionDistance && !pillCollected) {
               shouldCollectPill = true;
-            } else {
-              object.visible = true;
             }
-          } else {
-            object.visible = true;
           }
         }
       } else {
@@ -597,6 +607,7 @@ function updateObjectsWalkBy(progress: number) {
 
   if (shouldCollectPill && !pillCollected) {
     pillCollected = true;
+    mouthPhaseAtCollection = lastPacmanAnimationTime;
     if (pill) {
       pill.visible = false;
     }
