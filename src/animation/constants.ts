@@ -65,6 +65,8 @@ export const PACMAN_MOUTH_SPEED = {
   NORMAL: 1.0,
 } as const;
 
+export const INTRO_MOUTH_PHASE = 0.0;
+
 export const INTRO_EDGE_OFFSET = {
   PERCENTAGE: 0.25,
   MIN: 2.0,
