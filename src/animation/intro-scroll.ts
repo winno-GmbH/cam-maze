@@ -667,27 +667,35 @@ function updateObjectsWalkBy(progress: number) {
             const mesh = child as THREE.Mesh;
             const childName = child.name || "";
 
-            if (
-              isCurrencySymbol(childName) ||
-              (key === "pacman" && isPacmanPart(childName))
-            ) {
+            if (isCurrencySymbol(childName)) {
               mesh.visible = false;
               return;
             }
 
-            if (key === "pacman" && pacmanTransformed) {
-              const name = mesh.name || "";
-              if (
-                name.includes("CAM-Pacman") &&
-                !name.includes("Bitcoin") &&
-                !name.includes("Shell")
-              ) {
-                mesh.visible = false;
-                return;
+            let shouldBeVisible = true;
+
+            if (key === "pacman") {
+              if (pacmanTransformed) {
+                const name = mesh.name || "";
+                if (name.includes("Bitcoin_1") || name.includes("Bitcoin_2")) {
+                  shouldBeVisible = true;
+                } else if (
+                  name.includes("CAM-Pacman") &&
+                  !name.includes("Bitcoin") &&
+                  !name.includes("Shell")
+                ) {
+                  shouldBeVisible = false;
+                } else if (isPacmanPart(name)) {
+                  shouldBeVisible = false;
+                }
+              } else {
+                if (isPacmanPart(childName)) {
+                  shouldBeVisible = false;
+                }
               }
             }
 
-            mesh.visible = true;
+            mesh.visible = shouldBeVisible;
 
             const mat = mesh.material;
             if (mat) {
