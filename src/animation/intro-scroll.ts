@@ -102,8 +102,12 @@ export function initIntroScrollAnimation() {
           lastPacmanAnimationTime = 0;
           pillCollected = false;
           smoothedMouthPhase = 0;
-          mouthFrequency = 0;
-          pillProgressAtReach = 0;
+          if (pillProgressAtReach > 0) {
+            const minCycles = 10;
+            mouthFrequency = minCycles / Math.max(pillProgressAtReach, 0.01);
+          } else {
+            mouthFrequency = 0;
+          }
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -481,8 +485,12 @@ function updateObjectsWalkBy(progress: number) {
       pillProgressAtReach = progress;
       mouthFrequency = minCycles / Math.max(progress, 0.01);
     } else if (mouthFrequency === 0) {
-      const estimatedPillProgress = progress < 0.5 ? 0.5 : progress * 1.2;
-      mouthFrequency = minCycles / Math.max(estimatedPillProgress, 0.01);
+      if (pillProgressAtReach > 0) {
+        mouthFrequency = minCycles / Math.max(pillProgressAtReach, 0.01);
+      } else {
+        const estimatedPillProgress = progress < 0.5 ? 0.5 : progress * 1.2;
+        mouthFrequency = minCycles / Math.max(estimatedPillProgress, 0.01);
+      }
     }
 
     if (mouthFrequency > 0) {
