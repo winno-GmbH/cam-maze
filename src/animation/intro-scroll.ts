@@ -90,7 +90,6 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
-          pacmanAnimationOffset = 0;
           pillCollected = false;
           pacmanTransformed = false;
         },
@@ -99,7 +98,6 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           lastPacmanAnimationTime = 0;
-          pacmanAnimationOffset = 0;
           pillCollected = false;
           pacmanTransformed = false;
         },
@@ -271,7 +269,6 @@ let lastFloorState: {
 } | null = null;
 
 let lastPacmanAnimationTime: number = 0;
-let pacmanAnimationOffset: number = 0;
 let pillCollected: boolean = false;
 let pacmanTransformed: boolean = false;
 
@@ -378,30 +375,6 @@ function updateObjectsWalkBy(progress: number) {
   const pacmanY = camY + INTRO_POSITION_OFFSET.y;
   const pacmanZ = camZ + INTRO_POSITION_OFFSET.z;
 
-  if (pacmanMixer && pacmanAnimationOffset === 0) {
-    const pillX = INTRO_OBJECT_POSITIONS.PILL.x;
-    const distanceToPill = Math.abs(pacmanX - pillX);
-
-    if (distanceToPill < 0.3) {
-      const animationCycleLength = 1.0;
-      const currentAnimationPhase =
-        (progress * PACMAN_MOUTH_SPEED.INTRO) % animationCycleLength;
-      const targetPhase = animationCycleLength * 0.5;
-      pacmanAnimationOffset = targetPhase - currentAnimationPhase;
-    }
-  }
-
-  if (pacmanMixer) {
-    const targetAnimationTime =
-      progress * PACMAN_MOUTH_SPEED.INTRO + pacmanAnimationOffset;
-    const delta = targetAnimationTime - lastPacmanAnimationTime;
-    lastPacmanAnimationTime = targetAnimationTime;
-
-    if (Math.abs(delta) > 0.0001) {
-      pacmanMixer.update(delta);
-    }
-  }
-
   if (
     !isFinite(baseX) ||
     !isFinite(pacmanX) ||
@@ -466,6 +439,39 @@ function updateObjectsWalkBy(progress: number) {
       objectPositions[key] = new THREE.Vector3(finalX, finalY, finalZ);
     }
   );
+
+  if (pacmanMixer) {
+    const pacmanPos = objectPositions["pacman"];
+    const pillPos = objectPositions["pill"];
+    let targetMouthPhase = 0;
+
+    if (pacmanPos && pillPos && !pillCollected) {
+      const distanceToPill = pacmanPos.distanceTo(pillPos);
+      const collisionDistance = 0.03;
+      const animationCycleLength = 1.0;
+
+      if (distanceToPill < collisionDistance) {
+        targetMouthPhase = 0.0;
+      } else {
+        const distanceFromCollision = distanceToPill - collisionDistance;
+        const maxDistance = 1.5;
+        const normalizedDistance = Math.min(
+          1.0,
+          distanceFromCollision / maxDistance
+        );
+        targetMouthPhase = (1.0 - normalizedDistance) * animationCycleLength;
+      }
+    } else {
+      targetMouthPhase = (progress * PACMAN_MOUTH_SPEED.INTRO) % 1.0;
+    }
+
+    const delta = targetMouthPhase - lastPacmanAnimationTime;
+    lastPacmanAnimationTime = targetMouthPhase;
+
+    if (Math.abs(delta) > 0.0001) {
+      pacmanMixer.update(Math.abs(delta));
+    }
+  }
 
   objectsToAnimate.forEach(
     ({
