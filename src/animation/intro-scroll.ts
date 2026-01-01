@@ -675,18 +675,18 @@ function updateObjectsWalkBy(progress: number) {
             let shouldBeVisible = true;
 
             if (key === "pacman") {
+              const name = mesh.name || "";
               if (pacmanTransformed) {
-                const name = mesh.name || "";
-                if (name.includes("Bitcoin_1") || name.includes("Bitcoin_2")) {
-                  shouldBeVisible = true;
-                } else if (
-                  name.includes("CAM-Pacman") &&
-                  !name.includes("Bitcoin") &&
-                  !name.includes("Shell")
+                if (
+                  name.includes("Bitcoin_1") ||
+                  name.includes("Bitcoin_2") ||
+                  name.includes("Shell")
                 ) {
+                  shouldBeVisible = true;
+                } else if (name.includes("CAM-Pacman")) {
                   shouldBeVisible = false;
-                } else if (isPacmanPart(name)) {
-                  shouldBeVisible = false;
+                } else {
+                  shouldBeVisible = true;
                 }
               } else {
                 if (isPacmanPart(childName)) {
