@@ -479,7 +479,7 @@ function updateObjectsWalkBy(progress: number) {
 
   const pacmanPos = objectPositions["pacman"];
   const pillPosition = INTRO_OBJECT_POSITIONS.PILL;
-  const positionThreshold = 0.05;
+  const positionThreshold = 0.1;
   const pillProgress = calculatePillProgress();
 
   if (progress < pillProgress - 0.01) {
