@@ -155,9 +155,18 @@ export function stopHomeLoop() {
 }
 
 export function startHomeLoop() {
-  // Don't start if intro-scroll is active
   const introScrollTrigger = ScrollTrigger.getById("introScroll");
+  const povScrollTrigger = ScrollTrigger.getById("povScroll");
+
   if (introScrollTrigger?.isActive) {
+    return;
+  }
+
+  if (
+    povScrollTrigger &&
+    !povScrollTrigger.isActive &&
+    povScrollTrigger.progress > 0
+  ) {
     return;
   }
 
@@ -421,7 +430,6 @@ function updateHomeLoop(delta: number) {
 }
 
 export function homeLoopHandler() {
-  // Don't start home-loop if intro-scroll is active
   const introScrollTrigger = ScrollTrigger.getById("introScroll");
   if (introScrollTrigger?.isActive) {
     return;
@@ -434,7 +442,6 @@ export function homeLoopHandler() {
 
 export function setupHomeLoopScrollHandler() {
   window.addEventListener("scroll", () => {
-    // Don't start home-loop if intro-scroll is active
     const introScrollTrigger = ScrollTrigger.getById("introScroll");
     if (introScrollTrigger?.isActive) {
       if (isHomeLoopActive) {

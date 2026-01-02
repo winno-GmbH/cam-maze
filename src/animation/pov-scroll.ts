@@ -163,7 +163,6 @@ export function initPovScrollAnimation() {
         trigger: DOM_ELEMENTS.povSection,
         start: "top bottom",
         end: "bottom top",
-        markers: false,
         scrub: SCRUB_DURATION,
         toggleActions: "play none none reverse",
         onEnter: () => {
@@ -181,7 +180,6 @@ export function initPovScrollAnimation() {
           handleLeavePOV();
           resetState();
           
-          // Reset object scales to home when leaving pov-scroll (going to outro/home)
           Object.entries(ghosts).forEach(([key, object]) => {
             setObjectScale(object, key, "home");
           });
@@ -202,46 +200,37 @@ export function initPovScrollAnimation() {
           handleLeavePOV();
           resetState();
           
-          // Stop home-loop if it's active to prevent it from interfering
           const introScrollTrigger = ScrollTrigger.getById("introScroll");
           if (introScrollTrigger?.isActive) {
             stopHomeLoop();
           }
           
-          // Reset object scales to intro when leaving pov-scroll back to intro
           Object.entries(ghosts).forEach(([key, object]) => {
             setObjectScale(object, key, "intro");
           });
           
-          // IMMEDIATELY set camera to intro-scroll position (before any other code runs)
-          // This must happen synchronously, not in requestAnimationFrame
           const introStartPosition = getStartPosition();
           const introLookAtPosition = getLookAtPosition();
           
-          // Kill ALL camera animations FIRST (including home-loop animations)
           gsap.killTweensOf(camera.position);
           gsap.killTweensOf(camera.quaternion);
           gsap.killTweensOf(camera.rotation);
           
-          // Set camera position and rotation IMMEDIATELY (no animation, no delay)
           camera.position.set(
             introStartPosition.x,
             introStartPosition.y,
             introStartPosition.z
           );
           camera.lookAt(introLookAtPosition);
-          camera.fov = 50; // Reset to default FOV
+          camera.fov = 50;
           camera.updateProjectionMatrix();
           camera.updateMatrixWorld(true);
           
-          // Also set it in a requestAnimationFrame to ensure it stays after other code runs
           requestAnimationFrame(() => {
-            // Kill any animations that might have started
             gsap.killTweensOf(camera.position);
             gsap.killTweensOf(camera.quaternion);
             gsap.killTweensOf(camera.rotation);
             
-            // Set again to ensure it's correct
             camera.position.set(
               introStartPosition.x,
               introStartPosition.y,
@@ -251,21 +240,8 @@ export function initPovScrollAnimation() {
             camera.fov = 50;
             camera.updateProjectionMatrix();
             camera.updateMatrixWorld(true);
-            
-            const euler = new THREE.Euler().setFromQuaternion(camera.quaternion);
-            const eulerDeg = {
-              x: (euler.x * 180) / Math.PI,
-              y: (euler.y * 180) / Math.PI,
-              z: (euler.z * 180) / Math.PI,
-            };
-            
-            console.log(
-              `[POV->Intro Transition] Camera reset to intro position: (${introStartPosition.x.toFixed(3)}, ${introStartPosition.y.toFixed(3)}, ${introStartPosition.z.toFixed(3)}), LookAt: (${introLookAtPosition.x.toFixed(3)}, ${introLookAtPosition.y.toFixed(3)}, ${introLookAtPosition.z.toFixed(3)}), Rotation: (${eulerDeg.x.toFixed(1)}°, ${eulerDeg.y.toFixed(1)}°, ${eulerDeg.z.toFixed(1)}°)`
-            );
           });
           
-          // Don't reset pov-scroll timeline or update ghosts when leaving back to intro-scroll
-          // The intro-scroll animation will handle the object positions
           isLeavingPOV = false;
         },
       },
@@ -344,17 +320,6 @@ function updateCamera(
   povPaths: Record<string, THREE.CurvePath<THREE.Vector3>>,
   position: THREE.Vector3
 ) {
-  // Log camera rotation in every frame
-  const euler = new THREE.Euler().setFromQuaternion(camera.quaternion);
-  const eulerDeg = {
-    x: (euler.x * 180) / Math.PI,
-    y: (euler.y * 180) / Math.PI,
-    z: (euler.z * 180) / Math.PI,
-  };
-  console.log(
-    `[POV Camera] Progress: ${progress.toFixed(3)}, Position: (${position.x.toFixed(3)}, ${position.y.toFixed(3)}, ${position.z.toFixed(3)}), Rotation: (${eulerDeg.x.toFixed(1)}°, ${eulerDeg.y.toFixed(1)}°, ${eulerDeg.z.toFixed(1)}°)`
-  );
-
   if (isLeavingPOV) {
     camera.position.copy(position);
     camera.fov = wideFOV;

@@ -86,13 +86,6 @@ export function initIntroScrollAnimation() {
         end: "bottom bottom",
         scrub: SCRUB_DURATION,
         refreshPriority: 1,
-        markers: {
-          startColor: "green",
-          endColor: "red",
-          fontSize: "12px",
-          fontWeight: "bold",
-          indent: 60,
-        },
         onEnter: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
@@ -111,17 +104,13 @@ export function initIntroScrollAnimation() {
           cachedPillProgress = -1;
           lastPillProgressFrame = -1;
 
-          // IMMEDIATELY set camera to correct position and rotation when entering intro-scroll
-          // This must happen synchronously to prevent home-loop from interfering
           const introStartPosition = getStartPosition();
           const introLookAtPosition = getLookAtPosition();
 
-          // Kill any ongoing camera animations FIRST
           gsap.killTweensOf(camera.position);
           gsap.killTweensOf(camera.quaternion);
           gsap.killTweensOf(camera.rotation);
 
-          // Set camera position and rotation IMMEDIATELY
           camera.position.set(
             introStartPosition.x,
             introStartPosition.y,
@@ -132,14 +121,11 @@ export function initIntroScrollAnimation() {
           camera.updateProjectionMatrix();
           camera.updateMatrixWorld(true);
 
-          // Also set it in requestAnimationFrame to ensure it stays after other code runs
           requestAnimationFrame(() => {
-            // Kill any animations that might have started
             gsap.killTweensOf(camera.position);
             gsap.killTweensOf(camera.quaternion);
             gsap.killTweensOf(camera.rotation);
 
-            // Set again to ensure it's correct
             camera.position.set(
               introStartPosition.x,
               introStartPosition.y,
@@ -379,23 +365,6 @@ function updateObjectsWalkBy(progress: number) {
   const camX = camera.position.x;
   const camY = camera.position.y;
   const camZ = camera.position.z;
-
-  // Log camera rotation in every frame
-  const euler = new THREE.Euler().setFromQuaternion(camera.quaternion);
-  const eulerDeg = {
-    x: (euler.x * 180) / Math.PI,
-    y: (euler.y * 180) / Math.PI,
-    z: (euler.z * 180) / Math.PI,
-  };
-  console.log(
-    `[Intro Camera] Progress: ${progress.toFixed(3)}, Position: (${camX.toFixed(
-      3
-    )}, ${camY.toFixed(3)}, ${camZ.toFixed(
-      3
-    )}), Rotation: (${eulerDeg.x.toFixed(1)}°, ${eulerDeg.y.toFixed(
-      1
-    )}°, ${eulerDeg.z.toFixed(1)}°)`
-  );
 
   if (!isFinite(camX) || !isFinite(camY) || !isFinite(camZ)) {
     return;
