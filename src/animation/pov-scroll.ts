@@ -171,6 +171,30 @@ export function initPovScrollAnimation() {
           const scrollDir = getScrollDirection();
           applyPovScrollPreset(true, scrollDir);
         },
+        onLeave: () => {
+          if (povScrollTimeline) {
+            const povPaths = getPovPaths();
+            if (povPaths.camera) {
+              const endPosition = povPaths.camera.getPointAt(1);
+              updateCamera(1, povPaths, endPosition);
+              updateGhosts(endPosition, 1, povPaths);
+            }
+            handleLeavePOV();
+            resetState();
+          }
+        },
+        onLeaveBack: () => {
+          if (povScrollTimeline) {
+            const povPaths = getPovPaths();
+            if (povPaths.camera) {
+              const startPosition = povPaths.camera.getPointAt(0);
+              updateCamera(0, povPaths, startPosition);
+              updateGhosts(startPosition, 0, povPaths);
+            }
+            handleLeavePOV();
+            resetState();
+          }
+        },
       },
     })
     .addLabel("pov-animation-start", 0)
