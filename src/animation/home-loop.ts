@@ -259,12 +259,6 @@ export function startHomeLoop() {
         camera.updateProjectionMatrix();
       },
     });
-  } else {
-    if (checkAndStop()) return;
-    camera.position.copy(targetCameraPos);
-    const targetLookAt = getLookAtPosition();
-    camera.lookAt(targetLookAt);
-    camera.updateProjectionMatrix();
   }
 
   applyHomeLoopPreset(true);
@@ -385,8 +379,6 @@ export function startHomeLoop() {
 
 function updateHomeLoop(delta: number) {
   if (!isHomeLoopActive) return;
-
-  if (isTransitioningToIntro) return;
 
   const introScrollTrigger = ScrollTrigger.getById("introScroll");
   if (introScrollTrigger?.isActive) return;
