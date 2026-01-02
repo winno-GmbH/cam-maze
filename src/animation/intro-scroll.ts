@@ -91,12 +91,14 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           pillCollected = false;
+          pacmanTransformed = false;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           pillCollected = false;
+          pacmanTransformed = false;
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -266,6 +268,7 @@ let lastFloorState: {
 } | null = null;
 
 let pillCollected: boolean = false;
+let pacmanTransformed: boolean = false;
 
 function calculatePillProgress(): number {
   const camX = camera.position.x;
@@ -484,6 +487,7 @@ function updateObjectsWalkBy(progress: number) {
 
   if (progress < pillProgress) {
     pillCollected = false;
+    pacmanTransformed = false;
   } else if (pacmanPos && !pillCollected) {
     const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
     const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
@@ -495,6 +499,8 @@ function updateObjectsWalkBy(progress: number) {
       distanceZ < positionThreshold
     ) {
       pillCollected = true;
+      pacmanTransformed = true;
+      pacmanTransformed = true;
     }
   }
 
@@ -572,13 +578,24 @@ function updateObjectsWalkBy(progress: number) {
           }
         });
       } else {
-        const targetQuat =
-          key === "pacman" ? pacmanTargetQuaternion : ghostTargetQuaternion;
+        if (key === "pacman" && pacmanTransformed) {
+          object.scale.set(1.5, 1.5, 1.5);
+          const currentRotation = object.rotation;
+          object.rotation.set(
+            currentRotation.x,
+            currentRotation.y + Math.PI,
+            currentRotation.z
+          );
+          object.quaternion.setFromEuler(object.rotation);
+        } else {
+          const targetQuat =
+            key === "pacman" ? pacmanTargetQuaternion : ghostTargetQuaternion;
 
-        if (targetQuat) {
-          object.quaternion.copy(targetQuat);
+          if (targetQuat) {
+            object.quaternion.copy(targetQuat);
+          }
+          setObjectScale(object, key, "intro");
         }
-        setObjectScale(object, key, "intro");
       }
       if (key === "pill") {
         object.visible = !pillCollected;
