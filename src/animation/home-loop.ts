@@ -137,7 +137,7 @@ function initializeHomeLoopTangentSmoothers() {
   });
 }
 
-function stopHomeLoop() {
+export function stopHomeLoop() {
   if (!isHomeLoopActive) return;
   isHomeLoopActive = false;
   setHomeLoopActive(false);
