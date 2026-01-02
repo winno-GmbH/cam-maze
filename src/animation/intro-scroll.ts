@@ -482,7 +482,7 @@ function updateObjectsWalkBy(progress: number) {
   const positionThreshold = 0.01;
   const pillProgress = calculatePillProgress();
 
-  if (progress < pillProgress - 0.01) {
+  if (progress < pillProgress) {
     pillCollected = false;
   } else if (pacmanPos && !pillCollected) {
     const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
@@ -537,7 +537,21 @@ function updateObjectsWalkBy(progress: number) {
           "XYZ"
         );
         object.rotation.copy(targetEuler);
-        object.scale.set(1, 1, 1);
+
+        const scaleStartProgress = 0.0;
+        const scaleEndProgress = INTRO_FADE_IN_DURATION;
+        let pillScale = 1.0;
+
+        if (normalizedProgress < scaleEndProgress) {
+          const scaleProgress = normalizedProgress / scaleEndProgress;
+          const easedProgress =
+            scaleProgress < 0.5
+              ? 2 * scaleProgress * scaleProgress
+              : 1 - Math.pow(-2 * scaleProgress + 2, 2) / 2;
+          pillScale = 10.0 - easedProgress * 9.0;
+        }
+
+        object.scale.set(pillScale, pillScale, pillScale);
       } else {
         const targetQuat =
           key === "pacman" ? pacmanTargetQuaternion : ghostTargetQuaternion;
