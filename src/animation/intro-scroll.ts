@@ -273,6 +273,7 @@ let lastFloorState: {
 let pillCollected: boolean = false;
 let pacmanTransformed: boolean = false;
 let pacmanTransformProgress: number = 0;
+let pacmanFrozenPosition: THREE.Vector3 | null = null;
 
 function calculatePillProgress(): number {
   const camX = camera.position.x;
@@ -503,6 +504,7 @@ function updateObjectsWalkBy(progress: number) {
     pillCollected = false;
     pacmanTransformed = false;
     pacmanTransformProgress = 0;
+    pacmanFrozenPosition = null;
   } else if (pacmanPos && !pillCollected) {
     const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
     const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
@@ -515,6 +517,9 @@ function updateObjectsWalkBy(progress: number) {
     ) {
       pillCollected = true;
       pacmanTransformed = true;
+      if (!pacmanFrozenPosition) {
+        pacmanFrozenPosition = pacmanPos.clone();
+      }
       pacmanTransformed = true;
     }
   }
@@ -545,8 +550,12 @@ function updateObjectsWalkBy(progress: number) {
       const object = key === "pill" ? pill : ghosts[key];
       if (!object) return;
 
-      const position = objectPositions[key];
+      let position = objectPositions[key];
       if (!position) return;
+
+      if (key === "pacman" && pacmanFrozenPosition) {
+        position = pacmanFrozenPosition;
+      }
 
       object.position.set(position.x, position.y, position.z);
 
@@ -609,11 +618,11 @@ function updateObjectsWalkBy(progress: number) {
             const baseEuler = new THREE.Euler().setFromQuaternion(
               pacmanTargetQuaternion
             );
-            const targetY = baseEuler.y + Math.PI;
-            const currentY =
-              baseEuler.y + (targetY - baseEuler.y) * pacmanTransformProgress;
+            const targetZ = baseEuler.z + Math.PI;
+            const currentZ =
+              baseEuler.z + (targetZ - baseEuler.z) * pacmanTransformProgress;
 
-            object.rotation.set(baseEuler.x, currentY, baseEuler.z);
+            object.rotation.set(baseEuler.x, baseEuler.y, currentZ);
             object.quaternion.setFromEuler(object.rotation);
           }
         } else {
