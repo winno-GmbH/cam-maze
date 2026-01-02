@@ -200,10 +200,7 @@ export function initPovScrollAnimation() {
           handleLeavePOV();
           resetState();
           
-          const introScrollTrigger = ScrollTrigger.getById("introScroll");
-          if (introScrollTrigger?.isActive) {
-            stopHomeLoop();
-          }
+          stopHomeLoop();
           
           Object.entries(ghosts).forEach(([key, object]) => {
             setObjectScale(object, key, "intro");
@@ -225,6 +222,22 @@ export function initPovScrollAnimation() {
           camera.fov = 50;
           camera.updateProjectionMatrix();
           camera.updateMatrixWorld(true);
+          
+          requestAnimationFrame(() => {
+            gsap.killTweensOf(camera.position);
+            gsap.killTweensOf(camera.quaternion);
+            gsap.killTweensOf(camera.rotation);
+            
+            camera.position.set(
+              introStartPosition.x,
+              introStartPosition.y,
+              introStartPosition.z
+            );
+            camera.lookAt(introLookAtPosition);
+            camera.fov = 50;
+            camera.updateProjectionMatrix();
+            camera.updateMatrixWorld(true);
+          });
           
           requestAnimationFrame(() => {
             gsap.killTweensOf(camera.position);

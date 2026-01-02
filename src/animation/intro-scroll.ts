@@ -28,6 +28,7 @@ import {
 import { setFloorPlane, setObjectScale } from "./scene-utils";
 import { getStartPosition, getLookAtPosition } from "../paths/pathpoints";
 import { getIntroPacmanRotation } from "../core/debug-hud";
+import { stopHomeLoop } from "./home-loop";
 import {
   setMaterialOpacity,
   forEachMaterial,
@@ -104,6 +105,8 @@ export function initIntroScrollAnimation() {
           cachedPillProgress = -1;
           lastPillProgressFrame = -1;
 
+          stopHomeLoop();
+
           const introStartPosition = getStartPosition();
           const introLookAtPosition = getLookAtPosition();
 
@@ -120,6 +123,22 @@ export function initIntroScrollAnimation() {
           camera.fov = 50;
           camera.updateProjectionMatrix();
           camera.updateMatrixWorld(true);
+
+          requestAnimationFrame(() => {
+            gsap.killTweensOf(camera.position);
+            gsap.killTweensOf(camera.quaternion);
+            gsap.killTweensOf(camera.rotation);
+
+            camera.position.set(
+              introStartPosition.x,
+              introStartPosition.y,
+              introStartPosition.z
+            );
+            camera.lookAt(introLookAtPosition);
+            camera.fov = 50;
+            camera.updateProjectionMatrix();
+            camera.updateMatrixWorld(true);
+          });
 
           requestAnimationFrame(() => {
             gsap.killTweensOf(camera.position);

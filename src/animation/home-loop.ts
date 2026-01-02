@@ -193,6 +193,8 @@ export function startHomeLoop() {
 
   if (cameraDistance > 0.1) {
     gsap.killTweensOf(camera.position);
+    gsap.killTweensOf(camera.quaternion);
+    gsap.killTweensOf(camera.rotation);
 
     const transitionDuration = wasInHomeScroll ? 1.0 : 0.5;
 
