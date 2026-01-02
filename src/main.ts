@@ -11,7 +11,7 @@ import {
 } from "./animation/home-loop";
 import { initPovScrollAnimation } from "./animation/pov-scroll";
 import { loadModel } from "./core/objects";
-import { setupCamera } from "./core/camera";
+import { setupCamera, camera } from "./core/camera";
 import { initIntroScrollAnimation } from "./animation/intro-scroll";
 import { initOutroScrollAnimation } from "./animation/outro-scroll";
 import { initializeObjectStates } from "./animation/object-state";
