@@ -553,7 +553,21 @@ function updateObjectsWalkBy(progress: number) {
           "XYZ"
         );
         object.rotation.copy(targetEuler);
-        object.scale.set(1, 1, 1);
+
+        const scaleStartProgress = 0.0;
+        const scaleEndProgress = INTRO_FADE_IN_DURATION;
+        let pillScale = 1.0;
+
+        if (normalizedProgress < scaleEndProgress) {
+          const scaleProgress = normalizedProgress / scaleEndProgress;
+          const easedProgress =
+            scaleProgress < 0.5
+              ? 2 * scaleProgress * scaleProgress
+              : 1 - Math.pow(-2 * scaleProgress + 2, 2) / 2;
+          pillScale = 10.0 - easedProgress * 9.0;
+        }
+
+        object.scale.set(pillScale, pillScale, pillScale);
 
         const pillOpacity =
           normalizedProgress < INTRO_FADE_IN_DURATION
