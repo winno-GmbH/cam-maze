@@ -424,15 +424,17 @@ function updateObjectsWalkBy(progress: number) {
   ];
 
   let normalizedProgress = clamp(progress);
+  let effectiveNormalizedProgress = normalizedProgress;
 
   if (reverseDirection && frozenProgress > 0) {
+    const frozenNormalizedProgress = clamp(frozenProgress);
     const progressFromFrozen = Math.max(
       0,
-      (progress - frozenProgress) / (1.0 - frozenProgress)
+      Math.min(1, (progress - frozenProgress) / (1.0 - frozenProgress))
     );
-    normalizedProgress = Math.max(
+    effectiveNormalizedProgress = Math.max(
       0,
-      Math.min(1, frozenProgress * (1.0 - progressFromFrozen))
+      Math.min(1, frozenNormalizedProgress * (1.0 - progressFromFrozen))
     );
   }
 
@@ -474,7 +476,10 @@ function updateObjectsWalkBy(progress: number) {
         key === "pacman" || key === "pill"
           ? 0
           : Math.sin(
-              normalizedProgress * Math.PI * 2 * INTRO_GHOST_BOUNCE.FREQUENCY +
+              effectiveNormalizedProgress *
+                Math.PI *
+                2 *
+                INTRO_GHOST_BOUNCE.FREQUENCY +
                 zPhase
             ) * INTRO_GHOST_BOUNCE.AMPLITUDE;
       const animatedYOffset =
@@ -540,6 +545,14 @@ function updateObjectsWalkBy(progress: number) {
     if (!reverseDirection) {
       reverseDirection = true;
       frozenProgress = progress;
+      for (const key in ghostsFrozenPositions) {
+        if (ghostsFrozenPositions[key] && objectPositions[key]) {
+          ghostsFrozenPositions[key] = objectPositions[key].clone();
+        }
+      }
+      if (pacmanFrozenPosition && objectPositions["pacman"]) {
+        pacmanFrozenPosition = objectPositions["pacman"].clone();
+      }
     }
   }
 
