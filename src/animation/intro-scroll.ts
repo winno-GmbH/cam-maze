@@ -458,7 +458,17 @@ function updateObjectsWalkBy(progress: number) {
 
       if (key === "pill") {
         finalX = INTRO_OBJECT_POSITIONS.PILL.x;
-        finalY = INTRO_OBJECT_POSITIONS.PILL.y;
+        const pillStartY = 0.0;
+        const pillEndY = INTRO_OBJECT_POSITIONS.PILL.y;
+        const fallProgress = Math.min(
+          normalizedProgress / INTRO_FADE_IN_DURATION,
+          1.0
+        );
+        const easedFallProgress =
+          fallProgress < 0.5
+            ? 2 * fallProgress * fallProgress
+            : 1 - Math.pow(-2 * fallProgress + 2, 2) / 2;
+        finalY = pillStartY + (pillEndY - pillStartY) * easedFallProgress;
         finalZ = INTRO_OBJECT_POSITIONS.PILL.z;
       } else {
         finalX = pacmanX + behindOffset + xOffset;
@@ -543,21 +553,7 @@ function updateObjectsWalkBy(progress: number) {
           "XYZ"
         );
         object.rotation.copy(targetEuler);
-
-        const scaleStartProgress = 0.0;
-        const scaleEndProgress = INTRO_FADE_IN_DURATION;
-        let pillScale = 1.0;
-
-        if (normalizedProgress < scaleEndProgress) {
-          const scaleProgress = normalizedProgress / scaleEndProgress;
-          const easedProgress =
-            scaleProgress < 0.5
-              ? 2 * scaleProgress * scaleProgress
-              : 1 - Math.pow(-2 * scaleProgress + 2, 2) / 2;
-          pillScale = 10.0 - easedProgress * 9.0;
-        }
-
-        object.scale.set(pillScale, pillScale, pillScale);
+        object.scale.set(1, 1, 1);
 
         const pillOpacity =
           normalizedProgress < INTRO_FADE_IN_DURATION
