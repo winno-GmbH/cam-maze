@@ -600,7 +600,7 @@ function updateObjectsWalkBy(progress: number) {
           );
 
           const baseScale = SCALE.PACMAN_INTRO;
-          const targetScale = baseScale * 1.2;
+          const targetScale = 0.15;
           const currentScale =
             baseScale + (targetScale - baseScale) * pacmanTransformProgress;
           object.scale.set(currentScale, currentScale, currentScale);
