@@ -37,9 +37,12 @@ export function setMaterialOpacity(
 
   mat.opacity = opacity;
 
-  const shouldBeTransparent = preserveTransmission && mat.transmission !== undefined && mat.transmission > 0
-    ? true
-    : opacity < 1.0;
+  const shouldBeTransparent =
+    preserveTransmission &&
+    mat.transmission !== undefined &&
+    mat.transmission > 0
+      ? true
+      : opacity > 0;
 
   if (currentTransparent !== shouldBeTransparent) {
     mat.transparent = shouldBeTransparent;
@@ -57,9 +60,12 @@ export function setMaterialTransparent(
   const mat = material as any;
   const currentTransparent = mat.transparent ?? false;
 
-  const shouldBeTransparent = preserveTransmission && mat.transmission !== undefined && mat.transmission > 0
-    ? true
-    : transparent;
+  const shouldBeTransparent =
+    preserveTransmission &&
+    mat.transmission !== undefined &&
+    mat.transmission > 0
+      ? true
+      : transparent;
 
   if (currentTransparent === shouldBeTransparent) {
     return;
@@ -97,10 +103,13 @@ export function resetGhostMaterialsToFullOpacity(object: THREE.Object3D): void {
   });
 }
 
-
 export function forEachMaterial(
   object: THREE.Object3D,
-  callback: (material: THREE.Material, mesh: THREE.Mesh, childName: string) => void,
+  callback: (
+    material: THREE.Material,
+    mesh: THREE.Mesh,
+    childName: string
+  ) => void,
   options?: {
     skipCurrencySymbols?: boolean;
     skipPacmanParts?: boolean;
@@ -120,7 +129,11 @@ export function forEachMaterial(
         return;
       }
 
-      if (skipPacmanParts && objectKey === "pacman" && isPacmanPart(childName)) {
+      if (
+        skipPacmanParts &&
+        objectKey === "pacman" &&
+        isPacmanPart(childName)
+      ) {
         return;
       }
 

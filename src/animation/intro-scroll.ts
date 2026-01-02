@@ -437,7 +437,10 @@ function updateObjectsWalkBy(progress: number) {
     pacmanTransformProgress = 1.0;
   }
 
-  const frozenPositionProgress = 1.0;
+  const frozenPositionProgress =
+    pillProgress < 0.5
+      ? 2 * pillProgress * pillProgress
+      : 1 - 2 * (1 - pillProgress) * (1 - pillProgress);
   const frozenBaseX =
     walkStart + (walkEnd - walkStart) * frozenPositionProgress;
   const frozenPacmanX = frozenBaseX + INTRO_POSITION_OFFSET.x;
@@ -572,8 +575,10 @@ function updateObjectsWalkBy(progress: number) {
         const frozenY = frozenPacmanY + staticYOffset - frozenAnimatedYOffset;
         const frozenZPos = frozenPacmanZ + zOffset - frozenZ;
 
+        const frozenPosition = new THREE.Vector3(frozenX, frozenY, frozenZPos);
+
         if (normalizedProgress < pillProgress + TRANSFORMATION_DURATION) {
-          position = new THREE.Vector3(frozenX, frozenY, frozenZPos);
+          position = frozenPosition;
         } else {
           const returnProgress =
             (normalizedProgress - pillProgress - TRANSFORMATION_DURATION) /
