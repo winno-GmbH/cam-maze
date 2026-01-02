@@ -40,6 +40,7 @@ const domElementCache: Record<
 gsap.registerPlugin(ScrollTrigger);
 
 let povScrollTimeline: gsap.core.Timeline | null = null;
+let isLeavingPOV: boolean = false;
 
 let previousCameraPosition: THREE.Vector3 | null = null;
 let rotationStarted = false;
@@ -164,36 +165,44 @@ export function initPovScrollAnimation() {
         scrub: SCRUB_DURATION,
         toggleActions: "play none none reverse",
         onEnter: () => {
+          isLeavingPOV = false;
           const scrollDir = getScrollDirection();
           applyPovScrollPreset(true, scrollDir);
         },
         onEnterBack: () => {
+          isLeavingPOV = false;
           const scrollDir = getScrollDirection();
           applyPovScrollPreset(true, scrollDir);
         },
         onLeave: () => {
+          isLeavingPOV = true;
+          handleLeavePOV();
+          resetState();
           if (povScrollTimeline) {
+            povScrollTimeline.progress(1);
             const povPaths = getPovPaths();
-            if (povPaths.camera) {
+            if (povPaths && povPaths.camera) {
               const endPosition = povPaths.camera.getPointAt(1);
               updateCamera(1, povPaths, endPosition);
               updateGhosts(endPosition, 1, povPaths);
             }
-            handleLeavePOV();
-            resetState();
           }
+          isLeavingPOV = false;
         },
         onLeaveBack: () => {
+          isLeavingPOV = true;
+          handleLeavePOV();
+          resetState();
           if (povScrollTimeline) {
+            povScrollTimeline.progress(0);
             const povPaths = getPovPaths();
-            if (povPaths.camera) {
+            if (povPaths && povPaths.camera) {
               const startPosition = povPaths.camera.getPointAt(0);
               updateCamera(0, povPaths, startPosition);
               updateGhosts(startPosition, 0, povPaths);
             }
-            handleLeavePOV();
-            resetState();
           }
+          isLeavingPOV = false;
         },
       },
     })
@@ -271,6 +280,21 @@ function updateCamera(
   povPaths: Record<string, THREE.CurvePath<THREE.Vector3>>,
   position: THREE.Vector3
 ) {
+  if (isLeavingPOV) {
+    camera.position.copy(position);
+    camera.fov = wideFOV;
+    const customLookAt = getCustomLookAtForProgress(progress, povPaths);
+    if (customLookAt) {
+      camera.lookAt(customLookAt);
+    } else {
+      const rawTangent = povPaths.camera.getTangentAt(progress).normalize();
+      const defaultLookAt = position.clone().add(rawTangent);
+      handleDefaultOrientation(progress, defaultLookAt);
+    }
+    camera.updateProjectionMatrix();
+    return;
+  }
+
   const introScrollTrigger = ScrollTrigger.getById("introScroll");
   const povScrollTrigger = ScrollTrigger.getById("povScroll");
   const isIntroScrollActive = introScrollTrigger && introScrollTrigger.isActive;
