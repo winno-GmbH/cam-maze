@@ -596,6 +596,47 @@ function updateObjectsWalkBy(progress: number) {
 
         if (transformationProgress < 1.0) {
           position = frozenPositions[key];
+        } else {
+          const returnProgress =
+            (normalizedProgress -
+              transformationStartProgress -
+              TRANSFORMATION_DURATION) /
+            (1.0 - transformationStartProgress - TRANSFORMATION_DURATION);
+          const returnAmount = Math.max(0, Math.min(1, returnProgress));
+
+          const frozenPos = frozenPositions[key];
+          const startX = frozenPos.x;
+
+          const objectOffset =
+            key === "pacman"
+              ? INTRO_OBJECT_ANIMATION_OFFSETS.PACMAN
+              : key === "ghost1"
+              ? INTRO_OBJECT_ANIMATION_OFFSETS.GHOST1
+              : key === "ghost2"
+              ? INTRO_OBJECT_ANIMATION_OFFSETS.GHOST2
+              : key === "ghost3"
+              ? INTRO_OBJECT_ANIMATION_OFFSETS.GHOST3
+              : key === "ghost4"
+              ? INTRO_OBJECT_ANIMATION_OFFSETS.GHOST4
+              : key === "ghost5"
+              ? INTRO_OBJECT_ANIMATION_OFFSETS.GHOST5
+              : null;
+
+          if (objectOffset) {
+            const endX =
+              walkStart +
+              INTRO_POSITION_OFFSET.x +
+              objectOffset.behindOffset +
+              objectOffset.xOffset;
+
+            const easedReturn =
+              returnAmount < 0.5
+                ? 2 * returnAmount * returnAmount
+                : 1 - 2 * (1 - returnAmount) * (1 - returnAmount);
+
+            const currentX = startX + (endX - startX) * easedReturn;
+            position = new THREE.Vector3(currentX, frozenPos.y, frozenPos.z);
+          }
         }
       }
 
