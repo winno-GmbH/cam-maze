@@ -28,7 +28,7 @@ import {
 import { setObjectScale } from "./scene-utils";
 import { setObjectOpacity } from "../core/material-utils";
 import { getStartPosition, getLookAtPosition } from "../paths/pathpoints";
-import { stopHomeLoop } from "./home-loop";
+import { stopHomeLoop, setTransitioningToIntro } from "./home-loop";
 
 const domElementCache: Record<
   number,
@@ -196,6 +196,7 @@ export function initPovScrollAnimation() {
           isLeavingPOV = false;
         },
         onLeaveBack: () => {
+          setTransitioningToIntro(true);
           stopHomeLoop();
           gsap.killTweensOf(camera.position);
           gsap.killTweensOf(camera.quaternion);

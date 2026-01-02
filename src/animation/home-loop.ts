@@ -28,6 +28,7 @@ import { getStartPosition, getLookAtPosition } from "../paths/pathpoints";
 
 const LOOP_DURATION = 50;
 let isHomeLoopActive = true;
+let isTransitioningToIntro = false;
 let animationTime = 0;
 let homeLoopFrameRegistered = false;
 let rotationTransitionTime = 0;
@@ -155,6 +156,10 @@ export function stopHomeLoop() {
 }
 
 export function startHomeLoop() {
+  if (isTransitioningToIntro) {
+    return;
+  }
+
   const introScrollTrigger = ScrollTrigger.getById("introScroll");
   const povScrollTrigger = ScrollTrigger.getById("povScroll");
 
@@ -466,6 +471,13 @@ export function homeLoopHandler() {
 
 export function setupHomeLoopScrollHandler() {
   window.addEventListener("scroll", () => {
+    if (isTransitioningToIntro) {
+      if (isHomeLoopActive) {
+        stopHomeLoop();
+      }
+      return;
+    }
+
     const introScrollTrigger = ScrollTrigger.getById("introScroll");
     const povScrollTrigger = ScrollTrigger.getById("povScroll");
 
@@ -497,4 +509,8 @@ export function setupHomeLoopScrollHandler() {
       }
     }
   });
+}
+
+export function setTransitioningToIntro(value: boolean) {
+  isTransitioningToIntro = value;
 }
