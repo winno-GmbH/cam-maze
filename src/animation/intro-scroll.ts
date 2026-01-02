@@ -408,8 +408,8 @@ function updateObjectsWalkBy(progress: number) {
   ];
 
   const normalizedProgress = clamp(progress);
-  const pillProgress = calculatePillProgress();
   const TRANSFORMATION_DURATION = 0.1;
+  const pillProgress = calculatePillProgress();
 
   let positionProgress: number;
   let pacmanTransformProgress: number = 0;
