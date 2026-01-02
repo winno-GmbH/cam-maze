@@ -436,6 +436,14 @@ function updateObjectsWalkBy(progress: number) {
         : 1 - 2 * (1 - reversedProgress) * (1 - reversedProgress);
     pacmanTransformProgress = 1.0;
   }
+
+  const frozenPositionProgress = 1.0;
+  const frozenBaseX =
+    walkStart + (walkEnd - walkStart) * frozenPositionProgress;
+  const frozenPacmanX = frozenBaseX + INTRO_POSITION_OFFSET.x;
+  const frozenPacmanY = camY + INTRO_POSITION_OFFSET.y;
+  const frozenPacmanZ = camZ + INTRO_POSITION_OFFSET.z;
+
   const baseX = walkStart + (walkEnd - walkStart) * positionProgress;
   const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
   const pacmanY = camY + INTRO_POSITION_OFFSET.y;
@@ -547,54 +555,41 @@ function updateObjectsWalkBy(progress: number) {
       let position = objectPositions[key];
       if (!position) return;
 
-      if (
-        isTransforming ||
-        normalizedProgress > pillProgress + TRANSFORMATION_DURATION
-      ) {
+      if (normalizedProgress >= pillProgress) {
+        const frozenZ =
+          key === "pacman" || key === "pill"
+            ? 0
+            : Math.sin(
+                pillProgress * Math.PI * 2 * INTRO_GHOST_BOUNCE.FREQUENCY +
+                  zPhase
+              ) * INTRO_GHOST_BOUNCE.AMPLITUDE;
+        const frozenAnimatedYOffset =
+          key === "pacman" || key === "pill"
+            ? 0
+            : frozenZ * INTRO_GHOST_BOUNCE.Y_MULTIPLIER;
+
+        const frozenX = frozenPacmanX + behindOffset + xOffset;
+        const frozenY = frozenPacmanY + staticYOffset - frozenAnimatedYOffset;
+        const frozenZPos = frozenPacmanZ + zOffset - frozenZ;
+
         if (normalizedProgress < pillProgress + TRANSFORMATION_DURATION) {
-          position = objectPositions[key];
+          position = new THREE.Vector3(frozenX, frozenY, frozenZPos);
         } else {
           const returnProgress =
             (normalizedProgress - pillProgress - TRANSFORMATION_DURATION) /
             (1.0 - pillProgress - TRANSFORMATION_DURATION);
           const returnAmount = Math.max(0, Math.min(1, returnProgress));
 
-          const frozenX = objectPositions[key].x;
+          const endX =
+            walkStart + INTRO_POSITION_OFFSET.x + behindOffset + xOffset;
 
-          const objectOffset =
-            key === "pacman"
-              ? INTRO_OBJECT_ANIMATION_OFFSETS.PACMAN
-              : key === "ghost1"
-              ? INTRO_OBJECT_ANIMATION_OFFSETS.GHOST1
-              : key === "ghost2"
-              ? INTRO_OBJECT_ANIMATION_OFFSETS.GHOST2
-              : key === "ghost3"
-              ? INTRO_OBJECT_ANIMATION_OFFSETS.GHOST3
-              : key === "ghost4"
-              ? INTRO_OBJECT_ANIMATION_OFFSETS.GHOST4
-              : key === "ghost5"
-              ? INTRO_OBJECT_ANIMATION_OFFSETS.GHOST5
-              : null;
+          const easedReturn =
+            returnAmount < 0.5
+              ? 2 * returnAmount * returnAmount
+              : 1 - 2 * (1 - returnAmount) * (1 - returnAmount);
 
-          if (objectOffset) {
-            const endX =
-              walkStart +
-              INTRO_POSITION_OFFSET.x +
-              objectOffset.behindOffset +
-              objectOffset.xOffset;
-
-            const easedReturn =
-              returnAmount < 0.5
-                ? 2 * returnAmount * returnAmount
-                : 1 - 2 * (1 - returnAmount) * (1 - returnAmount);
-
-            const currentX = frozenX + (endX - frozenX) * easedReturn;
-            position = new THREE.Vector3(
-              currentX,
-              objectPositions[key].y,
-              objectPositions[key].z
-            );
-          }
+          const currentX = frozenX + (endX - frozenX) * easedReturn;
+          position = new THREE.Vector3(currentX, frozenY, frozenZPos);
         }
       }
 
@@ -632,19 +627,10 @@ function updateObjectsWalkBy(progress: number) {
           pillOpacity = OPACITY.HIDDEN;
         }
 
-        forEachMaterial(
-          object,
-          (material: any) => {
-            if (material) {
-              material.opacity = pillOpacity;
-              material.transparent = pillOpacity > 0;
-              if (material.needsUpdate !== undefined) {
-                material.needsUpdate = true;
-              }
-            }
-          },
-          { skipCurrencySymbols: false }
-        );
+        setObjectOpacity(object, pillOpacity, {
+          preserveTransmission: true,
+          skipCurrencySymbols: false,
+        });
       } else {
         if (key === "pacman" && normalizedProgress >= pillProgress) {
           const baseScale = SCALE.PACMAN_INTRO;
