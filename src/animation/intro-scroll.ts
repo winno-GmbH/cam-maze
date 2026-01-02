@@ -111,17 +111,35 @@ export function initIntroScrollAnimation() {
           cachedPillProgress = -1;
           lastPillProgressFrame = -1;
 
-          // Ensure camera is at correct position and rotation when entering intro-scroll
-          requestAnimationFrame(() => {
-            const introStartPosition = getStartPosition();
-            const introLookAtPosition = getLookAtPosition();
+          // IMMEDIATELY set camera to correct position and rotation when entering intro-scroll
+          // This must happen synchronously to prevent home-loop from interfering
+          const introStartPosition = getStartPosition();
+          const introLookAtPosition = getLookAtPosition();
 
-            // Kill any ongoing camera animations
+          // Kill any ongoing camera animations FIRST
+          gsap.killTweensOf(camera.position);
+          gsap.killTweensOf(camera.quaternion);
+          gsap.killTweensOf(camera.rotation);
+
+          // Set camera position and rotation IMMEDIATELY
+          camera.position.set(
+            introStartPosition.x,
+            introStartPosition.y,
+            introStartPosition.z
+          );
+          camera.lookAt(introLookAtPosition);
+          camera.fov = 50;
+          camera.updateProjectionMatrix();
+          camera.updateMatrixWorld(true);
+
+          // Also set it in requestAnimationFrame to ensure it stays after other code runs
+          requestAnimationFrame(() => {
+            // Kill any animations that might have started
             gsap.killTweensOf(camera.position);
             gsap.killTweensOf(camera.quaternion);
             gsap.killTweensOf(camera.rotation);
 
-            // Set camera position and rotation
+            // Set again to ensure it's correct
             camera.position.set(
               introStartPosition.x,
               introStartPosition.y,

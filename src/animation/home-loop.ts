@@ -155,6 +155,12 @@ export function stopHomeLoop() {
 }
 
 export function startHomeLoop() {
+  // Don't start if intro-scroll is active
+  const introScrollTrigger = ScrollTrigger.getById("introScroll");
+  if (introScrollTrigger?.isActive) {
+    return;
+  }
+
   isHomeLoopActive = true;
   setHomeLoopActive(true);
 
