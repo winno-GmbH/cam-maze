@@ -94,11 +94,6 @@ export function initIntroScrollAnimation() {
           pillCollected = false;
           pacmanTransformed = false;
           pacmanTransformProgress = 0;
-          pacmanFrozenPosition = null;
-          ghostsFrozenPositions = {};
-          allObjectsStopped = false;
-          reverseDirection = false;
-          frozenProgress = 0;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -107,11 +102,6 @@ export function initIntroScrollAnimation() {
           pillCollected = false;
           pacmanTransformed = false;
           pacmanTransformProgress = 0;
-          pacmanFrozenPosition = null;
-          ghostsFrozenPositions = {};
-          allObjectsStopped = false;
-          reverseDirection = false;
-          frozenProgress = 0;
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -283,11 +273,6 @@ let lastFloorState: {
 let pillCollected: boolean = false;
 let pacmanTransformed: boolean = false;
 let pacmanTransformProgress: number = 0;
-let pacmanFrozenPosition: THREE.Vector3 | null = null;
-let ghostsFrozenPositions: Record<string, THREE.Vector3> = {};
-let allObjectsStopped: boolean = false;
-let reverseDirection: boolean = false;
-let frozenProgress: number = 0;
 
 function calculatePillProgress(): number {
   const camX = camera.position.x;
@@ -423,25 +408,29 @@ function updateObjectsWalkBy(progress: number) {
     },
   ];
 
-  let normalizedProgress = clamp(progress);
-  let effectiveNormalizedProgress = normalizedProgress;
+  const normalizedProgress = clamp(progress);
 
-  if (reverseDirection && frozenProgress > 0) {
-    const frozenNormalizedProgress = clamp(frozenProgress);
-    const progressFromFrozen = Math.max(
-      0,
-      Math.min(1, (progress - frozenProgress) / (1.0 - frozenProgress))
-    );
-    effectiveNormalizedProgress = Math.max(
-      0,
-      Math.min(1, frozenNormalizedProgress * (1.0 - progressFromFrozen))
-    );
+  const PHASE_1_END = 0.5;
+  const PHASE_2_END = 0.6;
+
+  let positionProgress: number;
+  if (normalizedProgress <= PHASE_1_END) {
+    const phase1Progress = normalizedProgress / PHASE_1_END;
+    positionProgress =
+      phase1Progress < 0.5
+        ? 2 * phase1Progress * phase1Progress
+        : 1 - 2 * (1 - phase1Progress) * (1 - phase1Progress);
+  } else if (normalizedProgress <= PHASE_2_END) {
+    positionProgress = 1.0;
+  } else {
+    const phase3Progress =
+      (normalizedProgress - PHASE_2_END) / (1.0 - PHASE_2_END);
+    const reversedProgress = 1.0 - phase3Progress;
+    positionProgress =
+      reversedProgress < 0.5
+        ? 2 * reversedProgress * reversedProgress
+        : 1 - 2 * (1 - reversedProgress) * (1 - reversedProgress);
   }
-
-  const positionProgress =
-    normalizedProgress < 0.5
-      ? 2 * normalizedProgress * normalizedProgress
-      : 1 - 2 * (1 - normalizedProgress) * (1 - normalizedProgress);
   const baseX = walkStart + (walkEnd - walkStart) * positionProgress;
   const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
   const pacmanY = camY + INTRO_POSITION_OFFSET.y;
@@ -476,10 +465,7 @@ function updateObjectsWalkBy(progress: number) {
         key === "pacman" || key === "pill"
           ? 0
           : Math.sin(
-              effectiveNormalizedProgress *
-                Math.PI *
-                2 *
-                INTRO_GHOST_BOUNCE.FREQUENCY +
+              normalizedProgress * Math.PI * 2 * INTRO_GHOST_BOUNCE.FREQUENCY +
                 zPhase
             ) * INTRO_GHOST_BOUNCE.AMPLITUDE;
       const animatedYOffset =
@@ -522,55 +508,15 @@ function updateObjectsWalkBy(progress: number) {
       }
 
       objectPositions[key] = new THREE.Vector3(finalX, finalY, finalZ);
-
-      if (
-        pacmanTransformed &&
-        !reverseDirection &&
-        key !== "pacman" &&
-        key !== "pill"
-      ) {
-        if (!ghostsFrozenPositions[key]) {
-          ghostsFrozenPositions[key] = objectPositions[key].clone();
-        }
-      }
     }
   );
-
-  if (
-    pacmanTransformed &&
-    pacmanTransformProgress >= 1.0 &&
-    !allObjectsStopped
-  ) {
-    allObjectsStopped = true;
-    if (!reverseDirection) {
-      reverseDirection = true;
-      frozenProgress = progress;
-      for (const key in ghostsFrozenPositions) {
-        if (ghostsFrozenPositions[key] && objectPositions[key]) {
-          ghostsFrozenPositions[key] = objectPositions[key].clone();
-        }
-      }
-      if (pacmanFrozenPosition && objectPositions["pacman"]) {
-        pacmanFrozenPosition = objectPositions["pacman"].clone();
-      }
-    }
-  }
 
   const pacmanPos = objectPositions["pacman"];
   const pillPosition = INTRO_OBJECT_POSITIONS.PILL;
   const positionThreshold = 0.01;
   const pillProgress = calculatePillProgress();
 
-  if (progress < pillProgress) {
-    pillCollected = false;
-    pacmanTransformed = false;
-    pacmanTransformProgress = 0;
-    pacmanFrozenPosition = null;
-    ghostsFrozenPositions = {};
-    allObjectsStopped = false;
-    reverseDirection = false;
-    frozenProgress = 0;
-  } else if (pacmanPos && !pillCollected) {
+  if (normalizedProgress < PHASE_1_END && pacmanPos && !pillCollected) {
     const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
     const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
     const distanceZ = Math.abs(pacmanPos.z - pillPosition.z);
@@ -581,10 +527,6 @@ function updateObjectsWalkBy(progress: number) {
       distanceZ < positionThreshold
     ) {
       pillCollected = true;
-      pacmanTransformed = true;
-      if (!pacmanFrozenPosition) {
-        pacmanFrozenPosition = pacmanPos.clone();
-      }
     }
   }
 
@@ -614,19 +556,8 @@ function updateObjectsWalkBy(progress: number) {
       const object = key === "pill" ? pill : ghosts[key];
       if (!object) return;
 
-      let position = objectPositions[key];
+      const position = objectPositions[key];
       if (!position) return;
-
-      if (key === "pacman" && pacmanFrozenPosition && !reverseDirection) {
-        position = pacmanFrozenPosition;
-      } else if (
-        key !== "pill" &&
-        ghostsFrozenPositions[key] &&
-        pacmanTransformed &&
-        !reverseDirection
-      ) {
-        position = ghostsFrozenPositions[key];
-      }
 
       object.position.set(position.x, position.y, position.z);
 
