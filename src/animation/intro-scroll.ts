@@ -27,6 +27,11 @@ import {
 } from "./constants";
 import { setFloorPlane, setObjectScale } from "./scene-utils";
 import { getIntroPacmanRotation } from "../core/debug-hud";
+import {
+  setMaterialOpacity,
+  forEachMaterial,
+  setObjectOpacity,
+} from "../core/material-utils";
 
 let introScrollTimeline: gsap.core.Timeline | null = null;
 let isIntroScrollActive = false;
@@ -674,23 +679,9 @@ function updateObjectsWalkBy(progress: number) {
           pillOpacity = OPACITY.HIDDEN;
         }
 
-        object.traverse((child) => {
-          if ((child as any).isMesh) {
-            const mesh = child as THREE.Mesh;
-            const mat = mesh.material;
-            if (mat) {
-              const materials = Array.isArray(mat) ? mat : [mat];
-              materials.forEach((material: any) => {
-                if (material) {
-                  material.opacity = pillOpacity;
-                  material.transparent = pillOpacity > 0;
-                  if (material.needsUpdate !== undefined) {
-                    material.needsUpdate = true;
-                  }
-                }
-              });
-            }
-          }
+        setObjectOpacity(object, pillOpacity, {
+          preserveTransmission: true,
+          skipCurrencySymbols: false,
         });
       } else {
         if (key === "pacman" && pacmanTransformed) {
