@@ -31,12 +31,6 @@ export function setMaterialOpacity(
   const currentOpacity = mat.opacity ?? 1;
   const currentTransparent = mat.transparent ?? false;
 
-  if (Math.abs(currentOpacity - opacity) < 0.0001) {
-    return;
-  }
-
-  mat.opacity = opacity;
-
   const shouldBeTransparent =
     preserveTransmission &&
     mat.transmission !== undefined &&
@@ -44,7 +38,18 @@ export function setMaterialOpacity(
       ? true
       : opacity > 0;
 
-  if (currentTransparent !== shouldBeTransparent) {
+  const opacityChanged = Math.abs(currentOpacity - opacity) >= 0.0001;
+  const transparentChanged = currentTransparent !== shouldBeTransparent;
+
+  if (!opacityChanged && !transparentChanged) {
+    return;
+  }
+
+  if (opacityChanged) {
+    mat.opacity = opacity;
+  }
+
+  if (transparentChanged) {
     mat.transparent = shouldBeTransparent;
     if (mat.needsUpdate !== undefined) {
       mat.needsUpdate = true;
