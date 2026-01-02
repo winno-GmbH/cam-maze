@@ -97,12 +97,18 @@ export function initIntroScrollAnimation() {
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           pillCollectedProgress = -1;
+          lastPillOpacity = -1;
+          cachedPillProgress = -1;
+          lastPillProgressFrame = -1;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
           pillCollectedProgress = -1;
+          lastPillOpacity = -1;
+          cachedPillProgress = -1;
+          lastPillProgressFrame = -1;
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -272,6 +278,9 @@ let lastFloorState: {
 } | null = null;
 
 let pillCollectedProgress: number = -1;
+let lastPillOpacity: number = -1;
+let cachedPillProgress: number = -1;
+let lastPillProgressFrame: number = -1;
 
 function calculatePillProgress(): number {
   const camX = camera.position.x;
@@ -409,7 +418,16 @@ function updateObjectsWalkBy(progress: number) {
 
   const normalizedProgress = clamp(progress);
   const TRANSFORMATION_DURATION = 0.1;
-  const pillProgress = calculatePillProgress();
+
+  const currentFrame = performance.now();
+  if (
+    cachedPillProgress < 0 ||
+    Math.abs(currentFrame - lastPillProgressFrame) > 16
+  ) {
+    cachedPillProgress = calculatePillProgress();
+    lastPillProgressFrame = currentFrame;
+  }
+  const pillProgress = cachedPillProgress;
 
   let positionProgress: number;
   let pacmanTransformProgress: number = 0;
@@ -632,10 +650,13 @@ function updateObjectsWalkBy(progress: number) {
           pillOpacity = OPACITY.HIDDEN;
         }
 
-        setObjectOpacity(object, pillOpacity, {
-          preserveTransmission: true,
-          skipCurrencySymbols: false,
-        });
+        if (Math.abs(lastPillOpacity - pillOpacity) >= 0.001) {
+          setObjectOpacity(object, pillOpacity, {
+            preserveTransmission: true,
+            skipCurrencySymbols: false,
+          });
+          lastPillOpacity = pillOpacity;
+        }
       } else {
         if (key === "pacman" && normalizedProgress >= pillProgress) {
           const baseScale = SCALE.PACMAN_INTRO;

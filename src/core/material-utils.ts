@@ -31,12 +31,10 @@ export function setMaterialOpacity(
   const currentOpacity = mat.opacity ?? 1;
   const currentTransparent = mat.transparent ?? false;
 
+  const hasTransmission =
+    mat.transmission !== undefined && mat.transmission > 0;
   const shouldBeTransparent =
-    preserveTransmission &&
-    mat.transmission !== undefined &&
-    mat.transmission > 0
-      ? true
-      : opacity > 0;
+    preserveTransmission && hasTransmission ? true : opacity > 0;
 
   const opacityChanged = Math.abs(currentOpacity - opacity) >= 0.0001;
   const transparentChanged = currentTransparent !== shouldBeTransparent;
