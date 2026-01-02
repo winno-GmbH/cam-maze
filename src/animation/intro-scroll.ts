@@ -517,7 +517,6 @@ function updateObjectsWalkBy(progress: number) {
   const pacmanPos = objectPositions["pacman"];
   const pillPosition = INTRO_OBJECT_POSITIONS.PILL;
   const positionThreshold = 0.01;
-  const pillProgress = calculatePillProgress();
 
   if (normalizedProgress < PHASE_1_END) {
     if (pacmanPos && !pillCollected) {
@@ -534,9 +533,10 @@ function updateObjectsWalkBy(progress: number) {
         pacmanTransformed = true;
       }
     }
-  }
-
-  if (normalizedProgress >= PHASE_1_END && normalizedProgress < PHASE_2_END) {
+  } else if (
+    normalizedProgress >= PHASE_1_END &&
+    normalizedProgress < PHASE_2_END
+  ) {
     if (Object.keys(frozenPositions).length === 0) {
       for (const key in objectPositions) {
         if (objectPositions[key]) {
@@ -544,7 +544,13 @@ function updateObjectsWalkBy(progress: number) {
         }
       }
     }
-  } else if (normalizedProgress < PHASE_1_END) {
+    if (pacmanTransformed) {
+      pacmanTransformProgress = Math.min(pacmanTransformProgress + 0.02, 1.0);
+    }
+  } else {
+    pillCollected = false;
+    pacmanTransformed = false;
+    pacmanTransformProgress = 0;
     frozenPositions = {};
   }
 
@@ -634,12 +640,12 @@ function updateObjectsWalkBy(progress: number) {
           }
         });
       } else {
-        if (key === "pacman" && pacmanTransformed) {
-          pacmanTransformProgress = Math.min(
-            pacmanTransformProgress + 0.02,
-            1.0
-          );
-
+        if (
+          key === "pacman" &&
+          normalizedProgress >= PHASE_1_END &&
+          normalizedProgress < PHASE_2_END &&
+          pacmanTransformed
+        ) {
           const baseScale = SCALE.PACMAN_INTRO;
           const targetScale = 0.15;
           const currentScale =
