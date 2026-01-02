@@ -162,12 +162,10 @@ export function startHomeLoop() {
     return;
   }
 
-  if (
-    povScrollTrigger &&
-    !povScrollTrigger.isActive &&
-    povScrollTrigger.progress > 0
-  ) {
-    return;
+  if (povScrollTrigger) {
+    if (povScrollTrigger.progress > 0) {
+      return;
+    }
   }
 
   isHomeLoopActive = true;
@@ -445,7 +443,16 @@ export function homeLoopHandler() {
 export function setupHomeLoopScrollHandler() {
   window.addEventListener("scroll", () => {
     const introScrollTrigger = ScrollTrigger.getById("introScroll");
+    const povScrollTrigger = ScrollTrigger.getById("povScroll");
+
     if (introScrollTrigger?.isActive) {
+      if (isHomeLoopActive) {
+        stopHomeLoop();
+      }
+      return;
+    }
+
+    if (povScrollTrigger && povScrollTrigger.progress > 0) {
       if (isHomeLoopActive) {
         stopHomeLoop();
       }
