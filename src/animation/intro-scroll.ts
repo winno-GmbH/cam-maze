@@ -94,6 +94,10 @@ export function initIntroScrollAnimation() {
           pillCollected = false;
           pacmanTransformed = false;
           pacmanTransformProgress = 0;
+          pacmanFrozenPosition = null;
+          ghostsFrozenPositions = {};
+          allObjectsStopped = false;
+          reverseDirection = false;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -102,6 +106,10 @@ export function initIntroScrollAnimation() {
           pillCollected = false;
           pacmanTransformed = false;
           pacmanTransformProgress = 0;
+          pacmanFrozenPosition = null;
+          ghostsFrozenPositions = {};
+          allObjectsStopped = false;
+          reverseDirection = false;
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -274,6 +282,9 @@ let pillCollected: boolean = false;
 let pacmanTransformed: boolean = false;
 let pacmanTransformProgress: number = 0;
 let pacmanFrozenPosition: THREE.Vector3 | null = null;
+let ghostsFrozenPositions: Record<string, THREE.Vector3> = {};
+let allObjectsStopped: boolean = false;
+let reverseDirection: boolean = false;
 
 function calculatePillProgress(): number {
   const camX = camera.position.x;
@@ -409,7 +420,11 @@ function updateObjectsWalkBy(progress: number) {
     },
   ];
 
-  const normalizedProgress = clamp(progress);
+  let normalizedProgress = clamp(progress);
+
+  if (reverseDirection) {
+    normalizedProgress = 1.0 - normalizedProgress;
+  }
 
   const positionProgress =
     normalizedProgress < 0.5
@@ -492,8 +507,23 @@ function updateObjectsWalkBy(progress: number) {
       }
 
       objectPositions[key] = new THREE.Vector3(finalX, finalY, finalZ);
+
+      if (pacmanTransformed && key !== "pacman" && key !== "pill") {
+        if (!ghostsFrozenPositions[key]) {
+          ghostsFrozenPositions[key] = objectPositions[key].clone();
+        }
+      }
     }
   );
+
+  if (
+    pacmanTransformed &&
+    pacmanTransformProgress >= 1.0 &&
+    !allObjectsStopped
+  ) {
+    allObjectsStopped = true;
+    reverseDirection = true;
+  }
 
   const pacmanPos = objectPositions["pacman"];
   const pillPosition = INTRO_OBJECT_POSITIONS.PILL;
@@ -505,6 +535,9 @@ function updateObjectsWalkBy(progress: number) {
     pacmanTransformed = false;
     pacmanTransformProgress = 0;
     pacmanFrozenPosition = null;
+    ghostsFrozenPositions = {};
+    allObjectsStopped = false;
+    reverseDirection = false;
   } else if (pacmanPos && !pillCollected) {
     const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
     const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
@@ -520,7 +553,6 @@ function updateObjectsWalkBy(progress: number) {
       if (!pacmanFrozenPosition) {
         pacmanFrozenPosition = pacmanPos.clone();
       }
-      pacmanTransformed = true;
     }
   }
 
@@ -555,6 +587,12 @@ function updateObjectsWalkBy(progress: number) {
 
       if (key === "pacman" && pacmanFrozenPosition) {
         position = pacmanFrozenPosition;
+      } else if (
+        key !== "pill" &&
+        ghostsFrozenPositions[key] &&
+        !reverseDirection
+      ) {
+        position = ghostsFrozenPositions[key];
       }
 
       object.position.set(position.x, position.y, position.z);
