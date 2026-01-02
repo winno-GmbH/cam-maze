@@ -659,7 +659,6 @@ function updateObjectsWalkBy(progress: number) {
                 const materials = Array.isArray(mat) ? mat : [mat];
                 materials.forEach((material: any) => {
                   material.opacity = pillOpacity;
-                  material.transparent = pillOpacity < 1.0;
                   if (material.needsUpdate !== undefined) {
                     material.needsUpdate = true;
                   }
