@@ -600,7 +600,7 @@ function updateObjectsWalkBy(progress: number) {
       let position = objectPositions[key];
       if (!position) return;
 
-      if (key === "pacman" && pacmanFrozenPosition) {
+      if (key === "pacman" && pacmanFrozenPosition && !reverseDirection) {
         position = pacmanFrozenPosition;
       } else if (
         key !== "pill" &&
@@ -658,7 +658,7 @@ function updateObjectsWalkBy(progress: number) {
       } else {
         if (key === "pacman" && pacmanTransformed) {
           pacmanTransformProgress = Math.min(
-            pacmanTransformProgress + 0.05,
+            pacmanTransformProgress + 0.02,
             1.0
           );
 
