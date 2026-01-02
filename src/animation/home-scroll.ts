@@ -22,7 +22,7 @@ import {
   forEachMaterial,
   setMaterialOpacity,
 } from "../core/material-utils";
-import { killObjectAnimations } from "./scene-utils";
+import { killObjectAnimations, setObjectScale } from "./scene-utils";
 import {
   SCROLL_SELECTORS,
   SCRUB_DURATION,
@@ -42,12 +42,10 @@ const clonedMaterials: THREE.Material[] = [];
 let cachedPaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null = null;
 let cachedPathsKey: string | null = null;
 
-
 let cachedLookAtPoints: THREE.Vector3[] | null = null;
 let cachedLookAtCurve: THREE.CubicBezierCurve3 | null = null;
 const tempEuler = new THREE.Euler();
 const DEG_TO_RAD = Math.PI / 180;
-
 
 const pacmanRotationCache = {
   xAxis: new THREE.Vector3(1, 0, 0),
@@ -67,7 +65,6 @@ function updatePacmanRotationCache(offsets: {
   y: number;
   z: number;
 }) {
-
   if (
     pacmanRotationCache.offsets.x === offsets.x &&
     pacmanRotationCache.offsets.y === offsets.y &&
@@ -76,9 +73,7 @@ function updatePacmanRotationCache(offsets: {
     return;
   }
 
-
   pacmanRotationCache.offsets = { ...offsets };
-
 
   pacmanRotationCache.xRotation.setFromAxisAngle(
     pacmanRotationCache.xAxis,
@@ -93,13 +88,11 @@ function updatePacmanRotationCache(offsets: {
     offsets.z * DEG_TO_RAD
   );
 
-
   pacmanRotationCache.pacmanLayDown
     .copy(LAY_DOWN_QUAT_1)
     .multiply(pacmanRotationCache.yRotation)
     .multiply(pacmanRotationCache.xRotation)
     .multiply(pacmanRotationCache.zRotation);
-
 
   pacmanRotationCache.endEuler.setFromQuaternion(
     pacmanRotationCache.pacmanLayDown
@@ -141,6 +134,11 @@ export function initHomeScrollAnimation() {
         preserveTransmission: true,
         skipCurrencySymbols: true,
       });
+
+      // Reset object scales to intro when leaving home-scroll (going to intro)
+      if (introScrollTrigger?.isActive) {
+        setObjectScale(object, key, "intro");
+      }
     });
 
     disposeClonedMaterials();
@@ -159,7 +157,6 @@ export function initHomeScrollAnimation() {
       if (introScrollTrigger?.isActive) {
         return;
       }
-
 
       if (pacmanMixer) {
         pacmanMixer.timeScale = 2.0;
@@ -213,14 +210,10 @@ export function initHomeScrollAnimation() {
           const progress = self.progress;
           const clampedProgress = Math.min(1, Math.max(0, progress));
 
-
-
-
           const cameraProgress = 1 - Math.pow(1 - clampedProgress, 1.5);
 
           const cameraPoint = cameraPath.getPointAt(cameraProgress);
           camera.position.copy(cameraPoint);
-
 
           if (!cachedLookAtPoints) {
             cachedLookAtPoints = [];
@@ -229,7 +222,6 @@ export function initHomeScrollAnimation() {
                 cachedLookAtPoints!.push(point.lookAt);
               }
             });
-
 
             if (cachedLookAtPoints.length >= 4) {
               cachedLookAtCurve = new THREE.CubicBezierCurve3(
@@ -245,9 +237,7 @@ export function initHomeScrollAnimation() {
             const lookAtPoint = cachedLookAtCurve.getPointAt(cameraProgress);
             camera.lookAt(lookAtPoint);
 
-
             const targetZRotation = -17 + cameraProgress * 17;
-
 
             tempEuler.setFromQuaternion(camera.quaternion);
             tempEuler.z = targetZRotation * DEG_TO_RAD;
@@ -276,9 +266,7 @@ export function initHomeScrollAnimation() {
       killObjectAnimations(object);
     });
 
-
     disposeClonedMaterials();
-
 
     const pathsKey = JSON.stringify(startPositions);
     let homeScrollPaths: Record<string, THREE.CurvePath<THREE.Vector3>>;
@@ -305,7 +293,6 @@ export function initHomeScrollAnimation() {
       forEachMaterial(
         object,
         (mat: any, mesh: THREE.Mesh) => {
-
           const isSharedMaterial =
             mat === ghostMaterial ||
             Object.values(materialMap).includes(mat) ||
@@ -332,7 +319,6 @@ export function initHomeScrollAnimation() {
               mesh.material = clonedMat;
             }
           } else {
-
             setMaterialOpacity(mat, currentMaterialOpacity, true);
           }
         },
@@ -346,15 +332,11 @@ export function initHomeScrollAnimation() {
         object.quaternion.clone();
       const startEuler = new THREE.Euler().setFromQuaternion(startRot);
 
-
-
       let endEuler: THREE.Euler;
       if (key === "pacman") {
-
         updatePacmanRotationCache(PACMAN_ROTATION_OFFSETS);
         endEuler = pacmanRotationCache.endEuler.clone();
       } else {
-
         endEuler = new THREE.Euler().setFromQuaternion(LAY_DOWN_QUAT_1);
       }
 
@@ -381,8 +363,6 @@ export function initHomeScrollAnimation() {
       });
     });
 
-
-
     const objectTimings = [
       [0.0, 0.7],
       [0.05, 0.75],
@@ -399,7 +379,6 @@ export function initHomeScrollAnimation() {
       const animProps = animPropsArray[index];
       const timing = objectTimings[index] || [0, 1];
       const [startPercent, endPercent] = timing;
-
 
       const startTime = startPercent;
       const duration = endPercent - startPercent;
@@ -433,31 +412,22 @@ export function initHomeScrollAnimation() {
               return;
             }
 
-
-
-
             const rawProgress = animProps.progress;
             const easedProgress = rawProgress * rawProgress * rawProgress;
-
 
             const pathPoint = data.path.getPointAt(easedProgress);
             data.object.position.copy(pathPoint);
 
-
-
             let startEuler = data.startEuler;
             let endEuler = data.endEuler;
-
 
             let finalRotX: number;
             let finalRotY: number;
             let finalRotZ: number;
 
             if (data.key === "pacman") {
-
               updatePacmanRotationCache(PACMAN_ROTATION_OFFSETS);
               const cachedEndEuler = pacmanRotationCache.endEuler;
-
 
               finalRotX =
                 startEuler.x +
@@ -469,12 +439,10 @@ export function initHomeScrollAnimation() {
                 startEuler.z +
                 (cachedEndEuler.z - startEuler.z) * easedProgress;
 
-
               if (pacmanMixer) {
                 pacmanMixer.update(clock.getDelta());
               }
             } else {
-
               finalRotX =
                 startEuler.x + (endEuler.x - startEuler.x) * easedProgress;
               finalRotY =
@@ -483,17 +451,12 @@ export function initHomeScrollAnimation() {
                 startEuler.z + (endEuler.z - startEuler.z) * easedProgress;
             }
 
-
-
             data.object.rotation.set(finalRotX, finalRotY, finalRotZ);
             data.object.quaternion.setFromEuler(data.object.rotation);
             data.object.updateMatrixWorld(false);
 
-
-
             if (data.key === "pacman") {
               requestAnimationFrame(() => {
-
                 const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
                 if (homeScrollTrigger?.isActive && data.object) {
                   data.object.rotation.set(finalRotX, finalRotY, finalRotZ);
@@ -503,16 +466,11 @@ export function initHomeScrollAnimation() {
               });
             }
 
-
-
-
             const opacityFadeStart = 0.8;
             let finalOpacity: number;
             if (rawProgress < opacityFadeStart) {
-
               finalOpacity = OPACITY.FULL;
             } else {
-
               const fadeProgress =
                 (rawProgress - opacityFadeStart) / (1.0 - opacityFadeStart);
               finalOpacity = OPACITY.FULL * (1 - fadeProgress);

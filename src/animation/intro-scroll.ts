@@ -126,6 +126,11 @@ export function initIntroScrollAnimation() {
           restoreFloor();
           setIntroScrollLocked(false);
 
+          // Reset object scales to home when leaving intro-scroll
+          Object.entries(ghosts).forEach(([key, object]) => {
+            setObjectScale(object, key, "home");
+          });
+
           if (pacmanMixer) {
             pacmanMixer.timeScale = PACMAN_MOUTH_SPEED.NORMAL;
           }
@@ -333,6 +338,23 @@ function updateObjectsWalkBy(progress: number) {
   const camX = camera.position.x;
   const camY = camera.position.y;
   const camZ = camera.position.z;
+
+  // Log camera rotation in every frame
+  const euler = new THREE.Euler().setFromQuaternion(camera.quaternion);
+  const eulerDeg = {
+    x: (euler.x * 180) / Math.PI,
+    y: (euler.y * 180) / Math.PI,
+    z: (euler.z * 180) / Math.PI,
+  };
+  console.log(
+    `[Intro Camera] Progress: ${progress.toFixed(3)}, Position: (${camX.toFixed(
+      3
+    )}, ${camY.toFixed(3)}, ${camZ.toFixed(
+      3
+    )}), Rotation: (${eulerDeg.x.toFixed(1)}°, ${eulerDeg.y.toFixed(
+      1
+    )}°, ${eulerDeg.z.toFixed(1)}°)`
+  );
 
   if (!isFinite(camX) || !isFinite(camY) || !isFinite(camZ)) {
     return;

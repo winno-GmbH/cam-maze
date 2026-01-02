@@ -27,6 +27,7 @@ import {
 } from "./constants";
 import { setObjectScale } from "./scene-utils";
 import { setObjectOpacity } from "../core/material-utils";
+import { getStartPosition, getLookAtPosition } from "../paths/pathpoints";
 
 const domElementCache: Record<
   number,
@@ -178,6 +179,12 @@ export function initPovScrollAnimation() {
           isLeavingPOV = true;
           handleLeavePOV();
           resetState();
+          
+          // Reset object scales to home when leaving pov-scroll (going to outro/home)
+          Object.entries(ghosts).forEach(([key, object]) => {
+            setObjectScale(object, key, "home");
+          });
+          
           if (povScrollTimeline) {
             povScrollTimeline.progress(1);
             const povPaths = getPovPaths();
@@ -193,12 +200,29 @@ export function initPovScrollAnimation() {
           isLeavingPOV = true;
           handleLeavePOV();
           resetState();
+          
+          // Reset camera to intro-scroll position and rotation immediately
+          const introStartPosition = getStartPosition();
+          const introLookAtPosition = getLookAtPosition();
+          camera.position.copy(introStartPosition);
+          camera.lookAt(introLookAtPosition);
+          camera.fov = 50; // Reset to default FOV
+          camera.updateProjectionMatrix();
+          
+          // Reset object scales to intro when leaving pov-scroll back to intro
+          Object.entries(ghosts).forEach(([key, object]) => {
+            setObjectScale(object, key, "intro");
+          });
+          
+          console.log(
+            `[POV->Intro Transition] Camera reset to intro position: (${introStartPosition.x.toFixed(3)}, ${introStartPosition.y.toFixed(3)}, ${introStartPosition.z.toFixed(3)}), LookAt: (${introLookAtPosition.x.toFixed(3)}, ${introLookAtPosition.y.toFixed(3)}, ${introLookAtPosition.z.toFixed(3)})`
+          );
+          
           if (povScrollTimeline) {
             povScrollTimeline.progress(0);
             const povPaths = getPovPaths();
             if (povPaths && povPaths.camera) {
               const startPosition = povPaths.camera.getPointAt(0);
-              updateCamera(0, povPaths, startPosition);
               updateGhosts(startPosition, 0, povPaths);
             }
           }
@@ -280,6 +304,17 @@ function updateCamera(
   povPaths: Record<string, THREE.CurvePath<THREE.Vector3>>,
   position: THREE.Vector3
 ) {
+  // Log camera rotation in every frame
+  const euler = new THREE.Euler().setFromQuaternion(camera.quaternion);
+  const eulerDeg = {
+    x: (euler.x * 180) / Math.PI,
+    y: (euler.y * 180) / Math.PI,
+    z: (euler.z * 180) / Math.PI,
+  };
+  console.log(
+    `[POV Camera] Progress: ${progress.toFixed(3)}, Position: (${position.x.toFixed(3)}, ${position.y.toFixed(3)}, ${position.z.toFixed(3)}), Rotation: (${eulerDeg.x.toFixed(1)}°, ${eulerDeg.y.toFixed(1)}°, ${eulerDeg.z.toFixed(1)}°)`
+  );
+
   if (isLeavingPOV) {
     camera.position.copy(position);
     camera.fov = wideFOV;
