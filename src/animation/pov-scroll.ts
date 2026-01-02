@@ -264,14 +264,8 @@ export function initPovScrollAnimation() {
             );
           });
           
-          if (povScrollTimeline) {
-            povScrollTimeline.progress(0);
-            const povPaths = getPovPaths();
-            if (povPaths && povPaths.camera) {
-              const startPosition = povPaths.camera.getPointAt(0);
-              updateGhosts(startPosition, 0, povPaths);
-            }
-          }
+          // Don't reset pov-scroll timeline or update ghosts when leaving back to intro-scroll
+          // The intro-scroll animation will handle the object positions
           isLeavingPOV = false;
         },
       },
