@@ -22,6 +22,7 @@ import {
   INTRO_OBJECT_ROTATIONS,
   INTRO_OBJECT_ANIMATION_OFFSETS,
   INTRO_GHOST_BOUNCE,
+  SCALE,
   clamp,
 } from "./constants";
 import { setFloorPlane, setObjectScale } from "./scene-utils";
@@ -92,6 +93,7 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
           pillCollected = false;
           pacmanTransformed = false;
+          pacmanTransformProgress = 0;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -99,6 +101,7 @@ export function initIntroScrollAnimation() {
           setIntroScrollLocked(true);
           pillCollected = false;
           pacmanTransformed = false;
+          pacmanTransformProgress = 0;
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -269,6 +272,7 @@ let lastFloorState: {
 
 let pillCollected: boolean = false;
 let pacmanTransformed: boolean = false;
+let pacmanTransformProgress: number = 0;
 
 function calculatePillProgress(): number {
   const camX = camera.position.x;
@@ -498,6 +502,7 @@ function updateObjectsWalkBy(progress: number) {
   if (progress < pillProgress) {
     pillCollected = false;
     pacmanTransformed = false;
+    pacmanTransformProgress = 0;
   } else if (pacmanPos && !pillCollected) {
     const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
     const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
@@ -589,16 +594,26 @@ function updateObjectsWalkBy(progress: number) {
         });
       } else {
         if (key === "pacman" && pacmanTransformed) {
-          object.scale.set(1.5, 1.5, 1.5);
+          pacmanTransformProgress = Math.min(
+            pacmanTransformProgress + 0.05,
+            1.0
+          );
+
+          const baseScale = SCALE.PACMAN_INTRO;
+          const targetScale = baseScale * 1.2;
+          const currentScale =
+            baseScale + (targetScale - baseScale) * pacmanTransformProgress;
+          object.scale.set(currentScale, currentScale, currentScale);
+
           if (pacmanTargetQuaternion) {
             const baseEuler = new THREE.Euler().setFromQuaternion(
               pacmanTargetQuaternion
             );
-            object.rotation.set(
-              baseEuler.x,
-              baseEuler.y + Math.PI,
-              baseEuler.z
-            );
+            const targetY = baseEuler.y + Math.PI;
+            const currentY =
+              baseEuler.y + (targetY - baseEuler.y) * pacmanTransformProgress;
+
+            object.rotation.set(baseEuler.x, currentY, baseEuler.z);
             object.quaternion.setFromEuler(object.rotation);
           }
         } else {
