@@ -24,7 +24,7 @@ import {
   getHomeLoopStartT,
 } from "./object-state";
 import { isCurrencySymbol } from "./util";
-import { getStartPosition, getLookAtPosition } from "../paths/pathpoints";
+import { getLookAtPosition } from "../paths/pathpoints";
 
 const LOOP_DURATION = 50;
 let isHomeLoopActive = true;
@@ -188,78 +188,6 @@ export function startHomeLoop() {
 
   rotationTransitionTime = 0;
   startRotations = {};
-
-  const targetCameraPos = getStartPosition();
-  const currentCameraPos = camera.position.clone();
-  const cameraDistance = currentCameraPos.distanceTo(targetCameraPos);
-
-  const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
-  const wasInHomeScroll = homeScrollTrigger && homeScrollTrigger.progress > 0;
-
-  const checkAndStop = () => {
-    if (isTransitioningToIntro) {
-      gsap.killTweensOf(camera.position);
-      gsap.killTweensOf(camera.quaternion);
-      gsap.killTweensOf(camera.rotation);
-      return true;
-    }
-    const introScrollTrigger = ScrollTrigger.getById("introScroll");
-    if (introScrollTrigger?.isActive) {
-      gsap.killTweensOf(camera.position);
-      gsap.killTweensOf(camera.quaternion);
-      gsap.killTweensOf(camera.rotation);
-      return true;
-    }
-    return false;
-  };
-
-  if (cameraDistance > 0.1) {
-    gsap.killTweensOf(camera.position);
-    gsap.killTweensOf(camera.quaternion);
-    gsap.killTweensOf(camera.rotation);
-
-    if (checkAndStop()) return;
-
-    const transitionDuration = wasInHomeScroll ? 1.0 : 0.5;
-
-    const positionTween = gsap.to(camera.position, {
-      x: targetCameraPos.x,
-      y: targetCameraPos.y,
-      z: targetCameraPos.z,
-      duration: transitionDuration,
-      ease: "power2.out",
-      onUpdate: () => {
-        if (checkAndStop()) {
-          positionTween.kill();
-          return;
-        }
-        camera.updateProjectionMatrix();
-      },
-    });
-
-    const targetLookAt = getLookAtPosition();
-    const lookAtProps = { t: 0 };
-    const startLookAt = new THREE.Vector3();
-    camera.getWorldDirection(startLookAt);
-    startLookAt.multiplyScalar(10).add(currentCameraPos);
-
-    const lookAtTween = gsap.to(lookAtProps, {
-      t: 1,
-      duration: transitionDuration,
-      ease: "power2.out",
-      onUpdate: () => {
-        if (checkAndStop()) {
-          lookAtTween.kill();
-          return;
-        }
-        const currentLookAt = startLookAt
-          .clone()
-          .lerp(targetLookAt, lookAtProps.t);
-        camera.lookAt(currentLookAt);
-        camera.updateProjectionMatrix();
-      },
-    });
-  }
 
   applyHomeLoopPreset(true);
 
