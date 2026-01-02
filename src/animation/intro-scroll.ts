@@ -679,10 +679,19 @@ function updateObjectsWalkBy(progress: number) {
           pillOpacity = OPACITY.HIDDEN;
         }
 
-        setObjectOpacity(object, pillOpacity, {
-          preserveTransmission: true,
-          skipCurrencySymbols: false,
-        });
+        forEachMaterial(
+          object,
+          (material: any) => {
+            if (material) {
+              material.opacity = pillOpacity;
+              material.transparent = pillOpacity > 0;
+              if (material.needsUpdate !== undefined) {
+                material.needsUpdate = true;
+              }
+            }
+          },
+          { skipCurrencySymbols: false }
+        );
       } else {
         if (key === "pacman" && pacmanTransformed) {
           const baseScale = SCALE.PACMAN_INTRO;
