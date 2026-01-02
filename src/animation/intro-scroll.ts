@@ -97,6 +97,11 @@ export function initIntroScrollAnimation() {
           lastPillProgressFrame = -1;
         },
         onEnterBack: () => {
+          stopHomeLoop();
+          gsap.killTweensOf(camera.position);
+          gsap.killTweensOf(camera.quaternion);
+          gsap.killTweensOf(camera.rotation);
+
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
@@ -105,14 +110,8 @@ export function initIntroScrollAnimation() {
           cachedPillProgress = -1;
           lastPillProgressFrame = -1;
 
-          stopHomeLoop();
-
           const introStartPosition = getStartPosition();
           const introLookAtPosition = getLookAtPosition();
-
-          gsap.killTweensOf(camera.position);
-          gsap.killTweensOf(camera.quaternion);
-          gsap.killTweensOf(camera.rotation);
 
           camera.position.set(
             introStartPosition.x,

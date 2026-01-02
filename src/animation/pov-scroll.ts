@@ -196,11 +196,14 @@ export function initPovScrollAnimation() {
           isLeavingPOV = false;
         },
         onLeaveBack: () => {
+          stopHomeLoop();
+          gsap.killTweensOf(camera.position);
+          gsap.killTweensOf(camera.quaternion);
+          gsap.killTweensOf(camera.rotation);
+          
           isLeavingPOV = true;
           handleLeavePOV();
           resetState();
-          
-          stopHomeLoop();
           
           Object.entries(ghosts).forEach(([key, object]) => {
             setObjectScale(object, key, "intro");
@@ -208,10 +211,6 @@ export function initPovScrollAnimation() {
           
           const introStartPosition = getStartPosition();
           const introLookAtPosition = getLookAtPosition();
-          
-          gsap.killTweensOf(camera.position);
-          gsap.killTweensOf(camera.quaternion);
-          gsap.killTweensOf(camera.rotation);
           
           camera.position.set(
             introStartPosition.x,

@@ -191,20 +191,37 @@ export function startHomeLoop() {
   const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
   const wasInHomeScroll = homeScrollTrigger && homeScrollTrigger.progress > 0;
 
+  const checkAndStop = () => {
+    const introScrollTrigger = ScrollTrigger.getById("introScroll");
+    if (introScrollTrigger?.isActive) {
+      gsap.killTweensOf(camera.position);
+      gsap.killTweensOf(camera.quaternion);
+      gsap.killTweensOf(camera.rotation);
+      return true;
+    }
+    return false;
+  };
+
   if (cameraDistance > 0.1) {
     gsap.killTweensOf(camera.position);
     gsap.killTweensOf(camera.quaternion);
     gsap.killTweensOf(camera.rotation);
 
+    if (checkAndStop()) return;
+
     const transitionDuration = wasInHomeScroll ? 1.0 : 0.5;
 
-    gsap.to(camera.position, {
+    const positionTween = gsap.to(camera.position, {
       x: targetCameraPos.x,
       y: targetCameraPos.y,
       z: targetCameraPos.z,
       duration: transitionDuration,
       ease: "power2.out",
       onUpdate: () => {
+        if (checkAndStop()) {
+          positionTween.kill();
+          return;
+        }
         camera.updateProjectionMatrix();
       },
     });
@@ -215,11 +232,15 @@ export function startHomeLoop() {
     camera.getWorldDirection(startLookAt);
     startLookAt.multiplyScalar(10).add(currentCameraPos);
 
-    gsap.to(lookAtProps, {
+    const lookAtTween = gsap.to(lookAtProps, {
       t: 1,
       duration: transitionDuration,
       ease: "power2.out",
       onUpdate: () => {
+        if (checkAndStop()) {
+          lookAtTween.kill();
+          return;
+        }
         const currentLookAt = startLookAt
           .clone()
           .lerp(targetLookAt, lookAtProps.t);
@@ -228,6 +249,7 @@ export function startHomeLoop() {
       },
     });
   } else {
+    if (checkAndStop()) return;
     camera.position.copy(targetCameraPos);
     const targetLookAt = getLookAtPosition();
     camera.lookAt(targetLookAt);
@@ -445,7 +467,20 @@ export function homeLoopHandler() {
 export function setupHomeLoopScrollHandler() {
   window.addEventListener("scroll", () => {
     const introScrollTrigger = ScrollTrigger.getById("introScroll");
+    const povScrollTrigger = ScrollTrigger.getById("povScroll");
+
     if (introScrollTrigger?.isActive) {
+      if (isHomeLoopActive) {
+        stopHomeLoop();
+      }
+      return;
+    }
+
+    if (
+      povScrollTrigger &&
+      !povScrollTrigger.isActive &&
+      povScrollTrigger.progress > 0
+    ) {
       if (isHomeLoopActive) {
         stopHomeLoop();
       }
