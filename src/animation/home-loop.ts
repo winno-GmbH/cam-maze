@@ -45,7 +45,6 @@ const tempQuaternion = new THREE.Quaternion();
 const lastScales: Record<string, number> = {};
 
 function createPillPositionGuides(pillPos: THREE.Vector3) {
-
   if (pillGuides) {
     scene.remove(pillGuides);
     pillGuides = null;
@@ -56,11 +55,9 @@ function createPillPositionGuides(pillPos: THREE.Vector3) {
 
   const guideSize = 1.0;
 
-
   const axesHelper = new THREE.AxesHelper(guideSize);
   axesHelper.position.copy(pillPos);
   pillGuides.add(axesHelper);
-
 
   const sphereGeometry = new THREE.SphereGeometry(0.2, 16, 16);
   const sphereMaterial = new THREE.MeshBasicMaterial({
@@ -73,7 +70,6 @@ function createPillPositionGuides(pillPos: THREE.Vector3) {
   sphere.position.copy(pillPos);
   pillGuides.add(sphere);
 
-
   const boxGeometry = new THREE.BoxGeometry(guideSize, guideSize, guideSize);
   const boxMaterial = new THREE.LineBasicMaterial({
     color: 0x00ff00,
@@ -84,12 +80,10 @@ function createPillPositionGuides(pillPos: THREE.Vector3) {
   boxWireframe.position.copy(pillPos);
   pillGuides.add(boxWireframe);
 
-
   const lineMaterial = new THREE.LineBasicMaterial({
     color: 0xffff00,
     linewidth: 3,
   });
-
 
   const xLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(0, pillPos.y, pillPos.z),
@@ -101,7 +95,6 @@ function createPillPositionGuides(pillPos: THREE.Vector3) {
   );
   pillGuides.add(xLine);
 
-
   const yLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(pillPos.x, 0, pillPos.z),
     pillPos,
@@ -111,7 +104,6 @@ function createPillPositionGuides(pillPos: THREE.Vector3) {
     new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 })
   );
   pillGuides.add(yLine);
-
 
   const zLineGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(pillPos.x, pillPos.y, 0),
@@ -177,19 +169,15 @@ export function startHomeLoop() {
   rotationTransitionTime = 0;
   startRotations = {};
 
-
   const targetCameraPos = getStartPosition();
   const currentCameraPos = camera.position.clone();
   const cameraDistance = currentCameraPos.distanceTo(targetCameraPos);
 
-
   const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
   const wasInHomeScroll = homeScrollTrigger && homeScrollTrigger.progress > 0;
 
-
   if (cameraDistance > 0.1) {
     gsap.killTweensOf(camera.position);
-
 
     const transitionDuration = wasInHomeScroll ? 1.0 : 0.5;
 
@@ -203,7 +191,6 @@ export function startHomeLoop() {
         camera.updateProjectionMatrix();
       },
     });
-
 
     const targetLookAt = getLookAtPosition();
     const lookAtProps = { t: 0 };
@@ -224,7 +211,6 @@ export function startHomeLoop() {
       },
     });
   } else {
-
     camera.position.copy(targetCameraPos);
     const targetLookAt = getLookAtPosition();
     camera.lookAt(targetLookAt);
@@ -241,24 +227,17 @@ export function startHomeLoop() {
       if (hasBeenPausedBefore && savedT !== null) {
         const targetPosition = path.getPointAt(savedT);
         if (targetPosition) {
-
           const currentPosition = ghost.position.clone();
           const distance = currentPosition.distanceTo(targetPosition);
-
 
           const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
           const isTransitioningFromHomeScroll =
             homeScrollTrigger && homeScrollTrigger.isActive;
 
-
           if (distance > 0.001 || isTransitioningFromHomeScroll) {
-
             gsap.killTweensOf(ghost.position);
 
-
             ghost.position.copy(currentPosition);
-
-
 
             gsap.to(ghost.position, {
               x: targetPosition.x,
@@ -274,7 +253,6 @@ export function startHomeLoop() {
               },
             });
           } else {
-
             ghost.position.copy(targetPosition);
             updateObjectPosition(key, targetPosition);
           }
@@ -284,14 +262,11 @@ export function startHomeLoop() {
       const savedRotation = homeLoopStartRot[key];
 
       if (savedRotation) {
-
         const currentQuat = ghost.quaternion.clone();
         const angle = currentQuat.angleTo(savedRotation);
 
-
         if (angle > 0.01) {
           gsap.killTweensOf(ghost.quaternion);
-
 
           const quatProps = { t: 0 };
           gsap.to(quatProps, {
@@ -364,7 +339,6 @@ function updateHomeLoop(delta: number) {
   const introScrollTrigger = ScrollTrigger.getById("introScroll");
   if (introScrollTrigger?.isActive) return;
 
-
   const homeScrollTrigger = ScrollTrigger.getById("homeScroll");
   if (homeScrollTrigger?.isActive) return;
 
@@ -389,7 +363,6 @@ function updateHomeLoop(delta: number) {
   );
   const isTransitioning = hasBeenPausedBefore && transitionProgress < 1;
 
-
   for (let i = 0; i < ghostEntries.length; i++) {
     const [key, ghost] = ghostEntries[i];
     const path = homePaths[key];
@@ -402,14 +375,12 @@ function updateHomeLoop(delta: number) {
         updateObjectPosition(key, position);
       }
 
-
       const expectedScale =
         key === "pacman" ? SCALE.PACMAN_HOME : SCALE.GHOST_NORMAL;
       if (lastScales[key] !== expectedScale) {
         setObjectScale(ghost, key, "home");
         lastScales[key] = expectedScale;
       }
-
 
       tempQuaternion.set(0, 0, 0, 1);
       if (homeLoopTangentSmoothers[key] && objectT > 0) {
@@ -418,7 +389,6 @@ function updateHomeLoop(delta: number) {
           const smoothTangent =
             homeLoopTangentSmoothers[key].update(rawTangent);
           const objectType = key === "pacman" ? "pacman" : "ghost";
-
 
           calculateObjectOrientation(tempObject, smoothTangent, objectType);
           tempQuaternion.copy(tempObject.quaternion);
@@ -445,6 +415,12 @@ function updateHomeLoop(delta: number) {
 }
 
 export function homeLoopHandler() {
+  // Don't start home-loop if intro-scroll is active
+  const introScrollTrigger = ScrollTrigger.getById("introScroll");
+  if (introScrollTrigger?.isActive) {
+    return;
+  }
+
   if (window.scrollY === 0) {
     startHomeLoop();
   }
@@ -452,6 +428,15 @@ export function homeLoopHandler() {
 
 export function setupHomeLoopScrollHandler() {
   window.addEventListener("scroll", () => {
+    // Don't start home-loop if intro-scroll is active
+    const introScrollTrigger = ScrollTrigger.getById("introScroll");
+    if (introScrollTrigger?.isActive) {
+      if (isHomeLoopActive) {
+        stopHomeLoop();
+      }
+      return;
+    }
+
     if (window.scrollY === 0) {
       if (!isHomeLoopActive) {
         startHomeLoop();

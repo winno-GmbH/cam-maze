@@ -28,6 +28,7 @@ import {
 import { setObjectScale } from "./scene-utils";
 import { setObjectOpacity } from "../core/material-utils";
 import { getStartPosition, getLookAtPosition } from "../paths/pathpoints";
+import { stopHomeLoop } from "./home-loop";
 
 const domElementCache: Record<
   number,
@@ -201,6 +202,12 @@ export function initPovScrollAnimation() {
           handleLeavePOV();
           resetState();
           
+          // Stop home-loop if it's active to prevent it from interfering
+          const introScrollTrigger = ScrollTrigger.getById("introScroll");
+          if (introScrollTrigger?.isActive) {
+            stopHomeLoop();
+          }
+          
           // Reset object scales to intro when leaving pov-scroll back to intro
           Object.entries(ghosts).forEach(([key, object]) => {
             setObjectScale(object, key, "intro");
@@ -212,12 +219,12 @@ export function initPovScrollAnimation() {
             const introStartPosition = getStartPosition();
             const introLookAtPosition = getLookAtPosition();
             
-            // Kill any ongoing camera animations
+            // Kill any ongoing camera animations (including home-loop animations)
             gsap.killTweensOf(camera.position);
             gsap.killTweensOf(camera.quaternion);
             gsap.killTweensOf(camera.rotation);
             
-            // Set camera position and rotation immediately
+            // Set camera position and rotation immediately (no animation)
             camera.position.set(
               introStartPosition.x,
               introStartPosition.y,
