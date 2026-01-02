@@ -54,8 +54,18 @@ async function main() {
   const introScrollTrigger = ScrollTrigger.getById("introScroll");
   const povScrollTrigger = ScrollTrigger.getById("povScroll");
   
-  if (window.scrollY === 0 && !introScrollTrigger?.isActive && (!povScrollTrigger || povScrollTrigger.progress === 0)) {
-    startHomeLoop();
+  if (window.scrollY === 0) {
+    if (introScrollTrigger?.isActive) {
+      const introStartPosition = getStartPosition();
+      const introLookAtPosition = getLookAtPosition();
+      camera.position.set(introStartPosition.x, introStartPosition.y, introStartPosition.z);
+      camera.lookAt(introLookAtPosition);
+      camera.fov = 50;
+      camera.updateProjectionMatrix();
+      camera.updateMatrixWorld(true);
+    } else if (!povScrollTrigger || povScrollTrigger.progress === 0) {
+      startHomeLoop();
+    }
   } else {
     if (introScrollTrigger?.isActive) {
       const introStartPosition = getStartPosition();
