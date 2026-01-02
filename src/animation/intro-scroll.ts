@@ -681,8 +681,13 @@ function updateObjectsWalkBy(progress: number) {
             if (mat) {
               const materials = Array.isArray(mat) ? mat : [mat];
               materials.forEach((material: any) => {
-                material.opacity = pillOpacity;
-                material.transparent = pillOpacity < 1.0;
+                if (material) {
+                  material.opacity = pillOpacity;
+                  material.transparent = pillOpacity > 0;
+                  if (material.needsUpdate !== undefined) {
+                    material.needsUpdate = true;
+                  }
+                }
               });
             }
           }
