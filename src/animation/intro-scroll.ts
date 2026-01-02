@@ -96,21 +96,13 @@ export function initIntroScrollAnimation() {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
-          pillCollected = false;
-          pacmanTransformed = false;
-          pacmanTransformProgress = 0;
-          frozenPositions = {};
-          transformationStartProgress = 0;
+          pillCollectedProgress = -1;
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
-          pillCollected = false;
-          pacmanTransformed = false;
-          pacmanTransformProgress = 0;
-          frozenPositions = {};
-          transformationStartProgress = 0;
+          pillCollectedProgress = -1;
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -279,11 +271,7 @@ let lastFloorState: {
   transparent: boolean;
 } | null = null;
 
-let pillCollected: boolean = false;
-let pacmanTransformed: boolean = false;
-let pacmanTransformProgress: number = 0;
-let frozenPositions: Record<string, THREE.Vector3> = {};
-let transformationStartProgress: number = 0;
+let pillCollectedProgress: number = -1;
 
 function calculatePillProgress(): number {
   const camX = camera.position.x;
@@ -420,37 +408,33 @@ function updateObjectsWalkBy(progress: number) {
   ];
 
   const normalizedProgress = clamp(progress);
+  const pillProgress = calculatePillProgress();
+  const TRANSFORMATION_DURATION = 0.1;
 
   let positionProgress: number;
-  if (!pacmanTransformed) {
+  let pacmanTransformProgress: number = 0;
+  let isTransforming: boolean = false;
+
+  if (normalizedProgress < pillProgress) {
     positionProgress =
       normalizedProgress < 0.5
         ? 2 * normalizedProgress * normalizedProgress
         : 1 - 2 * (1 - normalizedProgress) * (1 - normalizedProgress);
+  } else if (normalizedProgress < pillProgress + TRANSFORMATION_DURATION) {
+    positionProgress = 1.0;
+    isTransforming = true;
+    pacmanTransformProgress =
+      (normalizedProgress - pillProgress) / TRANSFORMATION_DURATION;
   } else {
-    if (transformationStartProgress === 0) {
-      transformationStartProgress = normalizedProgress;
-    }
-
-    const TRANSFORMATION_DURATION = 0.1;
-    const transformationProgress =
-      (normalizedProgress - transformationStartProgress) /
-      TRANSFORMATION_DURATION;
-
-    if (transformationProgress < 1.0) {
-      positionProgress = 1.0;
-    } else {
-      const returnProgress =
-        (normalizedProgress -
-          transformationStartProgress -
-          TRANSFORMATION_DURATION) /
-        (1.0 - transformationStartProgress - TRANSFORMATION_DURATION);
-      const reversedProgress = Math.max(0, Math.min(1, 1.0 - returnProgress));
-      positionProgress =
-        reversedProgress < 0.5
-          ? 2 * reversedProgress * reversedProgress
-          : 1 - 2 * (1 - reversedProgress) * (1 - reversedProgress);
-    }
+    const returnProgress =
+      (normalizedProgress - pillProgress - TRANSFORMATION_DURATION) /
+      (1.0 - pillProgress - TRANSFORMATION_DURATION);
+    const reversedProgress = Math.max(0, Math.min(1, 1.0 - returnProgress));
+    positionProgress =
+      reversedProgress < 0.5
+        ? 2 * reversedProgress * reversedProgress
+        : 1 - 2 * (1 - reversedProgress) * (1 - reversedProgress);
+    pacmanTransformProgress = 1.0;
   }
   const baseX = walkStart + (walkEnd - walkStart) * positionProgress;
   const pacmanX = baseX + INTRO_POSITION_OFFSET.x;
@@ -532,35 +516,7 @@ function updateObjectsWalkBy(progress: number) {
     }
   );
 
-  const pacmanPos = objectPositions["pacman"];
-  const pillPosition = INTRO_OBJECT_POSITIONS.PILL;
-  const positionThreshold = 0.01;
-
-  if (pacmanPos && !pillCollected) {
-    const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
-    const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
-    const distanceZ = Math.abs(pacmanPos.z - pillPosition.z);
-
-    if (
-      distanceX < positionThreshold &&
-      distanceY < positionThreshold &&
-      distanceZ < positionThreshold
-    ) {
-      pillCollected = true;
-      pacmanTransformed = true;
-      if (Object.keys(frozenPositions).length === 0) {
-        for (const key in objectPositions) {
-          if (objectPositions[key]) {
-            frozenPositions[key] = objectPositions[key].clone();
-          }
-        }
-      }
-    }
-  }
-
-  if (pacmanTransformed) {
-    pacmanTransformProgress = Math.min(pacmanTransformProgress + 0.02, 1.0);
-  }
+  const isPillCollected = normalizedProgress >= pillProgress;
 
   if (pacmanMixer && pacmanActions) {
     const mouthSpeed = 17.5;
@@ -591,26 +547,19 @@ function updateObjectsWalkBy(progress: number) {
       let position = objectPositions[key];
       if (!position) return;
 
-      if (pacmanTransformed && frozenPositions[key]) {
-        const TRANSFORMATION_DURATION = 0.1;
-        const transformationProgress =
-          transformationStartProgress > 0
-            ? (normalizedProgress - transformationStartProgress) /
-              TRANSFORMATION_DURATION
-            : 0;
-
-        if (transformationProgress < 1.0) {
-          position = frozenPositions[key];
+      if (
+        isTransforming ||
+        normalizedProgress > pillProgress + TRANSFORMATION_DURATION
+      ) {
+        if (normalizedProgress < pillProgress + TRANSFORMATION_DURATION) {
+          position = objectPositions[key];
         } else {
           const returnProgress =
-            (normalizedProgress -
-              transformationStartProgress -
-              TRANSFORMATION_DURATION) /
-            (1.0 - transformationStartProgress - TRANSFORMATION_DURATION);
+            (normalizedProgress - pillProgress - TRANSFORMATION_DURATION) /
+            (1.0 - pillProgress - TRANSFORMATION_DURATION);
           const returnAmount = Math.max(0, Math.min(1, returnProgress));
 
-          const frozenPos = frozenPositions[key];
-          const startX = frozenPos.x;
+          const frozenX = objectPositions[key].x;
 
           const objectOffset =
             key === "pacman"
@@ -639,8 +588,12 @@ function updateObjectsWalkBy(progress: number) {
                 ? 2 * returnAmount * returnAmount
                 : 1 - 2 * (1 - returnAmount) * (1 - returnAmount);
 
-            const currentX = startX + (endX - startX) * easedReturn;
-            position = new THREE.Vector3(currentX, frozenPos.y, frozenPos.z);
+            const currentX = frozenX + (endX - frozenX) * easedReturn;
+            position = new THREE.Vector3(
+              currentX,
+              objectPositions[key].y,
+              objectPositions[key].z
+            );
           }
         }
       }
@@ -675,7 +628,7 @@ function updateObjectsWalkBy(progress: number) {
         if (normalizedProgress < INTRO_FADE_IN_DURATION) {
           pillOpacity = normalizedProgress / INTRO_FADE_IN_DURATION;
         }
-        if (pillCollected) {
+        if (isPillCollected) {
           pillOpacity = OPACITY.HIDDEN;
         }
 
@@ -693,7 +646,7 @@ function updateObjectsWalkBy(progress: number) {
           { skipCurrencySymbols: false }
         );
       } else {
-        if (key === "pacman" && pacmanTransformed) {
+        if (key === "pacman" && normalizedProgress >= pillProgress) {
           const baseScale = SCALE.PACMAN_INTRO;
           const targetScale = 0.15;
           const currentScale =
@@ -722,7 +675,7 @@ function updateObjectsWalkBy(progress: number) {
         }
       }
       if (key === "pill") {
-        object.visible = !pillCollected;
+        object.visible = !isPillCollected;
       } else {
         object.visible = true;
       }
