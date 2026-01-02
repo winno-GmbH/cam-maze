@@ -97,11 +97,13 @@ export function initIntroScrollAnimation() {
           lastPillProgressFrame = -1;
         },
         onEnterBack: () => {
-          setTransitioningToIntro(false);
-          stopHomeLoop();
           gsap.killTweensOf(camera.position);
           gsap.killTweensOf(camera.quaternion);
           gsap.killTweensOf(camera.rotation);
+
+          stopHomeLoop();
+
+          setTransitioningToIntro(false);
 
           isIntroScrollActive = true;
           resetIntroScrollCache();

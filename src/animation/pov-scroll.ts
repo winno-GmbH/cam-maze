@@ -197,10 +197,12 @@ export function initPovScrollAnimation() {
         },
         onLeaveBack: () => {
           setTransitioningToIntro(true);
-          stopHomeLoop();
+          
           gsap.killTweensOf(camera.position);
           gsap.killTweensOf(camera.quaternion);
           gsap.killTweensOf(camera.rotation);
+          
+          stopHomeLoop();
           
           isLeavingPOV = true;
           handleLeavePOV();

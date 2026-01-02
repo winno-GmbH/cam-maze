@@ -197,6 +197,12 @@ export function startHomeLoop() {
   const wasInHomeScroll = homeScrollTrigger && homeScrollTrigger.progress > 0;
 
   const checkAndStop = () => {
+    if (isTransitioningToIntro) {
+      gsap.killTweensOf(camera.position);
+      gsap.killTweensOf(camera.quaternion);
+      gsap.killTweensOf(camera.rotation);
+      return true;
+    }
     const introScrollTrigger = ScrollTrigger.getById("introScroll");
     if (introScrollTrigger?.isActive) {
       gsap.killTweensOf(camera.position);
@@ -379,6 +385,8 @@ export function startHomeLoop() {
 
 function updateHomeLoop(delta: number) {
   if (!isHomeLoopActive) return;
+
+  if (isTransitioningToIntro) return;
 
   const introScrollTrigger = ScrollTrigger.getById("introScroll");
   if (introScrollTrigger?.isActive) return;
