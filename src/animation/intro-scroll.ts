@@ -651,9 +651,21 @@ function updateObjectsWalkBy(progress: number) {
         }
 
         if (Math.abs(lastPillOpacity - pillOpacity) >= 0.001) {
-          setObjectOpacity(object, pillOpacity, {
-            preserveTransmission: true,
-            skipCurrencySymbols: false,
+          object.traverse((child) => {
+            if ((child as any).isMesh) {
+              const mesh = child as THREE.Mesh;
+              const mat = mesh.material;
+              if (mat) {
+                const materials = Array.isArray(mat) ? mat : [mat];
+                materials.forEach((material: any) => {
+                  material.opacity = pillOpacity;
+                  material.transparent = pillOpacity < 1.0;
+                  if (material.needsUpdate !== undefined) {
+                    material.needsUpdate = true;
+                  }
+                });
+              }
+            }
           });
           lastPillOpacity = pillOpacity;
         }
