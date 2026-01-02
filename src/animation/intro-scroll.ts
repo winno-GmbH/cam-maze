@@ -26,6 +26,7 @@ import {
   clamp,
 } from "./constants";
 import { setFloorPlane, setObjectScale } from "./scene-utils";
+import { getStartPosition, getLookAtPosition } from "../paths/pathpoints";
 import { getIntroPacmanRotation } from "../core/debug-hud";
 import {
   setMaterialOpacity,
@@ -109,6 +110,28 @@ export function initIntroScrollAnimation() {
           lastPillOpacity = -1;
           cachedPillProgress = -1;
           lastPillProgressFrame = -1;
+
+          // Ensure camera is at correct position and rotation when entering intro-scroll
+          requestAnimationFrame(() => {
+            const introStartPosition = getStartPosition();
+            const introLookAtPosition = getLookAtPosition();
+
+            // Kill any ongoing camera animations
+            gsap.killTweensOf(camera.position);
+            gsap.killTweensOf(camera.quaternion);
+            gsap.killTweensOf(camera.rotation);
+
+            // Set camera position and rotation
+            camera.position.set(
+              introStartPosition.x,
+              introStartPosition.y,
+              introStartPosition.z
+            );
+            camera.lookAt(introLookAtPosition);
+            camera.fov = 50;
+            camera.updateProjectionMatrix();
+            camera.updateMatrixWorld(true);
+          });
         },
         onLeave: () => {
           isIntroScrollActive = false;

@@ -201,22 +201,46 @@ export function initPovScrollAnimation() {
           handleLeavePOV();
           resetState();
           
-          // Reset camera to intro-scroll position and rotation immediately
-          const introStartPosition = getStartPosition();
-          const introLookAtPosition = getLookAtPosition();
-          camera.position.copy(introStartPosition);
-          camera.lookAt(introLookAtPosition);
-          camera.fov = 50; // Reset to default FOV
-          camera.updateProjectionMatrix();
-          
           // Reset object scales to intro when leaving pov-scroll back to intro
           Object.entries(ghosts).forEach(([key, object]) => {
             setObjectScale(object, key, "intro");
           });
           
-          console.log(
-            `[POV->Intro Transition] Camera reset to intro position: (${introStartPosition.x.toFixed(3)}, ${introStartPosition.y.toFixed(3)}, ${introStartPosition.z.toFixed(3)}), LookAt: (${introLookAtPosition.x.toFixed(3)}, ${introLookAtPosition.y.toFixed(3)}, ${introLookAtPosition.z.toFixed(3)})`
-          );
+          // Reset camera to intro-scroll position and rotation immediately
+          // Use requestAnimationFrame to ensure this happens after intro-scroll's onEnterBack
+          requestAnimationFrame(() => {
+            const introStartPosition = getStartPosition();
+            const introLookAtPosition = getLookAtPosition();
+            
+            // Kill any ongoing camera animations
+            gsap.killTweensOf(camera.position);
+            gsap.killTweensOf(camera.quaternion);
+            gsap.killTweensOf(camera.rotation);
+            
+            // Set camera position and rotation immediately
+            camera.position.set(
+              introStartPosition.x,
+              introStartPosition.y,
+              introStartPosition.z
+            );
+            camera.lookAt(introLookAtPosition);
+            camera.fov = 50; // Reset to default FOV
+            camera.updateProjectionMatrix();
+            
+            // Force update matrix
+            camera.updateMatrixWorld(true);
+            
+            const euler = new THREE.Euler().setFromQuaternion(camera.quaternion);
+            const eulerDeg = {
+              x: (euler.x * 180) / Math.PI,
+              y: (euler.y * 180) / Math.PI,
+              z: (euler.z * 180) / Math.PI,
+            };
+            
+            console.log(
+              `[POV->Intro Transition] Camera reset to intro position: (${introStartPosition.x.toFixed(3)}, ${introStartPosition.y.toFixed(3)}, ${introStartPosition.z.toFixed(3)}), LookAt: (${introLookAtPosition.x.toFixed(3)}, ${introLookAtPosition.y.toFixed(3)}, ${introLookAtPosition.z.toFixed(3)}), Rotation: (${eulerDeg.x.toFixed(1)}°, ${eulerDeg.y.toFixed(1)}°, ${eulerDeg.z.toFixed(1)}°)`
+            );
+          });
           
           if (povScrollTimeline) {
             povScrollTimeline.progress(0);
