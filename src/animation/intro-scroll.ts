@@ -425,9 +425,11 @@ function updateObjectsWalkBy(progress: number) {
 
   let normalizedProgress = clamp(progress);
 
-  if (reverseDirection) {
-    const progressFromFrozen =
-      (progress - frozenProgress) / (1.0 - frozenProgress);
+  if (reverseDirection && frozenProgress > 0) {
+    const progressFromFrozen = Math.max(
+      0,
+      (progress - frozenProgress) / (1.0 - frozenProgress)
+    );
     normalizedProgress = Math.max(
       0,
       Math.min(1, frozenProgress * (1.0 - progressFromFrozen))
@@ -535,8 +537,10 @@ function updateObjectsWalkBy(progress: number) {
     !allObjectsStopped
   ) {
     allObjectsStopped = true;
-    reverseDirection = true;
-    frozenProgress = progress;
+    if (!reverseDirection) {
+      reverseDirection = true;
+      frozenProgress = progress;
+    }
   }
 
   const pacmanPos = objectPositions["pacman"];
@@ -637,10 +641,13 @@ function updateObjectsWalkBy(progress: number) {
 
         object.scale.set(pillScale, pillScale, pillScale);
 
-        const pillOpacity =
-          normalizedProgress < INTRO_FADE_IN_DURATION
-            ? normalizedProgress / INTRO_FADE_IN_DURATION
-            : OPACITY.FULL;
+        let pillOpacity: number = OPACITY.FULL;
+        if (normalizedProgress < INTRO_FADE_IN_DURATION) {
+          pillOpacity = normalizedProgress / INTRO_FADE_IN_DURATION;
+        }
+        if (pillCollected) {
+          pillOpacity = OPACITY.HIDDEN;
+        }
 
         object.traverse((child) => {
           if ((child as any).isMesh) {
