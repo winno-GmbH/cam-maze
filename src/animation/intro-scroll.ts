@@ -590,13 +590,17 @@ function updateObjectsWalkBy(progress: number) {
       } else {
         if (key === "pacman" && pacmanTransformed) {
           object.scale.set(1.5, 1.5, 1.5);
-          const currentRotation = object.rotation;
-          object.rotation.set(
-            currentRotation.x,
-            currentRotation.y + Math.PI,
-            currentRotation.z
-          );
-          object.quaternion.setFromEuler(object.rotation);
+          if (pacmanTargetQuaternion) {
+            const baseEuler = new THREE.Euler().setFromQuaternion(
+              pacmanTargetQuaternion
+            );
+            object.rotation.set(
+              baseEuler.x,
+              baseEuler.y + Math.PI,
+              baseEuler.z
+            );
+            object.quaternion.setFromEuler(object.rotation);
+          }
         } else {
           const targetQuat =
             key === "pacman" ? pacmanTargetQuaternion : ghostTargetQuaternion;
