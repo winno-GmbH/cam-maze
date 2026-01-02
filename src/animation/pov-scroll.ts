@@ -248,9 +248,11 @@ function updateCamera(
   position: THREE.Vector3
 ) {
   const introScrollTrigger = ScrollTrigger.getById("introScroll");
+  const povScrollTrigger = ScrollTrigger.getById("povScroll");
   const isIntroScrollActive = introScrollTrigger && introScrollTrigger.isActive;
+  const isPovScrollActive = povScrollTrigger && povScrollTrigger.isActive;
 
-  if (isIntroScrollActive) {
+  if (isIntroScrollActive && !isPovScrollActive) {
     return;
   }
 
