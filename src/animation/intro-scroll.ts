@@ -28,7 +28,7 @@ import {
 import { setFloorPlane, setObjectScale } from "./scene-utils";
 import { getStartPosition, getLookAtPosition } from "../paths/pathpoints";
 import { getIntroPacmanRotation } from "../core/debug-hud";
-import { stopHomeLoop } from "./home-loop";
+import { stopHomeLoop, setTransitioningToIntro } from "./home-loop";
 import {
   setMaterialOpacity,
   forEachMaterial,
@@ -97,6 +97,7 @@ export function initIntroScrollAnimation() {
           lastPillProgressFrame = -1;
         },
         onEnterBack: () => {
+          setTransitioningToIntro(false);
           stopHomeLoop();
           gsap.killTweensOf(camera.position);
           gsap.killTweensOf(camera.quaternion);
