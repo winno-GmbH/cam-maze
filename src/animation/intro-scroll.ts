@@ -552,6 +552,25 @@ function updateObjectsWalkBy(progress: number) {
         }
 
         object.scale.set(pillScale, pillScale, pillScale);
+
+        const pillOpacity =
+          normalizedProgress < INTRO_FADE_IN_DURATION
+            ? normalizedProgress / INTRO_FADE_IN_DURATION
+            : OPACITY.FULL;
+
+        object.traverse((child) => {
+          if ((child as any).isMesh) {
+            const mesh = child as THREE.Mesh;
+            const mat = mesh.material;
+            if (mat) {
+              const materials = Array.isArray(mat) ? mat : [mat];
+              materials.forEach((material: any) => {
+                material.opacity = pillOpacity;
+                material.transparent = pillOpacity < 1.0;
+              });
+            }
+          }
+        });
       } else {
         const targetQuat =
           key === "pacman" ? pacmanTargetQuaternion : ghostTargetQuaternion;
