@@ -94,6 +94,7 @@ export function initIntroScrollAnimation() {
           pillCollected = false;
           pacmanTransformed = false;
           pacmanTransformProgress = 0;
+          frozenPositions = {};
         },
         onEnterBack: () => {
           isIntroScrollActive = true;
@@ -102,6 +103,7 @@ export function initIntroScrollAnimation() {
           pillCollected = false;
           pacmanTransformed = false;
           pacmanTransformProgress = 0;
+          frozenPositions = {};
         },
         onLeave: () => {
           isIntroScrollActive = false;
@@ -273,6 +275,7 @@ let lastFloorState: {
 let pillCollected: boolean = false;
 let pacmanTransformed: boolean = false;
 let pacmanTransformProgress: number = 0;
+let frozenPositions: Record<string, THREE.Vector3> = {};
 
 function calculatePillProgress(): number {
   const camX = camera.position.x;
@@ -516,18 +519,33 @@ function updateObjectsWalkBy(progress: number) {
   const positionThreshold = 0.01;
   const pillProgress = calculatePillProgress();
 
-  if (normalizedProgress < PHASE_1_END && pacmanPos && !pillCollected) {
-    const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
-    const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
-    const distanceZ = Math.abs(pacmanPos.z - pillPosition.z);
+  if (normalizedProgress < PHASE_1_END) {
+    if (pacmanPos && !pillCollected) {
+      const distanceX = Math.abs(pacmanPos.x - pillPosition.x);
+      const distanceY = Math.abs(pacmanPos.y - pillPosition.y);
+      const distanceZ = Math.abs(pacmanPos.z - pillPosition.z);
 
-    if (
-      distanceX < positionThreshold &&
-      distanceY < positionThreshold &&
-      distanceZ < positionThreshold
-    ) {
-      pillCollected = true;
+      if (
+        distanceX < positionThreshold &&
+        distanceY < positionThreshold &&
+        distanceZ < positionThreshold
+      ) {
+        pillCollected = true;
+        pacmanTransformed = true;
+      }
     }
+  }
+
+  if (normalizedProgress >= PHASE_1_END && normalizedProgress < PHASE_2_END) {
+    if (Object.keys(frozenPositions).length === 0) {
+      for (const key in objectPositions) {
+        if (objectPositions[key]) {
+          frozenPositions[key] = objectPositions[key].clone();
+        }
+      }
+    }
+  } else if (normalizedProgress < PHASE_1_END) {
+    frozenPositions = {};
   }
 
   if (pacmanMixer && pacmanActions) {
@@ -556,8 +574,17 @@ function updateObjectsWalkBy(progress: number) {
       const object = key === "pill" ? pill : ghosts[key];
       if (!object) return;
 
-      const position = objectPositions[key];
+      let position = objectPositions[key];
       if (!position) return;
+
+      if (
+        normalizedProgress >= PHASE_1_END &&
+        normalizedProgress < PHASE_2_END
+      ) {
+        if (frozenPositions[key]) {
+          position = frozenPositions[key];
+        }
+      }
 
       object.position.set(position.x, position.y, position.z);
 
