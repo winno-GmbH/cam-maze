@@ -299,28 +299,15 @@ function updateCamera(
   povPaths: Record<string, THREE.CurvePath<THREE.Vector3>>,
   position: THREE.Vector3
 ) {
-  if (isLeavingPOV) {
-    camera.position.copy(position);
-    camera.fov = wideFOV;
-    const customLookAt = getCustomLookAtForProgress(progress, povPaths);
-    if (customLookAt) {
-      camera.lookAt(customLookAt);
-    } else {
-      const rawTangent = povPaths.camera.getTangentAt(progress).normalize();
-      const defaultLookAt = position.clone().add(rawTangent);
-      handleDefaultOrientation(progress, defaultLookAt);
+  if (!isLeavingPOV) {
+    const introScrollTrigger = ScrollTrigger.getById("introScroll");
+    const povScrollTrigger = ScrollTrigger.getById("povScroll");
+    const isIntroScrollActive = introScrollTrigger && introScrollTrigger.isActive;
+    const isPovScrollActive = povScrollTrigger && povScrollTrigger.isActive;
+
+    if (isIntroScrollActive && !isPovScrollActive) {
+      return;
     }
-    camera.updateProjectionMatrix();
-    return;
-  }
-
-  const introScrollTrigger = ScrollTrigger.getById("introScroll");
-  const povScrollTrigger = ScrollTrigger.getById("povScroll");
-  const isIntroScrollActive = introScrollTrigger && introScrollTrigger.isActive;
-  const isPovScrollActive = povScrollTrigger && povScrollTrigger.isActive;
-
-  if (isIntroScrollActive && !isPovScrollActive) {
-    return;
   }
 
   camera.position.copy(position);
@@ -336,11 +323,11 @@ function updateCamera(
   const rawTangent = povPaths.camera.getTangentAt(progress).normalize();
   let smoothTangent = rawTangent;
 
-  if (povTangentSmoothers.camera && progress > 0) {
+  if (!isLeavingPOV && povTangentSmoothers.camera && progress > 0) {
     smoothTangent = povTangentSmoothers.camera.update(rawTangent);
   }
 
-  if (progress <= POV_Y_CONSTRAINT_THRESHOLD) {
+  if (!isLeavingPOV && progress <= POV_Y_CONSTRAINT_THRESHOLD) {
     smoothTangent = new THREE.Vector3(
       smoothTangent.x,
       0,

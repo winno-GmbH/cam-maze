@@ -214,15 +214,15 @@ export function startHomeLoop() {
               duration: isTransitioningFromHomeScroll ? 0.8 : 0.5,
               ease: "power2.out",
               onUpdate: () => {
-                updateObjectPosition(key, ghost.position);
+                updateObjectPosition(key, ghost.position, true);
               },
               onComplete: () => {
-                updateObjectPosition(key, targetPosition);
+                updateObjectPosition(key, targetPosition, true);
               },
             });
           } else {
             ghost.position.copy(targetPosition);
-            updateObjectPosition(key, targetPosition);
+            updateObjectPosition(key, targetPosition, true);
           }
         }
       }
@@ -343,7 +343,7 @@ function updateHomeLoop(delta: number) {
       const position = path.getPointAt(objectT);
       if (position) {
         ghost.position.copy(position);
-        updateObjectPosition(key, position);
+        updateObjectPosition(key, position, true);
       }
 
       const expectedScale =
