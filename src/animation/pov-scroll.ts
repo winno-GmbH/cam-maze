@@ -27,8 +27,7 @@ import {
 } from "./constants";
 import { setObjectScale } from "./scene-utils";
 import { setObjectOpacity } from "../core/material-utils";
-import { getStartPosition, getLookAtPosition } from "../paths/pathpoints";
-import { stopHomeLoop, setTransitioningToIntro } from "./home-loop";
+import { stopHomeLoop } from "./home-loop";
 
 const domElementCache: Record<
   number,
@@ -196,10 +195,6 @@ export function initPovScrollAnimation() {
           isLeavingPOV = false;
         },
         onLeaveBack: () => {
-          /*setTransitioningToIntro(true);
-          gsap.killTweensOf(camera.position);
-          gsap.killTweensOf(camera.quaternion);
-          gsap.killTweensOf(camera.rotation);
           stopHomeLoop();
 
           isLeavingPOV = true;
@@ -214,20 +209,7 @@ export function initPovScrollAnimation() {
             povScrollTimeline.progress(0);
           }
 
-          const introStartPosition = getStartPosition();
-          const introLookAtPosition = getLookAtPosition();
-
-          camera.position.set(
-            introStartPosition.x,
-            introStartPosition.y,
-            introStartPosition.z
-          );
-          camera.lookAt(introLookAtPosition);
-          camera.fov = 50;
-          camera.updateProjectionMatrix();
-          camera.updateMatrixWorld(true);
-
-          isLeavingPOV = false;*/
+          isLeavingPOV = false;
         },
       },
     })

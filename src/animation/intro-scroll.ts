@@ -26,9 +26,8 @@ import {
   clamp,
 } from "./constants";
 import { setFloorPlane, setObjectScale } from "./scene-utils";
-import { getStartPosition, getLookAtPosition } from "../paths/pathpoints";
 import { getIntroPacmanRotation } from "../core/debug-hud";
-import { stopHomeLoop, setTransitioningToIntro } from "./home-loop";
+import { stopHomeLoop } from "./home-loop";
 import {
   setMaterialOpacity,
   forEachMaterial,
@@ -88,12 +87,7 @@ export function initIntroScrollAnimation() {
         scrub: SCRUB_DURATION,
         refreshPriority: 1,
         onEnter: () => {
-          gsap.killTweensOf(camera.position);
-          gsap.killTweensOf(camera.quaternion);
-          gsap.killTweensOf(camera.rotation);
-
           stopHomeLoop();
-
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
@@ -101,29 +95,9 @@ export function initIntroScrollAnimation() {
           lastPillOpacity = -1;
           cachedPillProgress = -1;
           lastPillProgressFrame = -1;
-
-          const introStartPosition = getStartPosition();
-          const introLookAtPosition = getLookAtPosition();
-
-          camera.position.set(
-            introStartPosition.x,
-            introStartPosition.y,
-            introStartPosition.z
-          );
-          camera.lookAt(introLookAtPosition);
-          camera.fov = 50;
-          camera.updateProjectionMatrix();
-          camera.updateMatrixWorld(true);
         },
         onEnterBack: () => {
-          gsap.killTweensOf(camera.position);
-          gsap.killTweensOf(camera.quaternion);
-          gsap.killTweensOf(camera.rotation);
-
           stopHomeLoop();
-
-          setTransitioningToIntro(false);
-
           isIntroScrollActive = true;
           resetIntroScrollCache();
           setIntroScrollLocked(true);
@@ -131,19 +105,6 @@ export function initIntroScrollAnimation() {
           lastPillOpacity = -1;
           cachedPillProgress = -1;
           lastPillProgressFrame = -1;
-
-          const introStartPosition = getStartPosition();
-          const introLookAtPosition = getLookAtPosition();
-
-          camera.position.set(
-            introStartPosition.x,
-            introStartPosition.y,
-            introStartPosition.z
-          );
-          camera.lookAt(introLookAtPosition);
-          camera.fov = 50;
-          camera.updateProjectionMatrix();
-          camera.updateMatrixWorld(true);
         },
         onLeave: () => {
           isIntroScrollActive = false;
