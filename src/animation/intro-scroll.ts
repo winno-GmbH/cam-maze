@@ -121,36 +121,21 @@ export function initIntroScrollAnimation() {
             gsap.killTweensOf(camera.quaternion);
             gsap.killTweensOf(camera.rotation);
 
-            const tempEuler = new THREE.Euler();
+            camera.position.set(
+              homeScrollEndPosition.x,
+              homeScrollEndPosition.y,
+              homeScrollEndPosition.z
+            );
+            camera.lookAt(homeScrollEndLookAt);
 
-            gsap.to(camera.position, {
-              x: homeScrollEndPosition.x,
-              y: homeScrollEndPosition.y,
-              z: homeScrollEndPosition.z,
-              duration: 0.6,
-              ease: "power2.inOut",
-              onUpdate: () => {
-                camera.lookAt(homeScrollEndLookAt);
-                const targetZRotation = 0;
-                tempEuler.setFromQuaternion(camera.quaternion);
-                tempEuler.z = targetZRotation * DEG_TO_RAD;
-                camera.quaternion.setFromEuler(tempEuler);
-              },
-              onComplete: () => {
-                camera.position.set(
-                  homeScrollEndPosition.x,
-                  homeScrollEndPosition.y,
-                  homeScrollEndPosition.z
-                );
-                camera.lookAt(homeScrollEndLookAt);
-                const targetZRotation = 0;
-                tempEuler.setFromQuaternion(camera.quaternion);
-                tempEuler.z = targetZRotation * DEG_TO_RAD;
-                camera.quaternion.setFromEuler(tempEuler);
-                camera.fov = 50;
-                camera.updateProjectionMatrix();
-              },
-            });
+            const tempEuler = new THREE.Euler();
+            const targetZRotation = 0;
+            tempEuler.setFromQuaternion(camera.quaternion);
+            tempEuler.z = targetZRotation * DEG_TO_RAD;
+            camera.quaternion.setFromEuler(tempEuler);
+
+            camera.fov = 50;
+            camera.updateProjectionMatrix();
           }
         },
         onLeave: () => {
