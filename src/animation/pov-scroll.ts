@@ -196,7 +196,7 @@ export function initPovScrollAnimation() {
           isLeavingPOV = false;
         },
         onLeaveBack: () => {
-          setTransitioningToIntro(true);
+          /*setTransitioningToIntro(true);
           gsap.killTweensOf(camera.position);
           gsap.killTweensOf(camera.quaternion);
           gsap.killTweensOf(camera.rotation);
@@ -227,7 +227,7 @@ export function initPovScrollAnimation() {
           camera.updateProjectionMatrix();
           camera.updateMatrixWorld(true);
 
-          isLeavingPOV = false;
+          isLeavingPOV = false;*/
         },
       },
     })
