@@ -219,11 +219,6 @@ export function initPovScrollAnimation() {
           const introStartPosition = getStartPosition();
           const introLookAtPosition = getLookAtPosition();
 
-          camera.position.set(
-            introStartPosition.x,
-            introStartPosition.y,
-            introStartPosition.z
-          );
           camera.lookAt(introLookAtPosition);
           camera.fov = 50;
           camera.updateProjectionMatrix();
