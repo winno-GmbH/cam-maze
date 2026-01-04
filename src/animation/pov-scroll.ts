@@ -42,6 +42,8 @@ gsap.registerPlugin(ScrollTrigger);
 
 let povScrollTimeline: gsap.core.Timeline | null = null;
 let isLeavingPOV: boolean = false;
+let cachedPovPaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null =
+  null;
 
 let previousCameraPosition: THREE.Vector3 | null = null;
 let rotationStarted = false;
@@ -138,6 +140,7 @@ export function initPovScrollAnimation() {
     povScrollTimeline = null;
   }
 
+  cachedPovPaths = null;
   initializePovTangentSmoothers();
 
   Object.keys(povTriggerPositions).forEach((key) => {
@@ -185,7 +188,10 @@ export function initPovScrollAnimation() {
 
           if (povScrollTimeline) {
             povScrollTimeline.progress(1);
-            const povPaths = getPovPaths();
+            if (!cachedPovPaths) {
+              cachedPovPaths = getPovPaths();
+            }
+            const povPaths = cachedPovPaths;
             if (povPaths && povPaths.camera) {
               const endPosition = povPaths.camera.getPointAt(1);
               updateCamera(1, povPaths, endPosition);
@@ -239,7 +245,10 @@ export function initPovScrollAnimation() {
 }
 
 function handleAnimationStart() {
-  const povPaths = getPovPaths();
+  if (!cachedPovPaths) {
+    cachedPovPaths = getPovPaths();
+  }
+  const povPaths = cachedPovPaths;
 
   if (povTangentSmoothers.camera && povPaths.camera) {
     const initialCameraTangent = povPaths.camera.getTangentAt(0);
@@ -267,7 +276,10 @@ function handleAnimationStart() {
 function handleAnimationUpdate(this: gsap.core.Tween) {
   const overallProgress = (this.targets()[0] as any).progress;
 
-  const povPaths = getPovPaths();
+  if (!cachedPovPaths) {
+    cachedPovPaths = getPovPaths();
+  }
+  const povPaths = cachedPovPaths;
 
   if (!povPaths.camera) return;
 
@@ -346,7 +358,10 @@ function handleDefaultOrientation(
   progress: number,
   defaultLookAt: THREE.Vector3
 ) {
-  const povPaths = getPovPaths();
+  if (!cachedPovPaths) {
+    cachedPovPaths = getPovPaths();
+  }
+  const povPaths = cachedPovPaths;
   const startRotationProgress = findClosestProgressOnPath(
     povPaths.camera,
     startRotationPoint
@@ -436,7 +451,10 @@ function updateGhost(
   const { parent, povElements, camElements } = cached;
   if (!parent || !povElements.length || !camElements.length) return;
 
-  const povPaths = getPovPaths();
+  if (!cachedPovPaths) {
+    cachedPovPaths = getPovPaths();
+  }
+  const povPaths = cachedPovPaths;
   if (state.triggerCameraProgress === null) {
     state.triggerCameraProgress = findClosestProgressOnPath(
       povPaths.camera,

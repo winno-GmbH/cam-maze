@@ -40,9 +40,11 @@ let lastUpdateProgress: number | null = null;
 export let pacmanTargetQuaternion: THREE.Quaternion | null = null;
 let ghostTargetQuaternion: THREE.Quaternion | null = null;
 let introInitialRotations: Record<string, THREE.Quaternion> = {};
+let quaternionsInitialized = false;
 
 function resetIntroScrollCache() {
   lastUpdateProgress = null;
+  quaternionsInitialized = false;
 }
 
 function setIntroScrollLocked(locked: boolean) {
@@ -228,6 +230,9 @@ export function initIntroScrollAnimation() {
 }
 
 function initializeQuaternions() {
+  if (quaternionsInitialized) return;
+  quaternionsInitialized = true;
+
   const rotation = getIntroPacmanRotation();
 
   const euler = new THREE.Euler(

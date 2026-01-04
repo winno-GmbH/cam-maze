@@ -32,6 +32,8 @@ let homeLoopFrameRegistered = false;
 let rotationTransitionTime = 0;
 let startRotations: Record<string, THREE.Quaternion> = {};
 let hasBeenPausedBefore = false;
+let cachedHomePaths: Record<string, THREE.CurvePath<THREE.Vector3>> | null =
+  null;
 
 const homeLoopTangentSmoothers: Record<string, TangentSmoother> = {};
 let pillGuides: THREE.Group | null = null;
@@ -318,7 +320,10 @@ function updateHomeLoop(delta: number) {
 
   updateHomeLoopT(t, animationTime);
 
-  const homePaths = getHomePaths();
+  if (!cachedHomePaths) {
+    cachedHomePaths = getHomePaths();
+  }
+  const homePaths = cachedHomePaths;
   if (pacmanMixer) {
     pacmanMixer.update(delta);
   }
