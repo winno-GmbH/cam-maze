@@ -197,11 +197,9 @@ export function initPovScrollAnimation() {
         },
         onLeaveBack: () => {
           setTransitioningToIntro(true);
-
           gsap.killTweensOf(camera.position);
           gsap.killTweensOf(camera.quaternion);
           gsap.killTweensOf(camera.rotation);
-
           stopHomeLoop();
 
           isLeavingPOV = true;
@@ -219,32 +217,15 @@ export function initPovScrollAnimation() {
           const introStartPosition = getStartPosition();
           const introLookAtPosition = getLookAtPosition();
 
+          camera.position.set(
+            introStartPosition.x,
+            introStartPosition.y,
+            introStartPosition.z
+          );
           camera.lookAt(introLookAtPosition);
           camera.fov = 50;
           camera.updateProjectionMatrix();
           camera.updateMatrixWorld(true);
-
-          requestAnimationFrame(() => {
-            gsap.killTweensOf(camera.position);
-            gsap.killTweensOf(camera.quaternion);
-            gsap.killTweensOf(camera.rotation);
-
-            camera.lookAt(introLookAtPosition);
-            camera.fov = 50;
-            camera.updateProjectionMatrix();
-            camera.updateMatrixWorld(true);
-          });
-
-          requestAnimationFrame(() => {
-            gsap.killTweensOf(camera.position);
-            gsap.killTweensOf(camera.quaternion);
-            gsap.killTweensOf(camera.rotation);
-
-            camera.lookAt(introLookAtPosition);
-            camera.fov = 50;
-            camera.updateProjectionMatrix();
-            camera.updateMatrixWorld(true);
-          });
 
           isLeavingPOV = false;
         },

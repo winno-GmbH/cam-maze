@@ -144,38 +144,6 @@ export function initIntroScrollAnimation() {
           camera.fov = 50;
           camera.updateProjectionMatrix();
           camera.updateMatrixWorld(true);
-
-          requestAnimationFrame(() => {
-            gsap.killTweensOf(camera.position);
-            gsap.killTweensOf(camera.quaternion);
-            gsap.killTweensOf(camera.rotation);
-
-            camera.position.set(
-              introStartPosition.x,
-              introStartPosition.y,
-              introStartPosition.z
-            );
-            camera.lookAt(introLookAtPosition);
-            camera.fov = 50;
-            camera.updateProjectionMatrix();
-            camera.updateMatrixWorld(true);
-          });
-
-          requestAnimationFrame(() => {
-            gsap.killTweensOf(camera.position);
-            gsap.killTweensOf(camera.quaternion);
-            gsap.killTweensOf(camera.rotation);
-
-            camera.position.set(
-              introStartPosition.x,
-              introStartPosition.y,
-              introStartPosition.z
-            );
-            camera.lookAt(introLookAtPosition);
-            camera.fov = 50;
-            camera.updateProjectionMatrix();
-            camera.updateMatrixWorld(true);
-          });
         },
         onLeave: () => {
           isIntroScrollActive = false;
