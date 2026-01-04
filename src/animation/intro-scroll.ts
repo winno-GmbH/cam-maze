@@ -2,6 +2,7 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import * as THREE from "three";
 import { camera } from "../core/camera";
+const DEG_TO_RAD = Math.PI / 180;
 import { ghosts, pacmanMixer, pacmanActions, pill } from "../core/objects";
 import { clock, scene } from "../core/scene";
 import { slerpToLayDown, applyRotations } from "./util";
@@ -28,7 +29,7 @@ import {
 import { setFloorPlane, setObjectScale } from "./scene-utils";
 import { getIntroPacmanRotation } from "../core/debug-hud";
 import { stopHomeLoop } from "./home-loop";
-import { getStartPosition, getLookAtPosition } from "../paths/pathpoints";
+import { getCameraHomeScrollPathPoints } from "../paths/pathpoints";
 import {
   setMaterialOpacity,
   forEachMaterial,
@@ -109,33 +110,48 @@ export function initIntroScrollAnimation() {
           cachedPillProgress = -1;
           lastPillProgressFrame = -1;
 
-          const introStartPosition = getStartPosition();
-          const introLookAtPosition = getLookAtPosition();
+          const cameraPathPoints = getCameraHomeScrollPathPoints();
+          const homeScrollEndPoint =
+            cameraPathPoints[cameraPathPoints.length - 1];
 
-          gsap.killTweensOf(camera.position);
-          gsap.killTweensOf(camera.quaternion);
-          gsap.killTweensOf(camera.rotation);
+          if ("lookAt" in homeScrollEndPoint && homeScrollEndPoint.lookAt) {
+            const homeScrollEndPosition = homeScrollEndPoint.pos;
+            const homeScrollEndLookAt = homeScrollEndPoint.lookAt;
+            gsap.killTweensOf(camera.position);
+            gsap.killTweensOf(camera.quaternion);
+            gsap.killTweensOf(camera.rotation);
 
-          gsap.to(camera.position, {
-            x: introStartPosition.x,
-            y: introStartPosition.y,
-            z: introStartPosition.z,
-            duration: 0.6,
-            ease: "power2.inOut",
-            onUpdate: () => {
-              camera.lookAt(introLookAtPosition);
-            },
-            onComplete: () => {
-              camera.position.set(
-                introStartPosition.x,
-                introStartPosition.y,
-                introStartPosition.z
-              );
-              camera.lookAt(introLookAtPosition);
-              camera.fov = 50;
-              camera.updateProjectionMatrix();
-            },
-          });
+            const tempEuler = new THREE.Euler();
+
+            gsap.to(camera.position, {
+              x: homeScrollEndPosition.x,
+              y: homeScrollEndPosition.y,
+              z: homeScrollEndPosition.z,
+              duration: 0.6,
+              ease: "power2.inOut",
+              onUpdate: () => {
+                camera.lookAt(homeScrollEndLookAt);
+                const targetZRotation = 0;
+                tempEuler.setFromQuaternion(camera.quaternion);
+                tempEuler.z = targetZRotation * DEG_TO_RAD;
+                camera.quaternion.setFromEuler(tempEuler);
+              },
+              onComplete: () => {
+                camera.position.set(
+                  homeScrollEndPosition.x,
+                  homeScrollEndPosition.y,
+                  homeScrollEndPosition.z
+                );
+                camera.lookAt(homeScrollEndLookAt);
+                const targetZRotation = 0;
+                tempEuler.setFromQuaternion(camera.quaternion);
+                tempEuler.z = targetZRotation * DEG_TO_RAD;
+                camera.quaternion.setFromEuler(tempEuler);
+                camera.fov = 50;
+                camera.updateProjectionMatrix();
+              },
+            });
+          }
         },
         onLeave: () => {
           isIntroScrollActive = false;
