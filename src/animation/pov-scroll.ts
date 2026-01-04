@@ -179,11 +179,11 @@ export function initPovScrollAnimation() {
           isLeavingPOV = true;
           handleLeavePOV();
           resetState();
-          
+
           Object.entries(ghosts).forEach(([key, object]) => {
             setObjectScale(object, key, "home");
           });
-          
+
           if (povScrollTimeline) {
             povScrollTimeline.progress(1);
             const povPaths = getPovPaths();
@@ -197,34 +197,28 @@ export function initPovScrollAnimation() {
         },
         onLeaveBack: () => {
           setTransitioningToIntro(true);
-          
+
           gsap.killTweensOf(camera.position);
           gsap.killTweensOf(camera.quaternion);
           gsap.killTweensOf(camera.rotation);
-          
+
           stopHomeLoop();
-          
+
           isLeavingPOV = true;
           handleLeavePOV();
           resetState();
-          
+
           Object.entries(ghosts).forEach(([key, object]) => {
             setObjectScale(object, key, "intro");
           });
-          
+
           if (povScrollTimeline) {
             povScrollTimeline.progress(0);
-            const povPaths = getPovPaths();
-            if (povPaths && povPaths.camera) {
-              const startPosition = povPaths.camera.getPointAt(0);
-              updateCamera(0, povPaths, startPosition);
-              updateGhosts(startPosition, 0, povPaths);
-            }
           }
-          
+
           const introStartPosition = getStartPosition();
           const introLookAtPosition = getLookAtPosition();
-          
+
           camera.position.set(
             introStartPosition.x,
             introStartPosition.y,
@@ -234,12 +228,12 @@ export function initPovScrollAnimation() {
           camera.fov = 50;
           camera.updateProjectionMatrix();
           camera.updateMatrixWorld(true);
-          
+
           requestAnimationFrame(() => {
             gsap.killTweensOf(camera.position);
             gsap.killTweensOf(camera.quaternion);
             gsap.killTweensOf(camera.rotation);
-            
+
             camera.position.set(
               introStartPosition.x,
               introStartPosition.y,
@@ -250,12 +244,12 @@ export function initPovScrollAnimation() {
             camera.updateProjectionMatrix();
             camera.updateMatrixWorld(true);
           });
-          
+
           requestAnimationFrame(() => {
             gsap.killTweensOf(camera.position);
             gsap.killTweensOf(camera.quaternion);
             gsap.killTweensOf(camera.rotation);
-            
+
             camera.position.set(
               introStartPosition.x,
               introStartPosition.y,
@@ -266,7 +260,7 @@ export function initPovScrollAnimation() {
             camera.updateProjectionMatrix();
             camera.updateMatrixWorld(true);
           });
-          
+
           isLeavingPOV = false;
         },
       },
