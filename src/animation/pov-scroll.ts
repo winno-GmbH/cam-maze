@@ -212,6 +212,16 @@ export function initPovScrollAnimation() {
             setObjectScale(object, key, "intro");
           });
           
+          if (povScrollTimeline) {
+            povScrollTimeline.progress(0);
+            const povPaths = getPovPaths();
+            if (povPaths && povPaths.camera) {
+              const startPosition = povPaths.camera.getPointAt(0);
+              updateCamera(0, povPaths, startPosition);
+              updateGhosts(startPosition, 0, povPaths);
+            }
+          }
+          
           const introStartPosition = getStartPosition();
           const introLookAtPosition = getLookAtPosition();
           
