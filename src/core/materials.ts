@@ -47,6 +47,7 @@ const pacmanMaterials = {
     color: 0xffffff,
     transparent: true,
     opacity: 1,
+    side: THREE.DoubleSide,
   }),
   default: new THREE.MeshBasicMaterial({
     color: 0x1469d3,
