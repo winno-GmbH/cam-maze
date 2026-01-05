@@ -22,6 +22,17 @@ export function setFloorPlane(
   });
 }
 
+export function setArenaWallsVisible(visible: boolean): void {
+  scene.traverse((child) => {
+    if (
+      child.name === "CAM-Arena_LowRes_Top" ||
+      child.name === "CAM-Arena_LowRes_Bottom"
+    ) {
+      child.visible = visible;
+    }
+  });
+}
+
 export function setObjectScale(
   object: THREE.Object3D,
   key: string,

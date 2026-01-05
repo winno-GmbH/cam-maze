@@ -19,6 +19,7 @@ import {
   setFloorPlane,
   setObjectScale,
   killObjectAnimations,
+  setArenaWallsVisible,
 } from "./scene-utils";
 import { SCALE, OPACITY, INTRO_POSITION_OFFSET } from "./constants";
 
@@ -199,6 +200,7 @@ export function applyOutroScrollPreset(
 ) {
   if (!isEntering) return;
 
+  setArenaWallsVisible(false);
   setFloorPlane(true, OPACITY.FULL, false);
 }
 
