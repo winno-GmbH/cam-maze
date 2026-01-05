@@ -165,7 +165,10 @@ export function initPovScrollAnimation() {
         trigger: DOM_ELEMENTS.povSection,
         start: "top bottom",
         end: "bottom top",
-        scrub: SCRUB_DURATION,
+        scrub: {
+          value: SCRUB_DURATION,
+          smooth: true,
+        },
         toggleActions: "play none none reverse",
         onEnter: () => {
           isLeavingPOV = false;
@@ -225,6 +228,7 @@ export function initPovScrollAnimation() {
       {
         progress: 1,
         immediateRender: false,
+        ease: "none",
         onStart: handleAnimationStart,
         onUpdate: function (this: gsap.core.Tween) {
           handleAnimationUpdate.call(this);
@@ -273,8 +277,129 @@ function handleAnimationStart() {
   }
 }
 
+function mapProgressForCardReading(rawProgress: number): number {
+  if (!cachedPovPaths) {
+    cachedPovPaths = getPovPaths();
+  }
+  const povPaths = cachedPovPaths;
+  if (!povPaths.camera) return rawProgress;
+
+  const cameraPosition = povPaths.camera.getPointAt(rawProgress);
+  const currentCameraProgress = findClosestProgressOnPath(
+    povPaths.camera,
+    cameraPosition,
+    FIND_CLOSEST_SAMPLES
+  );
+
+  const SLOW_DOWN_FACTOR = 0.4;
+
+  let isInCardPhase = false;
+  Object.values(ghostStates).forEach((state: any) => {
+    if (
+      state.ghostStartFadeInProgress !== null &&
+      state.ghostEndFadeInProgress !== null &&
+      state.camStartFadeInProgress !== null &&
+      state.camEndFadeInProgress !== null
+    ) {
+      const isInGhostCardPhase =
+        currentCameraProgress >= state.ghostStartFadeInProgress &&
+        currentCameraProgress <= state.ghostEndFadeInProgress;
+      const isInCamCardPhase =
+        currentCameraProgress >= state.camStartFadeInProgress &&
+        currentCameraProgress <= state.camEndFadeInProgress;
+
+      if (isInGhostCardPhase || isInCamCardPhase) {
+        isInCardPhase = true;
+      }
+    }
+  });
+
+  if (!isInCardPhase) {
+    return rawProgress;
+  }
+
+  const allCardPhases: Array<{ start: number; end: number }> = [];
+  Object.values(ghostStates).forEach((state: any) => {
+    if (
+      state.ghostStartFadeInProgress !== null &&
+      state.camEndFadeInProgress !== null
+    ) {
+      allCardPhases.push({
+        start: state.ghostStartFadeInProgress,
+        end: state.camEndFadeInProgress,
+      });
+    }
+  });
+
+  if (allCardPhases.length === 0) {
+    return rawProgress;
+  }
+
+  allCardPhases.sort((a, b) => a.start - b.start);
+
+  let totalAdjustedDuration = 0;
+  let lastProgress = 0;
+
+  for (const phase of allCardPhases) {
+    const progressBeforePhase = phase.start - lastProgress;
+    totalAdjustedDuration += progressBeforePhase;
+
+    const phaseDuration = phase.end - phase.start;
+    const adjustedPhaseDuration = phaseDuration / SLOW_DOWN_FACTOR;
+    totalAdjustedDuration += adjustedPhaseDuration;
+
+    lastProgress = phase.end;
+  }
+
+  totalAdjustedDuration += 1.0 - lastProgress;
+
+  if (totalAdjustedDuration <= 0) {
+    return rawProgress;
+  }
+
+  let adjustedProgress = 0;
+  lastProgress = 0;
+
+  for (const phase of allCardPhases) {
+    if (currentCameraProgress < phase.start) {
+      const progressBeforePhase = currentCameraProgress - lastProgress;
+      adjustedProgress += progressBeforePhase;
+      return Math.min(1, (adjustedProgress / totalAdjustedDuration) * 1.0);
+    }
+
+    if (currentCameraProgress >= phase.start && currentCameraProgress <= phase.end) {
+      const progressBeforePhase = phase.start - lastProgress;
+      adjustedProgress += progressBeforePhase;
+
+      const progressInPhase = currentCameraProgress - phase.start;
+      const phaseDuration = phase.end - phase.start;
+      const adjustedPhaseDuration = phaseDuration / SLOW_DOWN_FACTOR;
+      const normalizedProgressInPhase = progressInPhase / phaseDuration;
+      adjustedProgress += normalizedProgressInPhase * adjustedPhaseDuration;
+
+      return Math.min(1, (adjustedProgress / totalAdjustedDuration) * 1.0);
+    } else {
+      const progressBeforePhase = phase.start - lastProgress;
+      adjustedProgress += progressBeforePhase;
+
+      const phaseDuration = phase.end - phase.start;
+      const adjustedPhaseDuration = phaseDuration / SLOW_DOWN_FACTOR;
+      adjustedProgress += adjustedPhaseDuration;
+
+      lastProgress = phase.end;
+    }
+  }
+
+  if (currentCameraProgress > lastProgress) {
+    adjustedProgress += currentCameraProgress - lastProgress;
+  }
+
+  return Math.min(1, Math.max(0, (adjustedProgress / totalAdjustedDuration) * 1.0));
+}
+
 function handleAnimationUpdate(this: gsap.core.Tween) {
-  const overallProgress = (this.targets()[0] as any).progress;
+  const rawProgress = (this.targets()[0] as any).progress;
+  const overallProgress = mapProgressForCardReading(rawProgress);
 
   if (!cachedPovPaths) {
     cachedPovPaths = getPovPaths();
